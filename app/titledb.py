@@ -246,11 +246,23 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
                 for filename in core_files:
                     results[filename] = download_titledb_file(filename, force=force)
                 
-                # Always download US/en and titles.json as safety nets
-                download_titledb_file("titles.US.en.json", force=force, silent_404=True)
-                download_titledb_file("titles.json", force=force, silent_404=True)
-                
+                # PRIORITY: Try to download the region-specific file based on settings FIRST
                 region_titles_file = get_region_titles_file(app_settings)
+                logger.info(f"Attempting to download region-specific file: {region_titles_file}")
+                region_success = download_titledb_file(region_titles_file, force=force, silent_404=True)
+                results[region_titles_file] = region_success
+                
+                # Fallback downloads (only if region-specific fails)
+                if not region_success:
+                    logger.warning(f"Region-specific file {region_titles_file} not available, trying fallbacks...")
+                    download_titledb_file("titles.US.en.json", force=force, silent_404=True)
+                    download_titledb_file("titles.json", force=force, silent_404=True)
+                else:
+                    logger.info(f"Successfully downloaded region-specific file: {region_titles_file}")
+                    # Optionally download fallbacks but don't fail if they're missing
+                    download_titledb_file("titles.US.en.json", force=force, silent_404=True)
+                    download_titledb_file("titles.json", force=force, silent_404=True)
+                
                 if all(results.get(f) for f in core_files):
                     source.last_success = datetime.now()
                     source.last_error = None
