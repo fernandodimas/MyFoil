@@ -13,11 +13,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     python3-dev \
     libzstd-dev \
+    zlib1g-dev \
+    libjpeg-dev \
+    libcurl4-openssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies
 WORKDIR /install
 COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
 # Final stage
