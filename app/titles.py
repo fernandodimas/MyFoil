@@ -47,24 +47,26 @@ def robust_json_load(filepath):
 
     try:
         # First try: Standard load
-        return json.loads(content)
+        data = json.loads(content)
     except json.JSONDecodeError as e:
-        # If it's an escape error, try to fix backslashes
-        if 'Invalid \\escape' in str(e):
-            logger.warning(f"Invalid escape found in {filepath}, attempting to sanitize...")
-            # Escape backslashes that aren't part of a valid JSON escape sequence
-            sanitized = re.sub(r'\\(?![u"\\\/bfnrt])', r'\\\\', content)
-            try:
-                return json.loads(sanitized, strict=False)
-            except Exception as ex:
-                logger.error(f"Sanitization failed for {filepath}: {ex}")
-        
-        # Second try: Non-strict load
+        logger.warning(f"JSON error in {filepath} at {e.pos}, attempting deep sanitization...")
         try:
-            return json.loads(content, strict=False)
+            # NUCLEAR OPTION: Escape ANY backslash that isn't a valid JSON escape sequence.
+            # Valid escapes: \", \\, \/, \b, \f, \n, \r, \t, \uXXXX
+            # This regex finds \ that is NOT followed by the valid list.
+            sanitized = re.sub(r'\\(?!(["\\\/bfnrt]|u[0-9a-fA-F]{4}))', r'\\\\', content)
+            data = json.loads(sanitized, strict=False)
         except Exception as ex:
-            logger.error(f"Critical error parsing JSON {filepath}: {ex}")
+            logger.error(f"Deep sanitization failed for {filepath}: {ex}")
             return None
+
+    # Handle common TitleDB wrapper structures (tinfoil.media, etc.)
+    if isinstance(data, dict):
+        for wrapper in ['data', 'items', 'titles', 'success']:
+            if wrapper in data and isinstance(data[wrapper], (dict, list)):
+                return data[wrapper]
+            
+    return data
 
 def getDirsAndFiles(path):
     entries = os.listdir(path)
