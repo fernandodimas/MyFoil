@@ -30,6 +30,7 @@ _cnmts_db = None
 _titles_db = None
 _versions_db = None
 _versions_txt_db = None
+_loaded_titles_file = None  # Track which titles file was loaded
 
 def robust_json_load(filepath):
     """Reliably load JSON files even with invalid escape sequences or control characters."""
@@ -215,6 +216,9 @@ def load_titledb(force=False):
         possible_files = [region_file, "titles.US.en.json", "titles.json"]
         
         _titles_db = None
+        global _loaded_titles_file
+        _loaded_titles_file = None
+        
         for filename in possible_files:
             filepath = os.path.join(TITLEDB_DIR, filename)
             if os.path.exists(filepath):
@@ -222,6 +226,7 @@ def load_titledb(force=False):
                 _titles_db = robust_json_load(filepath)
                 if _titles_db and len(_titles_db) > 0:
                     logger.info(f"SUCCESS: Loaded {len(_titles_db)} titles from {filename}")
+                    _loaded_titles_file = filename  # Track which file was loaded
                     break
                 else:
                     logger.warning(f"Could not use {filename}, trying next fallback...")
@@ -513,3 +518,8 @@ def get_all_existing_dlc(title_id):
                 if app_id.upper() not in dlcs:
                     dlcs.append(app_id.upper())
     return dlcs
+
+def get_loaded_titles_file():
+    """Return the filename of the currently loaded titles database"""
+    global _loaded_titles_file
+    return _loaded_titles_file

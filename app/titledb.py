@@ -341,13 +341,18 @@ def get_active_source_info() -> Dict:
         remote_date_str = "Unknown"
         if remote_date:
             remote_date_str = remote_date.strftime("%Y-%m-%d %H:%M")
+        
+        # Get which titles file is actually loaded
+        import titles
+        loaded_file = titles.get_loaded_titles_file() or "Not loaded yet"
 
         return {
             'name': active.name,
             'last_success': active.last_success,
             'is_updated': is_updated,
             'time_since': str(time_since).split('.')[0], # Simple formatting
-            'remote_date': remote_date_str
+            'remote_date': remote_date_str,
+            'loaded_titles_file': loaded_file
         }
     
     return None
