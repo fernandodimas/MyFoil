@@ -165,6 +165,14 @@ def load_titledb():
     identification_in_progress_count += 1
     if not _titles_db_loaded:
         logger.info("Loading TitleDBs into memory...")
+        
+        # Diagnostic: List files in TitleDB dir
+        try:
+            files = os.listdir(TITLEDB_DIR)
+            logger.info(f"Files in TitleDB directory: {', '.join(files)}")
+        except Exception as e:
+            logger.warning(f"Could not list TitleDB directory: {e}")
+
         app_settings = load_settings()
         
         _cnmts_db = robust_json_load(os.path.join(TITLEDB_DIR, 'cnmts.json'))
