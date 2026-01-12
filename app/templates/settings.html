@@ -36,14 +36,14 @@
     <div class="grid grid-cols-1 gap-12">
 
         <!-- Authentication -->
-        <section id="Authentication" class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden">
+        <section id="Authentication" class="card bg-base-100 shadow-xl border border-base-content/10 overflow-hidden">
             <div class="card-body">
                 <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
                     <i class="bi bi-people text-primary"></i> {{ t('Authentication') }}
                 </h2>
 
                 <div class="overflow-x-auto">
-                    <table class="table table-zebra w-full" id="userTable">
+                    <table class="table w-full" id="userTable">
                         <thead>
                             <tr>
                                 <th>{{ t('User') }}</th>
@@ -57,10 +57,10 @@
 
                 <div class="divider"></div>
 
-                <div class="collapse collapse-arrow bg-base-200/50 border border-base-content/5">
+                <div class="collapse collapse-arrow bg-primary/5 border border-primary/10">
                     <input type="checkbox" id="collapseNewUser" />
                     <div class="collapse-title font-bold">{{ t('Add new user') }}</div>
-                    <div class="collapse-content p-4">
+                    <div class="bg-base-100/50 border border-base-content/10 rounded-xl p-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <input type="text" id="inputNewUser" placeholder="{{ t('Username') }}"
                                 class="input input-bordered w-full" />
@@ -86,7 +86,7 @@
         </section>
 
         <!-- Library Paths -->
-        <section id="Library" class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden">
+        <section id="Library" class="card bg-base-100 shadow-xl border border-base-content/10 overflow-hidden">
             <div class="card-body">
                 <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
                     <i class="bi bi-folder2-open text-primary"></i> {{ t('Library') }}
@@ -94,7 +94,7 @@
                 <p class="text-sm opacity-60 mb-4">{{ t('Path of directory containing your games') }}</p>
 
                 <div class="overflow-x-auto">
-                    <table class="table table-zebra w-full" id="pathsTable">
+                    <table class="table w-full" id="pathsTable">
                         <thead>
                             <tr>
                                 <th>{{ t('Path') }}</th>
@@ -108,11 +108,11 @@
                 <div class="divider"></div>
 
                 <div class="flex flex-wrap gap-4">
-                    <div class="collapse collapse-arrow bg-base-200/50 border border-base-content/5 flex-grow">
+                    <div class="collapse collapse-arrow bg-primary/5 border border-primary/10 flex-grow">
                         <input type="checkbox" id="collapseNewPath" />
                         <div class="collapse-title font-bold">{{ t('Add library path') }}</div>
                         <div class="collapse-content p-4">
-                            <div class="flex gap-2">
+                            <div class="bg-base-100/50 border border-base-content/10 rounded-xl p-4 flex gap-2">
                                 <input type="text" id="libraryPathInput" placeholder="/path/to/games"
                                     class="input input-bordered flex-grow" />
                                 <button class="btn btn-primary" onclick="submitNewLibraryPath()">{{ t('Save')
@@ -128,7 +128,7 @@
         </section>
 
         <!-- Titles Configuration -->
-        <section id="Titles" class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden">
+        <section id="Titles" class="card bg-base-100 shadow-xl border border-base-content/10 overflow-hidden">
             <div class="card-body">
                 <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
                     <i class="bi bi-gear-fill text-primary"></i> {{ t('Titles') }}
@@ -162,7 +162,7 @@
         </section>
 
         <!-- TitleDB Sources -->
-        <section id="TitleDB" class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden">
+        <section id="TitleDB" class="card bg-base-100 shadow-xl border border-base-content/10 overflow-hidden">
             <div class="card-body">
                 <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
                     <i class="bi bi-database-fill text-primary"></i> {{ t('TitleDB Sources') }}
@@ -188,7 +188,7 @@
                 {% endif %}
 
                 <div class="overflow-x-auto mb-6">
-                    <table class="table table-zebra table-sm w-full" id="titledbSourcesTable">
+                    <table class="table table-sm w-full" id="titledbSourcesTable">
                         <thead>
                             <tr>
                                 <th>{{ t('Name') }}</th>
@@ -203,23 +203,26 @@
                 </div>
 
                 <div class="flex flex-wrap gap-4 items-center">
-                    <div class="collapse collapse-arrow bg-base-200/50 border border-base-content/5 flex-grow">
+                    <div class="collapse collapse-arrow bg-primary/5 border border-primary/10 flex-grow">
                         <input type="checkbox" id="collapseNewSource" />
                         <div class="collapse-title font-bold">{{ t('Add custom source') }}</div>
-                        <div class="collapse-content p-4 space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input type="text" id="inputSourceName" placeholder="{{ t('Source Name') }}"
-                                    class="input input-bordered w-full" />
-                                <input type="text" id="inputSourceUrl" placeholder="https://..."
-                                    class="input input-bordered w-full" />
-                                <select id="inputSourceType" class="select select-bordered w-full">
-                                    <option value="json" selected>{{ t('JSON (Direct)') }}</option>
-                                    <option value="zip_legacy">{{ t('Legacy (ZIP)') }}</option>
-                                </select>
-                                <input type="number" id="inputSourcePriority" value="50"
-                                    class="input input-bordered w-full" />
+                        <div class="collapse-content p-4">
+                            <div class="bg-base-100/50 border border-base-content/10 rounded-xl p-4 space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <input type="text" id="inputSourceName" placeholder="{{ t('Source Name') }}"
+                                        class="input input-bordered w-full" />
+                                    <input type="text" id="inputSourceUrl" placeholder="https://..."
+                                        class="input input-bordered w-full" />
+                                    <select id="inputSourceType" class="select select-bordered w-full">
+                                        <option value="json" selected>{{ t('JSON (Direct)') }}</option>
+                                        <option value="zip_legacy">{{ t('Legacy (ZIP)') }}</option>
+                                    </select>
+                                    <input type="number" id="inputSourcePriority" value="50"
+                                        class="input input-bordered w-full" />
+                                </div>
+                                <button class="btn btn-primary w-full md:w-auto"
+                                    onclick="submitNewSource()">Add</button>
                             </div>
-                            <button class="btn btn-primary w-full md:w-auto" onclick="submitNewSource()">Add</button>
                         </div>
                     </div>
                     <button class="btn btn-neutral updateTitleDBBtn" onclick="forceTitleDBUpdate()">{{ t('Force TitleDB
@@ -240,7 +243,7 @@
         </section>
 
         <!-- Shop Configuration -->
-        <section id="Shop" class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden mb-12">
+        <section id="Shop" class="card bg-base-100 shadow-xl border border-base-content/10 overflow-hidden mb-12">
             <div class="card-body">
                 <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
                     <i class="bi bi-cart-fill text-primary"></i> {{ t('Shop') }}
@@ -526,7 +529,7 @@
             $('#publicShopCheck').prop('checked', r['shop/public']);
             $('#encryptShopCheck').prop('checked', r['shop/encrypt']);
             $('#motdTextArea').val(r['shop/motd']);
-            $('#languageSelect').val(document.cookie.match(/lang=([^;]+)/)?.[1] || 'en');
+            $('#languageSelect').val(document.cookie.match(/language=([^;]+)/)?.[1] || 'en');
             $('#useDbiVersionsCheck').prop('checked', r['shop/dbi_versions']);
         });
     });

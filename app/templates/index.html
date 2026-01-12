@@ -106,6 +106,14 @@
                     title="{{ t('List View') }}"><i class="bi bi-list-ul"></i></button>
             </div>
 
+            <!-- Type Shortcuts -->
+            <div class="join border border-base-300">
+                <button id="btnFilterBase" class="join-item btn btn-sm btn-outline px-4 transition-all"
+                    onclick="toggleTypeFilter('BASE')">BASE</button>
+                <button id="btnFilterDlc" class="join-item btn btn-sm btn-outline px-4 transition-all"
+                    onclick="toggleTypeFilter('DLC')">DLC</button>
+            </div>
+
             <!-- Items Per Page -->
             <div class="flex items-center gap-2">
                 <span class="text-xs opacity-50 font-bold uppercase tracking-wider">{{ t('Items') }}</span>
@@ -546,7 +554,7 @@
             renderGames();
         });
 
-        $('.filterLabel').change(function () {
+        $('.filterLabel input').change(function () {
             const base = $('#filterCheckBase').is(':checked');
             const dlc = $('#filterCheckDlc').is(':checked');
             const owned = $('#filterCheckOwned').is(':checked');
@@ -554,21 +562,54 @@
             const upToDate = $('#filterCheckUpToDate').is(':checked');
             const outdated = $('#filterCheckMissingUpdate').is(':checked');
 
+            // Sync shortcut buttons
+            updateShortcutButtons(base, dlc);
+
             filteredGames = games.filter(game => {
                 let show = true;
+
+                // Type Filter (Base / DLC)
                 if (base || dlc) {
                     show = (base && game.app_type === 'BASE') || (dlc && game.app_type === 'DLC');
+                } else if (!base && !dlc && (owned || missing || upToDate || outdated)) {
+                    // If no type selected but other filters are, only show BASE by default
+                    // or maybe show everything? Let's show everything if none selected.
                 }
+
+                // Ownership Filter
                 if (show && (owned || missing)) {
                     show = (owned && game.owned !== false) || (missing && game.owned === false);
                 }
-                // Update filters logic can be added here
+
+                // Update Status Filter
+                if (show && (upToDate || outdated)) {
+                    const isOutdated = game.has_latest_version === false;
+                    show = (upToDate && !isOutdated) || (outdated && isOutdated);
+                }
+
                 return show;
             });
             currentPage = 1;
             renderGames();
         });
+
     });
+
+    function toggleTypeFilter(type) {
+        const checkbox = type === 'BASE' ? $('#filterCheckBase') : $('#filterCheckDlc');
+        checkbox.prop('checked', !checkbox.is(':checked')).trigger('change');
+    }
+
+    function updateShortcutButtons(base, dlc) {
+        const btnBase = $('#btnFilterBase');
+        const btnDlc = $('#btnFilterDlc');
+
+        if (base) btnBase.addClass('btn-primary').removeClass('btn-outline');
+        else btnBase.removeClass('btn-primary').addClass('btn-outline');
+
+        if (dlc) btnDlc.addClass('btn-primary').removeClass('btn-outline');
+        else btnDlc.removeClass('btn-primary').addClass('btn-outline');
+    }
 </script>
 
 <!-- Game Details Modal -->
