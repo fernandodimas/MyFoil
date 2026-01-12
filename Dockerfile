@@ -1,28 +1,49 @@
-FROM python:3.11-alpine
+# Build stage
+FROM python:3.11-slim-bookworm AS builder
 
-# Install platform-specific build dependencies
-ARG TARGETPLATFORM
-RUN apk update && apk add --no-cache bash sudo \
-    && if [ "$TARGETPLATFORM" = "linux/arm/v6" ] || [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
-        apk add --no-cache build-base gcc musl-dev jpeg-dev zlib-dev libffi-dev cairo-dev pango-dev gdk-pixbuf-dev; \
-    fi
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-RUN mkdir /app
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libffi-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY ./app /app
-COPY ./docker/run.sh /app/run.sh
+# Install python dependencies
+WORKDIR /install
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-COPY requirements.txt /tmp/
+# Final stage
+FROM python:3.11-slim-bookworm
 
-RUN pip install --no-cache-dir --requirement /tmp/requirements.txt && rm /tmp/requirements.txt
-
-RUN if [ "$TARGETPLATFORM" = "linux/arm/v6" ] || [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
-        apk del build-base gcc musl-dev jpeg-dev zlib-dev libffi-dev cairo-dev pango-dev gdk-pixbuf-dev; \
-    fi
-
-RUN mkdir -p /app/data
+# Metadata
+LABEL maintainer="Myfoil Team"
+LABEL description="Enhanced Nintendo Switch library manager and Tinfoil Shop"
 
 WORKDIR /app
 
-ENTRYPOINT [ "/app/run.sh" ]
+# Copy dependencies from builder
+COPY --from=builder /install /usr/local
 
+# Copy application code
+COPY ./app /app
+COPY ./docker/run.sh /app/run.sh
+RUN chmod +x /app/run.sh
+
+# Environment variables
+ENV PYTHONUNBUFFERED=1
+ENV CONFIG_DIR=/app/config
+ENV DATA_DIR=/app/data
+
+# Create necessary directories
+RUN mkdir -p /app/config /app/data /games
+
+# Expose port
+EXPOSE 8465
+
+# Run the application
+ENTRYPOINT [ "/app/run.sh" ]

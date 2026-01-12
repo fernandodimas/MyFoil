@@ -1,88 +1,199 @@
-import unzip_http
-import requests
-import os, re
+"""
+TitleDB Update Module for Myfoil
+Enhanced with multiple source support and direct JSON downloads
+"""
+import os
+import json
 import logging
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, List, Optional
 
 from constants import *
-
+from titledb_sources import TitleDBSourceManager
 
 # Retrieve main logger
 logger = logging.getLogger('main')
 
-def get_region_titles_file(app_settings):
-    return f"titles.{app_settings['titles']['region']}.{app_settings['titles']['language']}.json"
-
-def download_from_remote_zip(rzf, path, store_path):
-    with rzf.open(path) as fpin:
-        with open(store_path, mode='wb') as fpout:
-            while True:
-                r = fpin.read(65536)
-                if not r:
-                    break
-                fpout.write(r)
+# Global source manager instance
+_source_manager: Optional[TitleDBSourceManager] = None
 
 
-def is_titledb_update_available(rzf):
-    update_available = False
-    local_commit_file = os.path.join(TITLEDB_DIR, '.latest')
-    remote_latest_commit_file = [ f.filename for f in rzf.infolist() if 'latest_' in f.filename ][0]
-    latest_remote_commit = remote_latest_commit_file.split('_')[-1]
+def get_source_manager() -> TitleDBSourceManager:
+    """Get or create the global source manager instance"""
+    global _source_manager
+    if _source_manager is None:
+        _source_manager = TitleDBSourceManager(CONFIG_DIR)
+    return _source_manager
 
-    if not os.path.isfile(local_commit_file):
-        logger.info('Retrieving titledb for the first time...')
-        update_available = True
-    else: 
-        with open(local_commit_file, 'r') as f:
-            current_commit = f.read()
-            
-        if current_commit == latest_remote_commit:
-            logger.info(f'Titledb already up to date, commit: {current_commit}')
-            update_available = False
-        else:
-            logger.info(f'Titledb update available, current commit: {current_commit}, latest commit: {latest_remote_commit}')
-            update_available = True
+
+def get_region_titles_file(app_settings: Dict) -> str:
+    """Get the region-specific titles filename"""
+    region = app_settings['titles']['region']
+    language = app_settings['titles']['language']
     
-    if update_available:
-        with open(local_commit_file, 'w') as f:
-            f.write(latest_remote_commit)
+    # Try both naming conventions
+    # blawar/titledb uses: titles.US.en.json
+    # Some sources use: titles.json (generic)
+    return f"titles.{region}.{language}.json"
+
+
+def get_version_hash() -> str:
+    """Get a simple version hash based on current timestamp"""
+    return datetime.now().strftime("%Y%m%d%H%M%S")
+
+
+def is_file_outdated(filepath: str, max_age_hours: int = 24) -> bool:
+    """Check if a file is older than max_age_hours"""
+    if not os.path.exists(filepath):
+        return True
     
-    return update_available
+    file_time = datetime.fromtimestamp(os.path.getmtime(filepath))
+    age = datetime.now() - file_time
+    return age.total_seconds() > (max_age_hours * 3600)
 
 
-def download_titledb_files(rzf, files):
-    for file in files:
-        store_path = os.path.join(TITLEDB_DIR, file)
-        rel_store_path = os.path.relpath(store_path, start=APP_DIR)
-        logger.info(f'Downloading {file} from remote titledb to {rel_store_path}')
-        download_from_remote_zip(rzf, file, store_path)
-
-
-def update_titledb_files(app_settings):
-    files_to_update = []
+def download_titledb_file(filename: str, force: bool = False) -> bool:
+    """
+    Download a single TitleDB file using the source manager
     
+    Args:
+        filename: Name of the file to download
+        force: Force download even if file exists and is recent
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    dest_path = os.path.join(TITLEDB_DIR, filename)
+    
+    # Check if update is needed
+    if not force and not is_file_outdated(dest_path, max_age_hours=24):
+        logger.info(f"{filename} is up to date, skipping download")
+        return True
+    
+    # Download using source manager
+    source_manager = get_source_manager()
+    success, source_name, error = source_manager.download_file(filename, dest_path)
+    
+    if success:
+        logger.info(f"Successfully downloaded {filename} from {source_name}")
+        return True
+    else:
+        logger.error(f"Failed to download {filename}: {error}")
+        return False
+
+
+def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, bool]:
+    """
+    Update all required TitleDB files
+    
+    Args:
+        app_settings: Application settings dictionary
+        force: Force update even if files are recent
+        
+    Returns:
+        Dictionary mapping filename to success status
+    """
+    results = {}
+    
+    # Core files that are always needed
+    core_files = [
+        'cnmts.json',
+        'versions.json',
+        'versions.txt',
+        'languages.json',
+    ]
+    
+    # Download core files
+    for filename in core_files:
+        logger.info(f"Updating {filename}...")
+        results[filename] = download_titledb_file(filename, force=force)
+    
+    # Download region-specific titles file
     region_titles_file = get_region_titles_file(app_settings)
-    region_titles_file_present = region_titles_file in os.listdir(TITLEDB_DIR)
-
-    r = requests.get(TITLEDB_ARTEFACTS_URL, allow_redirects = False)
-    direct_url = r.next.url
-    rzf = unzip_http.RemoteZipFile(direct_url)
+    logger.info(f"Updating {region_titles_file}...")
     
-    if is_titledb_update_available(rzf):
-        files_to_update = TITLEDB_DEFAULT_FILES + [region_titles_file]
-        old_region_titles_files = [f for f in os.listdir(TITLEDB_DIR) if re.match(r"titles\.[A-Z]{2}\.[a-z]{2}\.json", f) and f not in files_to_update]
-        files_to_update += old_region_titles_files
+    # Try region-specific file first, fallback to generic titles.json
+    if download_titledb_file(region_titles_file, force=force):
+        results[region_titles_file] = True
+    else:
+        logger.warning(f"Failed to download {region_titles_file}, trying generic titles.json")
+        if download_titledb_file('titles.json', force=force):
+            # Copy generic to region-specific
+            generic_path = os.path.join(TITLEDB_DIR, 'titles.json')
+            region_path = os.path.join(TITLEDB_DIR, region_titles_file)
+            try:
+                import shutil
+                shutil.copy2(generic_path, region_path)
+                results[region_titles_file] = True
+                logger.info(f"Using generic titles.json as {region_titles_file}")
+            except Exception as e:
+                logger.error(f"Failed to copy titles.json: {e}")
+                results[region_titles_file] = False
+        else:
+            results[region_titles_file] = False
+    
+    # Update version tracking
+    version_file = os.path.join(TITLEDB_DIR, '.latest')
+    try:
+        with open(version_file, 'w') as f:
+            f.write(get_version_hash())
+    except Exception as e:
+        logger.warning(f"Failed to update version file: {e}")
+    
+    return results
 
-    elif not region_titles_file_present:
-        files_to_update.append(region_titles_file)
 
-    if len(files_to_update):
-        download_titledb_files(rzf, files_to_update)
+def update_titledb(app_settings: Dict, force: bool = False) -> bool:
+    """
+    Main entry point for updating TitleDB
+    
+    Args:
+        app_settings: Application settings dictionary
+        force: Force update even if files are recent
+        
+    Returns:
+        True if all files updated successfully, False otherwise
+    """
+    logger.info('Updating TitleDB...')
+    
+    # Ensure TitleDB directory exists
+    os.makedirs(TITLEDB_DIR, exist_ok=True)
+    
+    # Update all files
+    results = update_titledb_files(app_settings, force=force)
+    
+    # Check results
+    success_count = sum(1 for v in results.values() if v)
+    total_count = len(results)
+    
+    if success_count == total_count:
+        logger.info(f'TitleDB update completed successfully ({success_count}/{total_count} files)')
+        return True
+    else:
+        logger.warning(f'TitleDB update completed with errors ({success_count}/{total_count} files succeeded)')
+        return False
 
 
-def update_titledb(app_settings):
-    logger.info('Updating titledb...')
-    if not os.path.isdir(TITLEDB_DIR):
-        os.makedirs(TITLEDB_DIR, exist_ok=True)
+def get_titledb_sources_status() -> List[Dict]:
+    """Get status of all configured TitleDB sources"""
+    source_manager = get_source_manager()
+    return source_manager.get_sources_status()
 
-    update_titledb_files(app_settings)
-    logger.info('titledb update done.')
+
+def add_titledb_source(name: str, base_url: str, priority: int = 50, enabled: bool = True) -> bool:
+    """Add a new TitleDB source"""
+    source_manager = get_source_manager()
+    return source_manager.add_source(name, base_url, priority, enabled)
+
+
+def remove_titledb_source(name: str) -> bool:
+    """Remove a TitleDB source"""
+    source_manager = get_source_manager()
+    return source_manager.remove_source(name)
+
+
+def update_titledb_source(name: str, **kwargs) -> bool:
+    """Update a TitleDB source"""
+    source_manager = get_source_manager()
+    return source_manager.update_source(name, **kwargs)

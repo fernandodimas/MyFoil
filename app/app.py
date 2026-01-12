@@ -428,6 +428,94 @@ def upload_file():
     return jsonify(resp)
 
 
+@app.route('/api/settings/titledb/sources', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@access_required('admin')
+def titledb_sources_api():
+    """Manage TitleDB sources"""
+    if request.method == 'GET':
+        # Get all sources and their status
+        sources = titledb.get_titledb_sources_status()
+        return jsonify({
+            'success': True,
+            'sources': sources
+        })
+    
+    elif request.method == 'POST':
+        # Add a new source
+        data = request.json
+        name = data.get('name')
+        base_url = data.get('base_url')
+        priority = data.get('priority', 50)
+        enabled = data.get('enabled', True)
+        
+        if not name or not base_url:
+            return jsonify({
+                'success': False,
+                'errors': ['Name and base_url are required']
+            })
+        
+        success = titledb.add_titledb_source(name, base_url, priority, enabled)
+        return jsonify({
+            'success': success,
+            'errors': [] if success else ['Failed to add source']
+        })
+    
+    elif request.method == 'PUT':
+        # Update an existing source
+        data = request.json
+        name = data.get('name')
+        
+        if not name:
+            return jsonify({
+                'success': False,
+                'errors': ['Name is required']
+            })
+        
+        # Build kwargs for update
+        kwargs = {}
+        if 'base_url' in data:
+            kwargs['base_url'] = data['base_url']
+        if 'priority' in data:
+            kwargs['priority'] = data['priority']
+        if 'enabled' in data:
+            kwargs['enabled'] = data['enabled']
+        
+        success = titledb.update_titledb_source(name, **kwargs)
+        return jsonify({
+            'success': success,
+            'errors': [] if success else ['Failed to update source']
+        })
+    
+    elif request.method == 'DELETE':
+        # Remove a source
+        data = request.json
+        name = data.get('name')
+        
+        if not name:
+            return jsonify({
+                'success': False,
+                'errors': ['Name is required']
+            })
+        
+        success = titledb.remove_titledb_source(name)
+        return jsonify({
+            'success': success,
+            'errors': [] if success else ['Failed to remove source']
+        })
+
+
+@app.post('/api/settings/titledb/update')
+@access_required('admin')
+def force_titledb_update_api():
+    """Force a TitleDB update"""
+    reload_conf()
+    success = titledb.update_titledb(app_settings, force=True)
+    return jsonify({
+        'success': success,
+        'errors': [] if success else ['TitleDB update failed']
+    })
+
+
 @app.route('/api/titles', methods=['GET'])
 @access_required('shop')
 def get_all_titles_api():

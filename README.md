@@ -1,78 +1,72 @@
-# Ownfoil
-[![Latest Release](https://img.shields.io/docker/v/a1ex4/ownfoil?sort=semver)](https://github.com/a1ex4/ownfoil/releases/latest)
-[![Docker Pulls](https://img.shields.io/docker/pulls/a1ex4/ownfoil)](https://hub.docker.com/r/a1ex4/ownfoil)
-[![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/a1ex4/ownfoil?sort=date&arch=amd64)](https://hub.docker.com/r/a1ex4/ownfoil/tags)  
-![Static Badge](https://img.shields.io/badge/platforms-amd64%20%7C%20%20arm64%2Fv8%20%7C%20arm%2Fv7%20%7C%20arm%2Fv6-8A2BE2)
+# Myfoil
 
-Ownfoil is a Nintendo Switch library manager, that will also turn your library into a fully customizable and self-hosted Tinfoil Shop. The goal of this project is to manage your library, identify any missing content (DLCs or updates) and provide a user friendly way to browse your content. Some of the features include:
+**Myfoil** is an enhanced fork of [Ownfoil](https://github.com/a1ex4/ownfoil) - a Nintendo Switch library manager that turns your library into a fully customizable and self-hosted Tinfoil Shop. 
 
- - multi user authentication
- - web interface for configuration
- - web interface for browsing the library
- - content identification using decryption or filename
+## ✨ Enhanced Features (vs Ownfoil)
+
+ - **🔄 Multiple TitleDB Sources**: Support for blawar/titledb, tinfoil.media, and custom sources
+ - **⚡ Faster Updates**: Direct JSON downloads instead of ZIP extraction
+ - **🎯 Smart Fallback**: Automatic failover between multiple sources
+ - **⚙️ Configurable Sources**: Manage TitleDB sources via web interface
+ - **📊 Better Caching**: Intelligent cache with configurable TTL
+
+## 🎯 Core Features
+
+ - Multi-user authentication
+ - Web interface for configuration
+ - Web interface for browsing the library
+ - Content identification using decryption or filename
  - Tinfoil shop customization
+ - Library watchdog for automatic updates
 
-The project is still in development, expect things to break or change without notice.
+> **Note**: This project is a fork under active development. Based on Ownfoil by [a1ex4](https://github.com/a1ex4/ownfoil).
 
 # Table of Contents
-- [Installation](#nstallation)
+- [Installation](#installation)
+- [Enhanced Features](#enhanced-features)
 - [Usage](#usage)
+- [TitleDB Sources](#titledb-sources)
+- [Migration from Ownfoil](#migration-from-ownfoil)
 - [Roadmap](#roadmap)
-- [Similar Projects](#similar-projects)
 
 # Installation
-## Using Docker
-### Docker run
 
-Running this command will start the shop on port `8465` with the library in `/your/game/directory` :
+## Using Python (Recommended for Development)
 
-    docker run -d -p 8465:8465 -v /your/game/directory:/games -v /your/config/directory:/app/config --name ownfoil a1ex4/ownfoil
-
-The shop is now accessible with your computer/server IP and port, i.e. `http://localhost:8465` from the same computer or `http://192.168.1.100:8465` from a device in your network.
-
-### Docker compose
-Create a file named `docker-compose.yml` with the following content:
-```
-version: "3"
-
-services:
-  ownfoil:
-    container_name: ownfoil
-    image: a1ex4/ownfoil
-   # environment:
-   #   # For write permission in config directory
-   #   - PUID=1000
-   #   - PGID=1000
-   #   # to create/update an admin user at startup
-   #   - USER_ADMIN_NAME=admin
-   #   - USER_ADMIN_PASSWORD=asdvnf!546
-   #   # to create/update a regular user at startup
-   #   - USER_GUEST_NAME=guest
-   #   - USER_GUEST_PASSWORD=oerze!@8981
-    volumes:
-      - /your/game/directory:/games
-      - ./config:/app/config
-    ports:
-      - "8465:8465"
-```
-> [!NOTE]
-> You can control the `UID` and `GID` of the user running the app in the container with the `PUID` and `PGID` environment variables. By default the user is created with `1000:1000`. If you want to have the same ownership for mounted directories, you need to set those variables with the UID and GID returned by the `id` command.
-
-You can then create and start the container with the command (executed in the same directory as the docker-compose file):
-
-    docker-compose up -d
-
-This is usefull if you don't want to remember the `docker run` command and have a persistent and reproductible container configuration.
-
-## Using Python
 Clone the repository using `git`, install the dependencies and you're good to go:
+
+```bash
+git clone https://github.com/yourusername/myfoil
+cd myfoil
+pip install -r requirements.txt
+python app/app.py
 ```
-$ git clone https://github.com/a1ex4/ownfoil
-$ cd ownfoil
-$ pip install -r requirements.txt
-$ python app/app.py
+
+The shop will be accessible at `http://localhost:8465`
+
+## Using Docker (Coming Soon)
+
+Docker images will be available soon. For now, you can build your own:
+
+```bash
+git clone https://github.com/yourusername/myfoil
+cd myfoil
+docker build -t myfoil .
+docker run -d -p 8465:8465 \
+  -v /your/game/directory:/games \
+  -v ./config:/app/config \
+  --name myfoil myfoil
 ```
-To update the app you will need to pull the latest commits.
+
+## Migration from Ownfoil
+
+Myfoil is 100% compatible with Ownfoil. Simply:
+
+1. Stop your Ownfoil instance
+2. Replace the code/image with Myfoil
+3. Start Myfoil - it will use your existing config and database
+
+All your settings, users, and library data will be preserved!
 
 ## Tinfoil setup
 In Tinfoil, add a shop with the following settings:
@@ -99,6 +93,119 @@ This is where you can also upload your `console keys` file to enable content ide
 
 ## Shop customization
 In the `Settings` page under the `Shop` section is where you customize your Shop, like the message displayed when successfully accessing the shop from Tinfoil or if the shop is private or public.
+
+# TitleDB Sources
+
+## What are TitleDB Sources?
+
+TitleDB sources provide the metadata about Switch games, updates, and DLCs. Myfoil uses this data to:
+- Identify your game files
+- Check if you have the latest updates
+- Detect missing DLCs
+- Display game names and artwork
+
+## Default Sources
+
+Myfoil comes with three pre-configured sources (in priority order):
+
+1. **blawar/titledb (GitHub)** - Priority 1 (Enabled)
+   - The original and most comprehensive source
+   - Updated frequently by the community
+   - Direct from GitHub's raw content
+
+2. **tinfoil.media** - Priority 2 (Enabled)
+   - Official Tinfoil API
+   - Reliable and fast
+   - Good fallback option
+
+3. **ownfoil/workflow (Legacy)** - Priority 99 (Disabled)
+   - Original Ownfoil ZIP-based source
+   - Kept for compatibility
+   - Slower than direct sources
+
+## How It Works
+
+When Myfoil needs to update TitleDB:
+
+1. It tries the **highest priority enabled source** first
+2. If that fails (timeout, rate limit, etc.), it tries the **next source**
+3. This continues until a source succeeds or all fail
+4. Files are cached for 24 hours to reduce bandwidth
+
+## Managing Sources via API
+
+### Get All Sources
+```bash
+curl http://localhost:8465/api/settings/titledb/sources \
+  -H "Authorization: Basic YWRtaW46cGFzc3dvcmQ="
+```
+
+### Add a Custom Source
+```bash
+curl -X POST http://localhost:8465/api/settings/titledb/sources \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Basic YWRtaW46cGFzc3dvcmQ=" \
+  -d '{
+    "name": "My Mirror",
+    "base_url": "https://my-server.com/titledb",
+    "priority": 5,
+    "enabled": true
+  }'
+```
+
+### Update a Source
+```bash
+curl -X PUT http://localhost:8465/api/settings/titledb/sources \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Basic YWRtaW46cGFzc3dvcmQ=" \
+  -d '{
+    "name": "blawar/titledb (GitHub)",
+    "enabled": false
+  }'
+```
+
+### Remove a Source
+```bash
+curl -X DELETE http://localhost:8465/api/settings/titledb/sources \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Basic YWRtaW46cGFzc3dvcmQ=" \
+  -d '{
+    "name": "My Mirror"
+  }'
+```
+
+### Force Update
+```bash
+curl -X POST http://localhost:8465/api/settings/titledb/update \
+  -H "Authorization: Basic YWRtaW46cGFzc3dvcmQ="
+```
+
+## Creating Your Own Source
+
+To host your own TitleDB mirror:
+
+1. Clone blawar/titledb: `git clone https://github.com/blawar/titledb`
+2. Serve the files via HTTP/HTTPS
+3. Add your source to Myfoil with the base URL
+4. Required files:
+   - `cnmts.json` - Content metadata
+   - `versions.json` - Version information
+   - `versions.txt` - Version list
+   - `languages.json` - Language mappings
+   - `titles.{REGION}.{LANG}.json` - Game titles (e.g., `titles.US.en.json`)
+
+## Troubleshooting
+
+**Updates failing?**
+- Check source status in the API response
+- Look at `last_error` field for each source
+- Try forcing an update
+- Verify your internet connection
+
+**Want faster updates?**
+- Disable slower sources
+- Adjust priorities (lower number = higher priority)
+- Host your own mirror closer to your server
 
 # Roadmap
 Planned feature, in no particular order.

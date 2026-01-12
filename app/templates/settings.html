@@ -244,6 +244,59 @@
                 </div>
                 </form>
                 <hr>
+                <h2 id="TitleDB" class="pb-3">TitleDB Sources</h2>
+                <p>Manage TitleDB metadata sources and priorities.</p>
+
+                <table class="table table-hover caption-top" id="titledbSourcesTable">
+                    <caption>List of sources:</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Name</th>
+                            <th scope="col">Base URL</th>
+                            <th scope="col">Priority</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-auto">
+                        <button class="btn btn-primary" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#collapseNewSource" aria-expanded="false" aria-controls="collapseNewSource">
+                            Add custom source
+                        </button>
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-primary updateTitleDBBtn" onClick='forceTitleDBUpdate()'>
+                            Force TitleDB Update
+                        </button>
+                    </div>
+                </div>
+
+                <div class="collapse mb-3" id="collapseNewSource">
+                    <div class="card card-body">
+                        <label class="form-label">Add a new TitleDB source:</label>
+                        <form class="row g-3">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" id="inputSourceName" placeholder="Source Name">
+                            </div>
+                            <div class="col-md-5">
+                                <input type="text" class="form-control" id="inputSourceUrl" placeholder="https://example.com/titledb">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control" id="inputSourcePriority" placeholder="Priority" value="50">
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-primary" onClick='submitNewSource()'>Add</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <hr>
 
                 <h2 class="pb-3">Shop</h2>
                 <!-- Shop URL -->
@@ -417,6 +470,114 @@
             });
         })
 
+    }
+
+    function fillTitleDBSourcesTable() {
+        $('#titledbSourcesTable tbody').empty();
+        $.getJSON("/api/settings/titledb/sources", function (result) {
+            if (result.success === false) return;
+            
+            result.forEach(source => {
+                const statusBadge = source.enabled ? 
+                    '<span class="badge bg-success">Enabled</span>' : 
+                    '<span class="badge bg-secondary">Disabled</span>';
+                
+                const lastSuccess = source.last_success ? 
+                    new Date(source.last_success).toLocaleString() : 
+                    '<span class="text-muted">Never</span>';
+                
+                const errorStr = source.last_error ? 
+                    `<br><small class="text-danger">${source.last_error}</small>` : '';
+
+                const toggleBtn = source.enabled ? 
+                    `<button type="button" class="btn btn-outline-warning btn-sm" onclick="toggleSource('${source.name}', false)"><i class="bi bi-pause-fill"></i></button>` :
+                    `<button type="button" class="btn btn-outline-success btn-sm" onclick="toggleSource('${source.name}', true)"><i class="bi bi-play-fill"></i></button>`;
+
+                $('#titledbSourcesTable tbody').append(
+                    `<tr>
+                        <td><strong>${source.name}</strong></td>
+                        <td><small>${source.base_url}</small></td>
+                        <td>${source.priority}</td>
+                        <td>${statusBadge}<br><small class="text-muted">Last: ${lastSuccess}</small>${errorStr}</td>
+                        <td>
+                            ${toggleBtn}
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteSource('${source.name}')"><i class="bi bi-x-circle"></i></button>
+                        </td>
+                    </tr>`
+                );
+            });
+        });
+    }
+
+    function toggleSource(name, enabled) {
+        $.ajax({
+            url: "/api/settings/titledb/sources",
+            type: 'PUT',
+            data: JSON.stringify({ name: name, enabled: enabled }),
+            contentType: "application/json",
+            success: function (result) {
+                if (result.success) fillTitleDBSourcesTable();
+            }
+        });
+    }
+
+    function deleteSource(name) {
+        if (!confirm(`Delete TitleDB source "${name}"?`)) return;
+        $.ajax({
+            url: "/api/settings/titledb/sources",
+            type: 'DELETE',
+            data: JSON.stringify({ name: name }),
+            contentType: "application/json",
+            success: function (result) {
+                if (result.success) fillTitleDBSourcesTable();
+            }
+        });
+    }
+
+    function submitNewSource() {
+        const name = $('#inputSourceName').val().trim();
+        const url = $('#inputSourceUrl').val().trim();
+        const priority = parseInt($('#inputSourcePriority').val());
+
+        if (!name || !url) return;
+
+        $.ajax({
+            url: "/api/settings/titledb/sources",
+            type: 'POST',
+            data: JSON.stringify({ name: name, base_url: url, priority: priority, enabled: true }),
+            contentType: "application/json",
+            success: function (result) {
+                if (result.success) {
+                    $('#inputSourceName').val('');
+                    $('#inputSourceUrl').val('');
+                    $('#collapseNewSource').collapse('hide');
+                    fillTitleDBSourcesTable();
+                } else {
+                    alert('Error adding source: ' + (result.errors ? result.errors.join(', ') : 'Unknown error'));
+                }
+            }
+        });
+    }
+
+    function forceTitleDBUpdate() {
+        $('.updateTitleDBBtn').prop('disabled', true).text('Updating...');
+        $.ajax({
+            url: "/api/settings/titledb/update",
+            type: 'POST',
+            success: function (result) {
+                if (result.success) {
+                    alert('TitleDB update started successfully!');
+                } else {
+                    alert('Error starting update: ' + result.errors.join(', '));
+                }
+                $('.updateTitleDBBtn').prop('disabled', false).text('Force TitleDB Update');
+                fillTitleDBSourcesTable();
+            },
+            error: function() {
+                alert('Connection error');
+                $('.updateTitleDBBtn').prop('disabled', false).text('Force TitleDB Update');
+            }
+        });
     }
 
     const deletePathModal = $('#deletePathModal')
@@ -686,6 +847,7 @@
     $(document).ready(function () {
         fillUserTable();
         fillLibraryTable();
+        fillTitleDBSourcesTable();
 
         $.getJSON("/api/settings", function (result) {
             Object.keys(languages).forEach(function (key) {

@@ -1,22 +1,23 @@
-version: "3"
+version: "3.8"
 
 services:
-  ownfoil:
-    container_name: ownfoil
-    image: a1ex4/ownfoil:latest
+  myfoil:
+    container_name: myfoil
+    build: .
+    image: myfoil/myfoil:latest
+    restart: unless-stopped
     environment:
-      # For write permission in config directory
       - PUID=1000
       - PGID=1000
-      # to create/update an admin user at startup
-      # - USER_ADMIN_NAME=admin
-      # - USER_ADMIN_PASSWORD=asdvnf!546
-      # to create/update a regular user at startup
-      # - USER_GUEST_NAME=guest
-      # - USER_GUEST_PASSWORD=oerze!@8981
+      - TZ=UTC
     volumes:
-      - /your/game/directory:/games
+      - /path/to/your/games:/games
       - ./config:/app/config
       - ./data:/app/data
     ports:
       - "8465:8465"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8465/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

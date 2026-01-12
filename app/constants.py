@@ -11,8 +11,11 @@ LIBRARY_CACHE_FILE = os.path.join(CACHE_DIR, 'library.json')
 ALEMBIC_DIR = os.path.join(APP_DIR, 'migrations')
 ALEMBIC_CONF = os.path.join(ALEMBIC_DIR, 'alembic.ini')
 TITLEDB_DIR = os.path.join(DATA_DIR, 'titledb')
-TITLEDB_URL = 'https://github.com/blawar/titledb.git'
-TITLEDB_ARTEFACTS_URL = 'https://nightly.link/a1ex4/ownfoil/workflows/region_titles/master/titledb.zip'
+
+# Legacy constants kept for reference
+# TITLEDB_URL = 'https://github.com/blawar/titledb.git'
+# TITLEDB_ARTEFACTS_URL = 'https://nightly.link/a1ex4/ownfoil/workflows/region_titles/master/titledb.zip'
+
 TITLEDB_DEFAULT_FILES = [
     'cnmts.json',
     'versions.json',
