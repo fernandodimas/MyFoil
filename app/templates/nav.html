@@ -17,10 +17,6 @@
                         href="/settings">{{ t('Settings') }}</a>
                 </li>
                 {% endif %}
-                <li class="nav-item">
-                    <a class="nav-link{% if title == 'Setup' %} active" aria-current="page" {% else %}"{% endif %}"
-                        href="#">{{ t('Setup') }}</a>
-                </li>
             </ul>
             {% if current_user.is_authenticated %}
             <ul class="navbar-nav ms-auto">
