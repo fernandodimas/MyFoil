@@ -75,9 +75,15 @@ class TitleDBSourceManager:
             source_type='json'
         ),
         TitleDBSource(
+            name="bottle/titledb (GitHub)",
+            base_url="https://raw.githubusercontent.com/Big-On-The-Bottle/titledb/main",
+            priority=3,
+            source_type='json'
+        ),
+        TitleDBSource(
             name="tinfoil.media",
             base_url="https://tinfoil.media/repo/db",
-            priority=3,
+            priority=4,
             source_type='json'
         )
     ]

@@ -150,10 +150,11 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
         logger.error("No active TitleDB sources configured")
         return {}
 
-    source = active_sources[0] # Try the highest priority source
-    logger.info(f"Using TitleDB source: {source.name} (Type: {source.source_type})")
+    for source in active_sources:
+        logger.info(f"Attempting update using source: {source.name} (Type: {source.source_type})")
+        results = {}
 
-    if source.source_type == 'zip_legacy':
+        if source.source_type == 'zip_legacy':
         # --- ORIGINAL PROJECT LOGIC FOR LEGACY ZIP ---
         try:
             r = requests.get(source.base_url, allow_redirects=False, timeout=10)
@@ -230,12 +231,12 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
                     results[f] = True
             
             source_manager.save_sources()
+            return results # Success!
         except Exception as e:
-            logger.error(f"Legacy update failed: {e}")
+            logger.error(f"Legacy update from {source.name} failed: {e}")
             source.last_error = str(e)
             source_manager.save_sources()
-            # If legacy fails, we don't automatedly fallback to JSON here to keep it simple and predictable
-            return {}
+            continue # Try next source
 
     else:
         # --- NEW JSON MULTI-SOURCE LOGIC ---
@@ -248,17 +249,16 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
         download_titledb_file("titles.json", force=force, silent_404=True)
         
         region_titles_file = get_region_titles_file(app_settings)
-        if download_titledb_file(region_titles_file, force=force, silent_404=True):
-            results[region_titles_file] = True
+        if all(results.get(f) for f in core_files):
+            source.last_success = datetime.now()
+            source.last_error = None
+            source_manager.save_sources()
+            return results
         else:
-            # Fallback to US/en for JSON sources
-            if download_titledb_file("titles.US.en.json", force=force, silent_404=True):
-                shutil.copy2(os.path.join(TITLEDB_DIR, "titles.US.en.json"), os.path.join(TITLEDB_DIR, region_titles_file))
-                results[region_titles_file] = True
-            else:
-                results[region_titles_file] = download_titledb_file('titles.json', force=force)
-
-    return results
+            logger.warning(f"JSON source {source.name} failed to provide core files.")
+            continue
+            
+    return {}
 
 
 def update_titledb(app_settings: Dict, force: bool = False) -> bool:
