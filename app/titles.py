@@ -31,6 +31,24 @@ _titles_db = None
 _versions_db = None
 _versions_txt_db = None
 
+def robust_json_load(filepath):
+    """Reliably load JSON files even with invalid escape sequences or control characters."""
+    try:
+        with open(filepath, encoding='utf-8', errors='ignore') as f:
+            # First try: Standard load
+            return json.load(f)
+    except json.JSONDecodeError:
+        try:
+            with open(filepath, encoding='utf-8', errors='ignore') as f:
+                # Second try: Non-strict load (allows control characters)
+                return json.loads(f.read(), strict=False)
+        except Exception as e:
+            logger.error(f"Critical error loading JSON {filepath}: {e}")
+            return {}
+    except Exception as e:
+        logger.error(f"Unexpected error opening {filepath}: {e}")
+        return {}
+
 def getDirsAndFiles(path):
     entries = os.listdir(path)
     allFiles = []
@@ -148,23 +166,26 @@ def load_titledb():
     if not _titles_db_loaded:
         logger.info("Loading TitleDBs into memory...")
         app_settings = load_settings()
-        with open(os.path.join(TITLEDB_DIR, 'cnmts.json'), encoding='utf-8', errors='ignore') as f:
-            _cnmts_db = json.load(f)
-
-        with open(os.path.join(TITLEDB_DIR, titledb.get_region_titles_file(app_settings)), encoding='utf-8', errors='ignore') as f:
-            _titles_db = json.load(f)
-
-        with open(os.path.join(TITLEDB_DIR, 'versions.json'), encoding='utf-8', errors='ignore') as f:
-            _versions_db = json.load(f)
+        
+        _cnmts_db = robust_json_load(os.path.join(TITLEDB_DIR, 'cnmts.json'))
+        _titles_db = robust_json_load(os.path.join(TITLEDB_DIR, titledb.get_region_titles_file(app_settings)))
+        _versions_db = robust_json_load(os.path.join(TITLEDB_DIR, 'versions.json'))
 
         _versions_txt_db = {}
-        with open(os.path.join(TITLEDB_DIR, 'versions.txt'), encoding='utf-8', errors='ignore') as f:
-            for line in f:
-                line_strip = line.rstrip("\n")
-                app_id, rightsId, version = line_strip.split('|')
-                if not version:
-                    version = "0"
-                _versions_txt_db[app_id] = version
+        try:
+            with open(os.path.join(TITLEDB_DIR, 'versions.txt'), encoding='utf-8', errors='ignore') as f:
+                for line in f:
+                    line_strip = line.rstrip("\n")
+                    if '|' in line_strip:
+                        parts = line_strip.split('|')
+                        if len(parts) >= 3:
+                            app_id, rightsId, version = parts[0], parts[1], parts[2]
+                            if not version:
+                                version = "0"
+                            _versions_txt_db[app_id] = version
+        except Exception as e:
+            logger.warning(f"Error loading versions.txt: {e}")
+
         _titles_db_loaded = True
         logger.info("TitleDBs loaded.")
 
