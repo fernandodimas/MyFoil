@@ -174,7 +174,7 @@
         </div>
 
         <div class="col-auto">
-            <input type="text" id="textFilter" class="form-control" placeholder="Search titles...">
+            <input type="text" id="textFilter" class="form-control" placeholder="{{ t('Search titles...') }}">
         </div>
         <div class="col-auto">
             <div class="btn-group" role="group" aria-label="View toggle">
@@ -196,7 +196,7 @@
             <div class="btn-group dropdown-center" role="group">
                 <button id="itemsPerPageDropdownBtn" type="button" class="btn btn-primary dropdown-toggle"
                     data-bs-toggle="dropdown" aria-expanded="false">
-                    Items per page
+                    {{ t('Items per page') }}
                 </button>
                 <ul class="dropdown-menu" aria-labelledby="itemsPerPageDropdownBtn">
                     <li><button class="dropdown-item items-per-page" data-value="9">9</button></li>
@@ -382,7 +382,7 @@
 
         start = (currentPage - 1) * itemsPerPage
         end = start + itemsPerPage
-        paginatedGames = filteredGames.slice(start, end);
+        paginatedGames = filteredGames.slice(start, end); // Show ALL games, not just BASE
 
         const table = $('<table class="table table-hover align-middle"><thead><tr><th scope="col" width="60">Icon</th><th scope="col">Title</th><th scope="col">ID</th><th scope="col">Type</th><th scope="col">Version</th></tr></thead><tbody></tbody></table>');
 
@@ -395,8 +395,19 @@
             const typeBadgeClass = (game.owned === false) ? 'text-bg-warning' : 'text-bg-info';
             row.append($('<td></td>').append($(`<span class="badge ${typeBadgeClass}"></span>`).text(game.app_type)));
 
+            // Show latest downloaded version if array, otherwise single version
             let ver = 'v' + game.version;
-            if (Array.isArray(game.version)) { ver = 'Multiple'; }
+            if (Array.isArray(game.version) && game.version.length > 0) {
+                // Find the latest owned version
+                const ownedVersions = game.version.filter(v => v.owned);
+                if (ownedVersions.length > 0) {
+                    // Sort by version number descending and take first
+                    ownedVersions.sort((a, b) => parseInt(b.version) - parseInt(a.version));
+                    ver = 'v' + ownedVersions[0].version;
+                } else {
+                    ver = 'Multiple';
+                }
+            }
             row.append($('<td></td>').text(ver));
 
             table.find('tbody').append(row);

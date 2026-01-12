@@ -257,14 +257,16 @@
                     <i class="bi {{ 'bi-check-circle-fill' if active_source.is_updated else 'bi-exclamation-triangle-fill' }} flex-shrink-0 me-2"
                         style="font-size: 1.5rem;"></i>
                     <div>
-                        <strong>Current Active Source:</strong> {{ active_source.name }}
+                        <strong>{{ t('Current Active Source') }}:</strong> {{ active_source.name }}
                         <div class="small">
-                            Last local update: {{ active_source.time_since }} ago
-                            {% if active_source.is_updated %} (Up to date){% else %} (Outdated){% endif %}
+                            {{ t('Last local update') }}: {{ active_source.time_since }} {{ t('ago') }}
+                            {% if active_source.is_updated %} ({{ t('Up to date') }}){% else %} ({{ t('Outdated') }}){%
+                            endif %}
                             <br>
-                            Remote Source Date: {{ active_source.remote_date }}
+                            {{ t('Remote Source Date') }}: {{ active_source.remote_date }}
                             <br>
-                            <strong>Loaded Titles File:</strong> <code>{{ active_source.loaded_titles_file }}</code>
+                            <strong>{{ t('Loaded Titles File') }}:</strong>
+                            <code>{{ active_source.loaded_titles_file }}</code>
                         </div>
                     </div>
                 </div>
@@ -272,8 +274,8 @@
                 <div class="alert alert-secondary d-flex align-items-center" role="alert">
                     <i class="bi bi-info-circle-fill flex-shrink-0 me-2" style="font-size: 1.5rem;"></i>
                     <div>
-                        <strong>No TitleDB source active</strong>
-                        <div class="small">Run an update to populate TitleDB status.</div>
+                        <strong>{{ t('No TitleDB source active') }}</strong>
+                        <div class="small">{{ t('Run an update to populate TitleDB status') }}.</div>
                     </div>
                 </div>
                 {% endif %}
