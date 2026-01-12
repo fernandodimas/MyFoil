@@ -1,35 +1,59 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-
-    <div class="row d-flex flex-column min-vh-100 justify-content-center align-items-center">
-        <div class="col-sm-4">
-
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Login</h5>
-
-
-                    <form method="POST" action="/login">
-                        <div class="mb-3">
-                            <label for="exampleInputEmail1" class="form-label">Username</label>
-                            <input class="form-control" name="user" id="exampleInputEmail1" placeholder="User"
-                                aria-describedby="emailHelp">
-                        </div>
-                        <div class="mb-3">
-                            <label for="exampleInputPassword1" class="form-label">Password</label>
-                            <input type="password" name="password" class="form-control" id="exampleInputPassword1">
-                        </div>
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" name="remember" class="form-check-input" id="exampleCheck1">
-                            <label class="form-check-label" for="exampleCheck1">Remember me</label>
-                        </div>
-                        <input type="hidden" name="next" value="{{ request.args.get('next', '') }}" />
-                        <button type="submit" class="btn btn-primary">Login</button>
-                    </form>
+<div class="min-h-screen flex items-center justify-center bg-base-200">
+    <div class="card w-full max-w-md bg-base-100 shadow-2xl border border-base-300">
+        <div class="card-body p-8">
+            <div class="flex flex-col items-center mb-6">
+                <div
+                    class="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-primary-content mb-4 shadow-lg">
+                    <i class="bi bi-box-seam-fill text-3xl"></i>
                 </div>
+                <h2 class="card-title text-3xl font-bold tracking-tighter">MyFoil</h2>
+                <p class="text-sm opacity-50">{{ t('Login') }}</p>
             </div>
+
+            <form method="POST" action="/login" class="space-y-6">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">{{ t('Username') }}</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none opacity-50">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <input type="text" name="user" placeholder="{{ t('Username') }}"
+                            class="input input-bordered w-full pl-10 focus:input-primary" required />
+                    </div>
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">{{ t('Password') }}</span>
+                    </label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none opacity-50">
+                            <i class="bi bi-lock-fill"></i>
+                        </div>
+                        <input type="password" name="password" placeholder="{{ t('Password') }}"
+                            class="input input-bordered w-full pl-10 focus:input-primary" required />
+                    </div>
+                </div>
+
+                <div class="form-control">
+                    <label class="label cursor-pointer justify-start gap-3">
+                        <input type="checkbox" name="remember" class="checkbox checkbox-primary checkbox-sm"
+                            id="remember" />
+                        <span class="label-text">{{ t('Remember me') }}</span>
+                    </label>
+                </div>
+
+                <input type="hidden" name="next" value="{{ request.args.get('next', '') }}" />
+
+                <button type="submit" class="btn btn-primary w-full shadow-lg h-12">
+                    {{ t('Login') }}
+                </button>
+            </form>
         </div>
     </div>
 </div>

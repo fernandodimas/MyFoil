@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en" data-theme="night">
 
 <head>
     <meta charset="utf-8">
@@ -9,34 +9,45 @@
     {%else%}
     <title>MyFoil</title>
     {%endif%}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-4bw+/aepP/YC94hEpVNVgiZdgIC5+VKNBQNGCHeKRQN+PtmoHDEXuppvnDJzQIu9" crossorigin="anonymous">
+
+    <!-- Tailwind CSS & daisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-HwwvtgBNo3bZJJLYd8oVXjrBZt8cqVSpeBNS5n7C8IVInixGAoxmnlMuBnhbgrkm"
-        crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#570df8',
+                    }
+                }
+            }
+        }
+    </script>
 </head>
 
-<body>
+<body class="min-h-screen bg-base-200 text-base-content antialiased">
     {% block content %}
     {% endblock %}
 
-
-    <footer class="p-3 text-center text-secondary mt-5" style="font-size: 0.8rem;">
+    <footer class="py-10 text-center opacity-50 text-xs">
         MyFoil Build: {{ build_version }}
     </footer>
 
     <script>
-        // Theme toggle functionality
+        // Theme toggle functionality for daisyUI
         function toggleTheme() {
             const html = document.documentElement;
-            const currentTheme = html.getAttribute('data-bs-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            html.setAttribute('data-bs-theme', newTheme);
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'night' ? 'light' : 'night';
+            html.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
             updateThemeIcon(newTheme);
         }
@@ -44,7 +55,7 @@
         function updateThemeIcon(theme) {
             const icon = document.querySelector('#themeToggle i');
             if (icon) {
-                if (theme === 'dark') {
+                if (theme === 'night') {
                     icon.className = 'bi bi-moon-stars-fill';
                 } else {
                     icon.className = 'bi bi-sun-fill';
@@ -56,13 +67,13 @@
         document.addEventListener('DOMContentLoaded', function () {
             const savedTheme = localStorage.getItem('theme');
             if (savedTheme) {
-                document.documentElement.setAttribute('data-bs-theme', savedTheme);
+                document.documentElement.setAttribute('data-theme', savedTheme);
                 updateThemeIcon(savedTheme);
             } else {
                 // Default to system preference
                 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                const defaultTheme = prefersDark ? 'dark' : 'light';
-                document.documentElement.setAttribute('data-bs-theme', defaultTheme);
+                const defaultTheme = prefersDark ? 'night' : 'light';
+                document.documentElement.setAttribute('data-theme', defaultTheme);
                 updateThemeIcon(defaultTheme);
             }
         });

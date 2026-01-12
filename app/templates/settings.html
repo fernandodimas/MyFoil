@@ -2,1002 +2,521 @@
 {% block content %}
 {% include 'nav.html' %}
 
-<div class="container-fluid setting-body">
-    <div class="row">
-        <div class="col">
-            <div class="settings-container container mt-3">
+<div class="container mx-auto px-4 py-8 max-w-5xl">
 
-                <!-- <h1>Settings</h1> -->
-
-                {% if admin_account_created == false %}
-                <div class="alert alert-danger" role="alert">
-                    <h4 class="alert-heading">Missing admin account!</h4>
-                    <p>MyFoil requires an admin account to enable authentication. Until an account with admin rights is
-                        created, <strong>authentication is disabled, anyone can access and change the configuration of
-                            your shop!</strong>
-                        <br>
-                        Add an admin account <a href="/settings#Authentication" class="alert-link">here under
-                            Authentication</a>.
-                    </p>
-                </div>
-                {% endif %}
-
-                {% if valid_keys == false %}
-                <div id="missingKeysAlert" class="alert alert-warning alert-dismissible fade show" role="alert">
-                    <h4 class="alert-heading">Missing console keys!</h4>
-                    Console keys are required to decrypt any Nintendo content, including
-                    backups. MyFoil uses this to identify files, regardless of the filename.</br>
-                    <strong>Titles will be missed or misidentified if you don't fill in your keys!</strong>
-                    See <a target="_blank"
-                        href="https://gitlab.com/easyhacking/switch/-/wikis/home/getting-started/dump-keys"
-                        class="alert-link">this guide</a> on
-                    how to extract the
-                    keys from your console, and upload them <a href="/settings#consoleKeysInput" class="alert-link">here
-                        in MyFoil.</a>
-                    <hr>
-                    If keys are missing, all files <strong>must follow the format "Title Name
-                        [TITLEID][vVERSION]"</strong>, else the file won't be recognized.
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                {% endif %}
-
-                <div id="missingShopHostAlert" class="alert alert-warning alert-dismissible fade show" role="alert"
-                    style="display: none;">
-                    <h4 class="alert-heading">Missing shop Host!</h4>
-                    Host verification from outside the local network is disabled if the shop <code>Host</code> is
-                    missing, configure it <a href="/settings#shopHostInput" class="alert-link">here
-                        in MyFoil</a> to prevent someone else stealing from your shop.
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-
-                <div id="missingShopHauthAlert" class="alert alert-warning alert-dismissible fade show" role="alert"
-                    style="display: none;">
-                    <h4 class="alert-heading">Missing shop Hauth!</h4>
-                    <a href="https://blawar.github.io/tinfoil/network/#host-signature" class="alert-link"
-                        target="_blank">Host signature</a> verification from outside the local network is disabled if
-                    the shop <code>Hauth</code> is missing. Connect to the shop from Tinfoil with an admin account to
-                    set it.
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-
-                <h2 id="Authentication" class="pb-3">Authentication</h2>
-
-                <table class="table table-hover caption-top" id="userTable">
-                    <caption>List of users:</caption>
-                    <thead>
-                        <tr>
-                            <th scope="col">{{ t('User') }}</th>
-                            <th scope="col">{{ t('Permissions') }}</th>
-                            <th scope="col">{{ t('Actions') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-
-                <p class="d-inline-flex gap-1">
-                    <button class="btn btn-primary" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#collapseNewUser" aria-expanded="false" aria-controls="collapseNewUser">
-                        {{ t('Add new user') }}
-                    </button>
-                </p>
-                <div class="collapse" id="collapseNewUser">
-                    <div class="card card-body">
-                        <label class="form-label">{{ t('Add a new user') }}:</label>
-                        <form class="row g-3">
-                            <div class="col-auto">
-                                <label for="inputNewUser" class="visually-hidden">{{ t('Email') }}</label>
-                                <input type="text" class="form-control" id="inputNewUser"
-                                    placeholder="{{ t('Username') }}">
-                            </div>
-                            <div class="col-auto">
-                                <label for="inputNewUserPassword" class="visually-hidden">{{ t('Password') }}</label>
-                                <input type="password" class="form-control" id="inputNewUserPassword"
-                                    placeholder="{{ t('Password') }}">
-                            </div>
-                            <div class="col-auto p-2">
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" id="checkboxNewUserShopAccess"
-                                        checked>
-                                    <label class="form-check-label" for="checkboxNewUserShopAccess">{{ t('Shop Access')
-                                        }}</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" id="checkboxNewUserBackupAccess">
-                                    <label class="form-check-label" for="checkboxNewUserBackupAccess">{{ t('Backup
-                                        Access') }}</label>
-                                </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="checkbox" id="checkboxNewUserAdminAccess">
-                                    <label class="form-check-label" for="checkboxNewUserAdminAccess">{{ t('Admin
-                                        Access') }}</label>
-                                </div>
-                            </div>
-                            <div class="col-auto">
-                                <button type="button" class="btn btn-primary mb-3" onClick='submitNewUser()'>{{
-                                    t('Submit') }}</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Delete User Modal -->
-                <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel"
-                    aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h1 class="modal-title fs-5" id="deleteUserModalLabel">{{ t('Delete user') }}</h1>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                    aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                ...
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('Cancel')
-                                    }}</button>
-                                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">{{ t('Delete')
-                                    }}</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <hr>
-
-                <h2 class="pb-3">{{ t('Library') }}</h2>
-
-                <label class="form-label">{{ t('Library paths') }}:</label>
-                <div id="libraryPathHelp" class="form-text">{{ t('Path of directory containing your games') }}.</div>
-                <table class="table table-hover caption-top" id="pathsTable">
-                    <thead>
-                        <tr>
-                            <th scope="col">{{ t('Path') }}</th>
-                            <th scope="col">{{ t('Actions') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-
-                <!-- Library buttons -->
-                <div class="row g-3">
-                    <div class="col-auto">
-                        <button class="btn btn-primary" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#collapseNewPath" aria-expanded="false" aria-controls="collapseNewPath">
-                            {{ t('Add library path') }}
-                        </button>
-                    </div>
-
-                    <div class="col-auto">
-                        <button type="button" class="btn btn-primary mb-3 scanBtn" onClick='scanLibrary()'>Scan
-                            library</button>
-                    </div>
-                </div>
-
-                <div class="collapse" id="collapseNewPath">
-                    <div class="card card-body">
-                        <label class="form-label">Add a new directory:</label>
-                        <div class="row g-3">
-                            <div class="col-6">
-                                <input type="text" class="form-control" id="libraryPathInput" placeholder="Path">
-                            </div>
-                            <div class="col-auto">
-                                <button type="button" id="submitNewLibraryPathBtn" class="btn btn-primary mb-3"
-                                    onClick='submitNewLibraryPath()'>Submit</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Delete User Modal -->
-                <div class="modal fade" id="deletePathModal" tabindex="-1" aria-labelledby="deletePathModalLabel"
-                    aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h1 class="modal-title fs-5" id="deletePathModalLabel">{{ t('Delete library path') }}
-                                </h1>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                    aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                ...
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">Delete</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <hr>
-                <h2 class="pb-3">Titles</h2>
-                <p>Titles identification configuration.</p>
-                <div class="row mb-3">
-                    <div class="col">
-                        <label for="selectRegion" class="form-label">{{ t('Library Region') }}:</label>
-                        <select id="selectRegion" class="form-select" aria-label="Select library region">
-                        </select>
-                    </div>
-                    <div class="col">
-                        <label for="selectLanguage" class="form-label">{{ t('Library Language') }}:</label>
-                        <select id="selectLanguage" class="form-select" aria-label="Select library language">
-                        </select>
-                    </div>
-                    <div id="selectRegionLanguageHelp" class="form-text">{{ t('Region and Language used to get games
-                        informations') }}.</div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="consoleKeysInput" class="form-label">{{ t('Console keys') }}:</label>
-                    <input class="form-control {% if valid_keys == true %}is-valid{% endif %}" type="file"
-                        accept=".keys,.txt" id="consoleKeysInput">
-                    <div class="valid-feedback">
-                        {{ t('Keys are valid') }}
-                    </div>
-                    <div id="invalidConsoleKeysFeedback" class="invalid-feedback">
-                        {{ t('Invalid keys file') }}
-                    </div>
-                    <div id="consoleKeysHelp" class="form-text">{{ t('Tinfoil/MyFoil uses this to identify files') }}.
-                    </div>
-                </div>
-
-                <div class="mb-3 form-check">
-                    <input type="checkbox" class="form-check-input" id="useDbiVersionsCheck"
-                        aria-describedby="useDbiVersionsCheckHelp">
-                    <label class="form-check-label" for="useDbiVersionsCheck">{{ t('Fetch updates from DBI database')
-                        }}</label>
-                    <div id="useDbiVersionsCheckHelp" class="form-text">{{ t('Use DBI versions database instead of
-                        TitleDB for updates and DLCs') }}.</div>
-                </div>
-
-                <div class="mb-3">
-                    <button type="button" id="submitTitlesSettingsBtn" class="btn btn-primary"
-                        onClick='submitTitlesSettings()'>{{ t('Submit') }}</button>
-                </div>
-                </form>
-                <hr>
-                <h2 id="TitleDB" class="pb-3">{{ t('TitleDB Sources') }}</h2>
-                <p>{{ t('Manage TitleDB metadata sources and priorities') }}.</p>
-
-                {% if active_source %}
-                <div class="alert {{ 'alert-success' if active_source.is_updated else 'alert-warning' }} d-flex align-items-center"
-                    role="alert">
-                    <i class="bi {{ 'bi-check-circle-fill' if active_source.is_updated else 'bi-exclamation-triangle-fill' }} flex-shrink-0 me-2"
-                        style="font-size: 1.5rem;"></i>
-                    <div>
-                        <strong>{{ t('Current Active Source') }}:</strong> {{ active_source.name }}
-                        <div class="small">
-                            {{ t('Last local update') }}: {{ active_source.time_since }} {{ t('ago') }}
-                            {% if active_source.is_updated %} ({{ t('Up to date') }}){% else %} ({{ t('Outdated') }}){%
-                            endif %}
-                            <br>
-                            {{ t('Remote Source Date') }}: {{ active_source.remote_date }}
-                            <br>
-                            <strong>{{ t('Loaded Titles File') }}:</strong>
-                            <a href="/static/titledb/{{ active_source.loaded_titles_file }}" target="_blank"
-                                class="text-decoration-none"><code>{{ active_source.loaded_titles_file }}</code></a>
-                        </div>
-                    </div>
-                </div>
-                {% else %}
-                <div class="alert alert-secondary d-flex align-items-center" role="alert">
-                    <i class="bi bi-info-circle-fill flex-shrink-0 me-2" style="font-size: 1.5rem;"></i>
-                    <div>
-                        <strong>{{ t('No TitleDB source active') }}</strong>
-                        <div class="small">{{ t('Run an update to populate TitleDB status') }}.</div>
-                    </div>
-                </div>
-                {% endif %}
-                <table class="table table-hover caption-top" id="titledbSourcesTable">
-                    <caption>List of sources:</caption>
-                    <thead>
-                        <tr>
-                            <th scope="col">Name</th>
-                            <th scope="col">Base URL</th>
-                            <th scope="col">Type</th>
-                            <th scope="col">Priority</th>
-                            <th scope="col">Status</th>
-                            <th scope="col">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-
-                <div class="row g-3 mb-3">
-                    <div class="col-auto">
-                        <button class="btn btn-primary" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#collapseNewSource" aria-expanded="false" aria-controls="collapseNewSource">
-                            Add custom source
-                        </button>
-                    </div>
-                    <div class="col-auto">
-                        <button type="button" class="btn btn-primary updateTitleDBBtn" onClick='forceTitleDBUpdate()'>
-                            Force TitleDB Update
-                        </button>
-                    </div>
-                </div>
-
-                <div class="collapse mb-3" id="collapseNewSource">
-                    <div class="card card-body">
-                        <label class="form-label">Add a new TitleDB source:</label>
-                        <form class="row g-3">
-                            <div class="col-md-3">
-                                <input type="text" class="form-control" id="inputSourceName" placeholder="Source Name">
-                            </div>
-                            <div class="col-md-4">
-                                <input type="text" class="form-control" id="inputSourceUrl"
-                                    placeholder="https://example.com/titledb">
-                            </div>
-                            <div class="col-md-3">
-                                <select class="form-select" id="inputSourceType">
-                                    <option value="json" selected>JSON (Direct)</option>
-                                    <option value="zip_legacy">Legacy (ZIP)</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <input type="number" class="form-control" id="inputSourcePriority"
-                                    placeholder="Priority" value="50">
-                            </div>
-                            <div class="col-auto">
-                                <button type="button" class="btn btn-primary" onClick='submitNewSource()'>Add</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <hr>
-
-                <h2 class="pb-3">Shop</h2>
-                <!-- Shop URL -->
-                <div class="mb-3">
-                    <label for="shopHostInput" class="form-label">Shop URL:</label>
-                    <input class="form-control" id="shopHostInput" aria-describedby="shopHostHelp"
-                        placeholder="shop.domain.tld">
-                    <div id="shopHostHelp" class="form-text">Configure your shop URL to enable host verification.<br>
-                        Host verification from Tinfoil requests will be enforced if the shop is accessed securely (with
-                        <code>https</code>), make sure your reverse proxy <strong>does NOT</strong> allow insecure
-                        connections (or upgrades them to use SSL) and correctly sets the <code>X-Forwarded-Proto</code>
-                        header.
-                    </div>
-                </div>
-                <div class="mb-3 form-check">
-                    <input type="checkbox" class="form-check-input" id="publicShopCheck"
-                        aria-describedby="publicShopCheckHelp">
-                    <label class="form-check-label" for="publicShopCheck">Public shop</label>
-                    <div id="publicShopCheckHelp" class="form-text">If enabled, Shop access from Tinfoil does not
-                        require authentication.
-                    </div>
-                </div>
-                <div class="mb-3 form-check">
-                    <input type="checkbox" class="form-check-input" id="encryptShopCheck"
-                        aria-describedby="encryptShopCheckHelp">
-                    <label class="form-check-label" for="encryptShopCheck">Encrypt shop</label>
-                    <div id="encryptShopCheckHelp" class="form-text">Serve encrypted and compressed shop, so that only
-                        Tinfoil clients
-                        can access the content. <strong>Strongly suggested to enable it for security</strong>.</div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="motdTextArea" class="form-label">Message of the day:</label>
-                    <textarea class="form-control" id="motdTextArea" rows="3"></textarea>
-                    <div id="motdTextAreaHelp" class="form-text">Message presented when opening Tinfoil after
-                        successfully loading your shop.</div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="languageSelect" class="form-label">Language / Idioma</label>
-                    <select class="form-select" id="languageSelect" onchange="changeLanguage(this.value)">
-                        <option value="en">English (Default)</option>
-                        <option value="pt_BR">Português (Brasil)</option>
-                    </select>
-                    <div class="form-text">Browser detection is enabled by default.</div>
-                </div>
-
-                <div class="mb-3">
-                    <button type="button" id="submitShopSettingsBtn" class="btn btn-primary"
-                        onClick='submitShopSettings()'>Submit</button>
-                </div>
-
+    <!-- Alerts Section -->
+    <div class="space-y-4 mb-8">
+        {% if admin_account_created == false %}
+        <div class="alert alert-error shadow-lg">
+            <i class="bi bi-exclamation-triangle-fill text-2xl"></i>
+            <div>
+                <h3 class="font-bold">Missing admin account!</h3>
+                <div class="text-xs">Authentication is disabled. Anyone can access and change your configuration until
+                    an admin is created. <a href="#Authentication" class="link link-hover font-bold underline">Add one
+                        here</a>.</div>
             </div>
         </div>
+        {% endif %}
+
+        {% if valid_keys == false %}
+        <div class="alert alert-warning shadow-lg">
+            <i class="bi bi-key-fill text-2xl"></i>
+            <div>
+                <h3 class="font-bold">Missing console keys!</h3>
+                <div class="text-xs">Nintendo content decryption requires keys. Titles will be misidentified. <a
+                        target="_blank"
+                        href="https://gitlab.com/easyhacking/switch/-/wikis/home/getting-started/dump-keys"
+                        class="link link-hover font-bold underline">Extraction guide</a>.</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Main Settings Sections -->
+    <div class="grid grid-cols-1 gap-12">
+
+        <!-- Authentication -->
+        <section id="Authentication" class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden">
+            <div class="card-body">
+                <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
+                    <i class="bi bi-people text-primary"></i> {{ t('Authentication') }}
+                </h2>
+
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra w-full" id="userTable">
+                        <thead>
+                            <tr>
+                                <th>{{ t('User') }}</th>
+                                <th>{{ t('Permissions') }}</th>
+                                <th class="text-right">{{ t('Actions') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="collapse collapse-arrow bg-base-200">
+                    <input type="checkbox" id="collapseNewUser" />
+                    <div class="collapse-title font-bold">{{ t('Add new user') }}</div>
+                    <div class="collapse-content p-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="text" id="inputNewUser" placeholder="{{ t('Username') }}"
+                                class="input input-bordered w-full" />
+                            <input type="password" id="inputNewUserPassword" placeholder="{{ t('Password') }}"
+                                class="input input-bordered w-full" />
+                        </div>
+                        <div class="flex flex-wrap gap-6 my-6">
+                            <label class="label cursor-pointer gap-2"><input type="checkbox"
+                                    id="checkboxNewUserShopAccess" class="checkbox checkbox-primary" checked /> <span
+                                    class="label-text">{{ t('Shop Access') }}</span></label>
+                            <label class="label cursor-pointer gap-2"><input type="checkbox"
+                                    id="checkboxNewUserBackupAccess" class="checkbox checkbox-primary" /> <span
+                                    class="label-text">{{ t('Backup Access') }}</span></label>
+                            <label class="label cursor-pointer gap-2"><input type="checkbox"
+                                    id="checkboxNewUserAdminAccess" class="checkbox checkbox-primary" /> <span
+                                    class="label-text">{{ t('Admin Access') }}</span></label>
+                        </div>
+                        <button class="btn btn-primary w-full md:w-auto" onclick="submitNewUser()">{{ t('Submit')
+                            }}</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Library Paths -->
+        <section id="Library" class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden">
+            <div class="card-body">
+                <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
+                    <i class="bi bi-folder2-open text-primary"></i> {{ t('Library') }}
+                </h2>
+                <p class="text-sm opacity-60 mb-4">{{ t('Path of directory containing your games') }}</p>
+
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra w-full" id="pathsTable">
+                        <thead>
+                            <tr>
+                                <th>{{ t('Path') }}</th>
+                                <th class="text-right">{{ t('Actions') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="flex flex-wrap gap-4">
+                    <div class="collapse collapse-arrow bg-base-200 flex-grow">
+                        <input type="checkbox" id="collapseNewPath" />
+                        <div class="collapse-title font-bold">{{ t('Add library path') }}</div>
+                        <div class="collapse-content p-4">
+                            <div class="flex gap-2">
+                                <input type="text" id="libraryPathInput" placeholder="/path/to/games"
+                                    class="input input-bordered flex-grow" />
+                                <button class="btn btn-primary" onclick="submitNewLibraryPath()">{{ t('Submit')
+                                    }}</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline btn-neutral h-auto min-h-0 py-4 scanBtn" onclick="scanLibrary()">
+                        <i class="bi bi-arrow-clockwise"></i> {{ t('Scan library') }}
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Titles Configuration -->
+        <section id="Titles" class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden">
+            <div class="card-body">
+                <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
+                    <i class="bi bi-gear-fill text-primary"></i> {{ t('Titles') }}
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="form-control w-full">
+                        <label class="label"><span class="label-text">{{ t('Library Region') }}</span></label>
+                        <select id="selectRegion" class="select select-bordered w-full"></select>
+                    </div>
+                    <div class="form-control w-full">
+                        <label class="label"><span class="label-text">{{ t('Library Language') }}</span></label>
+                        <select id="selectLanguage" class="select select-bordered w-full"></select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="label"><span class="label-text">{{ t('Console keys') }}</span></label>
+                        <input type="file" id="consoleKeysInput" class="file-input file-input-bordered w-full"
+                            accept=".keys,.txt" />
+                        <label class="label">
+                            <span class="label-text-alt opacity-50">{{ t('Tinfoil/MyFoil uses this to identify files')
+                                }}</span>
+                            {% if valid_keys %}<span class="label-text-alt text-success">{{ t('Keys are valid')
+                                }}</span>{% endif %}
+                        </label>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary mt-4 w-full md:w-auto" onclick="submitTitlesSettings()">{{ t('Submit')
+                    }}</button>
+            </div>
+        </section>
+
+        <!-- TitleDB Sources -->
+        <section id="TitleDB" class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden">
+            <div class="card-body">
+                <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
+                    <i class="bi bi-database-fill text-primary"></i> {{ t('TitleDB Sources') }}
+                </h2>
+
+                {% if active_source %}
+                <div
+                    class="alert {{ 'alert-success' if active_source.is_updated else 'alert-warning' }} shadow-sm mb-6">
+                    <i
+                        class="bi {{ 'bi-check-circle-fill' if active_source.is_updated else 'bi-exclamation-triangle-fill' }} text-xl"></i>
+                    <div class="text-sm">
+                        <div class="font-bold">{{ t('Current Active Source') }}: {{ active_source.name }}</div>
+                        <div class="opacity-70">{{ t('Last local update') }}: {{ active_source.time_since }} {{ t('ago')
+                            }} ({{ t('Up to date') if active_source.is_updated else t('Outdated') }})</div>
+                        <div class="mt-1">
+                            <span class="opacity-70">{{ t('Loaded Titles File') }}:</span>
+                            <a href="/static/titledb/{{ active_source.loaded_titles_file }}" target="_blank"
+                                class="badge badge-ghost hover:badge-primary font-mono text-xs cursor-pointer tracking-tighter">{{
+                                active_source.loaded_titles_file }}</a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="overflow-x-auto mb-6">
+                    <table class="table table-zebra table-sm w-full" id="titledbSourcesTable">
+                        <thead>
+                            <tr>
+                                <th>{{ t('Name') }}</th>
+                                <th>{{ t('Type') }}</th>
+                                <th>{{ t('Priority') }}</th>
+                                <th>{{ t('Status') }}</th>
+                                <th class="text-right">{{ t('Actions') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="flex flex-wrap gap-4 items-center">
+                    <div class="collapse collapse-arrow bg-base-200 flex-grow">
+                        <input type="checkbox" id="collapseNewSource" />
+                        <div class="collapse-title font-bold">{{ t('Add custom source') }}</div>
+                        <div class="collapse-content p-4 space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <input type="text" id="inputSourceName" placeholder="{{ t('Source Name') }}"
+                                    class="input input-bordered w-full" />
+                                <input type="text" id="inputSourceUrl" placeholder="https://..."
+                                    class="input input-bordered w-full" />
+                                <select id="inputSourceType" class="select select-bordered w-full">
+                                    <option value="json" selected>{{ t('JSON (Direct)') }}</option>
+                                    <option value="zip_legacy">{{ t('Legacy (ZIP)') }}</option>
+                                </select>
+                                <input type="number" id="inputSourcePriority" value="50"
+                                    class="input input-bordered w-full" />
+                            </div>
+                            <button class="btn btn-primary w-full md:w-auto" onclick="submitNewSource()">Add</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-neutral updateTitleDBBtn" onclick="forceTitleDBUpdate()">{{ t('Force TitleDB
+                        Update') }}</button>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="form-control">
+                    <label class="label cursor-pointer justify-start gap-4">
+                        <input type="checkbox" id="useDbiVersionsCheck" class="checkbox checkbox-primary" />
+                        <span class="label-text font-bold">{{ t('Fetch updates from DBI database') }}</span>
+                    </label>
+                    <span class="text-xs opacity-50 ml-12">{{ t('Use DBI versions database instead of TitleDB for
+                        updates and DLCs') }}</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Shop Configuration -->
+        <section id="Shop" class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden mb-12">
+            <div class="card-body">
+                <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
+                    <i class="bi bi-cart-fill text-primary"></i> {{ t('Shop') }}
+                </h2>
+
+                <div class="space-y-6">
+                    <div class="form-control w-full">
+                        <label class="label"><span class="label-text font-bold">{{ t('Shop URL') }}</span></label>
+                        <input id="shopHostInput" placeholder="shop.domain.tld" class="input input-bordered w-full" />
+                        <span class="label-text-alt opacity-50 mt-1">Configure your shop URL to enable host
+                            verification.</span>
+                    </div>
+
+                    <div class="flex flex-wrap gap-8">
+                        <label class="label cursor-pointer gap-2"><input type="checkbox" id="publicShopCheck"
+                                class="checkbox checkbox-primary" /> <span class="label-text font-bold">{{ t('Public
+                                shop') }}</span></label>
+                        <label class="label cursor-pointer gap-2"><input type="checkbox" id="encryptShopCheck"
+                                class="checkbox checkbox-primary" /> <span class="label-text font-bold">{{ t('Encrypt
+                                shop') }}</span></label>
+                    </div>
+
+                    <div class="form-control w-full">
+                        <label class="label"><span class="label-text font-bold">{{ t('Message of the day')
+                                }}</span></label>
+                        <textarea id="motdTextArea" rows="3" class="textarea textarea-bordered w-full"></textarea>
+                    </div>
+
+                    <div class="form-control w-full max-w-xs">
+                        <label class="label"><span class="label-text font-bold">{{ t('Application language')
+                                }}</span></label>
+                        <select id="languageSelect" class="select select-bordered"
+                            onchange="changeLanguage(this.value)">
+                            <option value="en">{{ t('English (Default)') }}</option>
+                            <option value="pt_BR">{{ t('Português (Brasil)') }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary mt-8 w-full md:w-auto" onclick="submitShopSettings()">{{ t('Submit')
+                    }}</button>
+            </div>
+        </section>
+
     </div>
 </div>
 
+<!-- Custom Modals (Using daisyUI Dialog) -->
+<dialog id="deleteUserModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg">{{ t('Delete user') }}</h3>
+        <p class="py-4 modal-text"></p>
+        <div class="modal-action">
+            <button class="btn" onclick="deleteUserModal.close()">{{ t('Cancel') }}</button>
+            <button class="btn btn-error btn-confirm">{{ t('Delete') }}</button>
+        </div>
+    </div>
+</dialog>
+
+<dialog id="deletePathModal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg">{{ t('Delete library path') }}</h3>
+        <p class="py-4 modal-text"></p>
+        <div class="modal-action">
+            <button class="btn" onclick="deletePathModal.close()">{{ t('Cancel') }}</button>
+            <button class="btn btn-error btn-confirm">{{ t('Delete') }}</button>
+        </div>
+    </div>
+</dialog>
+
 <script>
+    let allUsernames = [];
 
-    settings_map = {
-        'library/path': 'libraryPathInput'
-    };
-
-
-    // allUsers = [];
-
-    function getInputVal(inputId) {
-        return $("#" + inputId).val();
-    };
-
-    function setInputVal(inputId, value) {
-        return $("#" + inputId).val(value);
-    };
-
-    function getCheckboxStatus(checkboxId) {
-        return $('#' + checkboxId).is(":checked")
-    }
+    function getInputVal(id) { return $(`#${id}`).val(); }
+    function getCheckboxStatus(id) { return $(`#${id}`).is(":checked"); }
 
     function scanLibrary(path = null) {
-        $('.scanBtn').prop('disabled', true);
-        data = {
-            path: path
-        }
+        $('.scanBtn').addClass('btn-disabled opacity-50');
         $.ajax({
             url: '/api/library/scan',
             type: 'POST',
-            data: JSON.stringify(data),
+            data: JSON.stringify({ path }),
             contentType: "application/json",
-            success: function (result) {
-                if (result['success']) {
-                    if (result['status_code'] == '302') {
-                        window.location.href = result['location']
-                        return
-                    }
-                    console.log('Scan Success!');
-                }
-                $('.scanBtn').prop('disabled', false);
+            success: (result) => {
+                if (result.success && result.location) window.location.href = result.location;
+                $('.scanBtn').removeClass('btn-disabled opacity-50');
             }
         });
-
     }
 
     function fillLibraryTable() {
-        $('#pathsTable tbody').empty();
-
-        $.getJSON("/api/settings/library/paths", function (result) {
-
-            if (!result['success']) {
-                if (result['status_code'] == '302') {
-                    window.location.href = result['location']
-                    return
-                }
-            }
-            paths = result.paths;
-            if (paths === null || !paths.length) {
-                $('#pathsTable tbody').append(
-                    '<tr><td>-</td><td>-</td><td>');
-            } else {
-                paths.forEach(path => {
-                    $('#pathsTable tbody').append(
-                        '<tr><td>' + path + '</td>'
-                        + '<td>' +
-                        '<button type="button" class="btn btn-outline-info btn-sm scanBtn" onclick=\'scanLibrary("' + path + '");\' ><i class="bi bi-arrow-clockwise"></i></button> ' +
-                        '<button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deletePathModal" data-bs-path="' + path + '"\'><i class="bi bi-x-circle"></i></button>' +
-                        '</td></tr>');
-                })
+        $.getJSON("/api/settings/library/paths", (result) => {
+            const tbody = $('#pathsTable tbody').empty();
+            if (!result.paths?.length) tbody.append('<tr><td colspan="2" class="text-center opacity-50">-</td></tr>');
+            else {
+                result.paths.forEach(path => {
+                    const row = $(`
+                        <tr>
+                            <td class="font-mono text-xs">${path}</td>
+                            <td class="text-right flex justify-end gap-1">
+                                <button class="btn btn-square btn-ghost btn-xs text-info" onclick="scanLibrary('${path}')"><i class="bi bi-arrow-clockwise"></i></button>
+                                <button class="btn btn-square btn-ghost btn-xs text-error" onclick="showDeletePathModal('${path}')"><i class="bi bi-x-circle"></i></button>
+                            </td>
+                        </tr>
+                    `);
+                    tbody.append(row);
+                });
             }
         });
-
     }
 
     function fillUserTable() {
-        $('#userTable tbody').empty();
-        $.getJSON("/api/users", function (result) {
-            if (!result['success']) {
-                if (result['status_code'] == '302') {
-                    window.location.href = result['location']
-                    return
-                }
-            }
-            allUsers = result;
-            allUsernames = [];
-            if (!result.length) {
-                $('#userTable tbody').append(
-                    '<tr><td>-</td><td>-</td><td>-</td></tr>');
-            }
-            result.forEach(user => {
-                allUsernames.push(user['user']);
-                base_input = '<input class="form-check-input" type="checkbox" onclick="return false" checked>';
-                shop_input = base_input;
-                backup_input = base_input;
-                admin_input = base_input;
-                if (!user['shop_access']) {
-                    shop_input = shop_input.replace(' checked', '');
-                }
-                if (!user['backup_access']) {
-                    backup_input = backup_input.replace(' checked', '');
-                }
-                if (!user['admin_access']) {
-                    admin_input = shop_input.replace(' checked', '');
-                }
-                $('#userTable tbody').append(
-                    '<tr><td>' + user['user'] + '</td><td>'
-                    + `
-                        <div class="form-check form-check-inline">`
-                    + shop_input + `
-                            <label class="form-check-label">Shop</label>
+        $.getJSON("/api/users", (result) => {
+            const tbody = $('#userTable tbody').empty();
+            allUsernames = result.map(u => u.user);
+            if (!result.length) tbody.append('<tr><td colspan="3" class="text-center opacity-50">-</td></tr>');
+            else {
+                result.forEach(user => {
+                    const permissions = `
+                        <div class="flex gap-2">
+                            <span class="badge ${user.shop_access ? 'badge-success' : 'badge-ghost'} badge-xs">Shop</span>
+                            <span class="badge ${user.backup_access ? 'badge-success' : 'badge-ghost'} badge-xs">Backup</span>
+                            <span class="badge ${user.admin_access ? 'badge-primary' : 'badge-ghost'} badge-xs">Admin</span>
                         </div>
-                        <div class="form-check form-check-inline">`
-                    + backup_input + `
-                            <label class="form-check-label">Backup</label>
-                        </div>
-                        <div class="form-check form-check-inline">`
-                    + admin_input + `
-                            <label class="form-check-label">Admin</label>
-                        </div>`
-                    + '</td><td>' +
-                    '<button type="button" class="btn btn-outline-info btn-sm" disabled=""><i class="bi bi-pencil-square"></i></button> ' +
-                    '<button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteUserModal" data-bs-id="' + user['id'] + '" data-bs-user="' + user['user'] + '"\'><i class="bi bi-x-circle"></i></button>' +
-                    '</td></tr>');
-            });
-        })
-
+                    `;
+                    tbody.append(`
+                        <tr>
+                            <td class="font-bold">${user.user}</td>
+                            <td>${permissions}</td>
+                            <td class="text-right">
+                                <button class="btn btn-square btn-ghost btn-xs text-error" onclick="showDeleteUserModal(${user.id}, '${user.user}')"><i class="bi bi-x-circle"></i></button>
+                            </td>
+                        </tr>
+                    `);
+                });
+            }
+        });
     }
 
     function fillTitleDBSourcesTable() {
-        $('#titledbSourcesTable tbody').empty();
-        $.getJSON("/api/settings/titledb/sources", function (result) {
-            if (result.success === false) return;
-
+        $.getJSON("/api/settings/titledb/sources", (result) => {
+            if (!result.success) return;
+            const tbody = $('#titledbSourcesTable tbody').empty();
             result.sources.forEach(source => {
-                const statusBadge = source.enabled ?
-                    '<span class="badge bg-success">Enabled</span>' :
-                    '<span class="badge bg-secondary">Disabled</span>';
-
-                const lastSuccess = source.last_success ?
-                    new Date(source.last_success).toLocaleString() :
-                    '<span class="text-muted">Never</span>';
-
-                const errorStr = source.last_error ?
-                    `<br><small class="text-danger">${source.last_error}</small>` : '';
-
-                const toggleBtn = source.enabled ?
-                    `<button type="button" class="btn btn-outline-warning btn-sm" onclick="toggleSource('${source.name}', false)"><i class="bi bi-pause-fill"></i></button>` :
-                    `<button type="button" class="btn btn-outline-success btn-sm" onclick="toggleSource('${source.name}', true)"><i class="bi bi-play-fill"></i></button>`;
-
-                $('#titledbSourcesTable tbody').append(
-                    `<tr>
-                        <td><strong>${source.name}</strong></td>
-                        <td><small>${source.base_url}</small></td>
-                        <td><span class="badge bg-info text-dark">${source.source_type}</span></td>
-                        <td>
-                            <input type="number" class="form-control form-control-sm" style="width: 80px" 
-                                   value="${source.priority}" 
-                                   onchange="updateSourcePriority('${source.name}', this.value)"
-                                   min="0" step="1">
+                tbody.append(`
+                    <tr>
+                        <td><strong>${source.name}</strong><br><small class="opacity-50 text-[10px] break-all">${source.base_url}</small></td>
+                        <td><span class="badge badge-ghost badge-xs uppercase">${source.source_type}</span></td>
+                        <td><input type="number" class="input input-bordered input-xs w-16" value="${source.priority}" onchange="updateSourcePriority('${source.name}', this.value)" /></td>
+                        <td><span class="badge ${source.enabled ? 'badge-success' : 'badge-ghost'} badge-xs">${source.enabled ? 'Enabled' : 'Disabled'}</span></td>
+                        <td class="text-right flex justify-end gap-1">
+                             <button class="btn btn-square btn-ghost btn-xs text-${source.enabled ? 'warning' : 'success'}" onclick="toggleSource('${source.name}', ${!source.enabled})"><i class="bi bi-${source.enabled ? 'pause' : 'play'}-fill"></i></button>
+                             <button class="btn btn-square btn-ghost btn-xs text-error" onclick="deleteSource('${source.name}')"><i class="bi bi-x-circle"></i></button>
                         </td>
-                        <td>${statusBadge}<br><small class="text-muted">Last Update: ${lastSuccess}</small>${errorStr}</td>
-                        <td>
-                            ${toggleBtn}
-                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteSource('${source.name}')"><i class="bi bi-x-circle"></i></button>
-                        </td>
-                    </tr>`
-                );
+                    </tr>
+                `);
             });
         });
     }
 
-    function loadTitleDBSources() {
-        fillTitleDBSourcesTable();
+    function showDeleteUserModal(id, user) {
+        $('#deleteUserModal .modal-text').text(`{{ t('Delete user') }} "${user}"?`);
+        $('#deleteUserModal .btn-confirm').attr('onclick', `deleteUser(${id})`);
+        deleteUserModal.showModal();
     }
 
-    function updateSourcePriority(name, priority) {
-        $.ajax({
-            url: "/api/settings/titledb/sources",
-            type: 'PUT',
-            data: JSON.stringify({ name: name, priority: parseInt(priority) }),
-            contentType: "application/json",
-            success: function (result) {
-                if (result.success) {
-                    loadTitleDBSources();
-                } else {
-                    alert('Error updating priority: ' + (result.errors ? result.errors.join(', ') : 'Unknown error'));
-                }
-            }
-        });
+    function showDeletePathModal(path) {
+        $('#deletePathModal .modal-text').text(`{{ t('Delete path') }} "${path}"?`);
+        $('#deletePathModal .btn-confirm').attr('onclick', `deleteLibraryPath('${path}')`);
+        deletePathModal.showModal();
     }
 
-    function toggleSource(name, enabled) {
-        $.ajax({
-            url: "/api/settings/titledb/sources",
-            type: 'PUT',
-            data: JSON.stringify({ name: name, enabled: enabled }),
-            contentType: "application/json",
-            success: function (result) {
-                if (result.success) loadTitleDBSources();
-            }
-        });
-    }
-
-    function deleteSource(name) {
-        if (!confirm(`Delete TitleDB source "${name}"?`)) return;
-        $.ajax({
-            url: "/api/settings/titledb/sources",
-            type: 'DELETE',
-            data: JSON.stringify({ name: name }),
-            contentType: "application/json",
-            success: function (result) {
-                if (result.success) loadTitleDBSources();
-            }
-        });
-    }
-
-    function submitNewSource() {
-        const name = $('#inputSourceName').val().trim();
-        const url = $('#inputSourceUrl').val().trim();
-        const priority = parseInt($('#inputSourcePriority').val());
-        const type = $('#inputSourceType').val();
-
-        if (!name || !url) return;
-
-        $.ajax({
-            url: "/api/settings/titledb/sources",
-            type: 'POST',
-            data: JSON.stringify({ name: name, base_url: url, priority: priority, enabled: true, source_type: type }),
-            contentType: "application/json",
-            success: function (result) {
-                if (result.success) {
-                    $('#inputSourceName').val('');
-                    $('#inputSourceUrl').val('');
-                    $('#collapseNewSource').collapse('hide');
-                    loadTitleDBSources();
-                } else {
-                    alert('Error adding source: ' + (result.errors ? result.errors.join(', ') : 'Unknown error'));
-                }
-            }
-        });
-    }
-
-    function forceTitleDBUpdate() {
-        $('.updateTitleDBBtn').prop('disabled', true).text('Updating...');
-        $.ajax({
-            url: "/api/settings/titledb/update",
-            type: 'POST',
-            success: function (result) {
-                if (result.success) {
-                    alert('TitleDB update started successfully!');
-                } else {
-                    alert('Error starting update: ' + result.errors.join(', '));
-                }
-                $('.updateTitleDBBtn').prop('disabled', false).text('Force TitleDB Update');
-                fillTitleDBSourcesTable();
-            },
-            error: function () {
-                alert('Connection error');
-                $('.updateTitleDBBtn').prop('disabled', false).text('Force TitleDB Update');
-            }
-        });
-    }
-
-    const deletePathModal = $('#deletePathModal')
-    if (deletePathModal) {
-        deletePathModal.on('show.bs.modal', event => {
-            // Button that triggered the modal
-            const button = event.relatedTarget
-            // Extract info from data-bs-* attributes
-            const path = button.getAttribute('data-bs-path')
-            // If necessary, you could initiate an Ajax request here
-            // and then do the updating in a callback.
-
-            // Update the modal's content.
-            // const modalTitle = deletePathModal.querySelector('.modal-title')
-            const modalBody = deletePathModal.find('.modal-body')
-            const deleteBtn = deletePathModal.find('.btn-danger')
-
-
-            deleteBtn.attr('onClick', 'deleteLibraryPath("' + path + '");');
-
-            // modalTitle.textContent = `New message to ${recipient}`
-            modalBody.text("Delete path " + path + " ?")
-        })
-    }
-
-    const deleteUserModal = $('#deleteUserModal')
-    if (deleteUserModal) {
-        deleteUserModal.on('show.bs.modal', event => {
-            // Button that triggered the modal
-            const button = event.relatedTarget
-            // Extract info from data-bs-* attributes
-            const user = button.getAttribute('data-bs-user')
-            const id = button.getAttribute('data-bs-id')
-            // If necessary, you could initiate an Ajax request here
-            // and then do the updating in a callback.
-
-            // Update the modal's content.
-            // const modalTitle = deleteUserModal.querySelector('.modal-title')
-            const modalBody = deleteUserModal.find('.modal-body')
-            const deleteBtn = deleteUserModal.find('.btn-danger')
-
-
-            deleteBtn.attr('onClick', 'deleteUser(' + id + ');');
-
-            // modalTitle.textContent = `New message to ${recipient}`
-            modalBody.text("Delete user " + user + " ?")
-        })
-    }
-
-    function deleteUser(userId) {
-        data = {
-            user_id: userId
-        }
-        $.ajax({
-            url: "/api/user",
-            type: 'DELETE',
-            data: JSON.stringify(data),
-            contentType: "application/json",
-            success: function (result) {
-                if (result['success']) {
-                    fillUserTable();
-                }
-            }
-        });
+    function deleteUser(id) {
+        $.ajax({ url: "/api/user", type: 'DELETE', data: JSON.stringify({ user_id: id }), contentType: "application/json", success: () => { fillUserTable(); deleteUserModal.close(); } });
     }
 
     function deleteLibraryPath(path) {
-        data = {
-            path: path
-        }
-        $.ajax({
-            url: "/api/settings/library/paths",
-            type: 'DELETE',
-            data: JSON.stringify(data),
-            contentType: "application/json",
-            success: function (result) {
-                if (result['success']) {
-                    fillLibraryTable();
-                }
-            }
-        });
+        $.ajax({ url: "/api/settings/library/paths", type: 'DELETE', data: JSON.stringify({ path }), contentType: "application/json", success: () => { fillLibraryTable(); deletePathModal.close(); } });
     }
 
-    $('#checkboxNewUserAdminAccess').change(function () {
-        if (this.checked != false) {
-            $('#checkboxNewUserShopAccess').prop('checked', true).attr("disabled", true);
-            $('#checkboxNewUserBackupAccess').prop('checked', true).attr("disabled", true);
-
-        } else {
-            $('#checkboxNewUserShopAccess').attr("disabled", false);
-            $('#checkboxNewUserBackupAccess').attr("disabled", false);
-
-        }
-    });
-
     function submitNewUser() {
-        formOk = true;
-        user = getInputVal("inputNewUser")
-        password = getInputVal("inputNewUserPassword")
-        shop_access = getCheckboxStatus("checkboxNewUserShopAccess")
-        backup_access = getCheckboxStatus("checkboxNewUserBackupAccess")
-        admin_access = getCheckboxStatus("checkboxNewUserAdminAccess")
-
-        if (user == '') {
-            $('#inputNewUser').addClass('is-invalid');
-            formOk = false;
-        } else if (allUsernames.includes(user)) {
-            $('#inputNewUser').addClass('is-invalid');
-            formOk = false;
-        } else {
-            $('#inputNewUser').removeClass('is-invalid');
-        }
-
-        if (password == '') {
-            $('#inputNewUserPassword').addClass('is-invalid');
-            formOk = false;
-        } else {
-            $('#inputNewUserPassword').removeClass('is-invalid');
-        }
-
-
-        if (formOk) {
-            data = {
-                user: user,
-                password: password,
-                shop_access: shop_access,
-                backup_access: backup_access,
-                admin_access: admin_access,
-            }
-
-            $.ajax({
-                url: "/api/user/signup",
-                type: 'POST',
-                data: JSON.stringify(data),
-                contentType: "application/json",
-                success: function (result) {
-                    if (result['success']) {
-                        if (result['status_code'] == '302') {
-                            window.location.href = result['location']
-                            return
-                        }
-                        console.log('Signup Success!');
-                        setInputVal("inputNewUser", "")
-                        setInputVal("inputNewUserPassword", "")
-                        fillUserTable();
-                    }
-                }
-            });
-        }
+        const user = getInputVal("inputNewUser");
+        const password = getInputVal("inputNewUserPassword");
+        if (!user || !password) return alert('Fill all fields');
+        $.ajax({
+            url: "/api/user", type: 'POST',
+            data: JSON.stringify({
+                user, password,
+                shop_access: getCheckboxStatus("checkboxNewUserShopAccess"),
+                backup_access: getCheckboxStatus("checkboxNewUserBackupAccess"),
+                admin_access: getCheckboxStatus("checkboxNewUserAdminAccess")
+            }),
+            contentType: "application/json",
+            success: () => { fillUserTable(); $('#collapseNewUser').prop('checked', false); }
+        });
     }
 
     function submitNewLibraryPath() {
-        $('#submitNewLibraryPathBtn').prop('disabled', true);
-        path = getInputVal("libraryPathInput").trim();
-        data = {
-            path: path
-        }
+        const path = getInputVal("libraryPathInput");
+        if (!path) return;
+        $.ajax({ url: "/api/settings/library/paths", type: 'POST', data: JSON.stringify({ path }), contentType: "application/json", success: () => { fillLibraryTable(); $('#collapseNewPath').prop('checked', false); } });
+    }
 
-        $.ajax({
-            url: "/api/settings/library/paths",
-            type: 'POST',
-            data: JSON.stringify(data),
-            contentType: "application/json",
-            success: function (result) {
-                if (result['success']) {
-                    if (result['status_code'] == '302') {
-                        window.location.href = result['location']
-                        return
-                    }
-                    console.log('Sucessfully added path ' + path);
-                    setInputVal("libraryPathInput", "")
-                    fillLibraryTable();
-                } else {
-                    console.log('Error adding path ' + path);
-                }
-                $('#submitNewLibraryPathBtn').prop('disabled', false);
-            }
-        });
+    function toggleSource(name, enabled) {
+        $.ajax({ url: "/api/settings/titledb/sources", type: 'PUT', data: JSON.stringify({ name, enabled }), contentType: "application/json", success: fillTitleDBSourcesTable });
+    }
+
+    function updateSourcePriority(name, priority) {
+        $.ajax({ url: "/api/settings/titledb/sources", type: 'PUT', data: JSON.stringify({ name, priority: parseInt(priority) }), contentType: "application/json", success: fillTitleDBSourcesTable });
+    }
+
+    function deleteSource(name) {
+        if (confirm(`Delete source ${name}?`)) $.ajax({ url: "/api/settings/titledb/sources", type: 'DELETE', data: JSON.stringify({ name }), contentType: "application/json", success: fillTitleDBSourcesTable });
+    }
+
+    function submitNewSource() {
+        const data = {
+            name: getInputVal('inputSourceName'),
+            base_url: getInputVal('inputSourceUrl'),
+            priority: parseInt(getInputVal('inputSourcePriority')),
+            source_type: $('#inputSourceType').val(),
+            enabled: true
+        };
+        $.ajax({ url: "/api/settings/titledb/sources", type: 'POST', data: JSON.stringify(data), contentType: "application/json", success: () => { fillTitleDBSourcesTable(); $('#collapseNewSource').prop('checked', false); } });
+    }
+
+    function forceTitleDBUpdate() {
+        $('.updateTitleDBBtn').addClass('btn-disabled block-events').text('Updating...');
+        $.post("/api/settings/titledb/update", (r) => { alert(r.success ? 'Update started!' : 'Error!'); $('.updateTitleDBBtn').removeClass('btn-disabled block-events').text('Force TitleDB Update'); fillTitleDBSourcesTable(); });
     }
 
     function submitTitlesSettings() {
-        $('#submitTitlesSettingsBtn').prop('disabled', true);
-        data = {
-            region: getInputVal("selectRegion"),
-            language: getInputVal("selectLanguage"),
+        const data = { region: $('#selectRegion').val(), language: $('#selectLanguage').val() };
+        $.ajax({ url: "/api/settings/titles", type: 'POST', data: JSON.stringify(data), contentType: "application/json", success: () => alert('Saved!') });
+
+        const keysFile = $('#consoleKeysInput')[0].files[0];
+        if (keysFile) {
+            const formData = new FormData();
+            formData.append('file', keysFile);
+            $.ajax({ url: "/api/settings/keys", type: 'POST', data: formData, processData: false, contentType: false, success: () => window.location.reload() });
         }
-        file = $('#consoleKeysInput').prop('files')[0];
-
-        if (file != undefined) {
-            formData = new FormData();
-            formData.append("file", file);
-            $.ajax({
-                url: "/api/upload",
-                type: 'POST',
-                data: formData,
-                cache: false,
-                contentType: false,
-                processData: false,
-                success: function (result) {
-                    if (result['success']) {
-                        $('#consoleKeysInput').removeClass('is-invalid');
-                        $('#consoleKeysInput').addClass('is-valid');
-                        $('#missingKeysAlert').addClass('d-none');
-                    } else {
-                        $('#invalidConsoleKeysFeedback').text("Invalid keys file! Invalid keys detected: " + result['errors'].join(', '));
-                        $('#consoleKeysInput').addClass('is-invalid');
-                    }
-                }
-            });
-        }
-
-        $.ajax({
-            url: "/api/settings/titles",
-            type: 'POST',
-            data: JSON.stringify(data),
-            contentType: "application/json",
-            success: function (result) {
-                if (!result['success']) {
-                    console.log('Not Success!');
-                    result['errors'].forEach(error => {
-                        path = error['path'];
-                        formId = settings_map[path];
-                        form = $('#' + formId);
-                        form.addClass('is-invalid');
-                        formTextElement = form.attr('aria-describedby');
-                        $("#" + formTextElement).addClass('invalid-feedback');
-                        $("#" + formTextElement).text(error['error']);
-                    });
-                }
-                $('#submitTitlesSettingsBtn').prop('disabled', false);
-            }
-        });
-    }
-
-    function changeLanguage(lang) {
-        $.post('/api/set_language/' + lang, function (data) {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Failed to set language');
-            }
-        });
     }
 
     function submitShopSettings() {
-        $('#submitShopSettingsBtn').prop('disabled', true);
-        data = {
-            host: $('#shopHostInput').val(),
-            public: getCheckboxStatus("publicShopCheck"),
-            encrypt: getCheckboxStatus("encryptShopCheck"),
-            motd: $('#motdTextArea').val(),
-        }
-
-        $.ajax({
-            url: "/api/settings/shop",
-            type: 'POST',
-            data: JSON.stringify(data),
-            contentType: "application/json",
-            success: function (result) {
-                if (!result['success']) {
-                    console.log('Not Success!');
-                    result['errors'].forEach(error => {
-                        path = error['path'];
-                        formId = settings_map[path];
-                        form = $('#' + formId);
-                        form.addClass('is-invalid');
-                        formTextElement = form.attr('aria-describedby');
-                        $("#" + formTextElement).addClass('invalid-feedback');
-                        $("#" + formTextElement).text(error['error']);
-                    });
-                }
-                $('#submitShopSettingsBtn').prop('disabled', false);
-            }
-        });
+        const data = {
+            host: getInputVal('shopHostInput'),
+            public: getCheckboxStatus('publicShopCheck'),
+            encrypt: getCheckboxStatus('encryptShopCheck'),
+            motd: getInputVal('motdTextArea'),
+            dbi_versions: getCheckboxStatus('useDbiVersionsCheck')
+        };
+        $.ajax({ url: "/api/settings/shop", type: 'POST', data: JSON.stringify(data), contentType: "application/json", success: () => alert('Saved!') });
     }
 
-    $(document).ready(function () {
+    function changeLanguage(lang) {
+        document.cookie = "lang=" + lang + ";path=/;max-age=31536000";
+        window.location.reload();
+    }
+
+    $(document).ready(() => {
         fillUserTable();
         fillLibraryTable();
         fillTitleDBSourcesTable();
 
-        $.getJSON("/api/settings", function (result) {
-            Object.keys(languages).forEach(function (key) {
-                $('#selectRegion').append(`<option value="${key}">${key}</option>`);
-            });
-
-            $('#selectRegion').on('change', function () {
-                $('#selectLanguage').empty()
-                region = $(this).find(":selected").val();
-                availableLanguages = languages[region];
-                availableLanguages.forEach(function (key) {
-                    $('#selectLanguage').append(`<option value="${key}">${key}</option>`);
-                });
-            });
-
-
-            // Library settings
-            librarySettings = result['library'];
-            // Titles settings
-            titlesSettings = result['titles'];
-
-            // Fill region and language
-            setInputVal("selectRegion", titlesSettings['region']);
-            $('#selectRegion').trigger('change');
-            setInputVal("selectLanguage", titlesSettings['language']);
-
-            // Shop settings
-            shopSettings = result['shop'];
-            setInputVal("shopHostInput", shopSettings['host']);
-            setInputVal("motdTextArea", shopSettings['motd']);
-            $("#publicShopCheck").prop("checked", shopSettings['public']);
-            $("#encryptShopCheck").prop("checked", shopSettings['encrypt']);
-            if (!shopSettings['host']) {
-                $("#missingShopHostAlert").css('display', '');
-            } else if (!shopSettings['hauth']) {
-                $("#missingShopHauthAlert").css('display', '');
-            }
-
-            // Set current language from server-side context or cookie
-            $('#languageSelect').val('{{ get_locale() }}');
+        $.getJSON("/api/settings/regions", (r) => r.regions.forEach(reg => $('#selectRegion').append(new Option(reg, reg))));
+        $.getJSON("/api/settings/languages", (r) => r.languages.forEach(l => $('#selectLanguage').append(new Option(l, l))));
+        $.getJSON("/api/settings", (r) => {
+            $('#selectRegion').val(r['titles/region']);
+            $('#selectLanguage').val(r['titles/language']);
+            $('#shopHostInput').val(r['shop/host']);
+            $('#publicShopCheck').prop('checked', r['shop/public']);
+            $('#encryptShopCheck').prop('checked', r['shop/encrypt']);
+            $('#motdTextArea').val(r['shop/motd']);
+            $('#languageSelect').val(document.cookie.match(/lang=([^;]+)/)?.[1] || 'en');
+            $('#useDbiVersionsCheck').prop('checked', r['shop/dbi_versions']);
         });
-
     });
-    {% if admin_account_created == false %}
-    $('#checkboxNewUserAdminAccess').prop('checked', true).attr("disabled", true);
-    $('#checkboxNewUserShopAccess').prop('checked', true).attr("disabled", true);
-    $('#checkboxNewUserBackupAccess').prop('checked', true).attr("disabled", true);
-    {% endif %}
-    languages = {{ languages_from_titledb | tojson | safe }}
 </script>
-
 {% endblock %}
