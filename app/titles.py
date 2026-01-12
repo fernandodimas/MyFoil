@@ -51,14 +51,18 @@ def robust_json_load(filepath):
     except json.JSONDecodeError as e:
         logger.warning(f"JSON error in {filepath} at {e.pos}, attempting deep sanitization...")
         try:
-            # NUCLEAR OPTION: Escape ANY backslash that isn't a valid JSON escape sequence.
-            # Valid escapes: \", \\, \/, \b, \f, \n, \r, \t, \uXXXX
-            # This regex finds \ that is NOT followed by the valid list.
+            # NUCLEAR OPTION: Escape backslashes that aren't valid JSON escape sequences.
             sanitized = re.sub(r'\\(?!(["\\\/bfnrt]|u[0-9a-fA-F]{4}))', r'\\\\', content)
             data = json.loads(sanitized, strict=False)
         except Exception as ex:
-            logger.error(f"Deep sanitization failed for {filepath}: {ex}")
-            return None
+            logger.warning(f"Deep sanitization failed, trying last resort (escape all backslashes): {ex}")
+            try:
+                # LAST RESORT: Just escape every single backslash.
+                last_resort = content.replace('\\', '\\\\')
+                data = json.loads(last_resort, strict=False)
+            except Exception as ex2:
+                logger.error(f"Complete failure loading {filepath}: {ex2}")
+                return None
 
     # Handle common TitleDB wrapper structures (tinfoil.media, etc.)
     if isinstance(data, dict):
@@ -203,20 +207,20 @@ def load_titledb(force=False):
         region_file = titledb.get_region_titles_file(app_settings)
         possible_files = [region_file, "titles.US.en.json", "titles.json"]
         
-        _titles_db = {}
+        _titles_db = None
         for filename in possible_files:
             filepath = os.path.join(TITLEDB_DIR, filename)
             if os.path.exists(filepath):
                 logger.info(f"Loading titles from {filename}...")
                 _titles_db = robust_json_load(filepath)
-                if _titles_db:
+                if _titles_db and len(_titles_db) > 0:
+                    logger.info(f"Successfully loaded {len(_titles_db)} titles from {filename}")
                     break
+                else:
+                    logger.warning(f"Failed to parse {filename} or it was empty, trying next fallback...")
         
         if not _titles_db:
-            logger.warning("No titles database found among possible files!")
-        else:
-            count = len(_titles_db) if isinstance(_titles_db, (dict, list)) else 0
-            logger.info(f"TitleDBs loaded. ({count} titles in memory)")
+            logger.error("No valid titles database could be loaded! All files failed.")
 
         _versions_db = robust_json_load(os.path.join(TITLEDB_DIR, 'versions.json'))
 
