@@ -435,10 +435,14 @@ def get_game_info(title_id):
         if info:
             return {
                 'name': info.get('name', 'Unrecognized'),
-                'bannerUrl': info.get('bannerUrl', '//placehold.it/400x200'),
+                'bannerUrl': info.get('bannerUrl', ''),
                 'iconUrl': info.get('iconUrl', ''),
                 'id': info.get('id', title_id),
-                'category': info.get('category', ''),
+                'category': info.get('category', []) if isinstance(info.get('category'), list) else [info.get('category')] if info.get('category') else [],
+                'releaseDate': info.get('releaseDate', ''),
+                'size': info.get('size', 0),
+                'publisher': info.get('publisher', 'Nintendo'),
+                'description': info.get('description', '')
             }
         
         raise Exception(f"ID {search_id} not found in database")

@@ -18,11 +18,12 @@
         <div class="collapse-content">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
                 <!-- Owned Stats -->
-                <div class="stats shadow bg-success text-success-content">
+                <div class="stats shadow border border-success/20 bg-base-100">
                     <div class="stat">
-                        <div class="stat-title text-success-content opacity-70">{{ t('Owned Content') }}</div>
-                        <div class="stat-value text-2xl mb-2">{{ total_games + total_updates + total_dlcs }}</div>
-                        <div class="stat-desc text-success-content opacity-70">
+                        <div class="stat-title opacity-70">{{ t('Owned Content') }}</div>
+                        <div class="stat-value text-success text-2xl mb-2">{{ total_games + total_updates + total_dlcs
+                            }}</div>
+                        <div class="stat-desc opacity-70">
                             {{ total_games }} {{ t('Games') }} | {{ total_updates }} {{ t('Updates') }} | {{ total_dlcs
                             }} {{ t('DLCs') }}
                         </div>
@@ -30,11 +31,12 @@
                 </div>
 
                 <!-- Library Status -->
-                <div class="stats shadow bg-warning text-warning-content">
+                <div class="stats shadow border border-warning/20 bg-base-100">
                     <div class="stat">
-                        <div class="stat-title text-warning-content opacity-70">{{ t('Library Status') }}</div>
-                        <div class="stat-value text-2xl mb-2">{{ games_missing_updates + games_missing_dlcs }}</div>
-                        <div class="stat-desc text-warning-content opacity-70">
+                        <div class="stat-title opacity-70">{{ t('Library Status') }}</div>
+                        <div class="stat-value text-warning text-2xl mb-2">{{ games_missing_updates + games_missing_dlcs
+                            }}</div>
+                        <div class="stat-desc opacity-70">
                             {{ games_missing_updates }} {{ t('Games needing Update') }}<br>
                             {{ games_missing_dlcs }} {{ t('Games missing DLCs') }}
                         </div>
@@ -42,13 +44,12 @@
                 </div>
 
                 <!-- Missing Content -->
-                <div class="stats shadow bg-error text-error-content">
+                <div class="stats shadow border border-error/20 bg-base-100">
                     <div class="stat">
-                        <div class="stat-title text-error-content opacity-70">{{ t('Missing Content') }}</div>
-                        <div class="stat-value text-2xl mb-2">{{ missing_games + missing_updates + missing_dlcs }}</div>
-                        <div class="stat-desc text-error-content opacity-70">
-                            {{ missing_games }} {{ t('Missing Base Games') }}<br>
-                            {{ missing_updates }} {{ t('Missing Updates') }} | {{ missing_dlcs }} {{ t('Missing DLCs')
+                        <div class="stat-title opacity-70">{{ t('Missing Content') }}</div>
+                        <div class="stat-value text-error text-2xl mb-2">{{ missing_games + missing_dlcs }}</div>
+                        <div class="stat-desc opacity-70">
+                            {{ missing_games }} {{ t('Missing Base Games') }} | {{ missing_dlcs }} {{ t('Missing DLCs')
                             }}
                         </div>
                     </div>
@@ -91,14 +92,7 @@
                 </ul>
             </div>
 
-            <!-- Search Input -->
-            <div class="relative w-full max-w-xs">
-                <input type="text" id="textFilter" placeholder="{{ t('Search titles...') }}"
-                    class="input input-bordered w-full pr-10" />
-                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none opacity-50">
-                    <i class="bi bi-search"></i>
-                </div>
-            </div>
+
         </div>
 
         <div class="flex flex-wrap items-center gap-4">
@@ -180,6 +174,14 @@
                 totalGames = data.total;
                 games = data.games;
                 filteredGames = games;
+
+                // Populate Auto-completion datalist
+                const datalist = $('#gameTitlesList').empty();
+                const uniqueTitles = [...new Set(games.filter(g => g.app_type === 'BASE').map(g => g.title_id_name || g.name))];
+                uniqueTitles.sort().forEach(title => {
+                    datalist.append(`<option value="${title}">`);
+                });
+
                 resolve();
             }).fail(reject);
         });
@@ -219,8 +221,39 @@
         const paginatedGames = filteredGames.slice(start, end);
 
         paginatedGames.forEach(game => {
+            let versionInfo = '';
+            if (game.has_latest_version !== undefined) {
+                if (Array.isArray(game.version) && game.version.length > 0) {
+                    const versionList = game.version.map(v => `
+                        <li class="flex justify-between items-center gap-4 px-3 py-1 hover:bg-base-200 rounded-lg text-[11px]">
+                            <span class="opacity-60">${v.release_date}</span>
+                            <span class="font-bold">v${v.version}</span>
+                            <span class="badge badge-xs ${v.owned ? 'badge-success' : 'badge-warning'}">${v.owned ? 'Owned' : 'Missing'}</span>
+                        </li>
+                    `).join('');
+
+                    versionInfo = `
+                        <div class="dropdown dropdown-top dropdown-end">
+                            <label tabindex="0" class="cursor-pointer">
+                                <i class="bi ${game.has_latest_version ? 'bi-check-circle-fill text-success' : 'bi-arrow-down-circle text-warning'} text-sm"></i>
+                            </label>
+                            <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-64 border border-base-300">
+                                <li class="menu-title text-[10px] uppercase font-bold opacity-50">{{ t('Versions') }}</li>
+                                ${versionList}
+                            </ul>
+                        </div>
+                    `;
+                } else {
+                    versionInfo = `
+                        <div class="tooltip tooltip-top" data-tip="v${game.version || '0'}">
+                            <i class="bi ${game.has_latest_version ? 'bi-check-circle-fill text-success' : 'bi-arrow-down-circle text-warning'} text-sm"></i>
+                        </div>
+                    `;
+                }
+            }
+
             const card = $(`
-                <div class="card bg-base-100 shadow-xl overflow-hidden game-card-hover cursor-pointer group">
+                <div class="card bg-base-100 shadow-xl overflow-hidden game-card-hover cursor-pointer group" onclick="showGameDetails('${game.title_id}')">
                     <figure class="relative aspect-video">
                         <img src="${game.bannerUrl}" alt="${game.name}" class="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500" />
                         <div class="absolute top-2 right-2 flex gap-1">
@@ -232,11 +265,7 @@
                         <div class="flex justify-between items-end mt-2">
                              <span class="text-[10px] opacity-50 font-mono tracking-tight">${game.title_id}</span>
                              <div class="flex gap-1 items-center">
-                                ${game.has_latest_version !== undefined ? `
-                                    <div class="tooltip tooltip-top" data-tip="Updates: ${game.has_latest_version ? 'Up to date' : 'Update Available'}">
-                                        <i class="bi ${game.has_latest_version ? 'bi-check-circle-fill text-success' : 'bi-arrow-down-circle text-warning'} text-sm"></i>
-                                    </div>
-                                ` : ''}
+                                ${versionInfo}
                              </div>
                         </div>
                     </div>
@@ -260,7 +289,7 @@
 
         paginatedGames.forEach(game => {
             const icon = $(`
-                <div class="tooltip" data-tip="${game.name}">
+                <div class="tooltip" data-tip="${game.name}" onclick="showGameDetails('${game.title_id}')">
                     <img src="${game.iconUrl || '/static/img/no-icon.png'}" class="w-${size} h-${size} md:w-${size * 2} md:h-${size * 2} rounded-xl shadow-lg ring-1 ring-base-content/10 hover:ring-primary hover:scale-105 transition-all cursor-pointer object-cover" 
                          onerror="this.src='/static/img/no-icon.png'"/>
                 </div>
@@ -375,9 +404,81 @@
                     </div>
                 </div>
             `);
+            item.find('.collapse-title').click(function (e) { e.stopPropagation(); });
+            item.attr('onclick', `showGameDetails('${game.title_id}')`);
+
             gameGrid.append(item);
         });
         updatePaginationControls(groupedArray.length);
+    }
+
+    function showGameDetails(titleId) {
+        const game = games.find(g => g.title_id === titleId && g.app_type === 'BASE') || games.find(g => g.title_id === titleId);
+        if (!game) return;
+
+        const related = games.filter(r => r.title_id === titleId);
+
+        $('#modalBanner').css('background-image', `url(${game.bannerUrl || game.iconUrl || ''})`);
+        $('#modalIcon').attr('src', game.iconUrl || game.bannerUrl || '/static/img/no-icon.png');
+        $('#modalTitle').text(game.title_id_name || game.name);
+        $('#modalTitleId').text(game.title_id);
+        $('#modalPublisher').text(game.publisher || 'Nintendo');
+        $('#modalReleaseDate').text(game.releaseDate || '--');
+
+        // Format size
+        const sizeInMb = (game.size || 0) / (1024 * 1024);
+        const sizeDisplay = sizeInMb > 1024 ? (sizeInMb / 1024).toFixed(2) + ' GB' : sizeInMb.toFixed(2) + ' MB';
+        $('#modalSize').text(sizeDisplay);
+
+        // Populate Genres
+        const genreContainer = $('#modalGenre').empty();
+        const categories = Array.isArray(game.category) ? game.category : [];
+        categories.forEach(cat => {
+            genreContainer.append(`<span class="badge badge-outline badge-xs opacity-70">${cat}</span>`);
+        });
+
+        $('#modalDescription').text(game.description || '{{ t("No description available") }}');
+
+        const badges = $('#modalBadges').empty();
+        badges.append(`<span class="badge badge-primary">${game.app_type}</span>`);
+        if (game.owned === false) badges.append(`<span class="badge badge-warning">Missing</span>`);
+        else badges.append(`<span class="badge badge-success">Owned</span>`);
+
+        const list = $('#modalContentList').empty();
+        const updates = related.filter(r => r.app_type === 'UPDATE');
+        const dlcs = related.filter(r => r.app_type === 'DLC');
+
+        if (updates.length > 0) {
+            list.append('<h4 class="text-xs font-bold uppercase opacity-50 mb-2 mt-4">Updates</h4>');
+            const updTable = $('<table class="table table-sm w-full bg-base-200 rounded-lg overflow-hidden"></table>');
+            updates.forEach(upd => {
+                updTable.append(`
+                    <tr>
+                        <td><span class="badge badge-xs badge-outline">v${upd.app_version || upd.version || '0'}</span></td>
+                        <td class="text-xs font-mono opacity-60">${upd.app_id}</td>
+                        <td class="text-right"><span class="badge badge-xs ${upd.owned ? 'badge-success' : 'badge-warning'}">${upd.owned ? 'Owned' : 'Missing'}</span></td>
+                    </tr>
+                `);
+            });
+            list.append(updTable);
+        }
+
+        if (dlcs.length > 0) {
+            list.append('<h4 class="text-xs font-bold uppercase opacity-50 mb-2 mt-4">DLCs</h4>');
+            const dlcTable = $('<table class="table table-sm w-full bg-base-200 rounded-lg overflow-hidden"></table>');
+            dlcs.forEach(dlc => {
+                dlcTable.append(`
+                    <tr>
+                        <td class="text-xs font-bold truncate max-w-[200px]">${dlc.name}</td>
+                        <td class="text-xs font-mono opacity-60">${dlc.app_id}</td>
+                        <td class="text-right"><span class="badge badge-xs ${dlc.owned ? 'badge-success' : 'badge-warning'}">${dlc.owned ? 'Owned' : 'Missing'}</span></td>
+                    </tr>
+                `);
+            });
+            list.append(dlcTable);
+        }
+
+        gameDetailsModal.showModal();
     }
 
     function updatePaginationControls(totalItems) {
@@ -414,11 +515,12 @@
 
         fetchGames().then(renderGames);
 
-        $('#textFilter').on('input', function () {
+        $('#navbarSearch').on('input', function () {
             const searchText = $(this).val().toLowerCase();
             filteredGames = games.filter(game =>
                 game.name?.toLowerCase().includes(searchText) ||
-                game.title_id?.toLowerCase().includes(searchText)
+                game.title_id?.toLowerCase().includes(searchText) ||
+                game.title_id_name?.toLowerCase().includes(searchText)
             );
             currentPage = 1;
             renderGames();
@@ -470,4 +572,71 @@
         });
     });
 </script>
+
+<!-- Game Details Modal -->
+<dialog id="gameDetailsModal" class="modal">
+    <div class="modal-box w-11/12 max-w-4xl p-0 overflow-hidden bg-base-100 pb-6 shadow-2xl">
+        <div id="modalBanner" class="w-full h-64 bg-cover bg-center relative">
+            <div class="absolute inset-0 bg-gradient-to-t from-base-100 to-transparent"></div>
+            <form method="dialog">
+                <button
+                    class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 text-white shadow-lg bg-black/20 hover:bg-black/40 border-none">✕</button>
+            </form>
+        </div>
+
+        <div class="px-8 -mt-16 relative flex flex-col md:flex-row gap-6">
+            <div class="avatar shadow-2xl">
+                <div class="w-32 h-32 rounded-2xl bg-base-200 border-4 border-base-100">
+                    <img id="modalIcon" src="" onerror="this.src='/static/img/no-icon.png'" />
+                </div>
+            </div>
+            <div class="flex-grow pt-16 md:pt-20">
+                <h3 id="modalTitle" class="text-3xl font-extrabold tracking-tight"></h3>
+                <div class="flex flex-wrap gap-2 mt-2" id="modalBadges"></div>
+            </div>
+        </div>
+
+        <div class="px-8 mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="md:col-span-2 space-y-4">
+                <div>
+                    <h4 class="text-[10px] font-bold uppercase opacity-50 mb-2 tracking-widest">{{ t('Description') }}
+                    </h4>
+                    <p id="modalDescription" class="text-sm leading-relaxed opacity-80 italic"></p>
+                </div>
+
+                <div id="modalContentList" class="space-y-4">
+                    <!-- DLCs and Updates will go here -->
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div class="bg-base-200 p-4 rounded-xl space-y-3">
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[10px] uppercase font-bold opacity-40">Title ID</span>
+                        <span id="modalTitleId" class="font-mono text-xs font-bold break-all"></span>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[10px] uppercase font-bold opacity-40">{{ t('Publisher') }}</span>
+                        <span id="modalPublisher" class="text-xs font-bold"></span>
+                    </div>
+                    <div class="flex flex-col gap-1 border-t border-base-content/5 pt-2">
+                        <span class="text-[10px] uppercase font-bold opacity-40">{{ t('Release Date') }}</span>
+                        <span id="modalReleaseDate" class="text-xs font-bold"></span>
+                    </div>
+                    <div class="flex flex-col gap-1 border-t border-base-content/5 pt-2">
+                        <span class="text-[10px] uppercase font-bold opacity-40">{{ t('Size') }}</span>
+                        <span id="modalSize" class="text-xs font-bold"></span>
+                    </div>
+                    <div class="flex flex-col gap-1 border-t border-base-content/5 pt-2">
+                        <span class="text-[10px] uppercase font-bold opacity-40">{{ t('Genre') }}</span>
+                        <div id="modalGenre" class="flex flex-wrap gap-1 mt-1"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>{{ t('close') }}</button>
+    </form>
+</dialog>
 {% endblock %}

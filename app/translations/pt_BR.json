@@ -109,10 +109,18 @@
     "Strongly suggested to enable it for security": "Fortemente sugerido ativar para segurança",
     "Message of the day": "Mensagem do dia",
     "Message presented when opening Tinfoil": "Mensagem apresentada ao abrir o Tinfoil após carregar sua loja com sucesso",
+    "Publisher": "Editora",
+    "Release Date": "Data de Lançamento",
+    "Size": "Tamanho",
+    "Genre": "Gênero",
     "Language / Idioma": "Language / Idioma",
     "English (Default)": "Inglês (Padrão)",
     "Português (Brasil)": "Português (Brasil)",
     "Browser detection is enabled by default": "Detecção do navegador está habilitada por padrão",
     "Fetch updates from DBI database": "Buscar atualizações na base do DBI",
-    "Use DBI versions database instead of TitleDB for updates and DLCs": "Usar base de dados de versões do DBI ao invés do TitleDB para atualizações e DLCs"
+    "Use DBI versions database instead of TitleDB for updates and DLCs": "Usar base de dados de versões do DBI ao invés do TitleDB para atualizações e DLCs",
+    "Description": "Descrição",
+    "No description available": "Nenhuma descrição disponível",
+    "Versions": "Versões",
+    "close": "fechar"
 }

@@ -28,8 +28,22 @@
             {% endif %}
         </ul>
     </div>
-    <div class="navbar-end gap-2">
-        <button class="btn btn-ghost btn-circle" id="themeToggle" onclick="toggleTheme()"
+    <div class="navbar-end gap-2 px-2">
+        {% if title == 'Library' %}
+        <div class="form-control hidden md:block relative group">
+            <div class="relative">
+                <input type="text" id="navbarSearch" placeholder="{{ t('Search titles...') }}"
+                    class="input input-bordered input-sm w-32 md:w-64 focus:w-80 transition-all duration-300 pr-8"
+                    list="gameTitlesList" />
+                <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none opacity-50">
+                    <i class="bi bi-search text-xs"></i>
+                </div>
+            </div>
+            <datalist id="gameTitlesList"></datalist>
+        </div>
+        {% endif %}
+
+        <button class="btn btn-ghost btn-xs md:btn-sm btn-circle" id="themeToggle" onclick="toggleTheme()"
             title="{{ t('Toggle Theme') }}">
             <i class="bi bi-circle-half text-lg"></i>
         </button>
