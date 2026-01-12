@@ -273,12 +273,14 @@ def access_shop():
     total_files = Files.query.count()
     total_games = Apps.query.filter_by(app_type=APP_TYPE_BASE, owned=True).count()
     total_dlcs = Apps.query.filter_by(app_type=APP_TYPE_DLC, owned=True).count()
+    total_updates = Apps.query.filter_by(app_type=APP_TYPE_UPD, owned=True).count()
     return render_template('index.html', title='Library', 
                            admin_account_created=admin_account_created(), 
                            valid_keys=app_settings['titles']['valid_keys'],
                            total_files=total_files,
                            total_games=total_games,
-                           total_dlcs=total_dlcs)
+                           total_dlcs=total_dlcs,
+                           total_updates=total_updates)
 
 @access_required('shop')
 def access_shop_auth():

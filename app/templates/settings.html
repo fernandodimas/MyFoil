@@ -379,6 +379,19 @@
 
             </div>
         </div>
+
+        <div class="alert alert-info mt-3">
+            <h6><i class="bi bi-info-circle-fill me-2"></i>Expected JSON Format</h6>
+            <small>
+                Sources should point to a directory containing <code>titles.US.en.json</code> (or similar) and
+                <code>cnmts.json</code>.
+                <br>
+                For wrappers like <strong>tinfoil.media</strong>, select "JSON (Direct)". The system automatically
+                handles standard JSON structures.
+                <br>
+                <strong>Legacy (ZIP)</strong> supports the old zipped TitleDB format.
+            </small>
+        </div>
     </div>
 </div>
 
@@ -553,6 +566,10 @@
         });
     }
 
+    function loadTitleDBSources() {
+        fillTitleDBSourcesTable();
+    }
+
     function updateSourcePriority(name, priority) {
         $.ajax({
             url: "/api/settings/titledb/sources",
@@ -561,7 +578,7 @@
             contentType: "application/json",
             success: function (result) {
                 if (result.success) {
-                    fillTitleDBSourcesTable();
+                    loadTitleDBSources();
                 } else {
                     alert('Error updating priority: ' + (result.errors ? result.errors.join(', ') : 'Unknown error'));
                 }
@@ -576,7 +593,7 @@
             data: JSON.stringify({ name: name, enabled: enabled }),
             contentType: "application/json",
             success: function (result) {
-                if (result.success) fillTitleDBSourcesTable();
+                if (result.success) loadTitleDBSources();
             }
         });
     }
@@ -589,7 +606,7 @@
             data: JSON.stringify({ name: name }),
             contentType: "application/json",
             success: function (result) {
-                if (result.success) fillTitleDBSourcesTable();
+                if (result.success) loadTitleDBSources();
             }
         });
     }
@@ -612,7 +629,7 @@
                     $('#inputSourceName').val('');
                     $('#inputSourceUrl').val('');
                     $('#collapseNewSource').collapse('hide');
-                    fillTitleDBSourcesTable();
+                    loadTitleDBSources();
                 } else {
                     alert('Error adding source: ' + (result.errors ? result.errors.join(', ') : 'Unknown error'));
                 }
