@@ -174,21 +174,47 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
                 if current_commit != latest_remote_commit:
                     update_available = True
             
+            # FORCE update if critical files are missing from disk
+            region_titles_file = get_region_titles_file(app_settings)
+            critical_files = ['cnmts.json', 'versions.json', region_titles_file]
+            missing_critical = any(not os.path.exists(os.path.join(TITLEDB_DIR, f)) for f in critical_files)
+            
+            if missing_critical:
+                logger.info("Critical TitleDB files missing from disk, forcing extraction...")
+                update_available = True
+
             if update_available:
-                region_titles_file = get_region_titles_file(app_settings)
+                zip_files = [f.filename for f in rzf.infolist()]
+                logger.debug(f"Files found in ZIP: {', '.join(zip_files[:10])}... (Total: {len(zip_files)})")
+                
                 files_to_update = ['cnmts.json', 'versions.json', 'versions.txt', 'languages.json', region_titles_file]
                 
-                # Update all files from ZIP
+                # Update all files from ZIP - handles potential paths in ZIP
                 for filename in files_to_update:
-                    if filename in [f.filename for f in rzf.infolist()]:
-                        logger.info(f'Extracting {filename} from legacy ZIP...')
-                        with rzf.open(filename) as fpin:
-                            with open(os.path.join(TITLEDB_DIR, filename), 'wb') as fpout:
-                                while True:
-                                    chunk = fpin.read(65536)
-                                    if not chunk: break
-                                    fpout.write(chunk)
-                        results[filename] = True
+                    # Try exact match or match with path
+                    target_zip_path = None
+                    if filename in zip_files:
+                        target_zip_path = filename
+                    else:
+                        # Try to find file if it's inside a folder in the zip
+                        for zf in zip_files:
+                            if zf.endswith('/' + filename) or zf.endswith('\\' + filename):
+                                target_zip_path = zf
+                                break
+                    
+                    if target_zip_path:
+                        logger.info(f'Extracting {filename} from legacy ZIP ({target_zip_path})...')
+                        try:
+                            with rzf.open(target_zip_path) as fpin:
+                                with open(os.path.join(TITLEDB_DIR, filename), 'wb') as fpout:
+                                    while True:
+                                        chunk = fpin.read(65536)
+                                        if not chunk: break
+                                        fpout.write(chunk)
+                            results[filename] = True
+                        except Exception as ex:
+                            logger.error(f"Failed to extract {filename}: {ex}")
+                            results[filename] = False
                 
                 # Save new commit hash
                 with open(local_commit_file, 'w') as f:
