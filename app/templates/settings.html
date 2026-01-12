@@ -238,15 +238,22 @@
                     <div id="invalidConsoleKeysFeedback" class="invalid-feedback">
                         Invalid keys file!
                     </div>
-                    <div id="consoleKeysHelp" class="form-text">Console keys are required to decrypt any Nintendo
-                        content, including
-                        backups. MyFoil uses this to identify files, regardless of the filename.
+                    <div id="consoleKeysHelp" class="form-text">{{ t('Tinfoil/MyFoil uses this to identify files') }}.
                     </div>
+                </div>
+
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="useDbiVersionsCheck"
+                        aria-describedby="useDbiVersionsCheckHelp">
+                    <label class="form-check-label" for="useDbiVersionsCheck">{{ t('Fetch updates from DBI database')
+                        }}</label>
+                    <div id="useDbiVersionsCheckHelp" class="form-text">{{ t('Use DBI versions database instead of
+                        TitleDB for updates and DLCs') }}.</div>
                 </div>
 
                 <div class="mb-3">
                     <button type="button" id="submitTitlesSettingsBtn" class="btn btn-primary"
-                        onClick='submitTitlesSettings()'>Submit</button>
+                        onClick='submitTitlesSettings()'>{{ t('Submit') }}</button>
                 </div>
                 </form>
                 <hr>
