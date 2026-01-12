@@ -7,6 +7,8 @@ import json
 import logging
 import requests
 import unzip_http
+import re
+import shutil
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
@@ -138,78 +140,92 @@ def download_titledb_file(filename: str, force: bool = False, silent_404: bool =
 
 def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, bool]:
     """
-    Update all required TitleDB files
-    
-    Args:
-        app_settings: Application settings dictionary
-        force: Force update even if files are recent
-        
-    Returns:
-        Dictionary mapping filename to success status
+    Update all required TitleDB files using either Legacy ZIP or JSON sources
     """
     results = {}
+    source_manager = get_source_manager()
+    active_sources = source_manager.get_active_sources()
     
-    # Core files that are always needed
-    core_files = [
-        'cnmts.json',
-        'versions.json',
-        'versions.txt',
-        'languages.json',
-    ]
-    
-    # Download core files
-    for filename in core_files:
-        logger.info(f"Updating {filename}...")
-        results[filename] = download_titledb_file(filename, force=force)
-    
-    # Download region-specific titles file
-    region_titles_file = get_region_titles_file(app_settings)
-    logger.info(f"Updating {region_titles_file}...")
-    
-    # Try region-specific file first
-    if download_titledb_file(region_titles_file, force=force, silent_404=True):
-        results[region_titles_file] = True
-    else:
-        # Fallback 1: Try US/en which is almost always available and complete
-        fallback_file = "titles.US.en.json"
-        logger.info(f"{region_titles_file} not available, trying fallback to {fallback_file}...")
-        
-        if download_titledb_file(fallback_file, force=force, silent_404=True):
-            # Copy to region-specific path so app can find it
-            try:
-                import shutil
-                shutil.copy2(os.path.join(TITLEDB_DIR, fallback_file), os.path.join(TITLEDB_DIR, region_titles_file))
-                results[region_titles_file] = True
-                logger.info(f"Using {fallback_file} as {region_titles_file}")
-            except Exception as e:
-                logger.error(f"Failed to copy {fallback_file}: {e}")
-                results[region_titles_file] = False
-        else:
-            # Fallback 2: Try generic titles.json
-            logger.warning(f"Failed to download {fallback_file}, trying generic titles.json")
-            if download_titledb_file('titles.json', force=force):
-                # Copy generic to region-specific
-                generic_path = os.path.join(TITLEDB_DIR, 'titles.json')
-                region_path = os.path.join(TITLEDB_DIR, region_titles_file)
-                try:
-                    import shutil
-                    shutil.copy2(generic_path, region_path)
-                    results[region_titles_file] = True
-                    logger.info(f"Using generic titles.json as {region_titles_file}")
-                except Exception as e:
-                    logger.error(f"Failed to copy titles.json: {e}")
-                    results[region_titles_file] = False
+    if not active_sources:
+        logger.error("No active TitleDB sources configured")
+        return {}
+
+    source = active_sources[0] # Try the highest priority source
+    logger.info(f"Using TitleDB source: {source.name} (Type: {source.source_type})")
+
+    if source.source_type == 'zip_legacy':
+        # --- ORIGINAL PROJECT LOGIC FOR LEGACY ZIP ---
+        try:
+            r = requests.get(source.base_url, allow_redirects=False, timeout=10)
+            direct_url = r.next.url if hasattr(r, 'next') else source.base_url
+            rzf = unzip_http.RemoteZipFile(direct_url)
+            
+            # Check for update available (Legacy style)
+            update_available = force
+            local_commit_file = os.path.join(TITLEDB_DIR, '.latest')
+            remote_latest_commit_file = [f.filename for f in rzf.infolist() if 'latest_' in f.filename][0]
+            latest_remote_commit = remote_latest_commit_file.split('_')[-1]
+
+            if not os.path.isfile(local_commit_file):
+                update_available = True
             else:
-                results[region_titles_file] = False
-    
-    # Update version tracking
-    version_file = os.path.join(TITLEDB_DIR, '.latest')
-    try:
-        with open(version_file, 'w') as f:
-            f.write(get_version_hash())
-    except Exception as e:
-        logger.warning(f"Failed to update version file: {e}")
-    
+                with open(local_commit_file, 'r') as f:
+                    current_commit = f.read()
+                if current_commit != latest_remote_commit:
+                    update_available = True
+            
+            if update_available:
+                region_titles_file = get_region_titles_file(app_settings)
+                files_to_update = ['cnmts.json', 'versions.json', 'versions.txt', 'languages.json', region_titles_file]
+                
+                # Update all files from ZIP
+                for filename in files_to_update:
+                    if filename in [f.filename for f in rzf.infolist()]:
+                        logger.info(f'Extracting {filename} from legacy ZIP...')
+                        with rzf.open(filename) as fpin:
+                            with open(os.path.join(TITLEDB_DIR, filename), 'wb') as fpout:
+                                while True:
+                                    chunk = fpin.read(65536)
+                                    if not chunk: break
+                                    fpout.write(chunk)
+                        results[filename] = True
+                
+                # Save new commit hash
+                with open(local_commit_file, 'w') as f:
+                    f.write(latest_remote_commit)
+                
+                source.last_success = datetime.now()
+                source.last_error = None
+            else:
+                logger.info("TitleDB already up to date (Legacy)")
+                for f in ['cnmts.json', 'versions.json', 'versions.txt', 'languages.json', get_region_titles_file(app_settings)]:
+                    results[f] = True
+            
+            source_manager.save_sources()
+        except Exception as e:
+            logger.error(f"Legacy update failed: {e}")
+            source.last_error = str(e)
+            source_manager.save_sources()
+            # If legacy fails, we don't automatedly fallback to JSON here to keep it simple and predictable
+            return {}
+
+    else:
+        # --- NEW JSON MULTI-SOURCE LOGIC ---
+        core_files = ['cnmts.json', 'versions.json', 'versions.txt', 'languages.json']
+        for filename in core_files:
+            results[filename] = download_titledb_file(filename, force=force)
+        
+        region_titles_file = get_region_titles_file(app_settings)
+        if download_titledb_file(region_titles_file, force=force, silent_404=True):
+            results[region_titles_file] = True
+        else:
+            # Fallback to US/en for JSON sources
+            if download_titledb_file("titles.US.en.json", force=force, silent_404=True):
+                shutil.copy2(os.path.join(TITLEDB_DIR, "titles.US.en.json"), os.path.join(TITLEDB_DIR, region_titles_file))
+                results[region_titles_file] = True
+            else:
+                results[region_titles_file] = download_titledb_file('titles.json', force=force)
+
     return results
 
 
