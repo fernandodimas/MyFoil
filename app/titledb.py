@@ -303,6 +303,10 @@ def update_titledb(app_settings: Dict, force: bool = False) -> bool:
     success_count = sum(1 for v in results.values() if v)
     total_count = len(results)
     
+    if success_count > 0:
+        import titles
+        titles.load_titledb(force=True)
+
     if success_count == total_count:
         logger.info(f'TitleDB update completed successfully ({success_count}/{total_count} files)')
         return True

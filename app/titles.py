@@ -46,15 +46,16 @@ def robust_json_load(filepath):
         logger.error(f"Error reading {filepath}: {e}")
         return None
 
+    data = None
     try:
         # First try: Standard load
-        return json.loads(content)
+        data = json.loads(content)
     except json.JSONDecodeError as e:
         logger.warning(f"JSON error in {filepath} at {e.pos}, attempting multi-stage sanitization...")
         try:
             # Stage 1: Smart regex cleanup
             sanitized = re.sub(r'\\(?!(["\\\/bfnrt]|u[0-9a-fA-F]{4}))', r'\\\\', content)
-            return json.loads(sanitized, strict=False)
+            data = json.loads(sanitized, strict=False)
         except Exception:
             try:
                 # Stage 2: Bruteforce escape and restore valid sequences
@@ -65,7 +66,7 @@ def robust_json_load(filepath):
                     bruteforce = bruteforce.replace('\\\\' + valid, '\\' + valid)
                 # Restore unicode
                 bruteforce = re.sub(r'\\\\u([0-9a-fA-F]{4})', r'\\u\1', bruteforce)
-                return json.loads(bruteforce, strict=False)
+                data = json.loads(bruteforce, strict=False)
             except Exception as ex:
                 logger.error(f"All sanitization attempts failed for {filepath}: {ex}")
                 return None
@@ -450,10 +451,14 @@ def get_game_info(title_id):
         logger.debug(f"Identification failed for {title_id}: {e}")
         return {
             'name': 'Unrecognized',
-            'bannerUrl': '//placehold.it/400x200',
+            'bannerUrl': '',
             'iconUrl': '',
             'id': title_id,
-            'category': '',
+            'category': [],
+            'releaseDate': '',
+            'size': 0,
+            'publisher': 'Nintendo',
+            'description': ''
         }
 
 def get_update_number(version):
