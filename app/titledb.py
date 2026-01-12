@@ -9,7 +9,7 @@ import requests
 import unzip_http
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from constants import *
 from titledb_sources import TitleDBSourceManager
