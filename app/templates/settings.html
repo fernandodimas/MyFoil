@@ -491,7 +491,7 @@
         $.getJSON("/api/settings/titledb/sources", function (result) {
             if (result.success === false) return;
 
-            result.forEach(source => {
+            result.sources.forEach(source => {
                 const statusBadge = source.enabled ?
                     '<span class="badge bg-success">Enabled</span>' :
                     '<span class="badge bg-secondary">Disabled</span>';
