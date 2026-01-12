@@ -177,7 +177,8 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
             # FORCE update if critical files are missing from disk
             region_titles_file = get_region_titles_file(app_settings)
             fallback_titles_file = "titles.US.en.json"
-            critical_files = ['cnmts.json', 'versions.json', region_titles_file, fallback_titles_file]
+            ultimate_fallback = "titles.json"
+            critical_files = ['cnmts.json', 'versions.json', region_titles_file, fallback_titles_file, ultimate_fallback]
             missing_critical = any(not os.path.exists(os.path.join(TITLEDB_DIR, f)) for f in critical_files)
             
             if missing_critical:
@@ -188,7 +189,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
                 zip_files = [f.filename for f in rzf.infolist()]
                 
                 # Always ensure we try to get core files + region + fallback safety net
-                files_to_update = ['cnmts.json', 'versions.json', 'versions.txt', 'languages.json', region_titles_file, fallback_titles_file]
+                files_to_update = ['cnmts.json', 'versions.json', 'versions.txt', 'languages.json', region_titles_file, fallback_titles_file, ultimate_fallback]
                 
                 # Update all files from ZIP - handles potential paths in ZIP
                 for filename in files_to_update:
@@ -242,8 +243,9 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
         for filename in core_files:
             results[filename] = download_titledb_file(filename, force=force)
         
-        # Always download US/en as a safety net
+        # Always download US/en and titles.json as safety nets
         download_titledb_file("titles.US.en.json", force=force, silent_404=True)
+        download_titledb_file("titles.json", force=force, silent_404=True)
         
         region_titles_file = get_region_titles_file(app_settings)
         if download_titledb_file(region_titles_file, force=force, silent_404=True):

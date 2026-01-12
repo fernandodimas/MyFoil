@@ -47,21 +47,26 @@ def robust_json_load(filepath):
 
     try:
         # First try: Standard load
-        data = json.loads(content)
+        return json.loads(content)
     except json.JSONDecodeError as e:
-        logger.warning(f"JSON error in {filepath} at {e.pos}, attempting deep sanitization...")
+        logger.warning(f"JSON error in {filepath} at {e.pos}, attempting multi-stage sanitization...")
         try:
-            # NUCLEAR OPTION: Escape backslashes that aren't valid JSON escape sequences.
+            # Stage 1: Smart regex cleanup
             sanitized = re.sub(r'\\(?!(["\\\/bfnrt]|u[0-9a-fA-F]{4}))', r'\\\\', content)
-            data = json.loads(sanitized, strict=False)
-        except Exception as ex:
-            logger.warning(f"Deep sanitization failed, trying last resort (escape all backslashes): {ex}")
+            return json.loads(sanitized, strict=False)
+        except Exception:
             try:
-                # LAST RESORT: Just escape every single backslash.
-                last_resort = content.replace('\\', '\\\\')
-                data = json.loads(last_resort, strict=False)
-            except Exception as ex2:
-                logger.error(f"Complete failure loading {filepath}: {ex2}")
+                # Stage 2: Bruteforce escape and restore valid sequences
+                # This ensures the JSON is structurally parsable even if names/desc are slightly altered
+                bruteforce = content.replace('\\', '\\\\')
+                # Restore common valid escapes
+                for valid in ['"', '\\', '/', 'b', 'f', 'n', 'r', 't']:
+                    bruteforce = bruteforce.replace('\\\\' + valid, '\\' + valid)
+                # Restore unicode
+                bruteforce = re.sub(r'\\\\u([0-9a-fA-F]{4})', r'\\u\1', bruteforce)
+                return json.loads(bruteforce, strict=False)
+            except Exception as ex:
+                logger.error(f"All sanitization attempts failed for {filepath}: {ex}")
                 return None
 
     # Handle common TitleDB wrapper structures (tinfoil.media, etc.)
@@ -203,7 +208,7 @@ def load_titledb(force=False):
         
         _cnmts_db = robust_json_load(os.path.join(TITLEDB_DIR, 'cnmts.json'))
         
-        # Try region file, then US/en, then generic titles.json
+        # Database fallback chain: Region -> US/en -> Generic titles.json
         region_file = titledb.get_region_titles_file(app_settings)
         possible_files = [region_file, "titles.US.en.json", "titles.json"]
         
@@ -211,16 +216,26 @@ def load_titledb(force=False):
         for filename in possible_files:
             filepath = os.path.join(TITLEDB_DIR, filename)
             if os.path.exists(filepath):
-                logger.info(f"Loading titles from {filename}...")
+                logger.info(f"Attempting to load titles from {filename}...")
                 _titles_db = robust_json_load(filepath)
                 if _titles_db and len(_titles_db) > 0:
-                    logger.info(f"Successfully loaded {len(_titles_db)} titles from {filename}")
+                    logger.info(f"SUCCESS: Loaded {len(_titles_db)} titles from {filename}")
                     break
                 else:
-                    logger.warning(f"Failed to parse {filename} or it was empty, trying next fallback...")
+                    logger.warning(f"Could not use {filename}, trying next fallback...")
         
         if not _titles_db:
-            logger.error("No valid titles database could be loaded! All files failed.")
+            # FINAL STAND: If everything failed, try ANY .json file in the folder that has 'titles' in the name
+            logger.error("All preferred databases failed. Searching for any title file...")
+            for f in os.listdir(TITLEDB_DIR):
+                if f.endswith('.json') and 'titles' in f:
+                    _titles_db = robust_json_load(os.path.join(TITLEDB_DIR, f))
+                    if _titles_db:
+                        logger.info(f"EMERGENCY: Using {f} as TitleDB")
+                        break
+        
+        if not _titles_db:
+            logger.error("CRITICAL: Failed to load any TitleDB. Game identification will be limited.")
 
         _versions_db = robust_json_load(os.path.join(TITLEDB_DIR, 'versions.json'))
 
