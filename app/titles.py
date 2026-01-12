@@ -168,7 +168,23 @@ def load_titledb():
         app_settings = load_settings()
         
         _cnmts_db = robust_json_load(os.path.join(TITLEDB_DIR, 'cnmts.json'))
-        _titles_db = robust_json_load(os.path.join(TITLEDB_DIR, titledb.get_region_titles_file(app_settings)))
+        
+        # Try region file, then US/en, then generic titles.json
+        region_file = titledb.get_region_titles_file(app_settings)
+        possible_files = [region_file, "titles.US.en.json", "titles.json"]
+        
+        _titles_db = {}
+        for filename in possible_files:
+            filepath = os.path.join(TITLEDB_DIR, filename)
+            if os.path.exists(filepath):
+                logger.info(f"Loading titles from {filename}...")
+                _titles_db = robust_json_load(filepath)
+                if _titles_db:
+                    break
+        
+        if not _titles_db:
+            logger.warning("No titles database found!")
+
         _versions_db = robust_json_load(os.path.join(TITLEDB_DIR, 'versions.json'))
 
         _versions_txt_db = {}
@@ -314,14 +330,24 @@ def get_game_info(title_id):
         return None
 
     try:
-        title_info = [_titles_db[t] for t in list(_titles_db.keys()) if _titles_db[t]['id'] == title_id][0]
-        return {
-            'name': title_info['name'],
-            'bannerUrl': title_info['bannerUrl'],
-            'iconUrl': title_info['iconUrl'],
-            'id': title_info['id'],
-            'category': title_info['category'],
-        }
+        # First try direct lookup by ID (Case-insensitive)
+        info = _titles_db.get(title_id.upper()) or _titles_db.get(title_id.lower())
+        
+        if not info:
+            # Fallback for some titledb formats that index by something else
+            matches = [v for k, v in _titles_db.items() if v.get('id') == title_id.upper()]
+            if matches:
+                info = matches[0]
+        
+        if info:
+            return {
+                'name': info.get('name', 'Unrecognized'),
+                'bannerUrl': info.get('bannerUrl', '//placehold.it/400x200'),
+                'iconUrl': info.get('iconUrl', ''),
+                'id': info.get('id', title_id),
+                'category': info.get('category', ''),
+            }
+        raise Exception("Not found")
     except Exception:
         logger.error(f"Title ID not found in titledb: {title_id}")
         return {

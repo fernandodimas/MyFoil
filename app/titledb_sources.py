@@ -63,7 +63,7 @@ class TitleDBSourceManager:
     DEFAULT_SOURCES = [
         TitleDBSource(
             name="ownfoil/workflow (Legacy)",
-            base_url="https://nightly.link/a1ex4/ownfoil/workflows/region_titles/master",
+            base_url="https://nightly.link/a1ex4/ownfoil/workflows/region_titles/master/titledb.zip",
             enabled=True,
             priority=1,
             source_type='zip_legacy'
