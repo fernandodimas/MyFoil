@@ -29,14 +29,12 @@ class I18n:
                     print(f"Error loading translation {filename}: {e}")
 
     def get_locale(self):
-        # Try to get from URL parameter usually, but user asked for "default english, translatable via json"
-        # Since we don't have a user selector yet, let's use browser Accept-Language
-        # or fallback to en. 
-        # For this specific request, "maintains english by default" suggests we stick to en unless forced?
-        # A simple approach: Check 'lang' cookie or query param, else 'en'.
-        # But 'pt_BR' file exists for when we want to switch.
-        
-        # Let's try best match from headers
+        # 1. Check for language cookie
+        cookie_lang = request.cookies.get('language')
+        if cookie_lang and cookie_lang in self.translations:
+            return cookie_lang
+            
+        # 2. Try best match from headers
         best_match = request.accept_languages.best_match(self.translations.keys())
         return best_match or self.default_locale
 
@@ -46,4 +44,4 @@ class I18n:
         return self.translations.get(locale, {}).get(key, self.translations.get(self.default_locale, {}).get(key, key))
 
     def context_processor(self):
-        return dict(t=self.t)
+        return dict(t=self.t, get_locale=self.get_locale)

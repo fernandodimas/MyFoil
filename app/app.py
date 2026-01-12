@@ -578,6 +578,15 @@ def get_all_titles_api():
         'games': titles_library
     })
 
+@app.route('/api/set_language/<lang>', methods=['POST'])
+def set_language(lang):
+    if lang in ['en', 'pt_BR']:
+        resp = jsonify({'success': True})
+        # Set cookie for 1 year
+        resp.set_cookie('language', lang, max_age=31536000)
+        return resp
+    return jsonify({'success': False, 'error': 'Invalid language'}), 400
+
 @app.route('/api/get_game/<int:id>')
 @tinfoil_access
 def serve_game(id):

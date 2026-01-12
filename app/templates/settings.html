@@ -373,6 +373,15 @@
                 </div>
 
                 <div class="mb-3">
+                    <label for="languageSelect" class="form-label">Language / Idioma</label>
+                    <select class="form-select" id="languageSelect" onchange="changeLanguage(this.value)">
+                        <option value="en">English (Default)</option>
+                        <option value="pt_BR">Português (Brasil)</option>
+                    </select>
+                    <div class="form-text">Browser detection is enabled by default.</div>
+                </div>
+
+                <div class="mb-3">
                     <button type="button" id="submitShopSettingsBtn" class="btn btn-primary"
                         onClick='submitShopSettings()'>Submit</button>
                 </div>
@@ -380,25 +389,18 @@
             </div>
         </div>
 
-        <div class="accordion mt-3" id="titledbHelpAccordion">
-            <div class="accordion-item">
-                <h2 class="accordion-header" id="headingHelp">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#collapseHelp" aria-expanded="false" aria-controls="collapseHelp">
-                        <i class="bi bi-info-circle-fill me-2"></i> Expected JSON Format & Help
-                    </button>
-                </h2>
-                <div id="collapseHelp" class="accordion-collapse collapse" aria-labelledby="headingHelp"
-                    data-bs-parent="#titledbHelpAccordion">
-                    <div class="accordion-body">
+        <!-- Clean TitleDB Help Callout -->
+        <div class="card mt-3 border-light bg-light">
+            <div class="card-body d-flex align-items-start">
+                <i class="bi bi-info-circle-fill text-primary me-3 fs-4"></i>
+                <div>
+                    <h6 class="card-title fw-bold mb-1">Expected JSON Format</h6>
+                    <p class="card-text small text-muted mb-0">
                         Sources should point to a directory containing <code>titles.US.en.json</code> (or similar) and
                         <code>cnmts.json</code>.
-                        <br>
-                        For wrappers like <strong>tinfoil.media</strong>, select "JSON (Direct)". The system
-                        automatically handles standard JSON structures.
-                        <br>
-                        <strong>Legacy (ZIP)</strong> supports the old zipped TitleDB format.
-                    </div>
+                        For wrappers like <strong>tinfoil.media</strong>, select "JSON (Direct)".
+                        <strong>Legacy (ZIP)</strong> supports the old zipped format.
+                    </p>
                 </div>
             </div>
         </div>
@@ -900,6 +902,16 @@
         });
     }
 
+    function changeLanguage(lang) {
+        $.post('/api/set_language/' + lang, function (data) {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Failed to set language');
+            }
+        });
+    }
+
     function submitShopSettings() {
         $('#submitShopSettingsBtn').prop('disabled', true);
         data = {
@@ -973,6 +985,9 @@
             } else if (!shopSettings['hauth']) {
                 $("#missingShopHauthAlert").css('display', '');
             }
+
+            // Set current language from server-side context or cookie
+            $('#languageSelect').val('{{ get_locale() }}');
         });
 
     });

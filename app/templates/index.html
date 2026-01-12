@@ -12,10 +12,10 @@
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                     data-bs-target="#statsCollapse" aria-expanded="false" aria-controls="statsCollapse">
                     <div class="d-flex w-100 justify-content-between align-items-center me-3">
-                        <span><strong>{{ t('Total Files') }}:</strong> <span class="badge bg-primary rounded-pill">{{
+                        <span><strong>Total Files:</strong> <span class="badge bg-primary rounded-pill">{{
                                 total_files
                                 }}</span></span>
-                        <small class="text-muted">{{ t('Click for details') }}</small>
+                        <small class="text-muted">Click for details</small>
                     </div>
                 </button>
             </h2>
@@ -584,6 +584,8 @@
                 currentView = 'card';
             } else if (view === 'icon') {
                 currentView = 'icon';
+            } else if (view === 'list') {
+                currentView = 'list';
             }
             renderGames(games);
         });
