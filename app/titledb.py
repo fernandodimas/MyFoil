@@ -53,13 +53,14 @@ def is_file_outdated(filepath: str, max_age_hours: int = 24) -> bool:
     return age.total_seconds() > (max_age_hours * 3600)
 
 
-def download_titledb_file(filename: str, force: bool = False) -> bool:
+def download_titledb_file(filename: str, force: bool = False, silent_404: bool = False) -> bool:
     """
     Download a single TitleDB file using the source manager
     
     Args:
         filename: Name of the file to download
         force: Force download even if file exists and is recent
+        silent_404: If True, do not log an error for 404 Not Found
         
     Returns:
         True if successful, False otherwise
@@ -79,7 +80,10 @@ def download_titledb_file(filename: str, force: bool = False) -> bool:
         logger.info(f"Successfully downloaded {filename} from {source_name}")
         return True
     else:
-        logger.error(f"Failed to download {filename}: {error}")
+        if silent_404 and "404" in str(error):
+            logger.debug(f"{filename} not found on sources (404), skipping silently")
+        else:
+            logger.error(f"Failed to download {filename}: {error}")
         return False
 
 
@@ -113,25 +117,41 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
     region_titles_file = get_region_titles_file(app_settings)
     logger.info(f"Updating {region_titles_file}...")
     
-    # Try region-specific file first, fallback to generic titles.json
-    if download_titledb_file(region_titles_file, force=force):
+    # Try region-specific file first
+    if download_titledb_file(region_titles_file, force=force, silent_404=True):
         results[region_titles_file] = True
     else:
-        logger.warning(f"Failed to download {region_titles_file}, trying generic titles.json")
-        if download_titledb_file('titles.json', force=force):
-            # Copy generic to region-specific
-            generic_path = os.path.join(TITLEDB_DIR, 'titles.json')
-            region_path = os.path.join(TITLEDB_DIR, region_titles_file)
+        # Fallback 1: Try US/en which is almost always available and complete
+        fallback_file = "titles.US.en.json"
+        logger.info(f"{region_titles_file} not available, trying fallback to {fallback_file}...")
+        
+        if download_titledb_file(fallback_file, force=force, silent_404=True):
+            # Copy to region-specific path so app can find it
             try:
                 import shutil
-                shutil.copy2(generic_path, region_path)
+                shutil.copy2(os.path.join(TITLEDB_DIR, fallback_file), os.path.join(TITLEDB_DIR, region_titles_file))
                 results[region_titles_file] = True
-                logger.info(f"Using generic titles.json as {region_titles_file}")
+                logger.info(f"Using {fallback_file} as {region_titles_file}")
             except Exception as e:
-                logger.error(f"Failed to copy titles.json: {e}")
+                logger.error(f"Failed to copy {fallback_file}: {e}")
                 results[region_titles_file] = False
         else:
-            results[region_titles_file] = False
+            # Fallback 2: Try generic titles.json
+            logger.warning(f"Failed to download {fallback_file}, trying generic titles.json")
+            if download_titledb_file('titles.json', force=force):
+                # Copy generic to region-specific
+                generic_path = os.path.join(TITLEDB_DIR, 'titles.json')
+                region_path = os.path.join(TITLEDB_DIR, region_titles_file)
+                try:
+                    import shutil
+                    shutil.copy2(generic_path, region_path)
+                    results[region_titles_file] = True
+                    logger.info(f"Using generic titles.json as {region_titles_file}")
+                except Exception as e:
+                    logger.error(f"Failed to copy titles.json: {e}")
+                    results[region_titles_file] = False
+            else:
+                results[region_titles_file] = False
     
     # Update version tracking
     version_file = os.path.join(TITLEDB_DIR, '.latest')
