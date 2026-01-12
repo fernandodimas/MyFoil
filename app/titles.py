@@ -33,21 +33,38 @@ _versions_txt_db = None
 
 def robust_json_load(filepath):
     """Reliably load JSON files even with invalid escape sequences or control characters."""
+    if not os.path.exists(filepath):
+        return None
+        
     try:
         with open(filepath, encoding='utf-8', errors='ignore') as f:
-            # First try: Standard load
-            return json.load(f)
-    except json.JSONDecodeError:
-        try:
-            with open(filepath, encoding='utf-8', errors='ignore') as f:
-                # Second try: Non-strict load (allows control characters)
-                return json.loads(f.read(), strict=False)
-        except Exception as e:
-            logger.error(f"Critical error loading JSON {filepath}: {e}")
-            return {}
+            content = f.read()
+            if not content:
+                return None
     except Exception as e:
-        logger.error(f"Unexpected error opening {filepath}: {e}")
-        return {}
+        logger.error(f"Error reading {filepath}: {e}")
+        return None
+
+    try:
+        # First try: Standard load
+        return json.loads(content)
+    except json.JSONDecodeError as e:
+        # If it's an escape error, try to fix backslashes
+        if 'Invalid \\escape' in str(e):
+            logger.warning(f"Invalid escape found in {filepath}, attempting to sanitize...")
+            # Escape backslashes that aren't part of a valid JSON escape sequence
+            sanitized = re.sub(r'\\(?![u"\\\/bfnrt])', r'\\\\', content)
+            try:
+                return json.loads(sanitized, strict=False)
+            except Exception as ex:
+                logger.error(f"Sanitization failed for {filepath}: {ex}")
+        
+        # Second try: Non-strict load
+        try:
+            return json.loads(content, strict=False)
+        except Exception as ex:
+            logger.error(f"Critical error parsing JSON {filepath}: {ex}")
+            return None
 
 def getDirsAndFiles(path):
     entries = os.listdir(path)
@@ -154,7 +171,7 @@ def identify_appId(app_id):
     
     return title_id.upper(), app_type
 
-def load_titledb():
+def load_titledb(force=False):
     global _cnmts_db
     global _titles_db
     global _versions_db
@@ -163,6 +180,9 @@ def load_titledb():
     global _titles_db_loaded
 
     identification_in_progress_count += 1
+    if force:
+        _titles_db_loaded = False
+
     if not _titles_db_loaded:
         logger.info("Loading TitleDBs into memory...")
         
@@ -331,6 +351,22 @@ def identify_file(filepath):
             'type': c[1],
             'version': c[3],
             } for c in contents]
+    
+    # IMPORTANT: Even if keys failed, we still want to return a result 
+    # if filename identification worked
+    if not contents and not success:
+        # Fallback to filename identification if CNMT failed
+        app_id, title_id, app_type, version, error = identify_file_from_filename(filename)
+        if title_id:
+            contents = [{
+                'title_id': title_id,
+                'app_id': app_id,
+                'type': app_type,
+                'version': version,
+            }]
+            identification = 'filename'
+            success = True # Consider it a success if we got something from filename
+
     return identification, success, contents, error
 
 
