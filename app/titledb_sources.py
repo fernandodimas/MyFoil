@@ -36,9 +36,45 @@ class TitleDBSource:
             'enabled': self.enabled,
             'priority': self.priority,
             'source_type': self.source_type,
-            'last_success': self.last_success.isoformat() if self.last_success else None,
             'last_error': self.last_error
         }
+
+    def get_last_modified_date(self, filename: str) -> Optional[datetime]:
+        """Get the last modified date of the specific file from the source"""
+        url = self.get_file_url(filename)
+        try:
+            # Check if it's a raw GitHub URL
+            if "raw.githubusercontent.com" in self.base_url:
+                # GitHub raw URLs update immediately, but don't always expose Last-Modified
+                # For more accuracy, one would hit the API, but HEAD is cheap.
+                # Let's try to get info from the repo API if possible.
+                # Convention: https://raw.githubusercontent.com/<user>/<repo>/<branch>
+                parts = self.base_url.split('/')
+                if len(parts) >= 6:
+                    user = parts[3]
+                    repo = parts[4]
+                    branch = parts[5]
+                    # Use GitHub API to get commit info for the file
+                    # Endpoint: https://api.github.com/repos/<user>/<repo>/commits?path=<path>&sha=<branch>&per_page=1
+                    api_url = f"https://api.github.com/repos/{user}/{repo}/commits?path={filename}&sha={branch}&per_page=1"
+                    resp = requests.get(api_url, timeout=5)
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if data and isinstance(data, list) and len(data) > 0:
+                            commit_date = data[0]['commit']['committer']['date']
+                            # Remove 'Z' if present for ISO parsing compatibility (Python < 3.11 needs handling)
+                            return datetime.fromisoformat(commit_date.replace("Z", "+00:00"))
+            
+            # Fallback to standard HEAD request
+            response = requests.head(url, timeout=5)
+            if response.status_code == 200:
+                if 'Last-Modified' in response.headers:
+                    # Parse RFC 2822 date
+                    return datetime.strptime(response.headers['Last-Modified'], '%a, %d %b %Y %H:%M:%S %Z')
+        except Exception as e:
+            logger.debug(f"Failed to get remote date for {url}: {e}")
+        
+        return None
     
     @classmethod
     def from_dict(cls, data: Dict) -> 'TitleDBSource':

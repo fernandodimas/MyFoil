@@ -259,8 +259,10 @@
                     <div>
                         <strong>Current Active Source:</strong> {{ active_source.name }}
                         <div class="small">
-                            Last updated {{ active_source.time_since }} ago
+                            Last local update: {{ active_source.time_since }} ago
                             {% if active_source.is_updated %} (Up to date){% else %} (Outdated){% endif %}
+                            <br>
+                            Remote Source Date: {{ active_source.remote_date }}
                         </div>
                     </div>
                 </div>

@@ -319,11 +319,22 @@ def get_active_source_info() -> Dict:
         time_since = datetime.now() - active.last_success
         is_updated = time_since.total_seconds() < (24 * 3600)  # Considered updated if < 24h
         
+        # Get remote last modified date for the main titles file
+        # We need to construct the filename to check
+        app_settings = load_settings() 
+        filename = get_region_titles_file(app_settings)
+        
+        remote_date = active.get_last_modified_date(filename)
+        remote_date_str = "Unknown"
+        if remote_date:
+            remote_date_str = remote_date.strftime("%Y-%m-%d %H:%M")
+
         return {
             'name': active.name,
             'last_success': active.last_success,
             'is_updated': is_updated,
-            'time_since': str(time_since).split('.')[0] # Simple formatting
+            'time_since': str(time_since).split('.')[0], # Simple formatting
+            'remote_date': remote_date_str
         }
     
     return None
