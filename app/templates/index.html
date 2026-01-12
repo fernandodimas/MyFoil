@@ -12,9 +12,10 @@
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                     data-bs-target="#statsCollapse" aria-expanded="false" aria-controls="statsCollapse">
                     <div class="d-flex w-100 justify-content-between align-items-center me-3">
-                        <span><strong>Total Files:</strong> <span class="badge bg-primary rounded-pill">{{ total_files
+                        <span><strong>{{ t('Total Files') }}:</strong> <span class="badge bg-primary rounded-pill">{{
+                                total_files
                                 }}</span></span>
-                        <small class="text-muted">Click for details</small>
+                        <small class="text-muted">{{ t('Click for details') }}</small>
                     </div>
                 </button>
             </h2>
@@ -25,18 +26,18 @@
                         <!-- Owned Stats -->
                         <div class="col-md-4">
                             <div class="card h-100 border-success">
-                                <div class="card-header bg-success text-white">Owned Content</div>
+                                <div class="card-header bg-success text-white">{{ t('Owned Content') }}</div>
                                 <ul class="list-group list-group-flush">
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Games
+                                        {{ t('Games') }}
                                         <span class="badge bg-success rounded-pill">{{ total_games }}</span>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Updates
+                                        {{ t('Updates') }}
                                         <span class="badge bg-success rounded-pill">{{ total_updates }}</span>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        DLCs
+                                        {{ t('DLCs') }}
                                         <span class="badge bg-success rounded-pill">{{ total_dlcs }}</span>
                                     </li>
                                 </ul>
@@ -46,15 +47,15 @@
                         <!-- Missing/Incomplete Stats -->
                         <div class="col-md-4">
                             <div class="card h-100 border-warning">
-                                <div class="card-header bg-warning text-dark">Library Status</div>
+                                <div class="card-header bg-warning text-dark">{{ t('Library Status') }}</div>
                                 <ul class="list-group list-group-flush">
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Games needing Update
+                                        {{ t('Games needing Update') }}
                                         <span class="badge bg-warning text-dark rounded-pill">{{ games_missing_updates
                                             }}</span>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Games missing DLCs
+                                        {{ t('Games missing DLCs') }}
                                         <span class="badge bg-warning text-dark rounded-pill">{{ games_missing_dlcs
                                             }}</span>
                                     </li>
@@ -65,18 +66,18 @@
                         <!-- Missing Content (Database known but not owned) -->
                         <div class="col-md-4">
                             <div class="card h-100 border-danger">
-                                <div class="card-header bg-danger text-white">Missing Content</div>
+                                <div class="card-header bg-danger text-white">{{ t('Missing Content') }}</div>
                                 <ul class="list-group list-group-flush">
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Missing Base Games
+                                        {{ t('Missing Base Games') }}
                                         <span class="badge bg-danger rounded-pill">{{ missing_games }}</span>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Missing Updates
+                                        {{ t('Missing Updates') }}
                                         <span class="badge bg-danger rounded-pill">{{ missing_updates }}</span>
                                     </li>
                                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                                        Missing DLCs
+                                        {{ t('Missing DLCs') }}
                                         <span class="badge bg-danger rounded-pill">{{ missing_dlcs }}</span>
                                     </li>
                                 </ul>
@@ -176,13 +177,19 @@
             <input type="text" id="textFilter" class="form-control" placeholder="Search titles...">
         </div>
         <div class="col-auto">
-            <div class="btn-group" role="group">
-                <button id="view-toggle-btn-card" type="button" class="btn btn-primary view-toggle-btn active"
-                    data-view="card"><i class="bi bi-card-heading"></i></button>
-                <button id="view-toggle-btn-icon" type="button" class="btn btn-primary view-toggle-btn"
-                    data-view="icon"><i class="bi bi-grid-fill"></i></button>
-                <button id="view-toggle-btn-list" type="button" class="btn btn-primary view-toggle-btn" data-view="list"
-                    disabled=""><i class="bi bi-list-ul"></i></button>
+            <div class="btn-group" role="group" aria-label="View toggle">
+                <button type="button" class="btn btn-outline-secondary view-toggle-btn active" data-view="card"
+                    title="{{ t('Card View') }}">
+                    <i class="bi bi-grid-fill"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary view-toggle-btn" data-view="icon"
+                    title="{{ t('Icon View') }}">
+                    <i class="bi bi-grid-3x3-gap-fill"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary view-toggle-btn" data-view="list"
+                    title="{{ t('List View') }}">
+                    <i class="bi bi-list-ul"></i>
+                </button>
             </div>
         </div>
         <div class="col-auto">
@@ -254,6 +261,8 @@
         } else if (currentView === 'icon') {
             renderIconView();
             adjustIconSizes();
+        } else if (currentView === 'list') {
+            renderListView();
         }
 
         // init version tooltips
@@ -365,6 +374,38 @@
         adjustIconSizes(cardSize);
         // Update pagination
         updatePaginationControls(baseGames.length)
+    }
+
+    function renderListView() {
+        const gameGrid = $('#gameGrid');
+        gameGrid.empty();
+
+        start = (currentPage - 1) * itemsPerPage
+        end = start + itemsPerPage
+        paginatedGames = filteredGames.slice(start, end);
+
+        const table = $('<table class="table table-hover align-middle"><thead><tr><th scope="col" width="60">Icon</th><th scope="col">Title</th><th scope="col">ID</th><th scope="col">Type</th><th scope="col">Version</th></tr></thead><tbody></tbody></table>');
+
+        paginatedGames.forEach(game => {
+            const row = $('<tr></tr>');
+            row.append($('<td></td>').append($('<img style="height: 50px; width: 50px; object-fit: cover; border-radius: 4px;">').attr('src', game.iconUrl).on('error', function () { $(this).attr('src', '/static/img/no-icon.png'); })));
+            row.append($('<td></td>').text(game.title_id_name || game.name));
+            row.append($('<td></td>').append($('<small class="text-muted"></small>').text(game.title_id)));
+
+            const typeBadgeClass = (game.owned === false) ? 'text-bg-warning' : 'text-bg-info';
+            row.append($('<td></td>').append($(`<span class="badge ${typeBadgeClass}"></span>`).text(game.app_type)));
+
+            let ver = 'v' + game.version;
+            if (Array.isArray(game.version)) { ver = 'Multiple'; }
+            row.append($('<td></td>').text(ver));
+
+            table.find('tbody').append(row);
+        });
+
+        const responsiveDiv = $('<div class="table-responsive col-12"></div>').append(table);
+        gameGrid.append(responsiveDiv);
+
+        updatePaginationControls(filteredGames.length);
     }
 
     function getColumnsForCardSize(size) {
@@ -499,7 +540,9 @@
 
         // Fetch initial set of games and render
         fetchGames().then(() => {
-            loadFiltersFromStorage();
+            // Filters are NOT loaded from storage on refresh as requested
+            // loadFiltersFromStorage();
+            renderGames();
         });
 
         // Event listeners for items per page dropdown

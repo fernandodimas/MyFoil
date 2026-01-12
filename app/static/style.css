@@ -1,8 +1,34 @@
-/* body {
+:root {
+    --bg-color: #f8f9fa;
+    --text-color: #212529;
+    --card-bg: #ffffff;
+    --card-border: rgba(0,0,0,.125);
+    --header-bg: linear-gradient(to top, rgba(7, 0, 91, 0.71), #001233a1);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg-color: #2a3a4f;
+        --text-color: #e9ecef;
+        --card-bg: #34495e;
+        --card-border: #455a64;
+    }
+}
+
+body {
     font-family: Arial, sans-serif;
-    background-color: #2a3a4f;
-    color: #8d97ad;
-} */
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+.card {
+    background-color: var(--card-bg);
+    border-color: var(--card-border);
+}
+
+.text-dark {
+    color: var(--text-color) !important;
+}
 
 .grid-container {
     padding: 20px;

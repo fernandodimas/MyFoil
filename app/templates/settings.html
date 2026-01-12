@@ -380,17 +380,27 @@
             </div>
         </div>
 
-        <div class="alert alert-info mt-3">
-            <h6><i class="bi bi-info-circle-fill me-2"></i>Expected JSON Format</h6>
-            <small>
-                Sources should point to a directory containing <code>titles.US.en.json</code> (or similar) and
-                <code>cnmts.json</code>.
-                <br>
-                For wrappers like <strong>tinfoil.media</strong>, select "JSON (Direct)". The system automatically
-                handles standard JSON structures.
-                <br>
-                <strong>Legacy (ZIP)</strong> supports the old zipped TitleDB format.
-            </small>
+        <div class="accordion mt-3" id="titledbHelpAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingHelp">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseHelp" aria-expanded="false" aria-controls="collapseHelp">
+                        <i class="bi bi-info-circle-fill me-2"></i> Expected JSON Format & Help
+                    </button>
+                </h2>
+                <div id="collapseHelp" class="accordion-collapse collapse" aria-labelledby="headingHelp"
+                    data-bs-parent="#titledbHelpAccordion">
+                    <div class="accordion-body">
+                        Sources should point to a directory containing <code>titles.US.en.json</code> (or similar) and
+                        <code>cnmts.json</code>.
+                        <br>
+                        For wrappers like <strong>tinfoil.media</strong>, select "JSON (Direct)". The system
+                        automatically handles standard JSON structures.
+                        <br>
+                        <strong>Legacy (ZIP)</strong> supports the old zipped TitleDB format.
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

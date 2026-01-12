@@ -20,6 +20,7 @@ from utils import *
 from library import *
 import titledb
 import os
+from i18n import I18n
 
 def init():
     global watcher
@@ -194,6 +195,11 @@ def create_app():
     login_manager.init_app(app)
 
     app.register_blueprint(auth_blueprint)
+
+
+
+    # Initialize I18n
+    app.i18n = I18n(app)
 
     return app
 
