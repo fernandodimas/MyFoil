@@ -14,6 +14,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 from constants import *
+from settings import load_settings
 from titledb_sources import TitleDBSourceManager
 
 # Retrieve main logger
