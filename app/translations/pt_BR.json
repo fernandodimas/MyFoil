@@ -28,6 +28,9 @@
     "Type": "Tipo",
     "Version": "Versão",
     "Multiple": "Múltiplas",
+    "Owned": "Adquirido",
+    "Missing": "Faltando",
+    "No DLCs or Updates available": "Nenhuma DLC ou Atualização disponível",
     "TitleDB Sources": "Fontes TitleDB",
     "Current Active Source": "Fonte Ativa Atual",
     "Last local update": "Última atualização local",
@@ -95,5 +98,7 @@
     "Language / Idioma": "Language / Idioma",
     "English (Default)": "Inglês (Padrão)",
     "Português (Brasil)": "Português (Brasil)",
-    "Browser detection is enabled by default": "Detecção do navegador está habilitada por padrão"
+    "Browser detection is enabled by default": "Detecção do navegador está habilitada por padrão",
+    "Fetch updates from DBI database": "Buscar atualizações na base do DBI",
+    "Use DBI versions database instead of TitleDB for updates and DLCs": "Usar base de dados de versões do DBI ao invés do TitleDB para atualizações e DLCs"
 }

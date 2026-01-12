@@ -28,6 +28,9 @@
     "Type": "Type",
     "Version": "Version",
     "Multiple": "Multiple",
+    "Owned": "Owned",
+    "Missing": "Missing",
+    "No DLCs or Updates available": "No DLCs or Updates available",
     "TitleDB Sources": "TitleDB Sources",
     "Current Active Source": "Current Active Source",
     "Last local update": "Last local update",
@@ -95,5 +98,7 @@
     "Language / Idioma": "Language / Idioma",
     "English (Default)": "English (Default)",
     "Português (Brasil)": "Portuguese (Brasil)",
-    "Browser detection is enabled by default": "Browser detection is enabled by default"
+    "Browser detection is enabled by default": "Browser detection is enabled by default",
+    "Fetch updates from DBI database": "Fetch updates from DBI database",
+    "Use DBI versions database instead of TitleDB for updates and DLCs": "Use DBI versions database instead of TitleDB for updates and DLCs"
 }
