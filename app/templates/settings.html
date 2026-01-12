@@ -78,42 +78,44 @@
                 <p class="d-inline-flex gap-1">
                     <button class="btn btn-primary" type="button" data-bs-toggle="collapse"
                         data-bs-target="#collapseNewUser" aria-expanded="false" aria-controls="collapseNewUser">
-                        Add new user
+                        {{ t('Add new user') }}
                     </button>
                 </p>
                 <div class="collapse" id="collapseNewUser">
                     <div class="card card-body">
-                        <label class="form-label">Add a new user:</label>
+                        <label class="form-label">{{ t('Add a new user') }}:</label>
                         <form class="row g-3">
                             <div class="col-auto">
-                                <label for="inputNewUser" class="visually-hidden">Email</label>
-                                <input type="text" class="form-control" id="inputNewUser" placeholder="Username">
+                                <label for="inputNewUser" class="visually-hidden">{{ t('Email') }}</label>
+                                <input type="text" class="form-control" id="inputNewUser"
+                                    placeholder="{{ t('Username') }}">
                             </div>
                             <div class="col-auto">
-                                <label for="inputNewUserPassword" class="visually-hidden">Password</label>
+                                <label for="inputNewUserPassword" class="visually-hidden">{{ t('Password') }}</label>
                                 <input type="password" class="form-control" id="inputNewUserPassword"
-                                    placeholder="Password">
+                                    placeholder="{{ t('Password') }}">
                             </div>
                             <div class="col-auto p-2">
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="checkbox" id="checkboxNewUserShopAccess"
                                         checked>
-                                    <label class="form-check-label" for="checkboxNewUserShopAccess">Shop Access</label>
+                                    <label class="form-check-label" for="checkboxNewUserShopAccess">{{ t('Shop Access')
+                                        }}</label>
                                 </div>
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="checkbox" id="checkboxNewUserBackupAccess">
-                                    <label class="form-check-label" for="checkboxNewUserBackupAccess">Backup
-                                        Access</label>
+                                    <label class="form-check-label" for="checkboxNewUserBackupAccess">{{ t('Backup
+                                        Access') }}</label>
                                 </div>
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="checkbox" id="checkboxNewUserAdminAccess">
-                                    <label class="form-check-label" for="checkboxNewUserAdminAccess">Admin
-                                        Access</label>
+                                    <label class="form-check-label" for="checkboxNewUserAdminAccess">{{ t('Admin
+                                        Access') }}</label>
                                 </div>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-primary mb-3"
-                                    onClick='submitNewUser()'>Submit</button>
+                                <button type="button" class="btn btn-primary mb-3" onClick='submitNewUser()'>{{
+                                    t('Submit') }}</button>
                             </div>
                         </form>
                     </div>
@@ -144,7 +146,7 @@
 
                 <hr>
 
-                <h2 class="pb-3">Library</h2>
+                <h2 class="pb-3">{{ t('Library') }}</h2>
 
                 <label class="form-label">{{ t('Library paths') }}:</label>
                 <div id="libraryPathHelp" class="form-text">{{ t('Path of directory containing your games') }}.</div>
@@ -195,7 +197,8 @@
                     <div class="modal-dialog modal-dialog-centered">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h1 class="modal-title fs-5" id="deletePathModalLabel">Delete library path</h1>
+                                <h1 class="modal-title fs-5" id="deletePathModalLabel">{{ t('Delete library path') }}
+                                </h1>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal"
                                     aria-label="Close"></button>
                             </div>
@@ -215,28 +218,28 @@
                 <p>Titles identification configuration.</p>
                 <div class="row mb-3">
                     <div class="col">
-                        <label for="selectRegion" class="form-label">Library Region:</label>
+                        <label for="selectRegion" class="form-label">{{ t('Library Region') }}:</label>
                         <select id="selectRegion" class="form-select" aria-label="Select library region">
                         </select>
                     </div>
                     <div class="col">
-                        <label for="selectLanguage" class="form-label">Library Language:</label>
+                        <label for="selectLanguage" class="form-label">{{ t('Library Language') }}:</label>
                         <select id="selectLanguage" class="form-select" aria-label="Select library language">
                         </select>
                     </div>
-                    <div id="selectRegionLanguageHelp" class="form-text">Region and Language used to get games
-                        informations.</div>
+                    <div id="selectRegionLanguageHelp" class="form-text">{{ t('Region and Language used to get games
+                        informations') }}.</div>
                 </div>
 
                 <div class="mb-3">
-                    <label for="consoleKeysInput" class="form-label">Console keys:</label>
+                    <label for="consoleKeysInput" class="form-label">{{ t('Console keys') }}:</label>
                     <input class="form-control {% if valid_keys == true %}is-valid{% endif %}" type="file"
                         accept=".keys,.txt" id="consoleKeysInput">
                     <div class="valid-feedback">
-                        Keys are valid!
+                        {{ t('Keys are valid') }}
                     </div>
                     <div id="invalidConsoleKeysFeedback" class="invalid-feedback">
-                        Invalid keys file!
+                        {{ t('Invalid keys file') }}
                     </div>
                     <div id="consoleKeysHelp" class="form-text">{{ t('Tinfoil/MyFoil uses this to identify files') }}.
                     </div>
@@ -257,8 +260,8 @@
                 </div>
                 </form>
                 <hr>
-                <h2 id="TitleDB" class="pb-3">TitleDB Sources</h2>
-                <p>Manage TitleDB metadata sources and priorities.</p>
+                <h2 id="TitleDB" class="pb-3">{{ t('TitleDB Sources') }}</h2>
+                <p>{{ t('Manage TitleDB metadata sources and priorities') }}.</p>
 
                 {% if active_source %}
                 <div class="alert {{ 'alert-success' if active_source.is_updated else 'alert-warning' }} d-flex align-items-center"
@@ -275,7 +278,8 @@
                             {{ t('Remote Source Date') }}: {{ active_source.remote_date }}
                             <br>
                             <strong>{{ t('Loaded Titles File') }}:</strong>
-                            <code>{{ active_source.loaded_titles_file }}</code>
+                            <a href="/static/titledb/{{ active_source.loaded_titles_file }}" target="_blank"
+                                class="text-decoration-none"><code>{{ active_source.loaded_titles_file }}</code></a>
                         </div>
                     </div>
                 </div>
