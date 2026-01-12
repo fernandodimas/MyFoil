@@ -1,5 +1,10 @@
 {
     "Library": "Biblioteca",
+    "Settings": "Configurações",
+    "Setup": "Configuração",
+    "Login": "Entrar",
+    "Logout": "Sair",
+    "Toggle Theme": "Alternar Tema",
     "Total Games": "Total de Jogos",
     "Total DLCs": "Total de DLCs",
     "Total Updates": "Total de Atualizações",
@@ -16,7 +21,6 @@
     "Missing Updates": "Atualizações Faltantes",
     "Missing DLCs": "DLCs Faltantes",
     "TitleDB Sources": "Fontes TitleDB",
-    "Settings": "Configurações",
     "Search": "Buscar",
     "Filter": "Filtrar",
     "Card View": "Visualização em Cartões",
@@ -51,5 +55,16 @@
     "Enabled": "Ativado",
     "Disabled": "Desativado",
     "Last Update": "Última Atualização",
-    "Never": "Nunca"
+    "Never": "Nunca",
+    "Submit": "Enviar",
+    "Add library path": "Adicionar caminho da biblioteca",
+    "Scan library": "Escanear biblioteca",
+    "Add a new directory": "Adicionar novo diretório",
+    "Path": "Caminho",
+    "Cancel": "Cancelar",
+    "Delete": "Excluir",
+    "Language / Idioma": "Language / Idioma",
+    "Browser detection is enabled by default": "Detecção do navegador está habilitada por padrão",
+    "English (Default)": "Inglês (Padrão)",
+    "Português (Brasil)": "Português (Brasil)"
 }

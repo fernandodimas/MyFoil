@@ -388,7 +388,9 @@
 
         paginatedGames.forEach(game => {
             const row = $('<tr></tr>');
-            row.append($('<td></td>').append($('<img style="height: 50px; width: 50px; object-fit: cover; border-radius: 4px;">').attr('src', game.iconUrl).on('error', function () { $(this).attr('src', '/static/img/no-icon.png'); })));
+            // Use bannerUrl as fallback if iconUrl is empty (common for DLCs)
+            const imgSrc = game.iconUrl || game.bannerUrl || '/static/img/no-icon.png';
+            row.append($('<td></td>').append($('<img style="height: 50px; width: 50px; object-fit: cover; border-radius: 4px;">').attr('src', imgSrc).on('error', function () { $(this).attr('src', '/static/img/no-icon.png'); })));
             row.append($('<td></td>').text(game.title_id_name || game.name));
             row.append($('<td></td>').append($('<small class="text-muted"></small>').text(game.title_id)));
 

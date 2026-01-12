@@ -24,10 +24,49 @@
 <body>
     {% block content %}
     {% endblock %}
-    
+
+
     <footer class="p-3 text-center text-secondary mt-5" style="font-size: 0.8rem;">
         MyFoil Build: {{ build_version }}
     </footer>
+
+    <script>
+        // Theme toggle functionality
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-bs-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-bs-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            const icon = document.querySelector('#themeToggle i');
+            if (icon) {
+                if (theme === 'dark') {
+                    icon.className = 'bi bi-moon-stars-fill';
+                } else {
+                    icon.className = 'bi bi-sun-fill';
+                }
+            }
+        }
+
+        // Load saved theme on page load
+        document.addEventListener('DOMContentLoaded', function () {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-bs-theme', savedTheme);
+                updateThemeIcon(savedTheme);
+            } else {
+                // Default to system preference
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const defaultTheme = prefersDark ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-bs-theme', defaultTheme);
+                updateThemeIcon(defaultTheme);
+            }
+        });
+    </script>
 </body>
 
 </html>
