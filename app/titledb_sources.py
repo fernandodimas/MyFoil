@@ -219,4 +219,4 @@ class TitleDBSourceManager:
     
     def get_sources_status(self) -> List[Dict]:
         """Get status of all sources for display"""
-        return [s.to_dict() for s in self.sources]
+        return [s.to_dict() for s in sorted(self.sources, key=lambda x: x.priority)]
