@@ -15,11 +15,12 @@ logger = logging.getLogger('main')
 class TitleDBSource:
     """Represents a single TitleDB source"""
     
-    def __init__(self, name: str, base_url: str, enabled: bool = True, priority: int = 0):
+    def __init__(self, name: str, base_url: str, enabled: bool = True, priority: int = 0, source_type: str = 'json'):
         self.name = name
         self.base_url = base_url.rstrip('/')
         self.enabled = enabled
         self.priority = priority
+        self.source_type = source_type # 'json' or 'zip_legacy'
         self.last_success = None
         self.last_error = None
         
@@ -34,6 +35,7 @@ class TitleDBSource:
             'base_url': self.base_url,
             'enabled': self.enabled,
             'priority': self.priority,
+            'source_type': self.source_type,
             'last_success': self.last_success.isoformat() if self.last_success else None,
             'last_error': self.last_error
         }
@@ -45,7 +47,8 @@ class TitleDBSource:
             name=data['name'],
             base_url=data['base_url'],
             enabled=data.get('enabled', True),
-            priority=data.get('priority', 0)
+            priority=data.get('priority', 0),
+            source_type=data.get('source_type', 'json')
         )
         if data.get('last_success'):
             source.last_success = datetime.fromisoformat(data['last_success'])
@@ -59,20 +62,23 @@ class TitleDBSourceManager:
     # Default sources
     DEFAULT_SOURCES = [
         TitleDBSource(
+            name="ownfoil/workflow (Legacy)",
+            base_url="https://nightly.link/a1ex4/ownfoil/workflows/region_titles/master",
+            enabled=True,
+            priority=1,
+            source_type='zip_legacy'
+        ),
+        TitleDBSource(
             name="blawar/titledb (GitHub)",
             base_url="https://raw.githubusercontent.com/blawar/titledb/master",
-            priority=1
+            priority=2,
+            source_type='json'
         ),
         TitleDBSource(
             name="tinfoil.media",
             base_url="https://tinfoil.media/repo/db",
-            priority=2
-        ),
-        TitleDBSource(
-            name="ownfoil/workflow (Legacy)",
-            base_url="https://nightly.link/a1ex4/ownfoil/workflows/region_titles/master",
-            enabled=False,
-            priority=99
+            priority=3,
+            source_type='json'
         )
     ]
     
@@ -161,17 +167,17 @@ class TitleDBSourceManager:
         self.save_sources()
         return False, None, "All TitleDB sources failed"
     
-    def add_source(self, name: str, base_url: str, priority: int = 50, enabled: bool = True) -> bool:
+    def add_source(self, name: str, base_url: str, priority: int = 50, enabled: bool = True, source_type: str = 'json') -> bool:
         """Add a new custom source"""
         # Check if source already exists
         if any(s.name == name for s in self.sources):
             logger.warning(f"Source {name} already exists")
             return False
         
-        new_source = TitleDBSource(name, base_url, enabled, priority)
+        new_source = TitleDBSource(name, base_url, enabled, priority, source_type)
         self.sources.append(new_source)
         self.save_sources()
-        logger.info(f"Added new TitleDB source: {name}")
+        logger.info(f"Added new TitleDB source: {name} (Type: {source_type})")
         return True
     
     def remove_source(self, name: str) -> bool:

@@ -5,6 +5,8 @@ Enhanced with multiple source support and direct JSON downloads
 import os
 import json
 import logging
+import requests
+import unzip_http
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -53,17 +55,36 @@ def is_file_outdated(filepath: str, max_age_hours: int = 24) -> bool:
     return age.total_seconds() > (max_age_hours * 3600)
 
 
+def download_titledb_legacy(source_name: str, base_url: str, filename: str, dest_path: str) -> Tuple[bool, Optional[str]]:
+    """Helper to download a file from the legacy TitleDB ZIP source"""
+    try:
+        # Get the direct URL from the artifact redirector
+        r = requests.get(base_url, allow_redirects=False, timeout=10)
+        direct_url = r.next.url if hasattr(r, 'next') else base_url
+        
+        rzf = unzip_http.RemoteZipFile(direct_url)
+        
+        # Check if file exists in zip
+        zip_filenames = [f.filename for f in rzf.infolist()]
+        if filename not in zip_filenames:
+            return False, f"File {filename} not found in remote ZIP"
+            
+        with rzf.open(filename) as fpin:
+            with open(dest_path, mode='wb') as fpout:
+                while True:
+                    chunk = fpin.read(65536)
+                    if not chunk:
+                        break
+                    fpout.write(chunk)
+        
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
 def download_titledb_file(filename: str, force: bool = False, silent_404: bool = False) -> bool:
     """
     Download a single TitleDB file using the source manager
-    
-    Args:
-        filename: Name of the file to download
-        force: Force download even if file exists and is recent
-        silent_404: If True, do not log an error for 404 Not Found
-        
-    Returns:
-        True if successful, False otherwise
     """
     dest_path = os.path.join(TITLEDB_DIR, filename)
     
@@ -72,19 +93,47 @@ def download_titledb_file(filename: str, force: bool = False, silent_404: bool =
         logger.info(f"{filename} is up to date, skipping download")
         return True
     
-    # Download using source manager
     source_manager = get_source_manager()
-    success, source_name, error = source_manager.download_file(filename, dest_path)
+    active_sources = source_manager.get_active_sources()
     
-    if success:
-        logger.info(f"Successfully downloaded {filename} from {source_name}")
-        return True
-    else:
-        if silent_404 and "404" in str(error):
-            logger.debug(f"{filename} not found on sources (404), skipping silently")
-        else:
-            logger.error(f"Failed to download {filename}: {error}")
+    if not active_sources:
+        logger.error("No active TitleDB sources configured")
         return False
+        
+    for source in active_sources:
+        logger.info(f"Attempting to download {filename} from {source.name} ({source.source_type})...")
+        
+        if source.source_type == 'zip_legacy':
+            success, error = download_titledb_legacy(source.name, source.base_url, filename, dest_path)
+        else:
+            # Standard JSON download
+            url = source.get_file_url(filename)
+            try:
+                response = requests.get(url, timeout=30, stream=True)
+                response.raise_for_status()
+                with open(dest_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                success, error = True, None
+            except Exception as e:
+                success, error = False, str(e)
+
+        if success:
+            source.last_success = datetime.now()
+            source.last_error = None
+            source_manager.save_sources()
+            logger.info(f"Successfully downloaded {filename} from {source.name}")
+            return True
+        else:
+            source.last_error = error
+            if silent_404 and ("404" in str(error) or "not found" in str(error).lower()):
+                logger.debug(f"{filename} not found on {source.name} (skipping silently)")
+            else:
+                logger.warning(f"Failed to download {filename} from {source.name}: {error}")
+            continue
+
+    source_manager.save_sources()
+    return False
 
 
 def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, bool]:

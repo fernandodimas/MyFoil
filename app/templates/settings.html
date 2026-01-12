@@ -28,7 +28,9 @@
                     Console keys are required to decrypt any Nintendo content, including
                     backups. Ownfoil uses this to identify files, regardless of the filename.</br>
                     <strong>Titles will be missed or misidentified if you don't fill in your keys!</strong>
-                    See <a target="_blank" href="https://gitlab.com/easyhacking/switch/-/wikis/home/getting-started/dump-keys" class="alert-link">this guide</a> on
+                    See <a target="_blank"
+                        href="https://gitlab.com/easyhacking/switch/-/wikis/home/getting-started/dump-keys"
+                        class="alert-link">this guide</a> on
                     how to extract the
                     keys from your console, and upload them <a href="/settings#consoleKeysInput" class="alert-link">here
                         in Ownfoil.</a>
@@ -39,7 +41,8 @@
                 </div>
                 {% endif %}
 
-                <div id="missingShopHostAlert" class="alert alert-warning alert-dismissible fade show" role="alert" style="display: none;">
+                <div id="missingShopHostAlert" class="alert alert-warning alert-dismissible fade show" role="alert"
+                    style="display: none;">
                     <h4 class="alert-heading">Missing shop Host!</h4>
                     Host verification from outside the local network is disabled if the shop <code>Host</code> is
                     missing, configure it <a href="/settings#shopHostInput" class="alert-link">here
@@ -47,7 +50,8 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
 
-                <div id="missingShopHauthAlert" class="alert alert-warning alert-dismissible fade show" role="alert" style="display: none;">
+                <div id="missingShopHauthAlert" class="alert alert-warning alert-dismissible fade show" role="alert"
+                    style="display: none;">
                     <h4 class="alert-heading">Missing shop Hauth!</h4>
                     <a href="https://blawar.github.io/tinfoil/network/#host-signature" class="alert-link"
                         target="_blank">Host signature</a> verification from outside the local network is disabled if
@@ -253,6 +257,7 @@
                         <tr>
                             <th scope="col">Name</th>
                             <th scope="col">Base URL</th>
+                            <th scope="col">Type</th>
                             <th scope="col">Priority</th>
                             <th scope="col">Status</th>
                             <th scope="col">Actions</th>
@@ -280,14 +285,22 @@
                     <div class="card card-body">
                         <label class="form-label">Add a new TitleDB source:</label>
                         <form class="row g-3">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <input type="text" class="form-control" id="inputSourceName" placeholder="Source Name">
                             </div>
-                            <div class="col-md-5">
-                                <input type="text" class="form-control" id="inputSourceUrl" placeholder="https://example.com/titledb">
+                            <div class="col-md-4">
+                                <input type="text" class="form-control" id="inputSourceUrl"
+                                    placeholder="https://example.com/titledb">
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-select" id="inputSourceType">
+                                    <option value="json" selected>JSON (Direct)</option>
+                                    <option value="zip_legacy">Legacy (ZIP)</option>
+                                </select>
                             </div>
                             <div class="col-md-2">
-                                <input type="number" class="form-control" id="inputSourcePriority" placeholder="Priority" value="50">
+                                <input type="number" class="form-control" id="inputSourcePriority"
+                                    placeholder="Priority" value="50">
                             </div>
                             <div class="col-auto">
                                 <button type="button" class="btn btn-primary" onClick='submitNewSource()'>Add</button>
@@ -323,7 +336,8 @@
                     <input type="checkbox" class="form-check-input" id="encryptShopCheck"
                         aria-describedby="encryptShopCheckHelp">
                     <label class="form-check-label" for="encryptShopCheck">Encrypt shop</label>
-                    <div id="encryptShopCheckHelp" class="form-text">Serve encrypted and compressed shop, so that only Tinfoil clients
+                    <div id="encryptShopCheckHelp" class="form-text">Serve encrypted and compressed shop, so that only
+                        Tinfoil clients
                         can access the content. <strong>Strongly suggested to enable it for security</strong>.</div>
                 </div>
 
@@ -476,20 +490,20 @@
         $('#titledbSourcesTable tbody').empty();
         $.getJSON("/api/settings/titledb/sources", function (result) {
             if (result.success === false) return;
-            
+
             result.forEach(source => {
-                const statusBadge = source.enabled ? 
-                    '<span class="badge bg-success">Enabled</span>' : 
+                const statusBadge = source.enabled ?
+                    '<span class="badge bg-success">Enabled</span>' :
                     '<span class="badge bg-secondary">Disabled</span>';
-                
-                const lastSuccess = source.last_success ? 
-                    new Date(source.last_success).toLocaleString() : 
+
+                const lastSuccess = source.last_success ?
+                    new Date(source.last_success).toLocaleString() :
                     '<span class="text-muted">Never</span>';
-                
-                const errorStr = source.last_error ? 
+
+                const errorStr = source.last_error ?
                     `<br><small class="text-danger">${source.last_error}</small>` : '';
 
-                const toggleBtn = source.enabled ? 
+                const toggleBtn = source.enabled ?
                     `<button type="button" class="btn btn-outline-warning btn-sm" onclick="toggleSource('${source.name}', false)"><i class="bi bi-pause-fill"></i></button>` :
                     `<button type="button" class="btn btn-outline-success btn-sm" onclick="toggleSource('${source.name}', true)"><i class="bi bi-play-fill"></i></button>`;
 
@@ -497,6 +511,7 @@
                     `<tr>
                         <td><strong>${source.name}</strong></td>
                         <td><small>${source.base_url}</small></td>
+                        <td><span class="badge bg-info text-dark">${source.source_type}</span></td>
                         <td>${source.priority}</td>
                         <td>${statusBadge}<br><small class="text-muted">Last: ${lastSuccess}</small>${errorStr}</td>
                         <td>
@@ -538,13 +553,14 @@
         const name = $('#inputSourceName').val().trim();
         const url = $('#inputSourceUrl').val().trim();
         const priority = parseInt($('#inputSourcePriority').val());
+        const type = $('#inputSourceType').val();
 
         if (!name || !url) return;
 
         $.ajax({
             url: "/api/settings/titledb/sources",
             type: 'POST',
-            data: JSON.stringify({ name: name, base_url: url, priority: priority, enabled: true }),
+            data: JSON.stringify({ name: name, base_url: url, priority: priority, enabled: true, source_type: type }),
             contentType: "application/json",
             success: function (result) {
                 if (result.success) {
@@ -573,7 +589,7 @@
                 $('.updateTitleDBBtn').prop('disabled', false).text('Force TitleDB Update');
                 fillTitleDBSourcesTable();
             },
-            error: function() {
+            error: function () {
                 alert('Connection error');
                 $('.updateTitleDBBtn').prop('disabled', false).text('Force TitleDB Update');
             }

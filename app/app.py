@@ -447,6 +447,7 @@ def titledb_sources_api():
         base_url = data.get('base_url')
         priority = data.get('priority', 50)
         enabled = data.get('enabled', True)
+        source_type = data.get('source_type', 'json')
         
         if not name or not base_url:
             return jsonify({
@@ -454,7 +455,7 @@ def titledb_sources_api():
                 'errors': ['Name and base_url are required']
             })
         
-        success = titledb.add_titledb_source(name, base_url, priority, enabled)
+        success = titledb.add_titledb_source(name, base_url, priority, enabled, source_type)
         return jsonify({
             'success': success,
             'errors': [] if success else ['Failed to add source']
@@ -479,6 +480,8 @@ def titledb_sources_api():
             kwargs['priority'] = data['priority']
         if 'enabled' in data:
             kwargs['enabled'] = data['enabled']
+        if 'source_type' in data:
+            kwargs['source_type'] = data['source_type']
         
         success = titledb.update_titledb_source(name, **kwargs)
         return jsonify({

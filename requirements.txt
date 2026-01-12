@@ -8,4 +8,4 @@ PyYAML==6.0.2
 requests==2.32.5
 watchdog==6.0.0
 Werkzeug==3.1.3
-zstandard==0.24.0
+zstandard==0.24.0unzip-http==0.1.2
