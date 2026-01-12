@@ -1,4 +1,4 @@
-# Myfoil
+# MyFoil
 
 **Myfoil** is an enhanced fork of [Ownfoil](https://github.com/a1ex4/ownfoil) - a Nintendo Switch library manager that turns your library into a fully customizable and self-hosted Tinfoil Shop. 
 
@@ -36,8 +36,8 @@
 Clone the repository using `git`, install the dependencies and you're good to go:
 
 ```bash
-git clone https://github.com/yourusername/myfoil
-cd myfoil
+git clone https://github.com/fernandodimas/MyFoil
+cd MyFoil
 pip install -r requirements.txt
 python app/app.py
 ```
@@ -49,13 +49,35 @@ The shop will be accessible at `http://localhost:8465`
 Docker images will be available soon. For now, you can build your own:
 
 ```bash
-git clone https://github.com/yourusername/myfoil
-cd myfoil
+git clone https://github.com/fernandodimas/MyFoil
+cd MyFoil
 docker build -t myfoil .
 docker run -d -p 8465:8465 \
   -v /your/game/directory:/games \
   -v ./config:/app/config \
   --name myfoil myfoil
+```
+
+## 🔄 Automatic Updates
+
+To keep **Myfoil** always up to date with the latest features from GitHub, we recommend using **Watchtower**. 
+
+Add this to your `docker-compose.yml`:
+
+```yaml
+services:
+  myfoil:
+    image: ghcr.io/fernandodimas/myfoil:latest
+    container_name: myfoil
+    # ... your config ...
+
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=3600
 ```
 
 ## Migration from Ownfoil
@@ -119,7 +141,7 @@ Myfoil comes with three pre-configured sources (in priority order):
    - Good fallback option
 
 3. **ownfoil/workflow (Legacy)** - Priority 99 (Disabled)
-   - Original Ownfoil ZIP-based source
+   - Original MyFoil ZIP-based source (inherited from Ownfoil)
    - Kept for compatibility
    - Slower than direct sources
 
