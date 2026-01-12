@@ -155,109 +155,115 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
         results = {}
 
         if source.source_type == 'zip_legacy':
-        # --- ORIGINAL PROJECT LOGIC FOR LEGACY ZIP ---
-        try:
-            r = requests.get(source.base_url, allow_redirects=False, timeout=10)
-            direct_url = r.next.url if hasattr(r, 'next') else source.base_url
-            rzf = unzip_http.RemoteZipFile(direct_url)
-            
-            # Check for update available (Legacy style)
-            update_available = force
-            local_commit_file = os.path.join(TITLEDB_DIR, '.latest')
-            remote_latest_commit_file = [f.filename for f in rzf.infolist() if 'latest_' in f.filename][0]
-            latest_remote_commit = remote_latest_commit_file.split('_')[-1]
+            # --- ORIGINAL PROJECT LOGIC FOR LEGACY ZIP ---
+            try:
+                r = requests.get(source.base_url, allow_redirects=False, timeout=10)
+                direct_url = r.next.url if hasattr(r, 'next') else source.base_url
+                rzf = unzip_http.RemoteZipFile(direct_url)
+                
+                # Check for update available (Legacy style)
+                update_available = force
+                local_commit_file = os.path.join(TITLEDB_DIR, '.latest')
+                remote_latest_commit_file = [f.filename for f in rzf.infolist() if 'latest_' in f.filename][0]
+                latest_remote_commit = remote_latest_commit_file.split('_')[-1]
 
-            if not os.path.isfile(local_commit_file):
-                update_available = True
-            else:
-                with open(local_commit_file, 'r') as f:
-                    current_commit = f.read()
-                if current_commit != latest_remote_commit:
+                if not os.path.isfile(local_commit_file):
                     update_available = True
-            
-            # FORCE update if critical files are missing from disk
-            region_titles_file = get_region_titles_file(app_settings)
-            fallback_titles_file = "titles.US.en.json"
-            ultimate_fallback = "titles.json"
-            critical_files = ['cnmts.json', 'versions.json', region_titles_file, fallback_titles_file, ultimate_fallback]
-            missing_critical = any(not os.path.exists(os.path.join(TITLEDB_DIR, f)) for f in critical_files)
-            
-            if missing_critical:
-                logger.info("Critical TitleDB files missing from disk, forcing extraction...")
-                update_available = True
+                else:
+                    with open(local_commit_file, 'r') as f:
+                        current_commit = f.read()
+                    if current_commit != latest_remote_commit:
+                        update_available = True
+                
+                # FORCE update if critical files are missing from disk
+                region_titles_file = get_region_titles_file(app_settings)
+                fallback_titles_file = "titles.US.en.json"
+                ultimate_fallback = "titles.json"
+                critical_files = ['cnmts.json', 'versions.json', region_titles_file, fallback_titles_file, ultimate_fallback]
+                missing_critical = any(not os.path.exists(os.path.join(TITLEDB_DIR, f)) for f in critical_files)
+                
+                if missing_critical:
+                    logger.info("Critical TitleDB files missing from disk, forcing extraction...")
+                    update_available = True
 
-            if update_available:
-                zip_files = [f.filename for f in rzf.infolist()]
-                
-                # Always ensure we try to get core files + region + fallback safety net
-                files_to_update = ['cnmts.json', 'versions.json', 'versions.txt', 'languages.json', region_titles_file, fallback_titles_file, ultimate_fallback]
-                
-                # Update all files from ZIP - handles potential paths in ZIP
-                for filename in files_to_update:
-                    # Try exact match or match with path
-                    target_zip_path = None
-                    if filename in zip_files:
-                        target_zip_path = filename
-                    else:
-                        # Try to find file if it's inside a folder in the zip
-                        for zf in zip_files:
-                            if zf.endswith('/' + filename) or zf.endswith('\\' + filename):
-                                target_zip_path = zf
-                                break
+                if update_available:
+                    zip_files = [f.filename for f in rzf.infolist()]
                     
-                    if target_zip_path:
-                        logger.info(f'Extracting {filename} from legacy ZIP ({target_zip_path})...')
-                        try:
-                            with rzf.open(target_zip_path) as fpin:
-                                with open(os.path.join(TITLEDB_DIR, filename), 'wb') as fpout:
-                                    while True:
-                                        chunk = fpin.read(65536)
-                                        if not chunk: break
-                                        fpout.write(chunk)
-                            results[filename] = True
-                        except Exception as ex:
-                            logger.error(f"Failed to extract {filename}: {ex}")
-                            results[filename] = False
+                    # Always ensure we try to get core files + region + fallback safety net
+                    files_to_update = ['cnmts.json', 'versions.json', 'versions.txt', 'languages.json', region_titles_file, fallback_titles_file, ultimate_fallback]
+                    
+                    # Update all files from ZIP - handles potential paths in ZIP
+                    for filename in files_to_update:
+                        # Try exact match or match with path
+                        target_zip_path = None
+                        if filename in zip_files:
+                            target_zip_path = filename
+                        else:
+                            # Try to find file if it's inside a folder in the zip
+                            for zf in zip_files:
+                                if zf.endswith('/' + filename) or zf.endswith('\\' + filename):
+                                    target_zip_path = zf
+                                    break
+                        
+                        if target_zip_path:
+                            logger.info(f'Extracting {filename} from legacy ZIP ({target_zip_path})...')
+                            try:
+                                with rzf.open(target_zip_path) as fpin:
+                                    with open(os.path.join(TITLEDB_DIR, filename), 'wb') as fpout:
+                                        while True:
+                                            chunk = fpin.read(65536)
+                                            if not chunk: break
+                                            fpout.write(chunk)
+                                results[filename] = True
+                            except Exception as ex:
+                                logger.error(f"Failed to extract {filename}: {ex}")
+                                results[filename] = False
+                    
+                    # Save new commit hash
+                    with open(local_commit_file, 'w') as f:
+                        f.write(latest_remote_commit)
+                    
+                    source.last_success = datetime.now()
+                    source.last_error = None
+                else:
+                    logger.info("TitleDB already up to date (Legacy)")
+                    for f in ['cnmts.json', 'versions.json', 'versions.txt', 'languages.json', get_region_titles_file(app_settings)]:
+                        results[f] = True
                 
-                # Save new commit hash
-                with open(local_commit_file, 'w') as f:
-                    f.write(latest_remote_commit)
-                
-                source.last_success = datetime.now()
-                source.last_error = None
-            else:
-                logger.info("TitleDB already up to date (Legacy)")
-                for f in ['cnmts.json', 'versions.json', 'versions.txt', 'languages.json', get_region_titles_file(app_settings)]:
-                    results[f] = True
-            
-            source_manager.save_sources()
-            return results # Success!
-        except Exception as e:
-            logger.error(f"Legacy update from {source.name} failed: {e}")
-            source.last_error = str(e)
-            source_manager.save_sources()
-            continue # Try next source
+                source_manager.save_sources()
+                return results # Success!
+            except Exception as e:
+                logger.error(f"Legacy update from {source.name} failed: {e}")
+                source.last_error = str(e)
+                source_manager.save_sources()
+                continue # Try next source
 
-    else:
-        # --- NEW JSON MULTI-SOURCE LOGIC ---
-        core_files = ['cnmts.json', 'versions.json', 'versions.txt', 'languages.json']
-        for filename in core_files:
-            results[filename] = download_titledb_file(filename, force=force)
-        
-        # Always download US/en and titles.json as safety nets
-        download_titledb_file("titles.US.en.json", force=force, silent_404=True)
-        download_titledb_file("titles.json", force=force, silent_404=True)
-        
-        region_titles_file = get_region_titles_file(app_settings)
-        if all(results.get(f) for f in core_files):
-            source.last_success = datetime.now()
-            source.last_error = None
-            source_manager.save_sources()
-            return results
         else:
-            logger.warning(f"JSON source {source.name} failed to provide core files.")
-            continue
-            
+            # --- NEW JSON MULTI-SOURCE LOGIC ---
+            try:
+                core_files = ['cnmts.json', 'versions.json', 'versions.txt', 'languages.json']
+                for filename in core_files:
+                    results[filename] = download_titledb_file(filename, force=force)
+                
+                # Always download US/en and titles.json as safety nets
+                download_titledb_file("titles.US.en.json", force=force, silent_404=True)
+                download_titledb_file("titles.json", force=force, silent_404=True)
+                
+                region_titles_file = get_region_titles_file(app_settings)
+                if all(results.get(f) for f in core_files):
+                    source.last_success = datetime.now()
+                    source.last_error = None
+                    source_manager.save_sources()
+                    return results
+                else:
+                    logger.warning(f"JSON source {source.name} failed to provide core files.")
+                    continue
+            except Exception as e:
+                logger.error(f"JSON update from {source.name} failed: {e}")
+                source.last_error = str(e)
+                source_manager.save_sources()
+                continue # Try next source
+
     return {}
 
 
