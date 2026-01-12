@@ -3,7 +3,7 @@ import os
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(APP_DIR, 'data')
 CONFIG_DIR = os.path.join(APP_DIR, 'config')
-DB_FILE = os.path.join(CONFIG_DIR, 'ownfoil.db')
+DB_FILE = os.path.join(CONFIG_DIR, 'myfoil.db')
 CONFIG_FILE = os.path.join(CONFIG_DIR, 'settings.yaml')
 KEYS_FILE = os.path.join(CONFIG_DIR, 'keys.txt')
 CACHE_DIR = os.path.join(DATA_DIR, 'cache')
@@ -23,7 +23,9 @@ TITLEDB_DEFAULT_FILES = [
     'languages.json',
 ]
 
-OWNFOIL_DB = 'sqlite:///' + DB_FILE
+MYFOIL_DB = 'sqlite:///' + DB_FILE
+
+BUILD_VERSION = '20260112_1621'
 
 DEFAULT_SETTINGS = {
     "library": {

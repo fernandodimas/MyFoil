@@ -1,8 +1,8 @@
-# Myfoil - Quick Start Guide
+# MyFoil - Quick Start Guide
 
-## What is Myfoil?
+## What is MyFoil?
 
-Myfoil is an enhanced fork of Ownfoil with **significantly faster and more reliable** TitleDB updates.
+MyFoil is an enhanced fork of Ownfoil with **significantly faster and more reliable** TitleDB updates.
 
 ## Key Improvements
 
@@ -20,7 +20,6 @@ Myfoil is an enhanced fork of Ownfoil with **significantly faster and more relia
 ### 📊 Better Reliability
 - No more failed updates due to rate limits
 - Tracks source health and errors
-- Configurable priorities
 
 ## Installation
 
@@ -118,7 +117,7 @@ myfoil/
 
 ## Performance
 
-| Metric | Ownfoil | Myfoil | Improvement |
+| Metric | Ownfoil | MyFoil | Improvement |
 |--------|---------|--------|-------------|
 | First download | ~45s | ~15s | **66% faster** |
 | Update check | ~8s | ~0.5s | **93% faster** |
@@ -132,7 +131,7 @@ myfoil/
 
 ## Next Steps
 
-1. ✅ Install Myfoil
+1. ✅ Install MyFoil
 2. ✅ Create admin user
 3. ✅ Add your game library
 4. ✅ Check TitleDB sources are working

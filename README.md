@@ -1,6 +1,8 @@
 # MyFoil
 
-**Myfoil** is an enhanced fork of [Ownfoil](https://github.com/a1ex4/ownfoil) - a Nintendo Switch library manager that turns your library into a fully customizable and self-hosted Tinfoil Shop. 
+# MyFoil
+
+**MyFoil** is an enhanced fork of [Ownfoil](https://github.com/a1ex4/ownfoil) - a Nintendo Switch library manager that turns your library into a fully customizable and self-hosted Tinfoil Shop. 
 
 ## ✨ Enhanced Features (vs Ownfoil)
 
@@ -60,7 +62,7 @@ docker run -d -p 8465:8465 \
 
 ## 🔄 Automatic Updates
 
-To keep **Myfoil** always up to date with the latest features from GitHub, we recommend using **Watchtower**. 
+To keep **MyFoil** always up to date with the latest features from GitHub, we recommend using **Watchtower**. 
 
 Add this to your `docker-compose.yml`:
 
@@ -82,11 +84,11 @@ services:
 
 ## Migration from Ownfoil
 
-Myfoil is 100% compatible with Ownfoil. Simply:
+MyFoil is 100% compatible with Ownfoil. Simply:
 
 1. Stop your Ownfoil instance
-2. Replace the code/image with Myfoil
-3. Start Myfoil - it will use your existing config and database
+2. Replace the code/image with MyFoil
+3. Start MyFoil - it will use your existing config and database
 
 All your settings, users, and library data will be preserved!
 
@@ -95,23 +97,23 @@ In Tinfoil, add a shop with the following settings:
  - Protocol: `http` (or `https` if using a SSL enabled reverse proxy)
  - Host: server/computer IP, i.e. `192.168.1.100`
  - Port: host port of the container, i.e. `8000`
- - Username: username as created in Ownfoil settings (if the shop is set to Private)
- - Password: password as created in Ownfoil settings (if the shop is set to Private)
+ - Username: username as created in MyFoil settings (if the shop is set to Private)
+ - Password: password as created in MyFoil settings (if the shop is set to Private)
 
 # Usage
-Once Ownfoil is running you can access the Shop Web UI by navigating to the `http://<computer/server IP>:8465`.
+Once MyFoil is running you can access the Shop Web UI by navigating to the `http://<computer/server IP>:8465`.
 
 ## User administration
-Ownfoil requires an `admin` user to be created to enable Authentication for your Shop. Go to the `Settings` to create a first user that will have admin rights. Then you can add more users to your shop the same way.
+MyFoil requires an `admin` user to be created to enable Authentication for your Shop. Go to the `Settings` to create a first user that will have admin rights. Then you can add more users to your shop the same way.
 
 ## Library administration
-In the `Settings` page under the `Library` section, you can add directories containing your content. You can then manually trigger the library scan: Ownfoil will scan the content of the directories and try to identify every supported file (currently `nsp`, `nsz`, `xci`, `xcz`).
+In the `Settings` page under the `Library` section, you can add directories containing your content. You can then manually trigger the library scan: MyFoil will scan the content of the directories and try to identify every supported file (currently `nsp`, `nsz`, `xci`, `xcz`).
 There is watchdog in place for all your added directories: files moved, renamed, added or removed will be reflected directly in your library.
 
 ## Titles configuration
 In the `Settings` page under the `Titles` section is where you specify the language of your Shop (currently the same for all users).
 
-This is where you can also upload your `console keys` file to enable content identification using decryption, instead of only using filenames. If you do not provide keys, Ownfoil expects the files to be named `[APP_ID][vVERSION]`.
+This is where you can also upload your `console keys` file to enable content identification using decryption, instead of only using filenames. If you do not provide keys, MyFoil expects the files to be named `[APP_ID][vVERSION]`.
 
 ## Shop customization
 In the `Settings` page under the `Shop` section is where you customize your Shop, like the message displayed when successfully accessing the shop from Tinfoil or if the shop is private or public.
@@ -120,7 +122,7 @@ In the `Settings` page under the `Shop` section is where you customize your Shop
 
 ## What are TitleDB Sources?
 
-TitleDB sources provide the metadata about Switch games, updates, and DLCs. Myfoil uses this data to:
+TitleDB sources provide the metadata about Switch games, updates, and DLCs. MyFoil uses this data to:
 - Identify your game files
 - Check if you have the latest updates
 - Detect missing DLCs
@@ -128,7 +130,7 @@ TitleDB sources provide the metadata about Switch games, updates, and DLCs. Myfo
 
 ## Default Sources
 
-Myfoil comes with three pre-configured sources (in priority order):
+MyFoil comes with three pre-configured sources (in priority order):
 
 1. **blawar/titledb (GitHub)** - Priority 1 (Enabled)
    - The original and most comprehensive source
@@ -147,7 +149,7 @@ Myfoil comes with three pre-configured sources (in priority order):
 
 ## How It Works
 
-When Myfoil needs to update TitleDB:
+When MyFoil needs to update TitleDB:
 
 1. It tries the **highest priority enabled source** first
 2. If that fails (timeout, rate limit, etc.), it tries the **next source**
@@ -208,7 +210,7 @@ To host your own TitleDB mirror:
 
 1. Clone blawar/titledb: `git clone https://github.com/blawar/titledb`
 2. Serve the files via HTTP/HTTPS
-3. Add your source to Myfoil with the base URL
+3. Add your source to MyFoil with the base URL
 4. Required files:
    - `cnmts.json` - Content metadata
    - `versions.json` - Version information

@@ -16,7 +16,7 @@
         "last_error": null
     },
     {
-        "name": "ownfoil/workflow (Legacy)",
+        "name": "MyFoil (Legacy)",
         "base_url": "https://nightly.link/a1ex4/ownfoil/workflows/region_titles/master",
         "enabled": false,
         "priority": 99,

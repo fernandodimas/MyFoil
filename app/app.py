@@ -184,7 +184,7 @@ def on_library_change(events):
 
 def create_app():
     app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = OWNFOIL_DB
+    app.config["SQLALCHEMY_DATABASE_URI"] = MYFOIL_DB
     # TODO: generate random secret_key
     app.config['SECRET_KEY'] = '8accb915665f11dfa15c2db1a4e8026905f57716'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -199,6 +199,10 @@ def create_app():
 
 # Create app
 app = create_app()
+
+@app.context_processor
+def inject_version():
+    return dict(build_version=BUILD_VERSION)
 
 
 def tinfoil_error(error):
@@ -596,7 +600,7 @@ def scan_library():
         scan_library_path(library.path) # Only scan, identification will be done globally
 
 if __name__ == '__main__':
-    logger.info('Starting initialization of Ownfoil...')
+    logger.info('Starting initialization of MyFoil...')
     init_db(app)
     init_users(app)
     init()

@@ -1,5 +1,5 @@
 """
-TitleDB Source Manager for Myfoil
+TitleDB Source Manager for MyFoil
 Supports multiple sources with automatic fallback and configurable priorities
 """
 import requests
@@ -62,7 +62,7 @@ class TitleDBSourceManager:
     # Default sources
     DEFAULT_SOURCES = [
         TitleDBSource(
-            name="ownfoil/workflow (Legacy)",
+            name="MyFoil (Legacy)",
             base_url="https://nightly.link/a1ex4/ownfoil/workflows/region_titles/master/titledb.zip",
             enabled=True,
             priority=1,

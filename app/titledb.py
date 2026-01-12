@@ -1,5 +1,5 @@
 """
-TitleDB Update Module for Myfoil
+TitleDB Update Module for MyFoil
 Enhanced with multiple source support and direct JSON downloads
 """
 import os

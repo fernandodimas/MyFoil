@@ -1,14 +1,14 @@
-# Myfoil - Changelog
+# MyFoil - Changelog
 
-## What is Myfoil?
+## What is MyFoil?
 
-**Myfoil** is an enhanced fork of [Ownfoil](https://github.com/a1ex4/ownfoil) with significant improvements to the TitleDB update system, providing faster, more reliable, and more flexible game library management.
+**MyFoil** is an enhanced fork of [Ownfoil](https://github.com/a1ex4/ownfoil) with significant improvements to the TitleDB update system, providing faster, more reliable, and more flexible game library management.
 
 ## Major Changes from Ownfoil
 
 ### 🔄 Multiple TitleDB Sources
 
-Instead of relying on a single ZIP-based workflow, Myfoil supports multiple TitleDB sources with automatic fallback:
+Instead of relying on a single ZIP-based workflow, MyFoil supports multiple TitleDB sources with automatic fallback:
 
 **Default Sources (in priority order):**
 1. **blawar/titledb (GitHub)** - The original and most up-to-date source
@@ -18,12 +18,12 @@ Instead of relying on a single ZIP-based workflow, Myfoil supports multiple Titl
 ### ⚡ Direct JSON Downloads
 
 - **Before (Ownfoil):** Downloads a ZIP file, extracts metadata, checks commits, then extracts specific files
-- **After (Myfoil):** Downloads JSON files directly from GitHub/CDN
+- **After (MyFoil):** Downloads JSON files directly from GitHub/CDN
 - **Result:** ~70% faster updates, less bandwidth usage
 
 ### 🎯 Smart Fallback System
 
-If one source fails (rate limit, downtime, etc.), Myfoil automatically tries the next source in priority order. No more failed updates!
+If one source fails (rate limit, downtime, etc.), MyFoil automatically tries the next source in priority order. No more failed updates!
 
 ### ⚙️ Configurable via API
 
@@ -101,7 +101,7 @@ POST /api/settings/titledb/update
 
 ## Migration from Ownfoil
 
-Myfoil is **100% backward compatible** with Ownfoil:
+MyFoil is **100% backward compatible** with Ownfoil:
 
 1. All existing configurations work as-is
 2. Database schema is unchanged
@@ -122,7 +122,7 @@ python app/app.py
 
 ## Performance Comparison
 
-| Operation | Ownfoil | Myfoil | Improvement |
+| Operation | Ownfoil | MyFoil | Improvement |
 |-----------|---------|--------|-------------|
 | First TitleDB download | ~45s | ~15s | **66% faster** |
 | Update check (no changes) | ~8s | ~0.5s | **93% faster** |
