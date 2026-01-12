@@ -251,6 +251,28 @@
                 <h2 id="TitleDB" class="pb-3">TitleDB Sources</h2>
                 <p>Manage TitleDB metadata sources and priorities.</p>
 
+                {% if active_source %}
+                <div class="alert {{ 'alert-success' if active_source.is_updated else 'alert-warning' }} d-flex align-items-center"
+                    role="alert">
+                    <i class="bi {{ 'bi-check-circle-fill' if active_source.is_updated else 'bi-exclamation-triangle-fill' }} flex-shrink-0 me-2"
+                        style="font-size: 1.5rem;"></i>
+                    <div>
+                        <strong>Current Active Source:</strong> {{ active_source.name }}
+                        <div class="small">
+                            Last updated {{ active_source.time_since }} ago
+                            {% if active_source.is_updated %} (Up to date){% else %} (Outdated){% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-secondary d-flex align-items-center" role="alert">
+                    <i class="bi bi-info-circle-fill flex-shrink-0 me-2" style="font-size: 1.5rem;"></i>
+                    <div>
+                        <strong>No TitleDB source active</strong>
+                        <div class="small">Run an update to populate TitleDB status.</div>
+                    </div>
+                </div>
+                {% endif %}
                 <table class="table table-hover caption-top" id="titledbSourcesTable">
                     <caption>List of sources:</caption>
                     <thead>

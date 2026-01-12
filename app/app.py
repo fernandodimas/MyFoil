@@ -324,7 +324,8 @@ def settings_page():
         title='Settings',
         languages_from_titledb=languages,
         admin_account_created=admin_account_created(),
-        valid_keys=app_settings['titles']['valid_keys'])
+        valid_keys=app_settings['titles']['valid_keys'],
+        active_source=titledb.get_active_source_info())
 
 @app.get('/api/settings')
 @access_required('admin')

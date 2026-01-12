@@ -304,6 +304,31 @@ def get_titledb_sources_status() -> List[Dict]:
     return source_manager.get_sources_status()
 
 
+def get_active_source_info() -> Dict:
+    """Get information about the currently active/latest successful source"""
+    source_manager = get_source_manager()
+    sources = source_manager.get_active_sources()
+    
+    # Sort by last success time (descending) to find the most recently used
+    successful_sources = [s for s in sources if s.last_success]
+    successful_sources.sort(key=lambda s: s.last_success, reverse=True)
+    
+    if successful_sources:
+        active = successful_sources[0]
+        # Calculate time since update
+        time_since = datetime.now() - active.last_success
+        is_updated = time_since.total_seconds() < (24 * 3600)  # Considered updated if < 24h
+        
+        return {
+            'name': active.name,
+            'last_success': active.last_success,
+            'is_updated': is_updated,
+            'time_since': str(time_since).split('.')[0] # Simple formatting
+        }
+    
+    return None
+
+
 def add_titledb_source(name: str, base_url: str, priority: int = 50, enabled: bool = True) -> bool:
     """Add a new TitleDB source"""
     source_manager = get_source_manager()
