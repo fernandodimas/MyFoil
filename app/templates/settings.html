@@ -512,7 +512,12 @@
                         <td><strong>${source.name}</strong></td>
                         <td><small>${source.base_url}</small></td>
                         <td><span class="badge bg-info text-dark">${source.source_type}</span></td>
-                        <td>${source.priority}</td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm" style="width: 80px" 
+                                   value="${source.priority}" 
+                                   onchange="updateSourcePriority('${source.name}', this.value)"
+                                   min="0" step="1">
+                        </td>
                         <td>${statusBadge}<br><small class="text-muted">Last: ${lastSuccess}</small>${errorStr}</td>
                         <td>
                             ${toggleBtn}
@@ -521,6 +526,22 @@
                     </tr>`
                 );
             });
+        });
+    }
+
+    function updateSourcePriority(name, priority) {
+        $.ajax({
+            url: "/api/settings/titledb/sources",
+            type: 'PUT',
+            data: JSON.stringify({ name: name, priority: parseInt(priority) }),
+            contentType: "application/json",
+            success: function (result) {
+                if (result.success) {
+                    fillTitleDBSourcesTable();
+                } else {
+                    alert('Error updating priority: ' + (result.errors ? result.errors.join(', ') : 'Unknown error'));
+                }
+            }
         });
     }
 
