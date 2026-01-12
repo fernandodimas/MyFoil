@@ -183,7 +183,10 @@ def load_titledb():
                     break
         
         if not _titles_db:
-            logger.warning("No titles database found!")
+            logger.warning("No titles database found among possible files!")
+        else:
+            count = len(_titles_db) if isinstance(_titles_db, (dict, list)) else 0
+            logger.info(f"TitleDBs loaded. ({count} titles in memory)")
 
         _versions_db = robust_json_load(os.path.join(TITLEDB_DIR, 'versions.json'))
 
@@ -325,20 +328,38 @@ def identify_file(filepath):
 
 def get_game_info(title_id):
     global _titles_db
-    if _titles_db is None:
-        logger.error("titles_db is not loaded. Call load_titledb first.")
-        return None
+    if not _titles_db:
+        logger.error("titles_db is empty or not loaded.")
+        return {
+            'name': 'Unrecognized (No DB)',
+            'bannerUrl': '//placehold.it/400x200',
+            'iconUrl': '',
+            'id': title_id,
+            'category': '',
+        }
 
     try:
-        # First try direct lookup by ID (Case-insensitive)
-        info = _titles_db.get(title_id.upper()) or _titles_db.get(title_id.lower())
+        info = None
+        search_id = title_id.upper()
+
+        if isinstance(_titles_db, dict):
+            # Format A: { "ID": { "name": "..." } }
+            info = _titles_db.get(search_id) or _titles_db.get(search_id.lower())
+            
+            # Format B: { "some_key": { "id": "ID", "name": "..." } }
+            if not info:
+                for k, v in _titles_db.items():
+                    if isinstance(v, dict) and v.get('id', '').upper() == search_id:
+                        info = v
+                        break
         
-        if not info:
-            # Fallback for some titledb formats that index by something else
-            matches = [v for k, v in _titles_db.items() if v.get('id') == title_id.upper()]
-            if matches:
-                info = matches[0]
-        
+        elif isinstance(_titles_db, list):
+            # Format C: [ { "id": "ID", "name": "..." }, ... ]
+            for item in _titles_db:
+                if isinstance(item, dict) and item.get('id', '').upper() == search_id:
+                    info = item
+                    break
+
         if info:
             return {
                 'name': info.get('name', 'Unrecognized'),
@@ -347,14 +368,15 @@ def get_game_info(title_id):
                 'id': info.get('id', title_id),
                 'category': info.get('category', ''),
             }
-        raise Exception("Not found")
-    except Exception:
-        logger.error(f"Title ID not found in titledb: {title_id}")
+        
+        raise Exception(f"ID {search_id} not found in database")
+    except Exception as e:
+        logger.debug(f"Identification failed for {title_id}: {e}")
         return {
             'name': 'Unrecognized',
             'bannerUrl': '//placehold.it/400x200',
             'iconUrl': '',
-            'id': title_id + ' not found in titledb',
+            'id': title_id,
             'category': '',
         }
 
