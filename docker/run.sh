@@ -4,13 +4,21 @@
 gid=${PGID:-1000}
 uid=${PUID:-1000}
 
-! getent group "${gid}" && addgroup -g "${gid}" -S ownfoil
-GROUP=$(getent group "${gid}" | cut -d ":" -f 1)
-! getent passwd "${uid}" && adduser -u "${uid}" -G "${GROUP}" -S ownfoil
+# Create group if it doesn't exist
+if ! getent group "${gid}" >/dev/null; then
+    groupadd -g "${gid}" myfoil
+fi
 
+# Create user if it doesn't exist
+if ! getent passwd "${uid}" >/dev/null; then
+    useradd -u "${uid}" -g "${gid}" -m -s /bin/bash myfoil
+fi
+
+# Set permissions
 chown -R ${uid}:${gid} /app
-chown -R ${uid}:${gid} /root
+chown -R ${uid}:${gid} /games 2>/dev/null || true
 
-echo "Starting ownfoil"
+echo "Starting MyFoil as UID ${uid}..."
 
+# Run the application
 exec sudo -E -u "#${uid}" python /app/app.py

@@ -20,6 +20,12 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 # Final stage
 FROM python:3.11-slim-bookworm
 
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    sudo \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Metadata
 LABEL maintainer="Myfoil Team"
 LABEL description="Enhanced Nintendo Switch library manager and Tinfoil Shop"
