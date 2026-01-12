@@ -10,6 +10,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libffi-dev \
     libssl-dev \
+    pkg-config \
+    python3-dev \
+    libzstd-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies
