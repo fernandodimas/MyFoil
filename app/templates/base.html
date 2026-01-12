@@ -37,9 +37,28 @@
     {% block content %}
     {% endblock %}
 
-    <footer class="py-10 text-center opacity-50 text-xs">
-        MyFoil Build: {{ build_version }}
-    </footer>
+    <div id="toastContainer" class="toast toast-end toast-bottom z-[9999]"></div>
+
+    <script>
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const icon = type === 'success' ? 'check-circle' : 'exclamation-circle';
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+
+            toast.className = `alert ${alertClass} shadow-lg border-none animate-in fade-in slide-in-from-bottom-4 duration-300`;
+            toast.innerHTML = `
+                <i class="bi bi-${icon}"></i>
+                <span class="text-sm font-bold">${message}</span>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('animate-out', 'fade-out', 'slide-out-to-bottom-4');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
 
     <script>
         // Theme toggle functionality for daisyUI

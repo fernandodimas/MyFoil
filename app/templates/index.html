@@ -107,21 +107,16 @@
             </div>
 
             <!-- Items Per Page -->
-            <div class="dropdown dropdown-end">
-                <div tabindex="0" role="button" class="btn btn-sm btn-outline">{{ t('Items per page') }} <i
-                        class="bi bi-chevron-down"></i></div>
-                <ul tabindex="0"
-                    class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-32 border border-base-200 mt-2">
-                    <li><button class="items-per-page" data-value="12">12</button></li>
-                    <li><button class="items-per-page" data-value="24">24</button></li>
-                    <li><button class="items-per-page" data-value="48">48</button></li>
-                </ul>
+            <div class="flex items-center gap-2">
+                <span class="text-xs opacity-50 font-bold uppercase tracking-wider">{{ t('Items') }}</span>
+                <input type="number" id="itemsPerPageInput" class="input input-bordered input-sm w-16" min="1"
+                    max="500" />
             </div>
 
             <!-- Card Size -->
             <div class="hidden md:flex items-center gap-2">
                 <i class="bi bi-image text-xs opacity-50"></i>
-                <input type="range" min="1" max="5" value="3" class="range range-xs range-primary w-24"
+                <input type="range" min="1" max="6" value="3" class="range range-xs range-primary w-24"
                     id="cardSizeRange" />
                 <i class="bi bi-image text-lg opacity-50"></i>
             </div>
@@ -351,14 +346,14 @@
                 <div class="collapse collapse-arrow bg-base-100 shadow-sm border border-base-200">
                     <input type="radio" name="game-accordion" /> 
                     <div class="collapse-title flex items-center gap-4">
-                        <div class="avatar">
+                        <div class="avatar cursor-pointer hover:scale-110 transition-transform" onclick="event.stopPropagation(); showGameDetails('${game.title_id}')">
                             <div class="w-12 rounded-lg">
                                 <img src="${game.iconUrl || game.bannerUrl || '/static/img/no-icon.png'}" onerror="this.src='/static/img/no-icon.png'" />
                             </div>
                         </div>
                         <div class="flex-grow">
                             <div class="flex items-center gap-2">
-                                <span class="font-bold text-sm md:text-base">${game.title_id_name || game.name}</span>
+                                <span class="font-bold text-sm md:text-base cursor-pointer hover:text-primary transition-colors" onclick="event.stopPropagation(); showGameDetails('${game.title_id}')">${game.title_id_name || game.name}</span>
                                 <span class="text-[10px] font-mono opacity-50 hidden md:inline">${game.title_id}${versionDisplay}</span>
                             </div>
                             <div class="flex gap-1 mt-1">
@@ -404,8 +399,10 @@
                     </div>
                 </div>
             `);
-            item.find('.collapse-title').click(function (e) { e.stopPropagation(); });
-            item.attr('onclick', `showGameDetails('${game.title_id}')`);
+            item.find('.collapse-title').click(function (e) {
+                // Don't trigger modal if clicking specific areas handled by onclick
+                if (e.target.closest('.avatar') || e.target.closest('.font-bold')) return;
+            });
 
             gameGrid.append(item);
         });
@@ -508,6 +505,7 @@
 
     $(document).ready(function () {
         itemsPerPage = parseInt(localStorage.getItem('itemsPerPage')) || 12;
+        $('#itemsPerPageInput').val(itemsPerPage);
         currentView = localStorage.getItem('currentView') || 'card';
         cardSize = parseInt(localStorage.getItem('cardSize')) || 3;
 
@@ -541,8 +539,8 @@
             renderGames();
         });
 
-        $('.items-per-page').click(function () {
-            itemsPerPage = $(this).data('value');
+        $('#itemsPerPageInput').on('change', function () {
+            itemsPerPage = parseInt($(this).val()) || 12;
             localStorage.setItem('itemsPerPage', itemsPerPage);
             currentPage = 1;
             renderGames();
