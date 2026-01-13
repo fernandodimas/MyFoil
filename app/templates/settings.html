@@ -2,355 +2,621 @@
 {% block content %}
 {% include 'nav.html' %}
 
-<div class="container mx-auto px-4 py-8 max-w-5xl">
+<section class="section">
+    <div class="container">
+        <div class="columns is-variable is-8">
 
-    <!-- Alerts Section -->
-    <div class="space-y-4 mb-8">
-        {% if admin_account_created == false %}
-        <div class="alert alert-error shadow-lg">
-            <i class="bi bi-exclamation-triangle-fill text-2xl"></i>
-            <div>
-                <h3 class="font-bold">{{ t('Missing admin account!') }}</h3>
-                <div class="text-xs">{{ t('Authentication is disabled. Anyone can access and change your configuration
-                    until an admin is created.') }} <a href="#Authentication"
-                        class="link link-hover font-bold underline">{{ t('Add one here') }}</a>.</div>
+            <!-- Sidebar Navigation -->
+            <div class="column is-3">
+                <aside class="menu is-sticky" style="top: 80px;">
+                    <p class="menu-label has-text-weight-black is-size-5 mb-5 tracking-tighter">
+                        <i class="bi bi-sliders2-vertical has-text-primary mr-2"></i> {{ t('Settings') }}
+                    </p>
+                    <ul class="menu-list" id="settingsNav">
+                        <li><a data-target="General" class="is-active"><i class="bi bi-gear-fill mr-2"></i> {{
+                                t('General') }}</a></li>
+                        <li><a data-target="Authentication"><i class="bi bi-people-fill mr-2"></i> {{
+                                t('Authentication') }}</a></li>
+                        <li><a data-target="Library"><i class="bi bi-folder2-open mr-2"></i> {{ t('Library') }}</a></li>
+                        <li><a data-target="TitleDB"><i class="bi bi-database-fill mr-2"></i> {{ t('TitleDB') }}</a>
+                        </li>
+                        <li><a data-target="Shop"><i class="bi bi-cart-fill mr-2"></i> {{ t('Shop') }}</a></li>
+                    </ul>
+                </aside>
             </div>
-        </div>
-        {% endif %}
 
-        {% if valid_keys == false %}
-        <div class="alert alert-warning shadow-lg">
-            <i class="bi bi-key-fill text-2xl"></i>
-            <div>
-                <h3 class="font-bold">{{ t('Missing console keys!') }}</h3>
-                <div class="text-xs">{{ t('Nintendo content decryption requires keys. Titles will be misidentified.') }}
-                    <a target="_blank"
-                        href="https://gitlab.com/easyhacking/switch/-/wikis/home/getting-started/dump-keys"
-                        class="link link-hover font-bold underline">{{ t('Extraction guide') }}</a>.
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- Main Settings Sections -->
-    <div class="grid grid-cols-1 gap-12">
-
-        <!-- Authentication -->
-        <section id="Authentication" class="card bg-base-100 shadow-xl border border-primary/20 overflow-hidden">
-            <div class="card-body">
-                <h2 class="card-title text-2xl mb-4 flex items-center gap-2 text-primary">
-                    <i class="bi bi-people"></i> {{ t('Authentication') }}
-                </h2>
-
-                <div class="overflow-x-auto">
-                    <table class="table w-full" id="userTable">
-                        <thead>
-                            <tr>
-                                <th>{{ t('User') }}</th>
-                                <th>{{ t('Permissions') }}</th>
-                                <th class="text-right">{{ t('Actions') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+            <!-- Main Content Area -->
+            <div class="column is-9">
+                <!-- Loading Overlay -->
+                <div id="settingsLoading" class="has-text-centered py-6">
+                    <button class="button is-loading is-ghost is-large"></button>
+                    <p class="mt-4 has-text-weight-bold">{{ t('Loading settings...') }}</p>
                 </div>
 
-                <div class="divider"></div>
-
-                <div class="collapse collapse-arrow bg-primary/5 border border-primary/20">
-                    <input type="checkbox" id="collapseNewUser" />
-                    <div class="collapse-title font-bold text-primary">{{ t('Add new user') }}</div>
-                    <div class="bg-base-100/50 border border-primary/20 rounded-xl p-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <input type="text" id="inputNewUser" placeholder="{{ t('Username') }}"
-                                class="input input-bordered w-full" />
-                            <input type="password" id="inputNewUserPassword" placeholder="{{ t('Password') }}"
-                                class="input input-bordered w-full" />
-                        </div>
-                        <div class="flex flex-wrap gap-6 my-6">
-                            <label class="label cursor-pointer gap-2"><input type="checkbox"
-                                    id="checkboxNewUserShopAccess" class="checkbox checkbox-primary" checked /> <span
-                                    class="label-text">{{ t('Shop Access') }}</span></label>
-                            <label class="label cursor-pointer gap-2"><input type="checkbox"
-                                    id="checkboxNewUserBackupAccess" class="checkbox checkbox-primary" /> <span
-                                    class="label-text">{{ t('Backup Access') }}</span></label>
-                            <label class="label cursor-pointer gap-2"><input type="checkbox"
-                                    id="checkboxNewUserAdminAccess" class="checkbox checkbox-primary" /> <span
-                                    class="label-text">{{ t('Admin Access') }}</span></label>
-                        </div>
-                        <button class="btn btn-primary w-full md:w-auto" onclick="submitNewUser()">{{ t('Save')
-                            }}</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Library Paths -->
-        <section id="Library" class="card bg-base-100 shadow-xl border border-primary/20 overflow-hidden">
-            <div class="card-body">
-                <h2 class="card-title text-2xl mb-4 flex items-center gap-2 text-primary">
-                    <i class="bi bi-folder2-open"></i> {{ t('Library') }}
-                </h2>
-                <p class="text-sm opacity-60 mb-4">{{ t('Path of directory containing your games') }}</p>
-
-                <div class="overflow-x-auto">
-                    <table class="table w-full" id="pathsTable">
-                        <thead>
-                            <tr>
-                                <th>{{ t('Path') }}</th>
-                                <th class="text-right">{{ t('Actions') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-
-                <div class="divider"></div>
-
-                <div class="flex flex-wrap gap-4">
-                    <div class="collapse collapse-arrow bg-primary/5 border border-primary/20 flex-grow">
-                        <input type="checkbox" id="collapseNewPath" />
-                        <div class="collapse-title font-bold text-primary">{{ t('Add library path') }}</div>
-                        <div class="collapse-content p-4">
-                            <div class="bg-base-100/50 border border-primary/20 rounded-xl p-4 flex gap-2">
-                                <input type="text" id="libraryPathInput" placeholder="/path/to/games"
-                                    class="input input-bordered flex-grow" />
-                                <button class="btn btn-primary" onclick="submitNewLibraryPath()">{{ t('Save')
-                                    }}</button>
+                <div id="settingsContent" class="is-hidden animate-fade-in">
+                    <!-- Alerts -->
+                    <div id="globalAlerts" class="mb-5">
+                        {% if admin_account_created == false %}
+                        <div class="notification is-danger is-light shadow-sm py-4">
+                            <div class="is-flex is-align-items-center gap-3">
+                                <i class="bi bi-exclamation-triangle-fill is-size-4"></i>
+                                <div>
+                                    <strong class="is-block uppercase is-size-7 tracking-widest">{{ t('Missing admin
+                                        account!') }}</strong>
+                                    <span class="is-size-7">{{ t('Authentication is disabled. Anyone can access and
+                                        change your configuration.') }}</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <button class="btn btn-outline btn-neutral h-auto min-h-0 py-4 scanBtn" onclick="scanLibrary()">
-                        <i class="bi bi-arrow-clockwise"></i> {{ t('Scan library') }}
-                    </button>
-                </div>
-            </div>
-        </section>
+                        {% endif %}
 
-        <!-- Titles Configuration -->
-        <section id="Titles" class="card bg-base-100 shadow-xl border border-primary/20 overflow-hidden">
-            <div class="card-body">
-                <h2 class="card-title text-2xl mb-4 flex items-center gap-2 text-primary">
-                    <i class="bi bi-gear-fill"></i> {{ t('Titles') }}
-                </h2>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="form-control w-full">
-                        <label class="label"><span class="label-text">{{ t('Library Region') }}</span></label>
-                        <select id="selectRegion" class="select select-bordered w-full"></select>
-                    </div>
-                    <div class="form-control w-full">
-                        <label class="label"><span class="label-text">{{ t('Library Language') }}</span></label>
-                        <select id="selectLanguage" class="select select-bordered w-full"></select>
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="label"><span class="label-text">{{ t('Console keys') }}</span></label>
-                        <input type="file" id="consoleKeysInput" class="file-input file-input-bordered w-full"
-                            accept=".keys,.txt" />
-                        <label class="label">
-                            <span class="label-text-alt opacity-50">{{ t('Tinfoil/MyFoil uses this to identify files')
-                                }}</span>
-                            {% if valid_keys %}<span class="label-text-alt text-success">{{ t('Keys are valid')
-                                }}</span>{% endif %}
-                        </label>
-                    </div>
-                </div>
-
-            </div>
-
-            <div class="divider"></div>
-
-            <div class="form-control">
-                <label class="label cursor-pointer justify-start gap-4">
-                    <input type="checkbox" id="useDbiVersionsCheck" class="checkbox checkbox-primary" />
-                    <span class="label-text font-bold">{{ t('Fetch updates from DBI database') }}</span>
-                </label>
-                <span class="text-xs opacity-50 ml-12">{{ t('Use DBI versions database instead of TitleDB for
-                    updates and DLCs') }}</span>
-            </div>
-
-            <button class="btn btn-primary mt-4 w-full md:w-auto" onclick="submitTitlesSettings()">{{ t('Save')
-                }}</button>
-    </div>
-    </section>
-
-    <!-- TitleDB Sources -->
-    <section id="TitleDB" class="card bg-base-100 shadow-xl border border-primary/20 overflow-hidden">
-        <div class="card-body">
-            <h2 class="card-title text-2xl mb-4 flex items-center gap-2 text-primary">
-                <i class="bi bi-database-fill"></i> {{ t('TitleDB Sources') }}
-            </h2>
-
-            {% if active_source %}
-            <div class="alert {{ 'alert-success' if active_source.is_updated else 'alert-warning' }} shadow-sm mb-6">
-                <i
-                    class="bi {{ 'bi-check-circle-fill' if active_source.is_updated else 'bi-exclamation-triangle-fill' }} text-xl"></i>
-                <div class="text-sm">
-                    <div class="font-bold">{{ t('Current Active Source') }}: {{ active_source.name }}</div>
-                    <div class="opacity-70">{{ t('Last local update') }}: {{ active_source.time_since }} {{ t('ago')
-                        }} ({{ t('Up to date') if active_source.is_updated else t('Outdated') }})</div>
-                    <div class="mt-1">
-                        <span class="opacity-70">{{ t('Loaded Titles File') }}:</span>
-                        <a href="/static/titledb/{{ active_source.loaded_titles_file }}" target="_blank"
-                            class="badge badge-ghost hover:badge-primary font-mono text-xs cursor-pointer tracking-tighter">{{
-                            active_source.loaded_titles_file }}</a>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <div class="overflow-x-auto mb-6">
-                <table class="table table-sm w-full" id="titledbSourcesTable">
-                    <thead>
-                        <tr>
-                            <th>{{ t('Name') }}</th>
-                            <th>{{ t('Type') }}</th>
-                            <th>{{ t('Priority') }}</th>
-                            <th>{{ t('Status') }}</th>
-                            <th class="text-right">{{ t('Actions') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-
-            <div class="flex flex-wrap gap-4 items-center">
-                <div class="collapse collapse-arrow bg-primary/5 border border-primary/20 flex-grow">
-                    <input type="checkbox" id="collapseNewSource" />
-                    <div class="collapse-title font-bold">{{ t('Add custom source') }}</div>
-                    <div class="collapse-content p-4">
-                        <div class="bg-base-100/50 border border-primary/20 rounded-xl p-4 space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <input type="text" id="inputSourceName" placeholder="{{ t('Source Name') }}"
-                                    class="input input-bordered w-full" />
-                                <input type="text" id="inputSourceUrl" placeholder="https://..."
-                                    class="input input-bordered w-full" />
-                                <select id="inputSourceType" class="select select-bordered w-full">
-                                    <option value="json" selected>{{ t('JSON (Direct)') }}</option>
-                                    <option value="zip_legacy">{{ t('Legacy (ZIP)') }}</option>
-                                </select>
-                                <input type="number" id="inputSourcePriority" value="50"
-                                    class="input input-bordered w-full" />
+                        {% if valid_keys == false %}
+                        <div id="keysAlert" class="notification is-warning is-light shadow-sm py-4">
+                            <div class="is-flex is-align-items-center gap-3">
+                                <i class="bi bi-key-fill is-size-4"></i>
+                                <div>
+                                    <strong class="is-block uppercase is-size-7 tracking-widest">{{ t('Missing console
+                                        keys!') }}</strong>
+                                    <span class="is-size-7">
+                                        {{ t('Nintendo content decryption requires keys.') }}
+                                        <a target="_blank"
+                                            href="https://gitlab.com/easyhacking/switch/-/wikis/home/getting-started/dump-keys"
+                                            class="has-text-weight-bold is-underlined ml-1">{{ t('Guide') }}</a>
+                                    </span>
+                                </div>
                             </div>
-                            <button class="btn btn-primary w-full md:w-auto" onclick="submitNewSource()">Add</button>
                         </div>
+                        {% endif %}
                     </div>
+
+                    <!-- Tab Sections -->
+
+                    <!-- General Section -->
+                    <section id="section-General" class="settings-section">
+                        <div class="card box shadow-sm">
+                            <header class="card-header border-none shadow-none">
+                                <p class="card-header-title has-text-primary">
+                                    <i class="bi bi-gear-fill mr-2"></i> {{ t('General Configuration') }}
+                                </p>
+                            </header>
+                            <div class="card-content pt-0">
+                                <div class="columns is-multiline">
+                                    <div class="column is-6">
+                                        <div class="field">
+                                            <label class="label is-small">{{ t('Library Region') }}</label>
+                                            <div class="control is-expanded">
+                                                <div class="select is-fullwidth">
+                                                    <select id="selectRegion"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="column is-6">
+                                        <div class="field">
+                                            <label class="label is-small">{{ t('Library Language') }}</label>
+                                            <div class="control is-expanded">
+                                                <div class="select is-fullwidth">
+                                                    <select id="selectLanguage"></select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="column is-6">
+                                        <div class="field">
+                                            <label class="label is-small">{{ t('Application Language') }}</label>
+                                            <div class="control is-expanded">
+                                                <div class="select is-fullwidth">
+                                                    <select id="languageSelect" onchange="changeLanguage(this.value)">
+                                                        <option value="en">{{ t('English') }}</option>
+                                                        <option value="pt_BR">{{ t('Português (Brasil)') }}</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="column is-6">
+                                        <div class="field pt-5">
+                                            <div class="control">
+                                                <label class="checkbox has-text-weight-bold">
+                                                    <input type="checkbox" id="useDbiVersionsCheck">
+                                                    {{ t('Fetch updates from DBI database') }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr class="my-6 opacity-10">
+
+                                <div class="block">
+                                    <h3 class="title is-6 mb-4"><i class="bi bi-key-fill has-text-primary mr-2"></i> {{
+                                        t('Console Keys') }}</h3>
+                                    <div class="notification is-primary is-light p-5">
+                                        <div class="columns is-vcentered">
+                                            <div class="column">
+                                                <div class="file has-name is-fullwidth">
+                                                    <label class="file-label">
+                                                        <input class="file-input" type="file" id="consoleKeysInput"
+                                                            name="file" accept=".keys,.txt">
+                                                        <span class="file-cta">
+                                                            <span class="file-icon"><i class="bi bi-upload"></i></span>
+                                                            <span class="file-label">{{ t('Choose file...') }}</span>
+                                                        </span>
+                                                        <span class="file-name" id="fileNameDisplay">{{ t('No file
+                                                            chosen') }}</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            <div class="column is-narrow">
+                                                <button class="button is-primary" onclick="submitTitlesSettings()">
+                                                    <i class="bi bi-check-lg mr-2"></i> {{ t('Update & Save') }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2 is-flex is-align-items-center gap-2">
+                                            {% if valid_keys %}
+                                            <span class="tag is-success is-light"><i
+                                                    class="bi bi-check-circle mr-1"></i> {{ t('Keys are valid')
+                                                }}</span>
+                                            {% else %}
+                                            <span class="tag is-danger is-light"><i class="bi bi-x-circle mr-1"></i> {{
+                                                t('Keys missing') }}</span>
+                                            {% endif %}
+                                            <span class="is-size-7 opacity-50 uppercase tracking-widest">{{ t('Required
+                                                for identification') }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Authentication Section -->
+                    <section id="section-Authentication" class="settings-section is-hidden">
+                        <div class="card box shadow-sm">
+                            <header class="card-header border-none shadow-none">
+                                <p class="card-header-title has-text-primary">
+                                    <i class="bi bi-people-fill mr-2"></i> {{ t('User Management') }}
+                                </p>
+                            </header>
+                            <div class="card-content pt-0">
+                                <div class="table-container">
+                                    <table class="table is-fullwidth is-hoverable" id="userTable">
+                                        <thead>
+                                            <tr>
+                                                <th>{{ t('User') }}</th>
+                                                <th>{{ t('Permissions') }}</th>
+                                                <th class="has-text-right">{{ t('Actions') }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+
+                                <div class="block mt-6">
+                                    <h3 class="title is-6 mb-4"><i
+                                            class="bi bi-person-plus-fill has-text-primary mr-2"></i> {{ t('Add New
+                                        User') }}</h3>
+                                    <div class="notification is-light p-5">
+                                        <div class="columns">
+                                            <div class="column">
+                                                <div class="field">
+                                                    <label class="label is-small">{{ t('Username') }}</label>
+                                                    <div class="control">
+                                                        <input class="input" type="text" id="inputNewUser">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="column">
+                                                <div class="field">
+                                                    <label class="label is-small">{{ t('Password') }}</label>
+                                                    <div class="control">
+                                                        <input class="input" type="password" id="inputNewUserPassword">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="field is-grouped is-grouped-multiline mb-5">
+                                            <div class="control">
+                                                <label class="checkbox mr-4">
+                                                    <input type="checkbox" id="checkboxNewUserShopAccess" checked> {{
+                                                    t('Shop Access') }}
+                                                </label>
+                                            </div>
+                                            <div class="control">
+                                                <label class="checkbox mr-4">
+                                                    <input type="checkbox" id="checkboxNewUserBackupAccess"> {{
+                                                    t('Backup Access') }}
+                                                </label>
+                                            </div>
+                                            <div class="control">
+                                                <label class="checkbox">
+                                                    <input type="checkbox" id="checkboxNewUserAdminAccess"> {{ t('Admin
+                                                    Access') }}
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <button class="button is-primary is-fullwidth-mobile" onclick="submitNewUser()">
+                                            {{ t('Create Account') }}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Library Section -->
+                    <section id="section-Library" class="settings-section is-hidden">
+                        <div class="card box shadow-sm">
+                            <header class="card-header border-none shadow-none">
+                                <p class="card-header-title has-text-primary">
+                                    <i class="bi bi-folder2-open mr-2"></i> {{ t('Library Locations') }}
+                                </p>
+                            </header>
+                            <div class="card-content pt-0">
+                                <div class="table-container mb-5">
+                                    <table class="table is-fullwidth" id="pathsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>{{ t('Storage Path') }}</th>
+                                                <th class="has-text-right">{{ t('Actions') }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+
+                                <div class="columns is-vcentered">
+                                    <div class="column">
+                                        <div class="field has-addons">
+                                            <div class="control is-expanded">
+                                                <input class="input" type="text" id="libraryPathInput"
+                                                    placeholder="/mnt/games">
+                                            </div>
+                                            <div class="control">
+                                                <button class="button is-primary" onclick="submitNewLibraryPath()">
+                                                    {{ t('Add Path') }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="column is-narrow">
+                                        <button class="button is-dark is-outlined scanBtn" onclick="scanLibrary()">
+                                            <span class="icon"><i class="bi bi-arrow-clockwise"></i></span>
+                                            <span>{{ t('Full Scan') }}</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- TitleDB Section -->
+                    <section id="section-TitleDB" class="settings-section is-hidden">
+                        <div class="card box shadow-sm">
+                            <header class="card-header border-none shadow-none">
+                                <p class="card-header-title has-text-primary">
+                                    <i class="bi bi-database-fill mr-2"></i> {{ t('TitleDB Sources') }}
+                                </p>
+                                <div class="card-header-icon pt-4 pr-5">
+                                    <button class="button is-small is-dark is-outlined updateTitleDBBtn"
+                                        onclick="forceTitleDBUpdate()">
+                                        <i class="bi bi-cloud-download mr-1"></i> {{ t('Force Update') }}
+                                    </button>
+                                </div>
+                            </header>
+                            <div class="card-content pt-0">
+                                {% if active_source %}
+                                <nav class="level box is-shadowless notification py-3 mb-6"
+                                    style="background: rgba(87,13,248,0.05)">
+                                    <div class="level-item has-text-centered">
+                                        <div>
+                                            <p class="heading">{{ t('Active Source') }}</p>
+                                            <p class="title is-5 has-text-primary">{{ active_source.name }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="level-item has-text-centered">
+                                        <div>
+                                            <p class="heading">{{ t('Last Update') }}</p>
+                                            <p class="title is-5">{{ active_source.time_since }} <small
+                                                    class="is-size-7 opacity-50">{{ t('ago') }}</small></p>
+                                        </div>
+                                    </div>
+                                    <div class="level-item has-text-centered">
+                                        <div>
+                                            <p class="heading">{{ t('Status') }}</p>
+                                            <span
+                                                class="tag {{ 'is-success' if active_source.is_updated else 'is-warning' }} is-light">
+                                                {{ t('Up to date') if active_source.is_updated else t('Outdated') }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </nav>
+                                {% endif %}
+
+                                <div class="table-container">
+                                    <table class="table is-fullwidth" id="titledbSourcesTable">
+                                        <thead>
+                                            <tr>
+                                                <th>{{ t('Source') }}</th>
+                                                <th>{{ t('Type') }}</th>
+                                                <th>{{ t('Priority') }}</th>
+                                                <th>{{ t('Status') }}</th>
+                                                <th class="has-text-right">{{ t('Actions') }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+
+                                <div class="block mt-6">
+                                    <button class="button is-small is-primary is-outlined" id="toggleAddSource">
+                                        <i class="bi bi-plus-lg mr-2"></i> {{ t('Add Custom Source') }}
+                                    </button>
+
+                                    <div id="addSourceForm" class="is-hidden mt-4 notification is-light p-5">
+                                        <div class="columns is-multiline">
+                                            <div class="column is-6">
+                                                <div class="field">
+                                                    <label class="label is-small">{{ t('Name') }}</label>
+                                                    <input class="input is-small" type="text" id="inputSourceName">
+                                                </div>
+                                            </div>
+                                            <div class="column is-6">
+                                                <div class="field">
+                                                    <label class="label is-small">{{ t('URL') }}</label>
+                                                    <input class="input is-small" type="text" id="inputSourceUrl">
+                                                </div>
+                                            </div>
+                                            <div class="column is-6">
+                                                <div class="field">
+                                                    <label class="label is-small">{{ t('Type') }}</label>
+                                                    <div class="select is-small is-fullwidth">
+                                                        <select id="inputSourceType">
+                                                            <option value="json" selected>JSON</option>
+                                                            <option value="zip_legacy">Legacy ZIP</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="column is-6">
+                                                <div class="field">
+                                                    <label class="label is-small">{{ t('Priority') }}</label>
+                                                    <input class="input is-small" type="number" id="inputSourcePriority"
+                                                        value="50">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button class="button is-primary is-small" onclick="submitNewSource()">{{
+                                            t('Save Source') }}</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Shop Section -->
+                    <section id="section-Shop" class="settings-section is-hidden">
+                        <div class="card box shadow-sm">
+                            <header class="card-header border-none shadow-none">
+                                <p class="card-header-title has-text-primary">
+                                    <i class="bi bi-cart-fill mr-2"></i> {{ t('Shop Configuration') }}
+                                </p>
+                            </header>
+                            <div class="card-content pt-0">
+                                <div class="field mb-6">
+                                    <label class="label">{{ t('Public Access URL') }}</label>
+                                    <div class="field has-addons">
+                                        <p class="control"><a class="button is-static">https://</a></p>
+                                        <div class="control is-expanded">
+                                            <input class="input" id="shopHostInput" type="text"
+                                                placeholder="tinfoil.domain.com">
+                                        </div>
+                                    </div>
+                                    <p class="help opacity-50">{{ t('Used for host verification and remote access') }}
+                                    </p>
+                                </div>
+
+                                <div class="field is-grouped mb-6">
+                                    <div class="control">
+                                        <label class="checkbox has-text-weight-bold mr-6">
+                                            <input type="checkbox" id="publicShopCheck"> {{ t('Public Index') }}
+                                        </label>
+                                    </div>
+                                    <div class="control">
+                                        <label class="checkbox has-text-weight-bold">
+                                            <input type="checkbox" id="encryptShopCheck" checked> {{ t('Encrypted Shop')
+                                            }}
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="field mb-6">
+                                    <label class="label">{{ t('Message of the Day') }}</label>
+                                    <div class="control">
+                                        <textarea class="textarea font-mono is-small" id="motdTextArea" rows="4"
+                                            placeholder="Welcome to MyFoil..."></textarea>
+                                    </div>
+                                </div>
+
+                                <button class="button is-primary px-6" onclick="submitShopSettings()">
+                                    {{ t('Save Shop Changes') }}
+                                </button>
+                            </div>
+                        </div>
+                    </section>
                 </div>
-                <button class="btn btn-neutral updateTitleDBBtn" onclick="forceTitleDBUpdate()">{{ t('Force TitleDB
-                    Update') }}</button>
             </div>
-
-        </div>
-    </section>
-
-    <!-- Shop Configuration -->
-    <section id="Shop" class="card bg-base-100 shadow-xl border border-primary/20 overflow-hidden mb-12">
-        <div class="card-body">
-            <h2 class="card-title text-2xl mb-4 flex items-center gap-2 text-primary">
-                <i class="bi bi-cart-fill"></i> {{ t('Shop') }}
-            </h2>
-
-            <div class="space-y-6">
-                <div class="form-control w-full">
-                    <label class="label"><span class="label-text font-bold">{{ t('Shop URL') }}</span></label>
-                    <input id="shopHostInput" placeholder="shop.domain.tld" class="input input-bordered w-full" />
-                    <span class="label-text-alt opacity-50 mt-1">{{ t('Configure your shop URL to enable host
-                        verification.') }}</span>
-                </div>
-
-                <div class="flex flex-wrap gap-8">
-                    <label class="label cursor-pointer gap-2"><input type="checkbox" id="publicShopCheck"
-                            class="checkbox checkbox-primary" /> <span class="label-text font-bold">{{ t('Public
-                            shop') }}</span></label>
-                    <label class="label cursor-pointer gap-2"><input type="checkbox" id="encryptShopCheck"
-                            class="checkbox checkbox-primary" /> <span class="label-text font-bold">{{ t('Encrypt
-                            shop') }}</span></label>
-                </div>
-
-                <div class="form-control w-full">
-                    <label class="label"><span class="label-text font-bold">{{ t('Message of the day')
-                            }}</span></label>
-                    <textarea id="motdTextArea" rows="3" class="textarea textarea-bordered w-full"></textarea>
-                </div>
-
-                <div class="form-control w-full max-w-xs">
-                    <label class="label"><span class="label-text font-bold">{{ t('Application language')
-                            }}</span></label>
-                    <select id="languageSelect" class="select select-bordered" onchange="changeLanguage(this.value)">
-                        <option value="en">{{ t('English (Default)') }}</option>
-                        <option value="pt_BR">{{ t('Português (Brasil)') }}</option>
-                    </select>
-                </div>
-            </div>
-
-            <button class="btn btn-primary mt-8 w-full md:w-auto" onclick="submitShopSettings()">{{ t('Save')
-                }}</button>
-        </div>
-    </section>
-
-</div>
-</div>
-
-<!-- Custom Modals (Using daisyUI Dialog) -->
-<dialog id="deleteUserModal" class="modal">
-    <div class="modal-box">
-        <h3 class="font-bold text-lg">{{ t('Delete user') }}</h3>
-        <p class="py-4 modal-text"></p>
-        <div class="modal-action">
-            <button class="btn" onclick="deleteUserModal.close()">{{ t('Cancel') }}</button>
-            <button class="btn btn-error btn-confirm">{{ t('Delete') }}</button>
         </div>
     </div>
-</dialog>
+</section>
 
-<dialog id="deletePathModal" class="modal">
-    <div class="modal-box">
-        <h3 class="font-bold text-lg">{{ t('Delete library path') }}</h3>
-        <p class="py-4 modal-text"></p>
-        <div class="modal-action">
-            <button class="btn" onclick="deletePathModal.close()">{{ t('Cancel') }}</button>
-            <button class="btn btn-error btn-confirm">{{ t('Delete') }}</button>
-        </div>
+<!-- Modals -->
+<div class="modal" id="deleteUserModal">
+    <div class="modal-background"></div>
+    <div class="modal-card shadow-2xl">
+        <header class="modal-card-head border-none">
+            <p class="modal-card-title has-text-danger has-text-weight-black"><i class="bi bi-trash3-fill mr-2"></i> {{
+                t('Delete User') }}</p>
+            <button class="delete" aria-label="close" onclick="closeModal('deleteUserModal')"></button>
+        </header>
+        <section class="modal-card-body py-6 modal-text opacity-70">
+            <!-- Text injected via JS -->
+        </section>
+        <footer class="modal-card-foot border-none is-justify-content-flex-end">
+            <button class="button" onclick="closeModal('deleteUserModal')">{{ t('Keep User') }}</button>
+            <button class="button is-danger btn-confirm">{{ t('Permanently Delete') }}</button>
+        </footer>
     </div>
-</dialog>
+</div>
+
+<div class="modal" id="deletePathModal">
+    <div class="modal-background"></div>
+    <div class="modal-card shadow-2xl">
+        <header class="modal-card-head border-none">
+            <p class="modal-card-title has-text-danger has-text-weight-black"><i class="bi bi-folder-x mr-2"></i> {{
+                t('Remove Path') }}</p>
+            <button class="delete" aria-label="close" onclick="closeModal('deletePathModal')"></button>
+        </header>
+        <section class="modal-card-body py-6 modal-text opacity-70">
+            <!-- Text injected via JS -->
+        </section>
+        <footer class="modal-card-foot border-none is-justify-content-flex-end">
+            <button class="button" onclick="closeModal('deletePathModal')">{{ t('Cancel') }}</button>
+            <button class="button is-danger btn-confirm">{{ t('Remove Path') }}</button>
+        </footer>
+    </div>
+</div>
+
+<style>
+    .menu-list a.is-active {
+        background-color: rgba(87, 13, 248, 0.1);
+        color: #570df8;
+        font-weight: bold;
+        border-left: 3px solid #570df8;
+    }
+
+    .animate-fade-in {
+        animation: fadeIn 0.3s ease-out forwards;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .is-sticky {
+        position: sticky;
+    }
+
+    .mr-1 {
+        margin-right: 0.25rem;
+    }
+
+    .mr-2 {
+        margin-right: 0.5rem;
+    }
+
+    .mr-4 {
+        margin-right: 1rem;
+    }
+
+    .mr-6 {
+        margin-right: 1.5rem;
+    }
+
+    .ml-1 {
+        margin-left: 0.25rem;
+    }
+
+    .my-6 {
+        margin-top: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .p-5 {
+        padding: 1.25rem !important;
+    }
+
+    .p-0 {
+        padding: 0 !important;
+    }
+
+    .gap-2 {
+        gap: 0.5rem;
+    }
+
+    .gap-3 {
+        gap: 0.75rem;
+    }
+
+    .shadow-none {
+        box-shadow: none !important;
+    }
+
+    .is-loading.is-ghost::after {
+        border-color: transparent transparent #570df8 #570df8 !important;
+    }
+</style>
 
 <script>
     let allUsernames = [];
 
-    function getInputVal(id) { return $(`#${id}`).val(); }
-    function getCheckboxStatus(id) { return $(`#${id}`).is(":checked"); }
+    // Helper functions
+    const getInputVal = (id) => $(`#${id}`).val();
+    const getCheckboxStatus = (id) => $(`#${id}`).is(":checked");
+    const openModal = (id) => $(`#${id}`).addClass('is-active');
+    const closeModal = (id) => $(`#${id}`).removeClass('is-active');
 
-    function scanLibrary(path = null) {
-        $('.scanBtn').addClass('btn-disabled opacity-50');
-        $.ajax({
-            url: '/api/library/scan',
-            type: 'POST',
-            data: JSON.stringify({ path }),
-            contentType: "application/json",
-            success: (result) => {
-                if (result.success && result.location) window.location.href = result.location;
-                $('.scanBtn').removeClass('btn-disabled opacity-50');
-            }
-        });
-    }
+    // Tab Navigation Logic
+    $('#settingsNav a').on('click', function () {
+        const target = $(this).data('target');
+        $('#settingsNav a').removeClass('is-active');
+        $(this).addClass('is-active');
+        $('.settings-section').addClass('is-hidden');
+        $(`#section-${target}`).removeClass('is-hidden');
+        sessionStorage.setItem('lastSettingsTab', target);
+    });
 
+    // File Input Helper
+    $('#consoleKeysInput').on('change', function () {
+        const file = this.files[0];
+        $('#fileNameDisplay').text(file ? file.name : '{{ t("No file chosen") }}');
+    });
+
+    // Toggle Add Source Form
+    $('#toggleAddSource').on('click', function () {
+        $('#addSourceForm').toggleClass('is-hidden');
+    });
+
+    // Populate Functions
     function fillLibraryTable() {
         $.getJSON("/api/settings/library/paths", (result) => {
             const tbody = $('#pathsTable tbody').empty();
-            if (!result.paths?.length) tbody.append('<tr><td colspan="2" class="text-center opacity-50">-</td></tr>');
-            else {
+            if (!result.paths?.length) {
+                tbody.append('<tr><td colspan="2" class="has-text-centered py-6 opacity-40 italic">{{ t("No paths configured") }}</td></tr>');
+            } else {
                 result.paths.forEach(path => {
-                    const row = $(`
+                    tbody.append(`
                         <tr>
-                            <td class="font-mono text-xs">${path}</td>
-                            <td class="text-right flex justify-end gap-1">
-                                <button class="btn btn-square btn-ghost btn-xs text-info" onclick="scanLibrary('${path}')"><i class="bi bi-arrow-clockwise"></i></button>
-                                <button class="btn btn-square btn-ghost btn-xs text-error" onclick="showDeletePathModal('${path}')"><i class="bi bi-x-circle"></i></button>
+                            <td class="font-mono is-size-7">${path}</td>
+                            <td class="has-text-right">
+                                <div class="buttons is-right">
+                                    <button class="button is-small is-ghost has-text-info" onclick="scanLibrary('${path}')"><i class="bi bi-arrow-clockwise"></i></button>
+                                    <button class="button is-small is-ghost has-text-danger" onclick="showDeletePathModal('${path}')"><i class="bi bi-trash3"></i></button>
+                                </div>
                             </td>
                         </tr>
                     `);
-                    tbody.append(row);
                 });
             }
         });
@@ -360,22 +626,29 @@
         $.getJSON("/api/users", (result) => {
             const tbody = $('#userTable tbody').empty();
             allUsernames = result.map(u => u.user);
-            if (!result.length) tbody.append('<tr><td colspan="3" class="text-center opacity-50">-</td></tr>');
-            else {
+            if (!result.length) {
+                tbody.append('<tr><td colspan="3" class="has-text-centered py-6 opacity-40 italic">{{ t("No users found") }}</td></tr>');
+            } else {
                 result.forEach(user => {
-                    const permissions = `
-                        <div class="flex gap-2">
-                            <span class="badge ${user.shop_access ? 'badge-success' : 'badge-ghost'} badge-xs">Shop</span>
-                            <span class="badge ${user.backup_access ? 'badge-success' : 'badge-ghost'} badge-xs">Backup</span>
-                            <span class="badge ${user.admin_access ? 'badge-primary' : 'badge-ghost'} badge-xs">Admin</span>
-                        </div>
-                    `;
+                    const self = user.user === '{{ current_user.user if current_user.is_authenticated else "" }}';
                     tbody.append(`
                         <tr>
-                            <td class="font-bold">${user.user}</td>
-                            <td>${permissions}</td>
-                            <td class="text-right">
-                                <button class="btn btn-square btn-ghost btn-xs text-error" onclick="showDeleteUserModal(${user.id}, '${user.user}')"><i class="bi bi-x-circle"></i></button>
+                            <td class="has-text-weight-bold">
+                                <i class="bi bi-person-circle mr-2 opacity-50"></i> ${user.user} ${self ? '<span class="tag is-info is-light is-small ml-2">You</span>' : ''}
+                            </td>
+                            <td>
+                                <div class="tags">
+                                    <span class="tag ${user.shop_access ? 'is-success' : 'is-light'} is-small">{{ t('Shop') }}</span>
+                                    <span class="tag ${user.backup_access ? 'is-success' : 'is-light'} is-small">{{ t('Backup') }}</span>
+                                    <span class="tag ${user.admin_access ? 'is-primary' : 'is-light'} is-small">{{ t('Admin') }}</span>
+                                </div>
+                            </td>
+                            <td class="has-text-right">
+                                ${!self ? `
+                                    <button class="button is-small is-ghost has-text-danger" onclick="showDeleteUserModal(${user.id}, '${user.user}')">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                ` : ''}
                             </td>
                         </tr>
                     `);
@@ -391,13 +664,26 @@
             result.sources.forEach(source => {
                 tbody.append(`
                     <tr>
-                        <td><strong>${source.name}</strong><br><small class="opacity-50 text-[10px] break-all">${source.base_url}</small></td>
-                        <td><span class="badge badge-ghost badge-xs uppercase">${source.source_type}</span></td>
-                        <td><input type="number" class="input input-bordered input-xs w-16" value="${source.priority}" onchange="updateSourcePriority('${source.name}', this.value)" /></td>
-                        <td><span class="badge ${source.enabled ? 'badge-success' : 'badge-ghost'} badge-xs">${source.enabled ? 'Enabled' : 'Disabled'}</span></td>
-                        <td class="text-right flex justify-end gap-1">
-                             <button class="btn btn-square btn-ghost btn-xs text-${source.enabled ? 'warning' : 'success'}" onclick="toggleSource('${source.name}', ${!source.enabled})"><i class="bi bi-${source.enabled ? 'pause' : 'play'}-fill"></i></button>
-                             <button class="btn btn-square btn-ghost btn-xs text-error" onclick="deleteSource('${source.name}')"><i class="bi bi-x-circle"></i></button>
+                        <td>
+                            <p class="has-text-weight-bold has-text-primary is-size-6">${source.name}</p>
+                            <p class="is-family-monospace is-size-7 opacity-40">${source.base_url}</p>
+                        </td>
+                        <td><span class="tag is-light is-small is-uppercase is-family-monospace">${source.source_type}</span></td>
+                        <td><input type="number" class="input is-small w-16" value="${source.priority}" style="width: 70px" onchange="updateSourcePriority('${source.name}', this.value)" /></td>
+                        <td>
+                            <span class="tag ${source.enabled ? 'is-success' : 'is-light'} is-small">
+                                ${source.enabled ? '{{ t("Enabled") }}' : '{{ t("Disabled") }}'}
+                            </span>
+                        </td>
+                        <td class="has-text-right">
+                            <div class="buttons is-right">
+                                <button class="button is-small is-ghost has-text-${source.enabled ? 'warning' : 'success'}" onclick="toggleSource('${source.name}', ${!source.enabled})">
+                                    <i class="bi bi-${source.enabled ? 'pause-fill' : 'play-fill'}"></i>
+                                </button>
+                                <button class="button is-small is-ghost has-text-danger" onclick="deleteSource('${source.name}')">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `);
@@ -405,30 +691,33 @@
         });
     }
 
+    // Modal Triggers
     function showDeleteUserModal(id, user) {
-        $('#deleteUserModal .modal-text').text(`{{ t('Delete user') }} "${user}"?`);
-        $('#deleteUserModal .btn-confirm').attr('onclick', `deleteUser(${id})`);
-        deleteUserModal.showModal();
+        $('#deleteUserModal .modal-text').text(`{{ t('Are you sure you want to delete user') }} "${user}"? {{ t('This action cannot be undone.') }}`);
+        $('#deleteUserModal .btn-confirm').off('click').on('click', () => deleteUser(id));
+        openModal('deleteUserModal');
     }
 
     function showDeletePathModal(path) {
-        $('#deletePathModal .modal-text').text(`{{ t('Delete path') }} "${path}"?`);
-        $('#deletePathModal .btn-confirm').attr('onclick', `deleteLibraryPath('${path}')`);
-        deletePathModal.showModal();
+        $('#deletePathModal .modal-text').text(`{{ t('Remove path') }} "${path}"? {{ t('This will not delete your files.') }}`);
+        $('#deletePathModal .btn-confirm').off('click').on('click', () => deleteLibraryPath(path));
+        openModal('deletePathModal');
     }
 
+    // API Calls
     function deleteUser(id) {
-        $.ajax({ url: "/api/user", type: 'DELETE', data: JSON.stringify({ user_id: id }), contentType: "application/json", success: () => { fillUserTable(); deleteUserModal.close(); } });
+        $.ajax({ url: "/api/user", type: 'DELETE', data: JSON.stringify({ user_id: id }), contentType: "application/json", success: () => { fillUserTable(); closeModal('deleteUserModal'); showToast('User deleted'); } });
     }
 
     function deleteLibraryPath(path) {
-        $.ajax({ url: "/api/settings/library/paths", type: 'DELETE', data: JSON.stringify({ path }), contentType: "application/json", success: () => { fillLibraryTable(); deletePathModal.close(); } });
+        $.ajax({ url: "/api/settings/library/paths", type: 'DELETE', data: JSON.stringify({ path }), contentType: "application/json", success: () => { fillLibraryTable(); closeModal('deletePathModal'); showToast('Path removed'); } });
     }
 
     function submitNewUser() {
         const user = getInputVal("inputNewUser");
         const password = getInputVal("inputNewUserPassword");
-        if (!user || !password) return alert('Fill all fields');
+        if (!user || !password) return showToast('Fill all fields', 'error');
+
         $.ajax({
             url: "/api/user", type: 'POST',
             data: JSON.stringify({
@@ -438,14 +727,51 @@
                 admin_access: getCheckboxStatus("checkboxNewUserAdminAccess")
             }),
             contentType: "application/json",
-            success: () => { fillUserTable(); $('#collapseNewUser').prop('checked', false); }
+            success: (r) => {
+                if (r.success) {
+                    fillUserTable();
+                    $('#inputNewUser, #inputNewUserPassword').val('');
+                    showToast('User created successfully');
+                } else {
+                    showToast(r.errors?.[0]?.error || 'Failed to create user', 'error');
+                }
+            }
         });
     }
 
     function submitNewLibraryPath() {
         const path = getInputVal("libraryPathInput");
-        if (!path) return;
-        $.ajax({ url: "/api/settings/library/paths", type: 'POST', data: JSON.stringify({ path }), contentType: "application/json", success: () => { fillLibraryTable(); $('#collapseNewPath').prop('checked', false); } });
+        if (!path) return showToast('Path is required', 'warning');
+        $.ajax({
+            url: "/api/settings/library/paths",
+            type: 'POST',
+            data: JSON.stringify({ path }),
+            contentType: "application/json",
+            success: (r) => {
+                if (r.success) {
+                    fillLibraryTable();
+                    $('#libraryPathInput').val('');
+                    showToast('Path added');
+                } else {
+                    showToast(r.errors?.[0]?.error || 'Failed to add path', 'error');
+                }
+            }
+        });
+    }
+
+    function scanLibrary(path = null) {
+        $('.scanBtn').addClass('is-loading');
+        showToast('Scan started...');
+        $.ajax({
+            url: '/api/library/scan',
+            type: 'POST',
+            data: JSON.stringify({ path }),
+            contentType: "application/json",
+            success: (result) => {
+                $('.scanBtn').removeClass('is-loading');
+                if (result.success) showToast('Scan triggered!');
+            }
+        });
     }
 
     function toggleSource(name, enabled) {
@@ -466,25 +792,41 @@
     }
 
     function submitNewSource() {
+        const name = getInputVal('inputSourceName');
+        const url = getInputVal('inputSourceUrl');
+        if (!name || !url) return showToast('Name and URL required', 'error');
+
         const data = {
-            name: getInputVal('inputSourceName'),
-            base_url: getInputVal('inputSourceUrl'),
+            name,
+            base_url: url,
             priority: parseInt(getInputVal('inputSourcePriority')),
             source_type: $('#inputSourceType').val(),
             enabled: true
         };
-        $.ajax({ url: "/api/settings/titledb/sources", type: 'POST', data: JSON.stringify(data), contentType: "application/json", success: () => { fillTitleDBSourcesTable(); $('#collapseNewSource').prop('checked', false); } });
+        $.ajax({
+            url: "/api/settings/titledb/sources",
+            type: 'POST',
+            data: JSON.stringify(data),
+            contentType: "application/json",
+            success: () => {
+                fillTitleDBSourcesTable();
+                $('#inputSourceName, #inputSourceUrl').val('');
+                $('#addSourceForm').addClass('is-hidden');
+                showToast('Source added');
+            }
+        });
     }
 
     function forceTitleDBUpdate() {
         const btn = $('.updateTitleDBBtn');
-        const oldText = btn.text();
-        btn.addClass('btn-disabled').text('Updating...');
+        btn.addClass('is-loading');
         $.post("/api/settings/titledb/update", (r) => {
-            if (r.success) showToast('Update started successfully!');
+            if (r.success) showToast('Update started in background!');
             else showToast('Update failed!', 'error');
-            btn.removeClass('btn-disabled').text(oldText);
-            fillTitleDBSourcesTable();
+            setTimeout(() => {
+                btn.removeClass('is-loading');
+                fillTitleDBSourcesTable();
+            }, 2000);
         });
     }
 
@@ -494,13 +836,39 @@
             language: $('#selectLanguage').val(),
             dbi_versions: getCheckboxStatus('useDbiVersionsCheck')
         };
-        $.ajax({ url: "/api/settings/titles", type: 'POST', data: JSON.stringify(data), contentType: "application/json", success: () => showToast('{{ t("Saved") }}!') });
 
+        $.ajax({
+            url: "/api/settings/titles",
+            type: 'POST',
+            data: JSON.stringify(data),
+            contentType: "application/json",
+            success: (r) => {
+                if (!r.success) showToast(r.errors?.[0]?.error, 'error');
+                else showToast('{{ t("Settings saved") }}');
+            }
+        });
+
+        // Handle Keys Upload
         const keysFile = $('#consoleKeysInput')[0].files[0];
         if (keysFile) {
             const formData = new FormData();
             formData.append('file', keysFile);
-            $.ajax({ url: "/api/settings/keys", type: 'POST', data: formData, processData: false, contentType: false, success: () => window.location.reload() });
+            showToast('Uploading keys...');
+            $.ajax({
+                url: "/api/settings/keys",
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: (r) => {
+                    if (r.success) {
+                        showToast('Keys updated! Reloading...');
+                        setTimeout(() => window.location.reload(), 1500);
+                    } else {
+                        showToast('Invalid keys file!', 'error');
+                    }
+                }
+            });
         }
     }
 
@@ -511,7 +879,13 @@
             encrypt: getCheckboxStatus('encryptShopCheck'),
             motd: getInputVal('motdTextArea')
         };
-        $.ajax({ url: "/api/settings/shop", type: 'POST', data: JSON.stringify(data), contentType: "application/json", success: () => showToast('{{ t("Saved") }}!') });
+        $.ajax({
+            url: "/api/settings/shop",
+            type: 'POST',
+            data: JSON.stringify(data),
+            contentType: "application/json",
+            success: () => showToast('{{ t("Shop settings saved") }}')
+        });
     }
 
     function changeLanguage(lang) {
@@ -519,39 +893,56 @@
         window.location.reload();
     }
 
+    // Initialization
     $(document).ready(async () => {
+        // Load UI state
+        const lastTab = sessionStorage.getItem('lastSettingsTab') || 'General';
+        $(`#settingsNav a[data-target="${lastTab}"]`).click();
+
         fillUserTable();
         fillLibraryTable();
         fillTitleDBSourcesTable();
 
         try {
-            // Load regions and languages first
             const [regionsData, languagesData, settingsData] = await Promise.all([
                 $.getJSON("/api/settings/regions"),
                 $.getJSON("/api/settings/languages"),
                 $.getJSON("/api/settings")
             ]);
 
-            // Populate select options
+            // Populate Regions
             const selectRegion = $('#selectRegion').empty();
             regionsData.regions.forEach(reg => selectRegion.append(new Option(reg, reg)));
+            selectRegion.val(settingsData['titles/region']);
 
+            // Populate Languages
             const selectLanguage = $('#selectLanguage').empty();
             languagesData.languages.forEach(l => selectLanguage.append(new Option(l, l)));
+            selectLanguage.val(settingsData['titles/language']);
 
-            // Set values
-            $('#selectRegion').val(settingsData['titles/region']);
-            $('#selectLanguage').val(settingsData['titles/language']);
+            // General & DBI
+            $('#useDbiVersionsCheck').prop('checked', settingsData['titles/dbi_versions']);
+            $('#languageSelect').val(document.cookie.match(/language=([^;]+)/)?.[1] || 'en');
+
+            // Shop
             $('#shopHostInput').val(settingsData['shop/host']);
             $('#publicShopCheck').prop('checked', settingsData['shop/public']);
             $('#encryptShopCheck').prop('checked', settingsData['shop/encrypt']);
             $('#motdTextArea').val(settingsData['shop/motd']);
-            $('#useDbiVersionsCheck').prop('checked', settingsData['shop/dbi_versions']);
 
-            $('#languageSelect').val(document.cookie.match(/language=([^;]+)/)?.[1] || 'en');
+            // Show content
+            $('#settingsLoading').addClass('is-hidden');
+            $('#settingsContent').removeClass('is-hidden');
+
         } catch (e) {
             console.error("Failed to load settings:", e);
+            showToast('Failed to load settings from server', 'error');
         }
+    });
+
+    // Close Modals on Outer Click
+    $('.modal-background').on('click', function () {
+        closeModal($(this).parent().attr('id'));
     });
 </script>
 {% endblock %}

@@ -1,60 +1,72 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="min-h-screen flex items-center justify-center bg-base-200">
-    <div class="card w-full max-w-md bg-base-100 shadow-2xl border border-base-300">
-        <div class="card-body p-8">
-            <div class="flex flex-col items-center mb-6">
-                <div
-                    class="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-primary-content mb-4 shadow-lg">
-                    <i class="bi bi-box-seam-fill text-3xl"></i>
+<section class="hero is-fullheight is-light" style="background-color: var(--bulma-background)">
+    <div class="hero-body">
+        <div class="container">
+            <div class="columns is-centered">
+                <div class="column is-4-desktop is-6-tablet">
+                    <div class="card box shadow-2xl p-6">
+                        <div class="has-text-centered mb-6">
+                            <div class="is-inline-block p-4 mb-4"
+                                style="background: #570df8; border-radius: 1.5rem; box-shadow: 0 10px 20px rgba(87,13,248,0.3)">
+                                <i class="bi bi-box-seam-fill is-size-1 has-text-white"></i>
+                            </div>
+                            <h2 class="title is-2 has-text-weight-black tracking-tighter">MyFoil</h2>
+                            <p class="subtitle is-6 opacity-50">{{ t('Login') }}</p>
+                        </div>
+
+                        <form method="POST" action="/login">
+                            <div class="field mb-5">
+                                <label class="label">{{ t('Username') }}</label>
+                                <div class="control has-icons-left">
+                                    <input class="input is-medium" type="text" name="user"
+                                        placeholder="{{ t('Username') }}" required>
+                                    <span class="icon is-small is-left"><i class="bi bi-person-fill"></i></span>
+                                </div>
+                            </div>
+
+                            <div class="field mb-5">
+                                <label class="label">{{ t('Password') }}</label>
+                                <div class="control has-icons-left">
+                                    <input class="input is-medium" type="password" name="password"
+                                        placeholder="{{ t('Password') }}" required>
+                                    <span class="icon is-small is-left"><i class="bi bi-lock-fill"></i></span>
+                                </div>
+                            </div>
+
+                            <div class="field mb-6">
+                                <div class="control">
+                                    <label class="checkbox">
+                                        <input type="checkbox" name="remember" id="remember">
+                                        {{ t('Remember me') }}
+                                    </label>
+                                </div>
+                            </div>
+
+                            <input type="hidden" name="next" value="{{ request.args.get('next', '') }}" />
+
+                            <div class="field">
+                                <button type="submit"
+                                    class="button is-primary is-medium is-fullwidth has-text-weight-bold shadow-lg">
+                                    {{ t('Login') }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                <h2 class="card-title text-3xl font-bold tracking-tighter">MyFoil</h2>
-                <p class="text-sm opacity-50">{{ t('Login') }}</p>
             </div>
-
-            <form method="POST" action="/login" class="space-y-6">
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text font-semibold">{{ t('Username') }}</span>
-                    </label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none opacity-50">
-                            <i class="bi bi-person-fill"></i>
-                        </div>
-                        <input type="text" name="user" placeholder="{{ t('Username') }}"
-                            class="input input-bordered w-full pl-10 focus:input-primary" required />
-                    </div>
-                </div>
-
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text font-semibold">{{ t('Password') }}</span>
-                    </label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none opacity-50">
-                            <i class="bi bi-lock-fill"></i>
-                        </div>
-                        <input type="password" name="password" placeholder="{{ t('Password') }}"
-                            class="input input-bordered w-full pl-10 focus:input-primary" required />
-                    </div>
-                </div>
-
-                <div class="form-control">
-                    <label class="label cursor-pointer justify-start gap-3">
-                        <input type="checkbox" name="remember" class="checkbox checkbox-primary checkbox-sm"
-                            id="remember" />
-                        <span class="label-text">{{ t('Remember me') }}</span>
-                    </label>
-                </div>
-
-                <input type="hidden" name="next" value="{{ request.args.get('next', '') }}" />
-
-                <button type="submit" class="btn btn-primary w-full shadow-lg h-12">
-                    {{ t('Login') }}
-                </button>
-            </form>
         </div>
     </div>
-</div>
+</section>
+
+<style>
+    .shadow-2xl {
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    }
+
+    .tracking-tighter {
+        letter-spacing: -0.05em;
+    }
+</style>
 {% endblock %}

@@ -3,706 +3,502 @@
 {% block content %}
 {% include 'nav.html' %}
 
-<div class="container mx-auto px-4 py-8">
+<section class="section">
+    <div class="container is-fluid">
 
-    <!-- Stats Section -->
-    <div class="collapse collapse-plus bg-base-100 shadow-xl mb-8">
-        <input type="checkbox" />
-        <div class="collapse-title flex items-center justify-between pr-12">
-            <div class="flex items-center gap-4">
-                <span class="text-lg font-bold">{{ t('Total Files') }}</span>
-                <span class="badge badge-primary badge-lg">{{ total_files }}</span>
+        <!-- Stats Section -->
+        <div class="box p-0 overflow-hidden mb-6 shadow-sm">
+            <div class="is-clickable p-4 is-flex is-justify-content-between is-align-items-center"
+                onclick="$('#statsContent').toggleClass('is-hidden')">
+                <div class="is-flex is-align-items-center gap-4">
+                    <span class="has-text-weight-bold tracking-tight">{{ t('Library Overview') }}</span>
+                    <span class="tag is-primary is-medium has-text-weight-black">{{ total_files }}</span>
+                </div>
+                <span class="is-size-7 opacity-50">{{ t('Click to toggle') }}</span>
             </div>
-            <span class="text-sm opacity-50">{{ t('Click for details') }}</span>
-        </div>
-        <div class="collapse-content">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-                <!-- Owned Stats -->
-                <div class="stats shadow border border-success/20 bg-base-100">
-                    <div class="stat">
-                        <div class="stat-title opacity-70">{{ t('Owned Content') }}</div>
-                        <div class="stat-value text-success text-2xl mb-2">{{ total_games + total_updates + total_dlcs
-                            }}</div>
-                        <div class="stat-desc opacity-70">
-                            {{ total_games }} {{ t('Games') }} | {{ total_updates }} {{ t('Updates') }} | {{ total_dlcs
-                            }} {{ t('DLCs') }}
+
+            <div id="statsContent" class="p-4 border-top">
+                <div class="columns is-variable is-3">
+                    <!-- Owned Stats -->
+                    <div class="column">
+                        <div class="notification is-success is-light border-success-soft">
+                            <p class="heading opacity-70">{{ t('Owned Content') }}</p>
+                            <p class="title is-4 mb-2">{{ total_games + total_updates + total_dlcs }}</p>
+                            <p class="is-size-7 opacity-70">
+                                {{ total_games }} {{ t('Games') }} | {{ total_updates }} {{ t('Updates') }} | {{
+                                total_dlcs }} {{ t('DLCs') }}
+                            </p>
                         </div>
                     </div>
-                </div>
 
-                <!-- Library Status -->
-                <div class="stats shadow border border-warning/20 bg-base-100">
-                    <div class="stat">
-                        <div class="stat-title opacity-70">{{ t('Library Status') }}</div>
-                        <div class="stat-value text-warning text-2xl mb-2">{{ games_missing_updates + games_missing_dlcs
-                            }}</div>
-                        <div class="stat-desc opacity-70">
-                            {{ games_missing_updates }} {{ t('Games needing Update') }}<br>
-                            {{ games_missing_dlcs }} {{ t('Games missing DLCs') }}
+                    <!-- Library Status -->
+                    <div class="column">
+                        <div class="notification is-warning is-light border-warning-soft">
+                            <p class="heading opacity-70">{{ t('Library Status') }}</p>
+                            <p class="title is-4 mb-2">{{ games_missing_updates + games_missing_dlcs }}</p>
+                            <p class="is-size-7 opacity-70">
+                                {{ games_missing_updates }} {{ t('Games needing Update') }}<br>
+                                {{ games_missing_dlcs }} {{ t('Games missing DLCs') }}
+                            </p>
                         </div>
                     </div>
-                </div>
 
-                <!-- Missing Content -->
-                <div class="stats shadow border border-error/20 bg-base-100">
-                    <div class="stat">
-                        <div class="stat-title opacity-70">{{ t('Missing Content') }}</div>
-                        <div class="stat-value text-error text-2xl mb-2">{{ missing_games + missing_dlcs }}</div>
-                        <div class="stat-desc opacity-70">
-                            {{ missing_games }} {{ t('Missing Base Games') }} | {{ missing_dlcs }} {{ t('Missing DLCs')
-                            }}
+                    <!-- Missing Content -->
+                    <div class="column">
+                        <div class="notification is-danger is-light border-danger-soft">
+                            <p class="heading opacity-70">{{ t('Missing Content') }}</p>
+                            <p class="title is-4 mb-2">{{ missing_games + missing_dlcs }}</p>
+                            <p class="is-size-7 opacity-70">
+                                {{ missing_games }} {{ t('Missing Base Games') }} | {{ missing_dlcs }} {{ t('Missing
+                                DLCs') }}
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Controls Row -->
+        <div class="box p-3 mb-6 shadow-sm">
+            <div class="level is-mobile is-multiline">
+                <div class="level-left">
+                    <div class="level-item">
+                        <!-- Bulma Dropdown for Filters -->
+                        <div class="dropdown" id="filterDropdown">
+                            <div class="dropdown-trigger">
+                                <button class="button is-primary is-small" aria-haspopup="true"
+                                    aria-controls="dropdown-menu">
+                                    <span class="icon is-small"><i class="bi bi-funnel-fill"></i></span>
+                                </button>
+                            </div>
+                            <div class="dropdown-menu" id="dropdown-menu" role="menu">
+                                <div class="dropdown-content p-2" style="min-width: 200px;">
+                                    <label class="checkbox block py-1 px-2">
+                                        <input type="checkbox" class="filterInput" id="filterCheckBase"> <span
+                                            class="ml-2">BASE</span>
+                                    </label>
+                                    <label class="checkbox block py-1 px-2">
+                                        <input type="checkbox" class="filterInput" id="filterCheckDlc"> <span
+                                            class="ml-2">DLC</span>
+                                    </label>
+                                    <hr class="dropdown-divider">
+                                    <label class="checkbox block py-1 px-2">
+                                        <input type="checkbox" class="filterInput" id="filterCheckOwned"> <span
+                                            class="ml-2">Owned</span>
+                                    </label>
+                                    <label class="checkbox block py-1 px-2">
+                                        <input type="checkbox" class="filterInput" id="filterCheckMissing"> <span
+                                            class="ml-2">Missing</span>
+                                    </label>
+                                    <hr class="dropdown-divider">
+                                    <label class="checkbox block py-1 px-2">
+                                        <input type="checkbox" class="filterInput" id="filterCheckUpToDate"> <span
+                                            class="ml-2">Up to date</span>
+                                    </label>
+                                    <label class="checkbox block py-1 px-2">
+                                        <input type="checkbox" class="filterInput" id="filterCheckMissingUpdate"> <span
+                                            class="ml-2">Missing Update</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="level-item">
+                        <div class="buttons has-addons">
+                            <button id="btnFilterBase" class="button is-small is-outlined"
+                                onclick="toggleTypeFilter('BASE')">BASE</button>
+                            <button id="btnFilterDlc" class="button is-small is-outlined"
+                                onclick="toggleTypeFilter('DLC')">DLC</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="level-right">
+                    <div class="level-item">
+                        <div class="buttons has-addons" id="viewToggleButtons">
+                            <button class="button is-small" onclick="setView('card')" id="btnViewCard"
+                                title="Card View"><i class="bi bi-grid-fill"></i></button>
+                            <button class="button is-small" onclick="setView('icon')" id="btnViewIcon"
+                                title="Icon View"><i class="bi bi-app"></i></button>
+                            <button class="button is-small" onclick="setView('list')" id="btnViewList"
+                                title="List View"><i class="bi bi-list-ul"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Library Content -->
+        <div id="libraryContainer" class="columns is-multiline is-variable is-3">
+            <!-- Dynamic content injected via JS -->
+        </div>
+
+        <!-- No Results -->
+        <div id="noResults" class="is-hidden has-text-centered py-6">
+            <div class="notification is-light">
+                <i class="bi bi-search is-size-1 opacity-20 block mb-4"></i>
+                <h3 class="title is-4">{{ t('No games found') }}</h3>
+                <p class="subtitle is-6 opacity-50">{{ t('Try adjusting your filters or checking your library paths.')
+                    }}</p>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <nav class="pagination is-centered mt-6" role="navigation" aria-label="pagination">
+            <a class="pagination-previous" id="btnPrev" onclick="changePage(-1)">{{ t('Previous') }}</a>
+            <a class="pagination-next" id="btnNext" onclick="changePage(1)">{{ t('Next page') }}</a>
+            <ul class="pagination-list" id="paginationSummary">
+                <!-- Injected via JS -->
+            </ul>
+        </nav>
+
     </div>
+</section>
 
-    <!-- Controls Row -->
-    <!-- Controls Row -->
-    <div class="flex flex-col gap-4 mb-8 bg-base-100 p-3 md:p-4 rounded-2xl shadow-sm border border-base-content/5">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-            <!-- Filter Actions -->
-            <div class="flex items-center gap-2 w-full md:w-auto">
-                <div class="dropdown">
-                    <div tabindex="0" role="button" class="btn btn-primary btn-square btn-sm"
-                        title="{{ t('Filters') }}">
-                        <i class="bi bi-funnel-fill"></i>
-                    </div>
-                    <ul tabindex="0"
-                        class="dropdown-content z-[10] menu p-2 shadow bg-base-100 rounded-box w-52 border border-base-content/10 mt-2">
-                        <li><label class="label cursor-pointer justify-start gap-2"><input type="checkbox"
-                                    class="checkbox checkbox-xs filterInput" id="filterCheckBase">
-                                <span>BASE</span></label></li>
-                        <li><label class="label cursor-pointer justify-start gap-2"><input type="checkbox"
-                                    class="checkbox checkbox-xs filterInput" id="filterCheckDlc">
-                                <span>DLC</span></label></li>
-                        <div class="divider my-0"></div>
-                        <li><label class="label cursor-pointer justify-start gap-2"><input type="checkbox"
-                                    class="checkbox checkbox-xs filterInput" id="filterCheckOwned">
-                                <span>Owned</span></label></li>
-                        <li><label class="label cursor-pointer justify-start gap-2"><input type="checkbox"
-                                    class="checkbox checkbox-xs filterInput" id="filterCheckMissing">
-                                <span>Missing</span></label></li>
-                        <div class="divider my-0"></div>
-                        <li><label class="label cursor-pointer justify-start gap-2"><input type="checkbox"
-                                    class="checkbox checkbox-xs filterInput" id="filterCheckUpToDate"> <span>Up to
-                                    date</span></label></li>
-                        <li><label class="label cursor-pointer justify-start gap-2"><input type="checkbox"
-                                    class="checkbox checkbox-xs filterInput" id="filterCheckMissingUpdate">
-                                <span>Missing Update</span></label></li>
-                    </ul>
-                </div>
-                <!-- Shorthand Buttons -->
-                <div class="join border border-base-300">
-                    <button id="btnFilterBase" class="join-item btn btn-xs md:btn-sm btn-outline px-3 font-bold"
-                        onclick="toggleTypeFilter('BASE')">BASE</button>
-                    <button id="btnFilterDlc" class="join-item btn btn-xs md:btn-sm btn-outline px-3 font-bold"
-                        onclick="toggleTypeFilter('DLC')">DLC</button>
-                </div>
-            </div>
-
-            <!-- View Toggles -->
-            <div class="join border border-base-300 w-full md:w-auto flex justify-center">
-                <button class="join-item btn btn-sm btn-ghost view-toggle-btn active flex-grow md:flex-none"
-                    data-view="card" title="{{ t('Card View') }}"><i class="bi bi-grid-fill"></i></button>
-                <button class="join-item btn btn-sm btn-ghost view-toggle-btn flex-grow md:flex-none" data-view="icon"
-                    title="{{ t('Icon View') }}"><i class="bi bi-grid-3x3-gap-fill"></i></button>
-                <button class="join-item btn btn-sm btn-ghost view-toggle-btn flex-grow md:flex-none" data-view="list"
-                    title="{{ t('List View') }}"><i class="bi bi-list-ul"></i></button>
-            </div>
-        </div>
-
-        <div class="flex items-center justify-between gap-4 border-t border-base-content/5 pt-3">
-            <div class="flex items-center gap-4">
-                <div class="flex items-center gap-2">
-                    <span class="text-[9px] uppercase font-bold opacity-40">{{ t('Items') }}</span>
-                    <input type="number" id="itemsPerPageInput" class="input input-bordered input-xs w-14" min="1"
-                        max="500" />
-                </div>
-                <div id="paginationSummary"
-                    class="text-[9px] font-bold opacity-40 uppercase tracking-widest hidden sm:block"></div>
-            </div>
-
-            <!-- Size Slider (Desktop Only) -->
-            <div class="hidden md:flex items-center gap-2">
-                <i class="bi bi-image text-xs opacity-50"></i>
-                <input type="range" min="1" max="6" value="3" class="range range-xs range-primary w-24"
-                    id="cardSizeRange" />
-                <i class="bi bi-image text-lg opacity-50"></i>
-            </div>
-        </div>
-    </div>
-
-    <!-- Games Container -->
-    <div id="gameGrid" class="grid-container"></div>
-
-    <!-- Pagination -->
-    <div class="flex justify-center mt-12 mb-8">
-        <div id="paginationControls" class="join"></div>
+<!-- Game Details Modal -->
+<div class="modal" id="gameDetailsModal">
+    <div class="modal-background"></div>
+    <div class="modal-card" style="max-height: 90vh;">
+        <header class="modal-card-head border-none">
+            <p class="modal-card-title has-text-weight-black tracking-tight" id="modalTitle"></p>
+            <button class="delete" aria-label="close" onclick="closeModal('gameDetailsModal')"></button>
+        </header>
+        <section class="modal-card-body overflow-y-auto" id="modalContent">
+            <!-- Injected via JS -->
+        </section>
+        <footer class="modal-card-foot border-none is-justify-content-flex-end">
+            <button class="button is-primary" onclick="closeModal('gameDetailsModal')">{{ t('Close') }}</button>
+        </footer>
     </div>
 </div>
 
 <style>
-    /* Custom grid helper */
-    .grid-container {
-        display: grid;
-        gap: 1.5rem;
+    .gap-4 {
+        gap: 1rem;
     }
 
-    .view-toggle-btn.active {
-        background-color: var(--p);
-        color: var(--pc);
+    .gap-2 {
+        gap: 0.5rem;
     }
 
-    .game-card-hover {
-        transition: transform 0.2s, box-shadow 0.2s;
+    .mb-6 {
+        margin-bottom: 1.5rem;
     }
 
-    .game-card-hover:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    .mr-2 {
+        margin-right: 0.5rem;
+    }
+
+    .ml-2 {
+        margin-left: 0.5rem;
+    }
+
+    .p-0 {
+        padding: 0 !important;
+    }
+
+    .border-top {
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .border-success-soft {
+        border: 1px solid rgba(72, 199, 142, 0.2);
+    }
+
+    .border-warning-soft {
+        border: 1px solid rgba(255, 221, 87, 0.3);
+    }
+
+    .border-danger-soft {
+        border: 1px solid rgba(241, 70, 104, 0.2);
+    }
+
+    .game-card {
+        height: 100%;
+        transition: transform 0.2s;
+    }
+
+    .game-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .game-icon-item {
+        width: 120px;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+    .game-icon-item:hover {
+        transform: scale(1.05);
+    }
+
+    /* Custom list styles for Bulma */
+    .game-list-table tr {
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .game-list-table tr:hover {
+        background-color: rgba(87, 13, 248, 0.05);
     }
 </style>
 
+{% raw %}
 <script>
-    let games;
-    let filteredGames;
-    let itemsPerPage = 12;
+    let games = []; // Will be populated from Jinja global
+    try {
+        games = games_data;
+    } catch (e) { }
+
+    let filteredGames = [...games];
     let currentPage = 1;
-    let totalGames = 0;
-    let cardSize = 3;
-    let currentView = 'card';
-
-    function fetchGames() {
-        return new Promise((resolve, reject) => {
-            $.get(`/api/titles`, function (data) {
-                totalGames = data.total;
-                games = data.games;
-                filteredGames = games;
-
-                // Populate Auto-completion datalist
-                const datalist = $('#gameTitlesList').empty();
-                const uniqueTitles = [...new Set(games.filter(g => g.app_type === 'BASE').map(g => g.title_id_name || g.name))];
-                uniqueTitles.sort().forEach(title => {
-                    datalist.append(`<option value="${title}">`);
-                });
-
-                resolve();
-            }).fail(reject);
-        });
-    }
-
-    function renderGames() {
-        $('#cardSizeRange').val(cardSize);
-        $('#paginationSummary').text(`${filteredGames.length} items`);
-        const gameGrid = $('#gameGrid');
-        gameGrid.empty();
-
-        if (!filteredGames || filteredGames.length === 0) {
-            gameGrid.append('<div class="col-span-full text-center py-20 opacity-50">{{ t("No games found") }}</div>');
-            $('#paginationControls').empty();
-            return;
-        }
-
-        if (currentView === 'card') renderCardView();
-        else if (currentView === 'icon') renderIconView();
-        else if (currentView === 'list') renderListView();
-    }
-
-    function getGridCols() {
-        switch (cardSize) {
-            case 1: return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8';
-            case 2: return 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6';
-            case 3: return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
-            case 4: return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
-            case 5: return 'grid-cols-1 lg:grid-cols-2';
-            case 6: return 'grid-cols-1';
-            default: return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
-        }
-    }
-
-    function renderCardView() {
-        const gameGrid = $('#gameGrid');
-        gameGrid.removeClass().addClass(`grid-container grid ${getGridCols()} gap-6`);
-
-        const start = (currentPage - 1) * itemsPerPage;
-        const end = start + itemsPerPage;
-        const paginatedGames = filteredGames.slice(start, end);
-
-        paginatedGames.forEach(game => {
-            let versionInfo = '';
-            if (game.has_latest_version !== undefined) {
-                if (Array.isArray(game.version) && game.version.length > 0) {
-                    const versionList = game.version.map(v => `
-                        <li class="flex justify-between items-center gap-4 px-3 py-1 hover:bg-base-200 rounded-lg text-[11px]">
-                            <span class="opacity-60">${v.release_date}</span>
-                            <span class="font-bold">v${v.version}</span>
-                            <span class="badge badge-xs ${v.owned ? 'badge-success' : 'badge-warning'}">${v.owned ? 'Owned' : 'Missing'}</span>
-                        </li>
-                    `).join('');
-
-                    versionInfo = `
-                        <div class="dropdown dropdown-top dropdown-end">
-                            <label tabindex="0" class="cursor-pointer">
-                                <i class="bi ${game.has_latest_version ? 'bi-check-circle-fill text-success' : 'bi-arrow-down-circle text-warning'} text-sm"></i>
-                            </label>
-                            <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-64 border border-base-300">
-                                <li class="menu-title text-[10px] uppercase font-bold opacity-50">{{ t('Versions') }}</li>
-                                ${versionList}
-                            </ul>
-                        </div>
-                    `;
-                } else {
-                    versionInfo = `
-                        <div class="tooltip tooltip-top" data-tip="v${game.version || '0'}">
-                            <i class="bi ${game.has_latest_version ? 'bi-check-circle-fill text-success' : 'bi-arrow-down-circle text-warning'} text-sm"></i>
-                        </div>
-                    `;
-                }
-            }
-
-            const card = $(`
-                <div class="card bg-base-100 shadow-xl overflow-hidden game-card-hover cursor-pointer group" onclick="showGameDetails('${game.title_id}')">
-                    <figure class="relative aspect-video">
-                        <img src="${game.bannerUrl}" alt="${game.name}" class="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500" />
-                        <div class="absolute top-2 right-2 flex gap-1">
-                            ${game.owned === false ? '<span class="badge badge-warning badge-sm">Missing</span>' : '<span class="badge badge-info badge-sm">' + game.app_type + '</span>'}
-                        </div>
-                    </figure>
-                    <div class="card-body p-4 gap-1">
-                        <h2 class="card-title text-sm leading-tight line-clamp-2 min-h-[3rem]">${game.title_id_name || game.name}</h2>
-                        <div class="flex justify-between items-end mt-2">
-                             <span class="text-[10px] opacity-50 font-mono tracking-tight">${game.title_id}</span>
-                             <div class="flex gap-1 items-center">
-                                ${versionInfo}
-                             </div>
-                        </div>
-                    </div>
-                </div>
-            `);
-            gameGrid.append(card);
-        });
-        updatePaginationControls(filteredGames.length);
-    }
-
-    function renderIconView() {
-        const gameGrid = $('#gameGrid');
-        gameGrid.removeClass().addClass('flex flex-wrap gap-4 justify-center');
-
-        const baseGames = filteredGames.filter(game => game.app_type === 'BASE');
-        // Fallback: If no base games but other types are filtered, show those
-        const itemsToShow = baseGames.length > 0 ? baseGames : filteredGames;
-
-        const start = (currentPage - 1) * itemsPerPage;
-        const end = start + itemsPerPage;
-        const paginatedGames = itemsToShow.slice(start, end);
-
-        if (paginatedGames.length === 0) return gameGrid.html('<div class="col-span-full text-center py-20 opacity-50">{{ t("No games found") }}</div>');
-
-        const size = 6 + (cardSize * 2);
-
-        paginatedGames.forEach(game => {
-            const icon = $(`
-                <div class="tooltip" data-tip="${game.name}" onclick="showGameDetails('${game.title_id}')">
-                    <img src="${game.iconUrl || '/static/img/no-icon.png'}" class="w-${size} h-${size} md:w-${size * 2} md:h-${size * 2} rounded-xl shadow-lg ring-1 ring-base-content/10 hover:ring-primary hover:scale-110 transition-all cursor-pointer object-cover" 
-                         onerror="this.src='/static/img/no-icon.png'"/>
-                </div>
-            `);
-            gameGrid.append(icon);
-        });
-        updatePaginationControls(itemsToShow.length);
-    }
-
-    function renderListView() {
-        const gameGrid = $('#gameGrid');
-        gameGrid.removeClass().addClass('flex flex-col gap-4');
-
-        const start = (currentPage - 1) * itemsPerPage;
-        const end = start + itemsPerPage;
-
-        const gameGroups = {};
-        filteredGames.forEach(game => {
-            const baseId = game.title_id;
-            if (!gameGroups[baseId]) {
-                gameGroups[baseId] = { base: null, dlcs: [], updates: [] };
-            }
-            if (game.app_type === 'BASE') gameGroups[baseId].base = game;
-            else if (game.app_type === 'DLC') gameGroups[baseId].dlcs.push(game);
-            else if (game.app_type === 'UPDATE') gameGroups[baseId].updates.push(game);
-        });
-
-        // For list view, if we don't have a BASE entry but we HAVE DLCs/Updates in filteredGames,
-        // we should still show the group (maybe using one of the DLCs as metadata).
-        const groupedArray = Object.values(gameGroups).map(g => {
-            if (!g.base && (g.dlcs.length > 0 || g.updates.length > 0)) {
-                // Find original game metadata from full games list if missing context
-                const fallback = games.find(all => all.title_id === (g.dlcs[0] || g.updates[0]).title_id && all.app_type === 'BASE');
-                g.base = fallback || g.dlcs[0] || g.updates[0];
-            }
-            return g;
-        }).filter(g => g.base !== null);
-
-        if (groupedArray.length === 0) return gameGrid.html('<div class="col-span-full text-center py-20 opacity-50">{{ t("No games found") }}</div>');
-
-        const paginatedGroups = groupedArray.slice(start, end);
-
-        paginatedGroups.forEach((group, index) => {
-            const game = group.base;
-            const accordionId = `collapse${index}`;
-            const ownedDLCs = group.dlcs.filter(d => d.owned !== false).length;
-            const totalDLCs = group.dlcs.length;
-
-            let dlcBadgeClass = 'badge-ghost';
-            if (totalDLCs > 0) {
-                if (ownedDLCs === 0) dlcBadgeClass = 'badge-error';
-                else if (ownedDLCs < totalDLCs) dlcBadgeClass = 'badge-warning';
-                else dlcBadgeClass = 'badge-success';
-            }
-
-            const hasUpdates = group.updates.length > 0;
-            const missingUpdate = group.updates.some(u => u.owned === false);
-            const updateBadgeClass = missingUpdate ? 'badge-warning' : 'badge-success';
-
-            let latestVersion = 0;
-            let hasMultipleVersions = false;
-            const ownedUpdates = group.updates.filter(u => u.owned !== false);
-            if (ownedUpdates.length > 0) {
-                const versions = ownedUpdates.map(u => parseInt(u.app_version || u.version || 0));
-                latestVersion = Math.max(...versions);
-                hasMultipleVersions = versions.some(v => v < latestVersion);
-            }
-            const versionDisplay = latestVersion > 0 ? ` [v${latestVersion}${hasMultipleVersions ? '+' : ''}]` : '';
-
-            const item = $(`
-                <div class="collapse collapse-arrow bg-base-100 shadow-sm border border-base-200">
-                    <input type="radio" name="game-accordion" /> 
-                    <div class="collapse-title flex items-center gap-4">
-                        <div class="avatar cursor-pointer hover:scale-110 transition-transform" onclick="event.stopPropagation(); showGameDetails('${game.title_id}')">
-                            <div class="w-12 rounded-lg">
-                                <img src="${game.iconUrl || game.bannerUrl || '/static/img/no-icon.png'}" onerror="this.src='/static/img/no-icon.png'" />
-                            </div>
-                        </div>
-                        <div class="flex-grow">
-                            <div class="flex items-center gap-2">
-                                <span class="font-bold text-sm md:text-base cursor-pointer hover:text-primary transition-colors" onclick="event.stopPropagation(); showGameDetails('${game.title_id}')">${game.title_id_name || game.name}</span>
-                                <span class="text-[10px] font-mono opacity-50 hidden md:inline">${game.title_id}${versionDisplay}</span>
-                            </div>
-                            <div class="flex gap-1 mt-1">
-                                ${game.owned === false ? '<span class="badge badge-warning badge-xs">Missing Base</span>' : ''}
-                                ${totalDLCs > 0 ? `<span class="badge ${dlcBadgeClass} badge-xs">${ownedDLCs}/${totalDLCs} DLCs</span>` : ''}
-                                ${hasUpdates ? `<span class="badge ${updateBadgeClass} badge-xs">UPDATE</span>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="collapse-content overflow-x-auto">
-                        <table class="table table-sm w-full mt-4">
-                            <thead>
-                                <tr class="bg-base-200">
-                                    <th>{{ t('Type') }}</th>
-                                    <th>{{ t('Name') }}</th>
-                                    <th>{{ t('ID') }}</th>
-                                    <th>{{ t('Version') }}</th>
-                                    <th>{{ t('Status') }}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${group.updates.map(upd => `
-                                    <tr>
-                                        <td><span class="badge badge-primary badge-xs">UPD</span></td>
-                                        <td>${upd.name || 'Update'}</td>
-                                        <td class="font-mono text-xs opacity-50">${upd.app_id}</td>
-                                        <td>v${upd.app_version || upd.version || '0'}</td>
-                                        <td><span class="badge ${upd.owned === false ? 'badge-warning' : 'badge-success'} badge-xs">${upd.owned === false ? 'Missing' : 'Owned'}</span></td>
-                                    </tr>
-                                `).join('')}
-                                ${group.dlcs.map(dlc => `
-                                    <tr>
-                                        <td><span class="badge badge-info badge-xs">DLC</span></td>
-                                        <td>${dlc.name}</td>
-                                        <td class="font-mono text-xs opacity-50">${dlc.app_id}</td>
-                                        <td>v0</td>
-                                        <td><span class="badge ${dlc.owned === false ? 'badge-warning' : 'badge-success'} badge-xs">${dlc.owned === false ? 'Missing' : 'Owned'}</span></td>
-                                    </tr>
-                                `).join('')}
-                                ${group.dlcs.length === 0 && group.updates.length === 0 ? `<tr><td colspan="5" class="text-center opacity-50 py-4">{{ t('No DLCs or Updates available') }}</td></tr>` : ''}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `);
-            item.find('.collapse-title').click(function (e) {
-                // Don't trigger modal if clicking specific areas handled by onclick
-                if (e.target.closest('.avatar') || e.target.closest('.font-bold')) return;
-            });
-
-            gameGrid.append(item);
-        });
-        updatePaginationControls(groupedArray.length);
-    }
-
-    function showGameDetails(titleId) {
-        const game = games.find(g => g.title_id === titleId && g.app_type === 'BASE') || games.find(g => g.title_id === titleId);
-        if (!game) return;
-
-        const related = games.filter(r => r.title_id === titleId);
-
-        $('#modalBanner').css('background-image', `url(${game.bannerUrl || game.iconUrl || ''})`);
-        $('#modalIcon').attr('src', game.iconUrl || game.bannerUrl || '/static/img/no-icon.png');
-        $('#modalTitle').text(game.title_id_name || game.name);
-        $('#modalTitleId').text(game.title_id);
-        $('#modalPublisher').text(game.publisher || 'Nintendo');
-        $('#modalReleaseDate').text(game.releaseDate || '--');
-
-        // Format size
-        const sizeInMb = (game.size || 0) / (1024 * 1024);
-        const sizeDisplay = sizeInMb > 1024 ? (sizeInMb / 1024).toFixed(2) + ' GB' : sizeInMb.toFixed(2) + ' MB';
-        $('#modalSize').text(sizeDisplay);
-
-        // Populate Genres
-        const genreContainer = $('#modalGenre').empty();
-        const categories = Array.isArray(game.category) ? game.category : [];
-        categories.forEach(cat => {
-            genreContainer.append(`<span class="badge badge-outline badge-xs opacity-70">${cat}</span>`);
-        });
-
-        $('#modalDescription').text(game.description || '{{ t("No description available") }}');
-
-        const badges = $('#modalBadges').empty();
-        badges.append(`<span class="badge badge-primary">${game.app_type}</span>`);
-        if (game.owned === false) badges.append(`<span class="badge badge-warning">Missing</span>`);
-        else badges.append(`<span class="badge badge-success">Owned</span>`);
-
-        const list = $('#modalContentList').empty();
-        const updates = related.filter(r => r.app_type === 'UPDATE');
-        const dlcs = related.filter(r => r.app_type === 'DLC');
-
-        if (updates.length > 0) {
-            list.append('<h4 class="text-xs font-bold uppercase opacity-50 mb-2 mt-4">Updates</h4>');
-            const updTable = $('<table class="table table-sm w-full bg-base-200 rounded-lg overflow-hidden"></table>');
-            updates.forEach(upd => {
-                updTable.append(`
-                    <tr>
-                        <td><span class="badge badge-xs badge-outline">v${upd.app_version || upd.version || '0'}</span></td>
-                        <td class="text-xs font-mono opacity-60">${upd.app_id}</td>
-                        <td class="text-right"><span class="badge badge-xs ${upd.owned ? 'badge-success' : 'badge-warning'}">${upd.owned ? 'Owned' : 'Missing'}</span></td>
-                    </tr>
-                `);
-            });
-            list.append(updTable);
-        }
-
-        if (dlcs.length > 0) {
-            list.append('<h4 class="text-xs font-bold uppercase opacity-50 mb-2 mt-4">DLCs</h4>');
-            const dlcTable = $('<table class="table table-sm w-full bg-base-200 rounded-lg overflow-hidden"></table>');
-            dlcs.forEach(dlc => {
-                dlcTable.append(`
-                    <tr>
-                        <td class="text-xs font-bold truncate max-w-[200px]">${dlc.name}</td>
-                        <td class="text-xs font-mono opacity-60">${dlc.app_id}</td>
-                        <td class="text-right"><span class="badge badge-xs ${dlc.owned ? 'badge-success' : 'badge-warning'}">${dlc.owned ? 'Owned' : 'Missing'}</span></td>
-                    </tr>
-                `);
-            });
-            list.append(dlcTable);
-        }
-
-        gameDetailsModal.showModal();
-    }
-
-    function updatePaginationControls(totalItems) {
-        const pagination = $('#paginationControls');
-        pagination.empty();
-
-        const totalPages = Math.ceil(totalItems / itemsPerPage);
-        if (totalPages <= 1) return;
-
-        const prev = $(`<button class="join-item btn btn-sm ${currentPage === 1 ? 'btn-disabled' : ''}">«</button>`);
-        prev.click(() => { if (currentPage > 1) { currentPage--; renderGames(); } });
-        pagination.append(prev);
-
-        const startP = Math.max(1, currentPage - 2);
-        const endP = Math.min(totalPages, currentPage + 2);
-
-        for (let i = startP; i <= endP; i++) {
-            const btn = $(`<button class="join-item btn btn-sm ${i === currentPage ? 'btn-active btn-primary' : ''}">${i}</button>`);
-            btn.click(() => { currentPage = i; renderGames(); });
-            pagination.append(btn);
-        }
-
-        const next = $(`<button class="join-item btn btn-sm ${currentPage === totalPages ? 'btn-disabled' : ''}">»</button>`);
-        next.click(() => { if (currentPage < totalPages) { currentPage++; renderGames(); } });
-        pagination.append(next);
-    }
-
-    $(document).ready(function () {
-        itemsPerPage = parseInt(localStorage.getItem('itemsPerPage')) || 12;
-        $('#itemsPerPageInput').val(itemsPerPage);
-        currentView = localStorage.getItem('currentView') || 'card';
-        cardSize = parseInt(localStorage.getItem('cardSize')) || 3;
-
-        $(`.view-toggle-btn[data-view="${currentView}"]`).addClass('active');
-
-        fetchGames().then(renderGames);
-
-        $('#navbarSearch').on('input', applyFilters);
-        $(document).on('change', '.filterInput', applyFilters);
-
-        function applyFilters() {
-            if (!games) return;
-
-            const searchText = $('#navbarSearch').val()?.toLowerCase() || '';
-            const base = $('#filterCheckBase').is(':checked');
-            const dlc = $('#filterCheckDlc').is(':checked');
-            const owned = $('#filterCheckOwned').is(':checked');
-            const missing = $('#filterCheckMissing').is(':checked');
-            const upToDate = $('#filterCheckUpToDate').is(':checked');
-            const outdated = $('#filterCheckMissingUpdate').is(':checked');
-
-            // Sync shortcut buttons
-            updateShortcutButtons(base, dlc);
-
-            filteredGames = games.filter(game => {
-                // 1. Search Filter
-                const nameMatch = !searchText ||
-                    game.name?.toLowerCase().includes(searchText) ||
-                    game.title_id?.toLowerCase().includes(searchText) ||
-                    game.title_id_name?.toLowerCase().includes(searchText);
-
-                if (!nameMatch) return false;
-
-                // 2. Type Filter
-                if (base || dlc) {
-                    const typeMatch = (base && game.app_type === 'BASE') || (dlc && game.app_type === 'DLC');
-                    if (!typeMatch) return false;
-                }
-
-                // 3. Ownership Filter
-                if (owned || missing) {
-                    const ownedMatch = (owned && game.owned !== false) || (missing && game.owned === false);
-                    if (!ownedMatch) return false;
-                }
-
-                // 4. Update Status Filter
-                if (upToDate || outdated) {
-                    const isOutdated = game.has_latest_version === false;
-                    const statusMatch = (upToDate && !isOutdated) || (outdated && isOutdated);
-                    if (!statusMatch) return false;
-                }
-
-                return true;
-            });
-
-            currentPage = 1;
-            renderGames();
-        }
-
-        // Additional View Control listeners
-        $('#cardSizeRange').on('input', function () {
-            cardSize = parseInt($(this).val());
-            localStorage.setItem('cardSize', cardSize);
-            renderGames();
-        });
-
-        $('.view-toggle-btn').click(function () {
-            $('.view-toggle-btn').removeClass('active');
-            $(this).addClass('active');
-            currentView = $(this).data('view');
-            localStorage.setItem('currentView', currentView);
-            currentPage = 1;
-            renderGames();
-        });
-
-        $('#itemsPerPageInput').on('change', function () {
-            itemsPerPage = parseInt($(this).val()) || 12;
-            localStorage.setItem('itemsPerPage', itemsPerPage);
-            currentPage = 1;
-            renderGames();
-        });
-
+    let pageSize = 24;
+    let currentView = localStorage.getItem('viewMode') || 'card';
+
+    // Helper functions
+    const openModal = (id) => $(`#${id}`).addClass('is-active');
+    const closeModal = (id) => $(`#${id}`).removeClass('is-active');
+
+    // Bulma Dropdown Toggle
+    $('#filterDropdown .dropdown-trigger').on('click', function (e) {
+        e.stopPropagation();
+        $('#filterDropdown').toggleClass('is-active');
     });
+    $(document).on('click', () => $('#filterDropdown').removeClass('is-active'));
+    $('.dropdown-content').on('click', (e) => e.stopPropagation());
+
+    function setView(view) {
+        currentView = view;
+        localStorage.setItem('viewMode', view);
+        $('#viewToggleButtons .button').removeClass('is-primary');
+        $(`#btnView${view.charAt(0).toUpperCase() + view.slice(1)}`).addClass('is-primary');
+        renderLibrary();
+    }
+
+    function renderLibrary() {
+        const container = $('#libraryContainer').empty();
+        const start = (currentPage - 1) * pageSize;
+        const paged = filteredGames.slice(start, start + pageSize);
+
+        $('#noResults').toggleClass('is-hidden', paged.length > 0);
+
+        if (currentView === 'card') renderCardView(paged);
+        else if (currentView === 'icon') renderIconView(paged);
+        else renderListView(paged);
+
+        updatePagination();
+    }
+
+    function renderCardView(items) {
+        items.forEach(game => {
+            const card = $(`
+                <div class="column is-3-desktop is-4-tablet is-12-mobile">
+                    <div class="card game-card box is-paddingless is-shadowless border" onclick="showGameDetails(${game.id})">
+                        <div class="card-image">
+                            <figure class="image is-16by9">
+                                <img src="${game.icon || '/static/no-icon.png'}" alt="${game.name}" style="object-fit: cover;">
+                            </figure>
+                        </div>
+                        <div class="card-content p-4">
+                            <p class="title is-6 mb-2 line-clamp-1">${game.name}</p>
+                            <p class="subtitle is-7 opacity-50 mb-3">${game.publisher || '--'}</p>
+                            <div class="tags">
+                                <span class="tag is-primary is-light is-small font-mono">${game.app_id}</span>
+                                <span class="tag is-info is-light is-small">v${game.version_name || game.version}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+            $('#libraryContainer').append(card);
+        });
+    }
+
+    function renderIconView(items) {
+        const wrapper = $('<div class="column is-12 is-flex is-flex-wrap-wrap is-justify-content-center gap-4"></div>');
+        items.forEach(game => {
+            wrapper.append(`
+                <div class="game-icon-item" onclick="showGameDetails(${game.id})" title="${game.name}">
+                    <figure class="image is-square box p-0 overflow-hidden shadow-sm">
+                        <img src="${game.icon || '/static/no-icon.png'}" alt="${game.name}">
+                    </figure>
+                </div>
+            `);
+        });
+        $('#libraryContainer').append(wrapper);
+    }
+
+    function renderListView(items) {
+        const table = $(`
+            <div class="column is-12">
+                <div class="table-container box is-paddingless shadow-sm overflow-hidden">
+                    <table class="table is-fullwidth is-hoverable game-list-table">
+                        <thead>
+                            <tr class="is-selected" style="background: #570df8">
+                                <th>Title</th>
+                                <th>ID</th>
+                                <th>Version</th>
+                                <th class="is-hidden-mobile">Size</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        `);
+        items.forEach(game => {
+            table.find('tbody').append(`
+                <tr onclick="showGameDetails(${game.id})">
+                    <td><strong>${game.name}</strong></td>
+                    <td class="font-mono is-size-7">${game.app_id}</td>
+                    <td><span class="tag is-light">v${game.version}</span></td>
+                    <td class="is-hidden-mobile opacity-50 font-mono is-size-7">${game.size_formatted || '--'}</td>
+                </tr>
+            `);
+        });
+        $('#libraryContainer').append(table);
+    }
+
+    function showGameDetails(id) {
+        $.getJSON(`/api/app_info/${id}`, (game) => {
+            $('#modalTitle').text(game.name);
+            let filesHtml = game.files && game.files.length > 0 ? `
+                <div class="mt-5">
+                    <p class="heading has-text-weight-bold mb-3 has-text-primary">Associated Files</p>
+                    <div class="field">
+                        ${game.files.map(f => `
+                            <div class="box is-shadowless border p-3 mb-3">
+                                <div class="columns is-vcentered is-mobile">
+                                    <div class="column">
+                                        <p class="is-size-7 has-text-weight-bold truncate" title="${f.filename}">${f.filename}</p>
+                                        <p class="is-size-7 opacity-50 truncate" title="${f.filepath}">${f.filepath}</p>
+                                        <p class="is-size-7 opacity-70">${f.size_formatted}</p>
+                                    </div>
+                                    <div class="column is-narrow">
+                                        <a href="/api/get_game/${f.id}" class="button is-primary is-small" download="${f.filename}">
+                                            <span class="icon is-small"><i class="bi bi-download"></i></span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : '<p class="notification is-warning is-light mt-5">No local files found for this title.</p>';
+
+            let content = `
+                <div class="columns">
+                    <div class="column is-4">
+                        <figure class="image is-square box p-0 shadow-sm overflow-hidden mb-4">
+                            <img src="${game.icon || '/static/no-icon.png'}" alt="Icon">
+                        </figure>
+                        <div class="tags are-medium">
+                            <span class="tag is-primary is-fullwidth font-mono">${game.app_id}</span>
+                            <span class="tag is-info is-fullwidth">${game.version_name || 'v' + game.version}</span>
+                        </div>
+                    </div>
+                    <div class="column is-8">
+                        <p class="subtitle is-6 has-text-weight-bold mb-2">Overview</p>
+                        <p class="is-size-7 mb-4 opacity-70">${game.description || 'No description available.'}</p>
+                        
+                        <div class="columns is-multiline is-mobile is-gapless mb-4">
+                            <div class="column is-6"><p class="is-size-7"><strong>Publisher:</strong> ${game.publisher || '--'}</p></div>
+                            <div class="column is-6"><p class="is-size-7"><strong>Release:</strong> ${game.release_date || '--'}</p></div>
+                        </div>
+
+                        ${game.dlcs && game.dlcs.length ? `
+                            <p class="heading has-text-primary has-text-weight-bold mt-5 mb-2">Available DLCs (${game.dlcs.length})</p>
+                            <div class="tags">
+                                ${game.dlcs.map(d => `<span class="tag is-light is-size-7">${d.name}</span>`).join('')}
+                            </div>
+                        ` : ''}
+
+                        ${filesHtml}
+                    </div>
+                </div>
+            `;
+            $('#modalContent').html(content);
+            openModal('gameDetailsModal');
+        });
+    }
+
+    function applyFilters() {
+        const query = $('#navbarSearch').val().toLowerCase();
+        const showBase = $('#filterCheckBase').is(':checked');
+        const showDlc = $('#filterCheckDlc').is(':checked');
+        const showOwned = $('#filterCheckOwned').is(':checked');
+        const showMissing = $('#filterCheckMissing').is(':checked');
+        const showUpToDate = $('#filterCheckUpToDate').is(':checked');
+        const showMissingUpdate = $('#filterCheckMissingUpdate').is(':checked');
+
+        filteredGames = games.filter(g => {
+            const matchesSearch = !query || (g.name && g.name.toLowerCase().includes(query)) || (g.app_id && g.app_id.toLowerCase().includes(query));
+
+            let matchesType = true;
+            if (showBase && !showDlc) matchesType = g.app_type === 'BASE';
+            else if (showDlc && !showBase) matchesType = g.app_type === 'DLC';
+
+            let matchesSource = true;
+            if (showOwned && !showMissing) matchesSource = g.owned;
+            else if (showMissing && !showOwned) matchesSource = !g.owned;
+
+            let matchesStatus = true;
+            if (showUpToDate && !showMissingUpdate) matchesStatus = g.has_latest_version;
+            else if (showMissingUpdate && !showUpToDate) matchesStatus = !g.has_latest_version;
+
+            return matchesSearch && matchesType && matchesSource && matchesStatus;
+        });
+
+        currentPage = 1;
+        renderLibrary();
+    }
 
     function toggleTypeFilter(type) {
-        const checkbox = type === 'BASE' ? $('#filterCheckBase') : $('#filterCheckDlc');
-        checkbox.prop('checked', !checkbox.is(':checked')).trigger('change');
+        const check = type === 'BASE' ? '#filterCheckBase' : '#filterCheckDlc';
+        $(check).prop('checked', !$(check).is(':checked'));
+        updateShortcutButtons();
+        applyFilters();
     }
 
-    function updateShortcutButtons(base, dlc) {
-        const btnBase = $('#btnFilterBase');
-        const btnDlc = $('#btnFilterDlc');
-
-        if (base) btnBase.addClass('btn-primary').removeClass('btn-outline');
-        else btnBase.removeClass('btn-primary').addClass('btn-outline');
-
-        if (dlc) btnDlc.addClass('btn-primary').removeClass('btn-outline');
-        else btnDlc.removeClass('btn-primary').addClass('btn-outline');
+    function updateShortcutButtons() {
+        $('#btnFilterBase').toggleClass('is-primary', $('#filterCheckBase').is(':checked'));
+        $('#btnFilterDlc').toggleClass('is-primary', $('#filterCheckDlc').is(':checked'));
     }
+
+    function changePage(delta) {
+        currentPage += delta;
+        renderLibrary();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function updatePagination() {
+        const totalPages = Math.ceil(filteredGames.length / pageSize) || 1;
+        $('#btnPrev').toggleClass('is-disabled', currentPage === 1);
+        $('#btnNext').toggleClass('is-disabled', currentPage === totalPages);
+
+        $('#paginationSummary').html(`
+            <li><span class="pagination-link is-current bg-primary shadow-sm border-none">Pagina ${currentPage} de ${totalPages}</span></li>
+            <li class="ml-4 is-size-7 opacity-50 has-text-weight-bold">(${filteredGames.length} items)</li>
+        `);
+    }
+
+    // Event Listeners
+    $('.filterInput').on('change', () => { updateShortcutButtons(); applyFilters(); });
+    $('#navbarSearch').on('input', applyFilters);
+    $('.modal-background').on('click', () => closeModal('gameDetailsModal'));
+
+    $(document).ready(() => {
+        // Populated globally outside raw block
+        setView(currentView);
+    });
+</script>
+{% endraw %}
+
+<script>
+    games = {{ games | tojson }};
+    filteredGames = [...games];
+    applyFilters();
 </script>
 
-<!-- Game Details Modal -->
-<dialog id="gameDetailsModal" class="modal">
-    <div class="modal-box w-11/12 max-w-4xl p-0 overflow-y-auto max-h-[90vh] bg-base-100 pb-6 shadow-2xl">
-        <div id="modalBanner" class="w-full h-64 bg-cover bg-center relative">
-            <div class="absolute inset-0 bg-gradient-to-t from-base-100 to-transparent"></div>
-            <form method="dialog">
-                <button
-                    class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 text-white shadow-lg bg-black/20 hover:bg-black/40 border-none">✕</button>
-            </form>
-        </div>
-
-        <div class="px-8 -mt-16 relative flex flex-col md:flex-row gap-6">
-            <div class="avatar shadow-2xl">
-                <div class="w-32 h-32 rounded-2xl bg-base-200 border-4 border-base-100">
-                    <img id="modalIcon" src="" onerror="this.src='/static/img/no-icon.png'" />
-                </div>
-            </div>
-            <div class="flex-grow pt-16 md:pt-20">
-                <h3 id="modalTitle" class="text-3xl font-extrabold tracking-tight"></h3>
-                <div class="flex flex-wrap gap-2 mt-2" id="modalBadges"></div>
-            </div>
-        </div>
-
-        <div class="px-8 mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div class="md:col-span-2 space-y-4">
-                <div>
-                    <h4 class="text-[10px] font-bold uppercase opacity-50 mb-2 tracking-widest">{{ t('Description') }}
-                    </h4>
-                    <p id="modalDescription" class="text-sm leading-relaxed opacity-80 italic"></p>
-                </div>
-
-                <div id="modalContentList" class="space-y-4">
-                    <!-- DLCs and Updates will go here -->
-                </div>
-            </div>
-
-            <div class="space-y-4">
-                <div class="bg-base-200 p-4 rounded-xl space-y-3">
-                    <div class="flex flex-col gap-1">
-                        <span class="text-[10px] uppercase font-bold opacity-40">Title ID</span>
-                        <span id="modalTitleId" class="font-mono text-xs font-bold break-all"></span>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <span class="text-[10px] uppercase font-bold opacity-40">{{ t('Publisher') }}</span>
-                        <span id="modalPublisher" class="text-xs font-bold"></span>
-                    </div>
-                    <div class="flex flex-col gap-1 border-t border-base-content/5 pt-2">
-                        <span class="text-[10px] uppercase font-bold opacity-40">{{ t('Release Date') }}</span>
-                        <span id="modalReleaseDate" class="text-xs font-bold"></span>
-                    </div>
-                    <div class="flex flex-col gap-1 border-t border-base-content/5 pt-2">
-                        <span class="text-[10px] uppercase font-bold opacity-40">{{ t('Size') }}</span>
-                        <span id="modalSize" class="text-xs font-bold"></span>
-                    </div>
-                    <div class="flex flex-col gap-1 border-t border-base-content/5 pt-2">
-                        <span class="text-[10px] uppercase font-bold opacity-40">{{ t('Genre') }}</span>
-                        <div id="modalGenre" class="flex flex-wrap gap-1 mt-1"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>{{ t('close') }}</button>
-    </form>
-</dialog>
 {% endblock %}

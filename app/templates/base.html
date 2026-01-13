@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ get_locale() }}" data-theme="night">
+<html lang="{{ get_locale() }}" class="has-navbar-fixed-top">
 
 <head>
     <meta charset="utf-8">
@@ -10,9 +10,8 @@
     <title>MyFoil</title>
     {%endif%}
 
-    <!-- Tailwind CSS & daisyUI -->
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Bulma CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
@@ -20,81 +19,150 @@
 
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#570df8',
-                    }
-                }
+    <style>
+        /* Dark Mode Support for Bulma */
+        :root[data-theme="night"] {
+            --bulma-background: #1a1a2e;
+            --bulma-text: #e1e1e6;
+            --bulma-card-background: #16213e;
+            --bulma-card-header-color: #e1e1e6;
+            --bulma-input-background: #0f3460;
+            --bulma-input-color: #e1e1e6;
+            --bulma-input-border: #570df8;
+            --bulma-border: #2d3436;
+        }
+
+        [data-theme="night"] body {
+            background-color: var(--bulma-background);
+            color: var(--bulma-text);
+        }
+
+        [data-theme="night"] .card,
+        [data-theme="night"] .box,
+        [data-theme="night"] .navbar,
+        [data-theme="night"] .modal-card-body,
+        [data-theme="night"] .modal-card-head,
+        [data-theme="night"] .modal-card-foot {
+            background-color: var(--bulma-card-background);
+            color: var(--bulma-text);
+        }
+
+        [data-theme="night"] .title,
+        [data-theme="night"] .subtitle,
+        [data-theme="night"] .label,
+        [data-theme="night"] strong {
+            color: var(--bulma-text);
+        }
+
+        [data-theme="night"] .input,
+        [data-theme="night"] .select select,
+        [data-theme="night"] .textarea {
+            background-color: var(--bulma-input-background);
+            color: var(--bulma-input-color);
+            border-color: rgba(87, 13, 248, 0.4);
+        }
+
+        [data-theme="night"] .navbar-item,
+        [data-theme="night"] .navbar-link {
+            color: var(--bulma-text);
+        }
+
+        [data-theme="night"] .navbar-item:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: #570df8;
+        }
+
+        [data-theme="night"] .table {
+            background-color: transparent;
+            color: var(--bulma-text);
+        }
+
+        [data-theme="night"] .table thead th {
+            color: var(--bulma-text);
+            border-bottom-color: var(--bulma-border);
+        }
+
+        [data-theme="night"] .table td,
+        [data-theme="night"] .table th {
+            border-color: var(--bulma-border);
+        }
+
+        /* Custom primary color to match old design */
+        .is-primary {
+            background-color: #570df8 !important;
+        }
+
+        .has-text-primary {
+            color: #570df8 !important;
+        }
+
+        #toastContainer {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+
+        .notification.is-toast {
+            margin-bottom: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
             }
         }
-    </script>
+    </style>
 </head>
 
-<body class="min-h-screen bg-base-200 text-base-content antialiased">
+<body>
     {% block content %}
     {% endblock %}
 
-    <div id="toastContainer" class="toast toast-end toast-bottom z-[9999]"></div>
+    <div id="toastContainer"></div>
 
     <script>
         function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            const icon = type === 'success' ? 'check-circle' : 'exclamation-circle';
-            const alertClass = type === 'success' ? 'alert-success' : 'alert-error';
+            const notification = document.createElement('div');
+            const colorClass = type === 'success' ? 'is-success' : 'is-danger';
 
-            toast.className = `alert ${alertClass} shadow-lg border-none animate-in fade-in slide-in-from-bottom-4 duration-300`;
-            toast.innerHTML = `
-                <i class="bi bi-${icon}"></i>
-                <span class="text-sm font-bold">${message}</span>
+            notification.className = `notification ${colorClass} is-toast`;
+            notification.innerHTML = `
+                <button class="delete" onclick="this.parentElement.remove()"></button>
+                <div class="is-flex is-align-items-center gap-2">
+                    <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                    <strong>${message}</strong>
+                </div>
             `;
 
-            container.appendChild(toast);
+            container.appendChild(notification);
             setTimeout(() => {
-                toast.classList.add('animate-out', 'fade-out', 'slide-out-to-bottom-4');
-                setTimeout(() => toast.remove(), 300);
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.5s';
+                setTimeout(() => notification.remove(), 500);
             }, 3000);
         }
-    </script>
 
-    <script>
-        // Theme toggle functionality for daisyUI
         function toggleTheme() {
             const html = document.documentElement;
             const currentTheme = html.getAttribute('data-theme');
             const newTheme = currentTheme === 'night' ? 'light' : 'night';
             html.setAttribute('data-theme', newTheme);
             localStorage.setItem('theme', newTheme);
-            updateThemeIcon(newTheme);
         }
 
-        function updateThemeIcon(theme) {
-            const icon = document.querySelector('#themeToggle i');
-            if (icon) {
-                if (theme === 'night') {
-                    icon.className = 'bi bi-moon-stars-fill';
-                } else {
-                    icon.className = 'bi bi-sun-fill';
-                }
-            }
-        }
-
-        // Load saved theme on page load
         document.addEventListener('DOMContentLoaded', function () {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme) {
-                document.documentElement.setAttribute('data-theme', savedTheme);
-                updateThemeIcon(savedTheme);
-            } else {
-                // Default to system preference
-                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                const defaultTheme = prefersDark ? 'night' : 'light';
-                document.documentElement.setAttribute('data-theme', defaultTheme);
-                updateThemeIcon(defaultTheme);
-            }
+            const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'night' : 'light');
+            document.documentElement.setAttribute('data-theme', savedTheme);
         });
     </script>
 </body>

@@ -317,7 +317,8 @@ def access_shop():
                            missing_updates=missing_updates,
                            missing_dlcs=missing_dlcs,
                            games_missing_updates=games_missing_updates,
-                           games_missing_dlcs=games_missing_dlcs)
+                           games_missing_dlcs=games_missing_dlcs,
+                           games=generate_library())
 
 @access_required('shop')
 def access_shop_auth():
@@ -430,6 +431,35 @@ def set_titles_settings_api():
     }
     return jsonify(resp)
 
+@app.route('/api/settings/regions')
+@access_required('admin')
+def get_regions_api():
+    languages_path = os.path.join(TITLEDB_DIR, 'languages.json')
+    if not os.path.exists(languages_path):
+        return jsonify({'regions': []})
+    try:
+        with open(languages_path) as f:
+            languages = json.load(f)
+        return jsonify({'regions': sorted(list(languages.keys()))})
+    except:
+        return jsonify({'regions': []})
+
+@app.route('/api/settings/languages')
+@access_required('admin')
+def get_languages_api():
+    languages_path = os.path.join(TITLEDB_DIR, 'languages.json')
+    if not os.path.exists(languages_path):
+        return jsonify({'languages': []})
+    try:
+        with open(languages_path) as f:
+            languages = json.load(f)
+        all_langs = set()
+        for region_langs in languages.values():
+            all_langs.update(region_langs)
+        return jsonify({'languages': sorted(list(all_langs))})
+    except:
+        return jsonify({'languages': []})
+
 @app.post('/api/settings/shop')
 def set_shop_settings_api():
     data = request.json
@@ -474,9 +504,9 @@ def library_paths_api():
         }
     return jsonify(resp)
 
-@app.post('/api/upload')
+@app.post('/api/settings/keys')
 @access_required('admin')
-def upload_file():
+def set_keys_api():
     errors = []
     success = False
 
@@ -616,9 +646,56 @@ def set_language(lang):
 @tinfoil_access
 def serve_game(id):
     # TODO add download count increment
-    filepath = db.session.query(Files.filepath).filter_by(id=id).first()[0]
-    filedir, filename = os.path.split(filepath)
+    file = Files.query.get(id)
+    if not file:
+        return "File not found", 404
+    filedir, filename = os.path.split(file.filepath)
     return send_from_directory(filedir, filename)
+
+@app.route('/api/app_info/<int:id>')
+@access_required('shop')
+def app_info_api(id):
+    app_obj = Apps.query.get(id)
+    if not app_obj:
+        return jsonify({'success': False, 'error': 'App not found'})
+    
+    # Get basic info from titledb
+    info = titles.get_game_info(app_obj.app_id)
+    if not info:
+        info = {
+            'name': f'Unknown ({app_obj.app_id})',
+            'publisher': '--',
+            'description': 'No information available.',
+            'release_date': '--',
+            'icon': '/static/no-icon.png'
+        }
+    
+    # Add files info
+    files_list = []
+    for f in app_obj.files:
+        files_list.append({
+            'id': f.id,
+            'filename': f.filename,
+            'filepath': f.filepath,
+            'size': f.size,
+            'size_formatted': format_size_py(f.size)
+        })
+    
+    info['id'] = app_obj.id
+    info['app_id'] = app_obj.app_id
+    info['version'] = app_obj.app_version
+    info['type'] = app_obj.app_type
+    info['files'] = files_list
+    
+    return jsonify(info)
+
+def format_size_py(size):
+    if size is None: return "0 B"
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if size < 1024:
+            return f"{size:.2f} {unit}"
+        size /= 1024
+    return f"{size:.2f} TB"
 
 
 @debounce(10)
@@ -683,6 +760,9 @@ if __name__ == '__main__':
     init_db(app)
     init_users(app)
     init()
+    logger.info('Registered routes:')
+    for rule in app.url_map.iter_rules():
+        logger.info(f"{rule.endpoint}: {rule}")
     logger.info('Initialization steps done, starting server...')
     app.run(debug=False, use_reloader=False, host="0.0.0.0", port=8465)
     # Shutdown server

@@ -2,21 +2,38 @@
 
 {% block content %}
 {% include 'nav.html' %}
-<div class="container mx-auto px-4 py-12 flex justify-center">
-  <div class="card bg-base-100 shadow-xl w-full max-w-md">
-    <div class="card-body items-center text-center">
-      <div class="avatar placeholder mb-4">
-        <div class="bg-primary text-primary-content rounded-full w-24">
-          <span class="text-3xl">{{ current_user.user[0].upper() if current_user.is_authenticated else '?' }}</span>
+
+<section class="section">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-4-desktop is-6-tablet">
+        <div class="card box shadow-sm">
+          <div class="card-content has-text-centered">
+            <div class="is-inline-block p-4 mb-4"
+              style="background: rgba(87,13,248,0.1); border-radius: 50%; width: 96px; height: 96px; display: flex; align-items: center; justify-content: center;">
+              <span class="is-size-2 has-text-primary has-text-weight-bold">
+                {{ current_user.user[0].upper() if current_user.is_authenticated else '?' }}
+              </span>
+            </div>
+
+            <h2 class="title is-3 has-text-weight-black">
+              {{ t('Welcome') }}, {{ current_user.user if current_user.is_authenticated else 'Guest' }}!
+            </h2>
+
+            <p class="subtitle is-6 opacity-50 mb-6">
+              {{ t('Profile management and personal settings coming soon.') }}
+            </p>
+
+            <div class="buttons is-centered">
+              <a href="/" class="button is-primary is-outlined">
+                <span class="icon"><i class="bi bi-arrow-left"></i></span>
+                <span>{{ t('Back to Library') }}</span>
+              </a>
+            </div>
+          </div>
         </div>
-      </div>
-      <h2 class="card-title text-2xl font-bold">Welcome, {{ current_user.user if current_user.is_authenticated else
-        'Guest' }}!</h2>
-      <p class="opacity-50">Profile management coming soon.</p>
-      <div class="card-actions mt-6">
-        <a href="/" class="btn btn-primary btn-outline">Back to Library</a>
       </div>
     </div>
   </div>
-</div>
+</section>
 {% endblock %}

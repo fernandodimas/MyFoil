@@ -6,6 +6,10 @@ import os
 import json
 import logging
 import requests
+
+# Retrieve main logger
+logger = logging.getLogger('main')
+
 try:
     import unzip_http
     HAS_UNZIP_HTTP = True

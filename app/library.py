@@ -507,7 +507,10 @@ def generate_library():
                     'release_date': version_release_dates.get(app_version, 'Unknown')
                 })
             
-            title['version'] = sorted(version_list, key=lambda x: x['version'])
+            title['versions_details'] = sorted(version_list, key=lambda x: x['version'])
+            title['latest_version'] = max([v['version'] for v in available_versions], default=0)
+            title['owned_version'] = max([v['version'] for v in version_list if v.get('owned')], default=title['app_version'])
+            title['version'] = title['owned_version'] # Use owned version for display in list
             title['title_id_name'] = title['name']
             
         elif title['app_type'] == APP_TYPE_DLC:
@@ -527,10 +530,12 @@ def generate_library():
                 version_list.append({
                     'version': app_version,
                     'owned': dlc_app.get('owned', False),
-                    'release_date': 'Unknown'  # DLC release dates not available in versions_db
+                    'release_date': 'Unknown'
                 })
             
-            title['version'] = sorted(version_list, key=lambda x: x['version'])
+            title['versions_details'] = sorted(version_list, key=lambda x: x['version'])
+            title['owned_version'] = max([v['version'] for v in version_list if v.get('owned')], default=title['app_version'])
+            title['version'] = title['owned_version']
             
             # Check if this DLC has latest version
             if dlc_apps:
