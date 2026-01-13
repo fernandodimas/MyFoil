@@ -322,6 +322,9 @@ def access_shop():
                            total_games=total_games,
                            total_dlcs=total_dlcs,
                            total_updates=total_updates,
+                           missing_games=missing_games,
+                           missing_updates=missing_updates,
+                           missing_dlcs=missing_dlcs,
                            games_missing_updates=games_missing_updates,
                            games_missing_dlcs=games_missing_dlcs,
                            games=None)

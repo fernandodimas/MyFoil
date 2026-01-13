@@ -22,7 +22,15 @@ def load_keys(key_file=KEYS_FILE):
         logger.error(f'Provided keys file {key_file} is invalid.')
     return valid
 
-def load_settings():
+# Cache variable
+_cached_settings = None
+
+def load_settings(force=False):
+    global _cached_settings
+
+    if _cached_settings and not force:
+        return _cached_settings
+
     if os.path.exists(CONFIG_FILE):
         logger.debug(f'Reading configuration file: {CONFIG_FILE}')
         with open(CONFIG_FILE, 'r') as yaml_file:
@@ -35,6 +43,8 @@ def load_settings():
         settings = DEFAULT_SETTINGS
         with open(CONFIG_FILE, 'w') as yaml_file:
             yaml.dump(settings, yaml_file)
+    
+    _cached_settings = settings
     return settings
 
 def verify_settings(section, data):
