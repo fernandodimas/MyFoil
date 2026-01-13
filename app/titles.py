@@ -279,30 +279,52 @@ def load_titledb(force=False):
         language = app_settings['titles'].get('language', 'en')
         possible_files = titledb.get_region_titles_filenames(region, language) + ["titles.US.en.json", "US.en.json", "titles.json"]
         
-        _titles_db = None
+        _titles_db = {}
         global _loaded_titles_file
-        _loaded_titles_file = None
+        _loaded_titles_file = [] # Now a list of files loaded
         
-        for filename in possible_files:
+        # Load order: Basic titles.json -> Region specific (reverses possible_files)
+        # We want to load the most "generic" first and OVERWRITE with the most "specific"
+        load_order = ["titles.json", "US.en.json", "titles.US.en.json"]
+        # Add regional files at the end of the load order so they take priority
+        for f in possible_files:
+            if f not in load_order:
+                load_order.append(f)
+
+        for filename in load_order:
             filepath = os.path.join(TITLEDB_DIR, filename)
             if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
-                logger.info(f"Attempting to load titles from {filename}...")
+                logger.info(f"Loading TitleDB: {filename}...")
                 loaded = robust_json_load(filepath)
                 if loaded:
-                    # Check if it's a dict or list
                     count = len(loaded) if isinstance(loaded, (dict, list)) else 0
                     if count > 0:
-                        logger.info(f"SUCCESS: Loaded {count} titles from {filename} (Type: {type(loaded).__name__})")
-                        _titles_db = loaded
-                        _loaded_titles_file = filename  # Track which file was loaded
-                        break
-                    else:
-                        logger.warning(f"{filename} loaded but is empty.")
+                        # Convert list to dict if necessary for merging
+                        current_batch = {}
+                        if isinstance(loaded, list):
+                            for item in loaded:
+                                if isinstance(item, dict) and 'id' in item:
+                                    current_batch[item['id'].upper()] = item
+                        else:
+                            current_batch = {k.upper(): v for k, v in loaded.items() if isinstance(v, dict)}
+                        
+                        # MERGE logic: Keep metadata (urls, size, etc) but update names/descriptions
+                        if not _titles_db:
+                            _titles_db = current_batch
+                        else:
+                            for tid, data in current_batch.items():
+                                if tid in _titles_db:
+                                    # Override specific fields but keep the rest
+                                    for field in ['name', 'description']:
+                                        if data.get(field):
+                                            _titles_db[tid][field] = data[field]
+                                else:
+                                    _titles_db[tid] = data
+                        
+                        _loaded_titles_file.append(filename)
+                        logger.info(f"SUCCESS: Merged {count} items from {filename}")
                 else:
-                    logger.warning(f"Could not parse or load valid data from {filename}, trying next fallback...")
-            else:
-                if os.path.exists(filepath):
-                    logger.warning(f"Skipping {filename}: File is exists but is empty (0 bytes).")
+                    logger.warning(f"Could not parse {filename}, skipping...")
         
         if _titles_db:
             # INDEXING: Ensure TitleDB is indexed by TitleID for O(1) lookups
