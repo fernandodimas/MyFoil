@@ -8,12 +8,24 @@
 
 ## 📊 Índice
 
-1. [Visão Geral do Projeto](#visão-geral-do-projeto)
-2. [Análise da Arquitetura Atual](#análise-da-arquitetura-atual)
-3. [Melhorias Técnicas Recomendadas](#melhorias-técnicas-recomendadas)
-4. [Novas Funcionalidades Propostas](#novas-funcionalidades-propostas)
-5. [Roadmap de Implementação](#roadmap-de-implementação)
-6. [Métricas e KPIs](#métricas-e-kpis)
+1. [Visão Geral do Projeto](#1-visão-geral-do-projeto)
+2. [Análise da Arquitetura Atual](#2-análise-da-arquitetura-atual)
+3. [Melhorias Técnicas Recomendadas](#3-melhorias-técnicas-recomendadas)
+    - 3.1 [Backend e Performance](#31-backend-e-performance)
+        - 3.1.1 [Filas Assíncronas](#311-sistema-de-filas-assíncronas) ✅
+        - 3.1.2 [API REST](#312-api-rest-completa-e-documentada) ✅
+        - 3.1.3 [Logging Estruturado](#313-sistema-de-logging-estruturado) ✅
+        - 3.1.4 [Métricas e Monitoramento](#314-sistema-de-métricas-e-monitoramento) ✅
+    - 3.2 [Frontend e UX](#32-frontend-e-ux)
+        - 3.2.1 [WebSockets](#321-websockets-para-atualizações-em-tempo-real) ✅
+        - 3.2.2 [Progressive Web App (PWA)](#322-progressive-web-app-pwa) ✅
+        - 3.2.3 [Modo Escuro](#323-modo-escuro-automático) ✅
+    - 3.3 [Segurança e Confiabilidade](#33-segurança-e-confiabilidade)
+        - 3.3.1 [Backup Automático](#331-sistema-de-backup-automático) ✅
+        - 3.3.2 [Rate Limiting](#332-rate-limiting-avançado) ⏳
+4. [Novas Funcionalidades Propostas](#4-novas-funcionalidades-propostas)
+5. [Roadmap de Implementação](#5-roadmap-de-implementação)
+6. [Métricas e KPIs](#6-métricas-e-kpis)
 
 ---
 
@@ -212,7 +224,7 @@ GET    /api/v1/health                     # Health check
 
 ---
 
-#### 3.1.3 Sistema de Logging Estruturado
+#### 3.1.3 Sistema de Logging Estruturado ✅ CONCLUÍDO
 **Prioridade:** 🟡 MÉDIA  
 **Complexidade:** Baixa  
 **Impacto:** Médio

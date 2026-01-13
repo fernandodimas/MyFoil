@@ -11,7 +11,8 @@ import logging
 import sys
 import copy
 import flask.cli
-from datetime import timedelta, datetime
+import datetime
+from datetime import timedelta
 flask.cli.show_server_banner = lambda *args: None
 from constants import *
 from settings import *
@@ -90,10 +91,10 @@ def scan_library_job():
         if is_titledb_update_running:
             logger.info("Skipping scheduled library scan: update_titledb job is currently in progress. Rescheduling in 5 minutes.")
             app.scheduler.add_job(
-                job_id=f'scan_library_rescheduled_{datetime.now().timestamp()}',
+                job_id=f'scan_library_rescheduled_{datetime.datetime.now().timestamp()}',
                 func=scan_library_job,
                 run_once=True,
-                start_date=datetime.now().replace(microsecond=0) + timedelta(minutes=5)
+                start_date=datetime.datetime.now().replace(microsecond=0) + timedelta(minutes=5)
             )
             return
             
@@ -168,7 +169,7 @@ def init():
         func=create_automatic_backup,
         interval=timedelta(days=1),
         run_first=False,
-        start_date=datetime.now().replace(hour=3, minute=0, second=0, microsecond=0)
+        start_date=datetime.datetime.now().replace(hour=3, minute=0, second=0, microsecond=0)
     )
 
 os.makedirs(CONFIG_DIR, exist_ok=True)
@@ -1001,7 +1002,7 @@ def post_library_change():
         titles.unload_titledb()
         
         # Notify clients about the change
-        socketio.emit('library_updated', {'timestamp': datetime.now().isoformat()}, namespace='/')
+        socketio.emit('library_updated', {'timestamp': datetime.datetime.now().isoformat()}, namespace='/')
 
 @app.post('/api/library/scan')
 @access_required('admin')
