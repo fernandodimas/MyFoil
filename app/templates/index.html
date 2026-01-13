@@ -425,27 +425,24 @@
             const card = $(`
                 <div class="grid-item">
                     <div class="card game-card box is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')">
-                        <div class="card-image position-relative overflow-hidden" style="padding-top: 100%;">
-                            <figure class="image position-absolute" style="top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: #222;">
-                                <img src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" 
-                                     style="width: 100%; height: 100%; object-fit: cover;">
+                        <div class="card-image position-relative overflow-hidden">
+                            <figure class="image is-16by9">
+                                <img src="${game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" style="object-fit: cover;">
                             </figure>
                         </div>
-                        <div class="card-content p-3" style="flex-grow: 1; display: flex; flex-direction: column;">
+                        <div class="card-content p-3">
                             <div class="is-flex is-justify-content-between mb-2">
                                 <span class="tag is-white p-0 font-mono is-size-7 opacity-50">${game.id}</span>
-                                <div class="has-text-right">
-                                    <span class="tag is-white p-0 font-mono is-size-7 has-text-weight-bold has-text-primary">v${game.display_version}</span>
-                                </div>
+                                <span class="tag is-white p-0 font-mono is-size-7 opacity-50">v${game.display_version}</span>
                             </div>
-                            <p class="is-size-6 has-text-weight-bold mb-3 truncate" style="margin-top: auto;" title="${game.name}">${game.name}</p>
-                            <div class="mt-auto is-flex is-justify-content-between is-align-items-center">
+                            <p class="is-size-6 has-text-weight-bold mb-3 truncate" title="${game.name}">${game.name}</p>
+                            <div class="is-flex is-justify-content-between is-align-items-center">
                                 <div class="is-flex is-align-items-center gap-1">
                                     <span class="status-dot ${statusDotClass}"></span>
-                                    ${!game.has_latest_version && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1" style="height: 1rem; font-size: 0.6rem; font-weight: bold;">UPD</span>' : ''}
-                                    ${!game.has_all_dlcs && game.has_base ? '<span class="tag is-danger is-light is-small py-0 px-1" style="height: 1rem; font-size: 0.6rem; font-weight: bold;">DLC</span>' : ''}
+                                    ${!game.has_latest_version && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1" style="height: 1.2rem; font-size: 0.65rem; font-weight: bold;">UPDATE</span>' : ''}
+                                    ${!game.has_all_dlcs && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1" style="height: 1.2rem; font-size: 0.65rem; font-weight: bold;">DLC</span>' : ''}
                                 </div>
-                                ${game.size_formatted ? `<span class="is-size-7 opacity-40 font-mono">${game.size_formatted}</span>` : ''}
+                                ${game.owned ? '<span class="tag is-success is-light is-small" style="font-weight: bold;"><i class="bi bi-check mr-1"></i>Possui</span>' : '<span class="tag is-grey-lighter has-text-grey is-small" style="font-weight: bold;"><i class="bi bi-x mr-1"></i>Vazio</span>'}
                             </div>
                         </div>
                     </div>
