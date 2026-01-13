@@ -11,17 +11,16 @@
             <div class="column is-3">
                 <aside class="menu is-sticky" style="top: 80px;">
                     <p class="menu-label has-text-weight-black is-size-5 mb-5 tracking-tighter">
-                        <i class="bi bi-sliders2-vertical has-text-primary mr-2"></i> {{ t('Settings') }}
+                        <i class="bi bi-sliders2-vertical has-text-primary mr-2"></i> Configurações
                     </p>
                     <ul class="menu-list" id="settingsNav">
-                        <li><a data-target="General" class="is-active"><i class="bi bi-gear-fill mr-2"></i> {{
-                                t('General') }}</a></li>
-                        <li><a data-target="Authentication"><i class="bi bi-people-fill mr-2"></i> {{
-                                t('Authentication') }}</a></li>
-                        <li><a data-target="Library"><i class="bi bi-folder2-open mr-2"></i> {{ t('Library') }}</a></li>
-                        <li><a data-target="TitleDB"><i class="bi bi-database-fill mr-2"></i> {{ t('TitleDB') }}</a>
+                        <li><a data-target="General" class="is-active"><i class="bi bi-gear-fill mr-2"></i> Geral</a>
                         </li>
-                        <li><a data-target="Shop"><i class="bi bi-cart-fill mr-2"></i> {{ t('Shop') }}</a></li>
+                        <li><a data-target="Authentication"><i class="bi bi-people-fill mr-2"></i> Autenticação</a></li>
+                        <li><a data-target="Library"><i class="bi bi-folder2-open mr-2"></i> Biblioteca</a></li>
+                        <li><a data-target="TitleDB"><i class="bi bi-database-fill mr-2"></i> TitleDB</a>
+                        </li>
+                        <li><a data-target="Shop"><i class="bi bi-cart-fill mr-2"></i> Loja</a></li>
                     </ul>
                 </aside>
             </div>
@@ -31,7 +30,7 @@
                 <!-- Loading Overlay -->
                 <div id="settingsLoading" class="has-text-centered py-6">
                     <button class="button is-loading is-ghost is-large"></button>
-                    <p class="mt-4 has-text-weight-bold">{{ t('Loading settings...') }}</p>
+                    <p class="mt-4 has-text-weight-bold">Carregando configurações...</p>
                 </div>
 
                 <div id="settingsContent" class="is-hidden animate-fade-in">
@@ -42,10 +41,10 @@
                             <div class="is-flex is-align-items-center gap-3">
                                 <i class="bi bi-exclamation-triangle-fill is-size-4"></i>
                                 <div>
-                                    <strong class="is-block uppercase is-size-7 tracking-widest">{{ t('Missing admin
-                                        account!') }}</strong>
-                                    <span class="is-size-7">{{ t('Authentication is disabled. Anyone can access and
-                                        change your configuration.') }}</span>
+                                    <strong class="is-block uppercase is-size-7 tracking-widest">Conta Admin
+                                        Ausente!</strong>
+                                    <span class="is-size-7">Autenticação desativada. Qualquer um pode acessar e alterar
+                                        configurações.</span>
                                 </div>
                             </div>
                         </div>
@@ -56,13 +55,13 @@
                             <div class="is-flex is-align-items-center gap-3">
                                 <i class="bi bi-key-fill is-size-4"></i>
                                 <div>
-                                    <strong class="is-block uppercase is-size-7 tracking-widest">{{ t('Missing console
-                                        keys!') }}</strong>
+                                    <strong class="is-block uppercase is-size-7 tracking-widest">Chaves do console
+                                        ausentes!</strong>
                                     <span class="is-size-7">
-                                        {{ t('Nintendo content decryption requires keys.') }}
+                                        Necessário para decriptar conteúdo Nintendo.
                                         <a target="_blank"
                                             href="https://gitlab.com/easyhacking/switch/-/wikis/home/getting-started/dump-keys"
-                                            class="has-text-weight-bold is-underlined ml-1">{{ t('Guide') }}</a>
+                                            class="has-text-weight-bold is-underlined ml-1">Guia</a>
                                     </span>
                                 </div>
                             </div>
@@ -77,14 +76,14 @@
                         <div class="card box shadow-sm">
                             <header class="card-header border-none shadow-none">
                                 <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-gear-fill mr-2"></i> {{ t('General Configuration') }}
+                                    <i class="bi bi-gear-fill mr-2"></i> Configuração Geral
                                 </p>
                             </header>
                             <div class="card-content pt-0">
                                 <div class="columns is-multiline">
                                     <div class="column is-6">
                                         <div class="field">
-                                            <label class="label is-small">{{ t('Library Region') }}</label>
+                                            <label class="label is-small">Região da Biblioteca</label>
                                             <div class="control is-expanded">
                                                 <div class="select is-fullwidth">
                                                     <select id="selectRegion"></select>
@@ -94,7 +93,7 @@
                                     </div>
                                     <div class="column is-6">
                                         <div class="field">
-                                            <label class="label is-small">{{ t('Library Language') }}</label>
+                                            <label class="label is-small">Idioma da Biblioteca</label>
                                             <div class="control is-expanded">
                                                 <div class="select is-fullwidth">
                                                     <select id="selectLanguage"></select>
@@ -104,12 +103,12 @@
                                     </div>
                                     <div class="column is-6">
                                         <div class="field">
-                                            <label class="label is-small">{{ t('Application Language') }}</label>
+                                            <label class="label is-small">Idioma da Aplicação</label>
                                             <div class="control is-expanded">
                                                 <div class="select is-fullwidth">
                                                     <select id="languageSelect" onchange="changeLanguage(this.value)">
-                                                        <option value="en">{{ t('English') }}</option>
-                                                        <option value="pt_BR">{{ t('Português (Brasil)') }}</option>
+                                                        <option value="en">English</option>
+                                                        <option value="pt_BR">Português (Brasil)</option>
                                                     </select>
                                                 </div>
                                             </div>
@@ -120,8 +119,8 @@
                                 <hr class="my-6 opacity-10">
 
                                 <div class="block">
-                                    <h3 class="title is-6 mb-4"><i class="bi bi-key-fill has-text-primary mr-2"></i> {{
-                                        t('Console Keys') }}</h3>
+                                    <h3 class="title is-6 mb-4"><i class="bi bi-key-fill has-text-primary mr-2"></i>
+                                        Chaves do Console</h3>
                                     <div class="notification is-primary is-light p-5">
                                         <div class="columns is-vcentered">
                                             <div class="column">
@@ -131,16 +130,16 @@
                                                             name="file" accept=".keys,.txt">
                                                         <span class="file-cta">
                                                             <span class="file-icon"><i class="bi bi-upload"></i></span>
-                                                            <span class="file-label">{{ t('Choose file...') }}</span>
+                                                            <span class="file-label">Escolher arquivo...</span>
                                                         </span>
-                                                        <span class="file-name" id="fileNameDisplay">{{ t('No file
-                                                            chosen') }}</span>
+                                                        <span class="file-name" id="fileNameDisplay">Nenhum arquivo
+                                                            escolhido</span>
                                                     </label>
                                                 </div>
                                             </div>
                                             <div class="column is-narrow">
                                                 <button class="button is-primary" onclick="submitTitlesSettings()">
-                                                    <i class="bi bi-check-lg mr-2"></i> {{ t('Update & Save') }}
+                                                    <i class="bi bi-check-lg mr-2"></i> Salvar & Atualizar
                                                 </button>
                                             </div>
                                         </div>
