@@ -322,12 +322,9 @@ def access_shop():
                            total_games=total_games,
                            total_dlcs=total_dlcs,
                            total_updates=total_updates,
-                           missing_games=missing_games,
-                           missing_updates=missing_updates,
-                           missing_dlcs=missing_dlcs,
                            games_missing_updates=games_missing_updates,
                            games_missing_dlcs=games_missing_dlcs,
-                           games=generate_library())
+                           games=None)
 
 @access_required('shop')
 def access_shop_auth():
@@ -693,7 +690,7 @@ def app_info_api(id):
             'publisher': '--',
             'description': 'No information available.',
             'release_date': '--',
-            'icon': '/static/no-icon.png'
+            'iconUrl': '/static/no-icon.png'
         }
     
     # Add files info
@@ -780,6 +777,11 @@ def scan_library():
     libraries = get_libraries()
     for library in libraries:
         scan_library_path(library.path) # Only scan, identification will be done globally
+
+@app.route('/api/library')
+@access_required('shop')
+def library_api():
+    return jsonify(generate_library())
 
 @app.route('/api/status')
 def process_status_api():

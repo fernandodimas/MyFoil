@@ -297,7 +297,7 @@
                     <div class="card game-card box is-paddingless is-shadowless border" onclick="showGameDetails(${game.id})">
                         <div class="card-image">
                             <figure class="image is-16by9">
-                                <img src="${game.icon || '/static/no-icon.png'}" alt="${game.name}" style="object-fit: cover;">
+                                <img src="${game.iconUrl || '/static/no-icon.png'}" alt="${game.name}" style="object-fit: cover;">
                             </figure>
                         </div>
                         <div class="card-content p-4">
@@ -321,7 +321,7 @@
             wrapper.append(`
                 <div class="game-icon-item" onclick="showGameDetails(${game.id})" title="${game.name}">
                     <figure class="image is-square box p-0 overflow-hidden shadow-sm">
-                        <img src="${game.icon || '/static/no-icon.png'}" alt="${game.name}">
+                        <img src="${game.iconUrl || '/static/no-icon.png'}" alt="${game.name}">
                     </figure>
                 </div>
             `);
@@ -391,7 +391,7 @@
                 <div class="columns">
                     <div class="column is-4">
                         <figure class="image is-square box p-0 shadow-sm overflow-hidden mb-4">
-                            <img src="${game.icon || '/static/no-icon.png'}" alt="Icon">
+                            <img src="${game.iconUrl || '/static/no-icon.png'}" alt="Icon">
                         </figure>
                         <div class="tags are-medium">
                             <span class="tag is-primary is-fullwidth font-mono">${game.app_id}</span>
@@ -488,17 +488,42 @@
     $('#navbarSearch').on('input', applyFilters);
     $('.modal-background').on('click', () => closeModal('gameDetailsModal'));
 
+    {% endraw %}
+</script>
+
+<script>
+    // Initialize empty
+    games = [];
+    filteredGames = [];
+
+    // Fetch games from API
     $(document).ready(() => {
+        // Show loading state if needed, though view is already set
+        const loadingHtml = `
+        <div class="column is-12 has-text-centered p-6">
+            <span class="loader is-loading is-inline-block" style="width: 3rem; height: 3rem; border-width: 3px;"></span>
+            <p class="mt-4 is-size-6 has-text-weight-bold opacity-60">{{ t('Loading Library...') }}</p>
+        </div>
+        `;
+        $('#libraryContainer').html(loadingHtml);
+
+        $.getJSON('/api/library', function (data) {
+            games = data || [];
+            // Log to debug invalid icons
+            games.forEach(g => {
+                if (!g.iconUrl) console.log('Missing icon for:', g.name);
+            });
+
+            filteredGames = [...games];
+            applyFilters();
+        })
+            .fail(function () {
+                $('#libraryContainer').html(`<div class="notification is-danger">{{ t('Failed to load library') }}</div>`);
+            });
+
         // Populated globally outside raw block
         setView(currentView);
     });
-</script>
-{% endraw %}
-
-<script>
-    games = {{ games | tojson }};
-    filteredGames = [...games];
-    applyFilters();
 </script>
 
 {% endblock %}

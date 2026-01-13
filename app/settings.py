@@ -24,7 +24,7 @@ def load_keys(key_file=KEYS_FILE):
 
 def load_settings():
     if os.path.exists(CONFIG_FILE):
-        logger.debug('Reading configuration file.')
+        logger.debug(f'Reading configuration file: {CONFIG_FILE}')
         with open(CONFIG_FILE, 'r') as yaml_file:
             settings = yaml.safe_load(yaml_file)
 
