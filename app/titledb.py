@@ -41,6 +41,13 @@ def get_source_manager() -> TitleDBSourceManager:
     return _source_manager
 
 
+def get_region_titles_file(app_settings: Dict) -> str:
+    """Get the preferred region-specific titles filename"""
+    region = app_settings['titles'].get('region', 'US')
+    language = app_settings['titles'].get('language', 'en')
+    return f"titles.{region}.{language}.json"
+
+
 def get_region_titles_filenames(region: str, language: str) -> List[str]:
     """Get possible filenames for regional titles"""
     return [

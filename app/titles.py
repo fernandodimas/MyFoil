@@ -469,31 +469,50 @@ def get_game_info(title_id):
             
             # DLC/Update Icon Fallback: If icon is missing, try to inherit from base game
             if (not res['iconUrl'] or res['iconUrl'] == '') and not search_id.endswith('000'):
-                base_id = search_id[:-3] + '000'
-                base_info = get_game_info(base_id)
-                if base_info and base_info.get('iconUrl'):
-                    res['iconUrl'] = base_info['iconUrl']
-                    logger.debug(f"Inherited icon from base game {base_id} for {search_id}")
+                possible_base_ids = [search_id[:-3] + '000']
+                try:
+                    # For DLCs, the base ID is often (DLC_PREFIX - 1) + 000
+                    prefix = search_id[:-3]
+                    base_prefix = hex(int(prefix, 16) - 1)[2:].upper().rjust(13, '0')
+                    possible_base_ids.append(base_prefix + '000')
+                except:
+                    pass
+                
+                for bid in possible_base_ids:
+                    base_info = get_game_info(bid)
+                    if base_info and base_info.get('iconUrl') and not base_info['name'].startswith('Unknown'):
+                        res['iconUrl'] = base_info['iconUrl']
+                        res['bannerUrl'] = res['bannerUrl'] or base_info.get('bannerUrl')
+                        logger.debug(f"Inherited visuals from base game {bid} for {search_id}")
+                        break
             
             return res
         
         # If not found, try to find parent BASE game if this is a DLC/UPD
         if not search_id.endswith('000'):
-            base_id = search_id[:-3] + '000'
-            logger.debug(f"ID {search_id} not found, attempting fallback to base {base_id}")
-            base_info = get_game_info(base_id)
-            if base_info and not base_info['name'].startswith('Unknown'):
-                return {
-                    'name': f"{base_info['name']} [DLC/UPD]",
-                    'bannerUrl': base_info['bannerUrl'],
-                    'iconUrl': base_info['iconUrl'],
-                    'id': title_id,
-                    'category': base_info['category'],
-                    'release_date': base_info['release_date'],
-                    'size': 0,
-                    'publisher': base_info['publisher'],
-                    'description': f"Informação estendida do jogo base: {base_info['name']}"
-                }
+            possible_base_ids = [search_id[:-3] + '000']
+            try:
+                prefix = search_id[:-3]
+                base_prefix = hex(int(prefix, 16) - 1)[2:].upper().rjust(13, '0')
+                possible_base_ids.append(base_prefix + '000')
+            except:
+                pass
+
+            for bid in possible_base_ids:
+                logger.debug(f"ID {search_id} not found, attempting fallback to base {bid}")
+                base_info = get_game_info(bid)
+                if base_info and not base_info['name'].startswith('Unknown'):
+                    return {
+                        'name': f"{base_info['name']} [DLC/UPD]",
+                        'bannerUrl': base_info['bannerUrl'],
+                        'iconUrl': base_info['iconUrl'],
+                        'id': title_id,
+                        'category': base_info['category'],
+                        'release_date': base_info['release_date'],
+                        'size': 0,
+                        'publisher': base_info['publisher'],
+                        'description': f"Informação estendida do jogo base: {base_info['name']}"
+                    }
 
         raise Exception(f"ID {search_id} not found in database")
     except Exception as e:
