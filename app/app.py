@@ -689,42 +689,104 @@ def serve_game(id):
     filedir, filename = os.path.split(file.filepath)
     return send_from_directory(filedir, filename)
 
-@app.route('/api/app_info/<int:id>')
+@app.route('/api/app_info/<id>')
 @access_required('shop')
 def app_info_api(id):
-    app_obj = db.session.get(Apps, id)
-    if not app_obj:
-        return jsonify({'success': False, 'error': 'App not found'})
+    # Try to get by TitleID first (hex string)
+    tid = str(id).upper()
+    title_obj = Titles.query.filter_by(title_id=tid).first()
+    
+    # If not found by TitleID, try by integer primary key (legacy/fallback)
+    app_obj = None
+    if not title_obj and str(id).isdigit():
+        app_obj = db.session.get(Apps, int(id))
+        if app_obj:
+            tid = app_obj.title.title_id
+            title_obj = app_obj.title
+
+    if not title_obj:
+        return jsonify({'success': False, 'error': 'Game not found'})
     
     # Get basic info from titledb
-    info = titles.get_game_info(app_obj.app_id)
+    info = titles_lib.get_game_info(tid)
     if not info:
         info = {
-            'name': f'Unknown ({app_obj.app_id})',
+            'name': f'Unknown ({tid})',
             'publisher': '--',
             'description': 'No information available.',
             'release_date': '--',
             'iconUrl': '/static/no-icon.png'
         }
     
-    # Add files info
-    files_list = []
-    for f in app_obj.files:
-        files_list.append({
-            'id': f.id,
-            'filename': f.filename,
-            'filepath': f.filepath,
-            'size': f.size,
-            'size_formatted': format_size_py(f.size)
+    # Get all apps for this title
+    all_title_apps = get_all_title_apps(tid)
+    
+    # Base Files (from owned BASE apps)
+    base_files = []
+    base_apps = [a for a in all_title_apps if a['app_type'] == APP_TYPE_BASE and a['owned']]
+    for b in base_apps:
+        # We need the original Files objects to get IDs for download
+        app_model = db.session.get(Apps, b['id'])
+        for f in app_model.files:
+            base_files.append({
+                'id': f.id,
+                'filename': f.filename,
+                'filepath': f.filepath,
+                'size': f.size,
+                'size_formatted': format_size_py(f.size)
+            })
+    
+    # Deduplicate files by ID
+    seen_ids = set()
+    unique_base_files = []
+    for f in base_files:
+        if f['id'] not in seen_ids:
+            unique_base_files.append(f)
+            seen_ids.add(f['id'])
+
+    # Updates and DLCs (for detailed listing)
+    available_versions = titles_lib.get_all_existing_versions(tid)
+    version_release_dates = {v['version']: v['release_date'] for v in available_versions}
+    
+    update_apps = [a for a in all_title_apps if a['app_type'] == APP_TYPE_UPD]
+    updates_list = []
+    for upd in update_apps:
+        v_int = int(upd['app_version'])
+        updates_list.append({
+            'version': v_int,
+            'owned': upd['owned'],
+            'release_date': version_release_dates.get(v_int, 'Unknown')
         })
     
-    info['id'] = app_obj.id
-    info['app_id'] = app_obj.app_id
-    info['version'] = app_obj.app_version
-    info['type'] = app_obj.app_type
-    info['files'] = files_list
+    # DLCs
+    dlc_ids = titles_lib.get_all_existing_dlc(tid)
+    dlcs_list = []
+    dlc_apps_grouped = {}
+    for a in [a for a in all_title_apps if a['app_type'] == APP_TYPE_DLC]:
+        aid = a['app_id']
+        if aid not in dlc_apps_grouped: dlc_apps_grouped[aid] = []
+        dlc_apps_grouped[aid].append(a)
+        
+    for dlc_id in dlc_ids:
+        owned = any(a['owned'] for a in dlc_apps_grouped.get(dlc_id, []))
+        dlcs_list.append({
+            'app_id': dlc_id,
+            'name': titles_lib.get_game_info(dlc_id).get('name', f'DLC {dlc_id}'),
+            'owned': owned
+        })
+
+    result = info.copy()
+    result['id'] = tid
+    result['app_id'] = tid
+    result['title_id'] = tid
+    result['has_base'] = title_obj.have_base
+    result['has_latest_version'] = title_obj.up_to_date
+    result['has_all_dlcs'] = title_obj.complete
+    result['files'] = unique_base_files
+    result['updates'] = sorted(updates_list, key=lambda x: x['version'])
+    result['dlcs'] = sorted(dlcs_list, key=lambda x: x['name'])
     
-    return jsonify(info)
+    return jsonify(result)
 
 def format_size_py(size):
     if size is None: return "0 B"

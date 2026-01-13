@@ -229,9 +229,10 @@ def get_all_apps():
             "app_id": app.app_id,
             "app_version": app.app_version,
             "app_type": app.app_type,
-            "owned": app.owned
+            "owned": app.owned,
+            "files": [f.filepath for f in app.files] # List of file paths associated with this app
         }
-        for app in Apps.query.options(db.joinedload(Apps.title)).all()  # Optimized with joinedload
+        for app in Apps.query.options(db.joinedload(Apps.title), db.joinedload(Apps.files)).all()
     ]
     return apps_list
 

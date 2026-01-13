@@ -114,11 +114,20 @@
 
                 <div class="level-right">
                     <div class="level-item">
+                        <div class="field is-horizontal is-align-items-center mr-4 is-hidden-mobile">
+                            <div class="field-label is-small mr-2">
+                                <label class="label opacity-50"><i class="bi bi-zoom-in"></i></label>
+                            </div>
+                            <div class="field-body">
+                                <input id="gridZoom" type="range" min="150" max="400" step="10" value="240"
+                                    oninput="updateGridZoom(this.value)">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="level-item">
                         <div class="buttons has-addons" id="viewToggleButtons">
                             <button class="button is-small" onclick="setView('card')" id="btnViewCard" title="Grade"><i
                                     class="bi bi-grid-fill"></i></button>
-                            <button class="button is-small" onclick="setView('icon')" id="btnViewIcon" title="Ícones"><i
-                                    class="bi bi-app"></i></button>
                             <button class="button is-small" onclick="setView('list')" id="btnViewList" title="Lista"><i
                                     class="bi bi-list-ul"></i></button>
                         </div>
@@ -213,21 +222,51 @@
 
     .game-card {
         height: 100%;
-        transition: transform 0.2s;
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid rgba(0, 0, 0, 0.05);
     }
 
     .game-card:hover {
         transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
     }
 
-    .game-icon-item {
-        width: 120px;
-        cursor: pointer;
-        transition: transform 0.2s;
+    .card-image img {
+        transition: transform 0.3s;
     }
 
-    .game-icon-item:hover {
+    .game-card:hover .card-image img {
         transform: scale(1.05);
+    }
+
+    #libraryContainer {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(var(--card-width, 240px), 1fr));
+        gap: 1.5rem;
+    }
+
+    .grid-item {
+        width: 100%;
+    }
+
+    .status-dot {
+        height: 8px;
+        width: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+
+    .bg-orange {
+        background-color: #ff9f43;
+    }
+
+    .bg-green {
+        background-color: #28c76f;
+    }
+
+    .bg-gray {
+        background-color: #b4b7bd;
     }
 
     /* Custom list styles for Bulma */
@@ -238,6 +277,13 @@
 
     .game-list-table tr:hover {
         background-color: rgba(87, 13, 248, 0.05);
+    }
+
+    .truncate {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
     }
 </style>
 
@@ -269,6 +315,11 @@
         renderLibrary();
     }
 
+    function updateGridZoom(val) {
+        document.documentElement.style.setProperty('--card-width', `${val}px`);
+        localStorage.setItem('gridZoom', val);
+    }
+
     function renderLibrary() {
         const container = $('#libraryContainer').empty();
         const start = (currentPage - 1) * pageSize;
@@ -277,7 +328,6 @@
         $('#noResults').toggleClass('is-hidden', paged.length > 0);
 
         if (currentView === 'card') renderCardView(paged);
-        else if (currentView === 'icon') renderIconView(paged);
         else renderListView(paged);
 
         updatePagination();
@@ -285,23 +335,24 @@
 
     function renderCardView(items) {
         items.forEach(game => {
+            const statusDotClass = game.status_color === 'orange' ? 'bg-orange' : (game.status_color === 'green' ? 'bg-green' : 'bg-gray');
             const card = $(`
-                <div class="column is-3-desktop is-4-tablet is-12-mobile">
-                    <div class="card game-card box is-paddingless is-shadowless border" onclick="showGameDetails('${game.id}')">
-                        <div class="card-image position-relative">
-                            <span class="tag ${game.app_type === 'BASE' ? 'is-success' : 'is-info'} type-badge">${game.app_type}</span>
+                <div class="grid-item">
+                    <div class="card game-card box is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')">
+                        <div class="card-image position-relative overflow-hidden">
                             <figure class="image is-16by9">
                                 <img src="${game.iconUrl || '/static/no-icon.png'}" alt="${game.name}" style="object-fit: cover;">
                             </figure>
                         </div>
-                        <div class="card-content p-4">
-                            <p class="title is-6 mb-2 line-clamp-1">${game.name}</p>
-                            <p class="subtitle is-7 opacity-50 mb-3">${game.publisher || '--'}</p>
+                        <div class="card-content p-3">
+                            <p class="is-size-6 has-text-weight-bold mb-1 truncate">${game.name}</p>
+                            <p class="is-size-7 opacity-50 mb-3 font-mono truncate">${game.id}</p>
                             <div class="is-flex is-justify-content-between is-align-items-center">
-                                <div class="tags">
-                                    <span class="tag is-primary is-light is-small font-mono">${game.app_id}</span>
-                                    <span class="tag is-info is-light is-small">v${game.version_name || game.version}</span>
+                                <div class="is-flex is-align-items-center">
+                                    <span class="status-dot ${statusDotClass}"></span>
+                                    <span class="is-size-7 opacity-70">${game.has_base ? 'Base' : 'Extra'}</span>
                                 </div>
+                                <span class="tag is-info is-light is-small has-text-weight-bold">${game.display_version}</span>
                             </div>
                         </div>
                     </div>
@@ -309,21 +360,6 @@
             `);
             $('#libraryContainer').append(card);
         });
-    }
-
-    function renderIconView(items) {
-        const wrapper = $('<div class="column is-12 is-flex is-flex-wrap-wrap is-justify-content-center gap-4"></div>');
-        items.forEach(game => {
-            wrapper.append(`
-                <div class="game-icon-item" onclick="showGameDetails('${game.id}')" title="${game.name}">
-                    <figure class="image is-square box p-0 overflow-hidden shadow-sm relative">
-                        <img src="${game.iconUrl || '/static/no-icon.png'}" alt="${game.name}">
-                        <span class="tag ${game.app_type === 'BASE' ? 'is-success' : 'is-info'} type-badge is-small">${game.app_type}</span>
-                    </figure>
-                </div>
-            `);
-        });
-        $('#libraryContainer').append(wrapper);
     }
 
     function renderListView(items) {
@@ -362,29 +398,72 @@
     function showGameDetails(id) {
         $.getJSON(`/api/app_info/${id}`, (game) => {
             $('#modalTitle').text(game.name);
+
+            // Base Files Section
             let filesHtml = game.files && game.files.length > 0 ? `
-                <div class="mt-5">
-                    <p class="heading has-text-weight-bold mb-3 has-text-primary">Arquivos Associados</p>
-                    <div class="field">
-                        ${game.files.map(f => `
-                            <div class="box is-shadowless border p-3 mb-3">
-                                <div class="columns is-vcentered is-mobile">
-                                    <div class="column">
-                                        <p class="is-size-7 has-text-weight-bold truncate" title="${f.filename}">${f.filename}</p>
-                                        <p class="is-size-7 opacity-50 truncate" title="${f.filepath}">${f.filepath}</p>
-                                        <p class="is-size-7 opacity-70">${f.size_formatted}</p>
-                                    </div>
-                                    <div class="column is-narrow">
-                                        <a href="/api/get_game/${f.id}" class="button is-primary is-small" download="${f.filename}">
-                                            <span class="icon is-small"><i class="bi bi-download"></i></span>
-                                        </a>
-                                    </div>
+                <div class="mb-5">
+                    <p class="heading has-text-weight-bold mb-3 has-text-primary">Arquivos Base Encontrados (${game.files.length})</p>
+                    ${game.files.map(f => `
+                        <div class="box is-shadowless border p-3 mb-2 bg-light-soft">
+                            <div class="columns is-vcentered is-mobile is-gapless">
+                                <div class="column">
+                                    <p class="is-size-7 has-text-weight-bold truncate" title="${f.filename}">${f.filename}</p>
+                                    <p class="is-size-7 opacity-50 truncate" title="${f.filepath}">${f.filepath}</p>
+                                </div>
+                                <div class="column is-narrow ml-2">
+                                    <a href="/api/get_game/${f.id}" class="button is-primary is-small" title="Download">
+                                        <span class="icon is-small"><i class="bi bi-download"></i></span>
+                                    </a>
                                 </div>
                             </div>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : (game.has_base ? '<p class="notification is-warning is-light p-2 is-size-7">Arquivo base não identificado localmente.</p>' : '');
+
+            // Updates Section
+            let updatesHtml = game.updates && game.updates.length > 0 ? `
+                <div class="mb-5">
+                    <p class="heading has-text-weight-bold mb-3 has-text-link">Histórico de Atualizações</p>
+                    <div class="table-container">
+                        <table class="table is-narrow is-fullwidth is-size-7">
+                            <thead>
+                                <tr>
+                                    <th>Versão</th>
+                                    <th>Lançamento</th>
+                                    <th class="has-text-centered">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${game.updates.map(u => `
+                                    <tr>
+                                        <td class="has-text-weight-bold">v${u.version}</td>
+                                        <td class="opacity-70">${u.release_date || '--'}</td>
+                                        <td class="has-text-centered">
+                                            ${u.owned ? '<span class="tag is-success is-light is-small">Possui</span>' : '<span class="tag is-danger is-light is-small">Falta</span>'}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            ` : '';
+
+            // DLCs Section
+            let dlcsHtml = game.dlcs && game.dlcs.length > 0 ? `
+                <div class="mb-5">
+                    <p class="heading has-text-weight-bold mb-3 has-text-success">Conteúdo Adicional (DLCs)</p>
+                    <div class="is-flex is-flex-wrap-wrap gap-2">
+                        ${game.dlcs.map(d => `
+                            <span class="tag ${d.owned ? 'is-success' : 'is-danger'} is-light is-small" title="${d.app_id}">
+                                ${d.owned ? '<i class="bi bi-check-circle-fill mr-1"></i>' : '<i class="bi bi-x-circle mr-1"></i>'}
+                                ${d.name}
+                            </span>
                         `).join('')}
                     </div>
                 </div>
-            ` : '<p class="notification is-warning is-light mt-5">Nenhum arquivo local encontrado.</p>';
+            ` : '';
 
             let content = `
                 <div class="columns">
@@ -392,28 +471,22 @@
                         <figure class="image is-square box p-0 shadow-sm overflow-hidden mb-4">
                             <img src="${game.iconUrl || '/static/no-icon.png'}" alt="Icon">
                         </figure>
-                        <div class="tags are-medium">
-                            <span class="tag is-primary is-fullwidth font-mono">${game.app_id}</span>
-                            <span class="tag is-info is-fullwidth">${game.version_name || 'v' + game.version}</span>
+                        <div class="box p-3 is-shadowless border bg-light-soft">
+                            <p class="is-size-7 mb-1"><strong>ID:</strong> <span class="font-mono">${game.app_id}</span></p>
+                            <p class="is-size-7 mb-1"><strong>Editora:</strong> ${game.publisher || '--'}</p>
+                            <p class="is-size-7 mb-1"><strong>Lançamento:</strong> ${game.release_date || '--'}</p>
+                            <p class="is-size-7"><strong>Versão Atual:</strong> v${game.owned_version}</p>
                         </div>
                     </div>
                     <div class="column is-8">
-                        <p class="subtitle is-6 has-text-weight-bold mb-2">Resumo</p>
-                        <p class="is-size-7 mb-4 opacity-70">${game.description || 'Nenhuma descrição disponível.'}</p>
-                        
-                        <div class="columns is-multiline is-mobile is-gapless mb-4">
-                            <div class="column is-6"><p class="is-size-7"><strong>Editora:</strong> ${game.publisher || '--'}</p></div>
-                            <div class="column is-6"><p class="is-size-7"><strong>Lançamento:</strong> ${game.release_date || '--'}</p></div>
+                        <p class="heading has-text-weight-bold mb-2">Descrição</p>
+                        <div class="content is-size-7 opacity-70 mb-5" style="max-height: 150px; overflow-y: auto;">
+                            ${game.description || 'Nenhuma descrição disponível.'}
                         </div>
-
-                        ${game.dlcs && game.dlcs.length ? `
-                            <p class="heading has-text-primary has-text-weight-bold mt-5 mb-2">DLCs Disponíveis (${game.dlcs.length})</p>
-                            <div class="tags">
-                                ${game.dlcs.map(d => `<span class="tag is-light is-size-7">${d.name}</span>`).join('')}
-                            </div>
-                        ` : ''}
-
+                        
                         ${filesHtml}
+                        ${updatesHtml}
+                        ${dlcsHtml}
                     </div>
                 </div>
             `;
@@ -432,15 +505,16 @@
         const showMissingUpdate = $('#filterCheckMissingUpdate').is(':checked');
 
         filteredGames = games.filter(g => {
-            const matchesSearch = !query || (g.name && g.name.toLowerCase().includes(query)) || (g.app_id && g.app_id.toLowerCase().includes(query));
+            const matchesSearch = !query || (g.name && g.name.toLowerCase().includes(query)) || (g.id && g.id.toLowerCase().includes(query));
 
             let matchesType = true;
-            if (showBase && !showDlc) matchesType = g.app_type === 'BASE';
-            else if (showDlc && !showBase) matchesType = g.app_type === 'DLC';
+            if (showBase && !showDlc) matchesType = g.has_base;
+            else if (showDlc && !showBase) matchesType = !g.has_base; // If it doesn't have base, it's likely just extra content
 
             let matchesSource = true;
-            if (showOwned && !showMissing) matchesSource = g.owned;
-            else if (showMissing && !showOwned) matchesSource = !g.owned;
+            // Since everything in library is technically owned (at least partially), we check if it has a base
+            if (showOwned && !showMissing) matchesSource = g.has_base;
+            else if (showMissing && !showOwned) matchesSource = !g.has_base;
 
             let matchesStatus = true;
             if (showUpToDate && !showMissingUpdate) matchesStatus = g.has_latest_version;
@@ -519,6 +593,11 @@
             .fail(function () {
                 $('#libraryContainer').html(`<div class="notification is-danger">Falha ao carregar biblioteca</div>`);
             });
+
+        // Initialize zoom from localStorage
+        const savedZoom = localStorage.getItem('gridZoom') || 240;
+        $('#gridZoom').val(savedZoom);
+        updateGridZoom(savedZoom);
 
         // Populated globally outside raw block
         setView(currentView);

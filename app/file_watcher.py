@@ -113,8 +113,17 @@ class Handler(FileSystemEventHandler):
         if source_event.is_directory:
             return
 
-        if not any(source_event.src_path.endswith(ext) or source_event.dest_path.endswith(ext) for ext in ALLOWED_EXTENSIONS):
+        if not any(source_event.src_path.endswith(ext) or (source_event.dest_path and source_event.dest_path.endswith(ext)) for ext in ALLOWED_EXTENSIONS):
             return
+
+        # Ignore macOS metadata files starting with ._
+        filename = os.path.basename(source_event.src_path)
+        if filename.startswith('._'):
+            return
+        if hasattr(source_event, 'dest_path') and source_event.dest_path:
+            dest_filename = os.path.basename(source_event.dest_path)
+            if dest_filename.startswith('._'):
+                return
 
         library_event = SimpleNamespace(
             type=source_event.event_type,
