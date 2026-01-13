@@ -58,8 +58,12 @@ def get_version_hash() -> str:
 
 
 def is_file_outdated(filepath: str, max_age_hours: int = 24) -> bool:
-    """Check if a file is older than max_age_hours"""
+    """Check if a file is older than max_age_hours or is empty"""
     if not os.path.exists(filepath):
+        return True
+    
+    # Check if file is empty
+    if os.path.getsize(filepath) == 0:
         return True
     
     file_time = datetime.fromtimestamp(os.path.getmtime(filepath))
@@ -126,7 +130,19 @@ def download_titledb_file(filename: str, force: bool = False, silent_404: bool =
                 with open(dest_path, 'wb') as f:
                     for chunk in response.iter_content(chunk_size=8192):
                         f.write(chunk)
-                success, error = True, None
+                
+                # Validation: Binary check if extension is .json
+                if filename.endswith('.json'):
+                    with open(dest_path, 'rb') as f:
+                        header = f.read(256)
+                        if header.startswith(b'TINFOIL'):
+                            success = False
+                            error = "Downloaded file is in binary TINFOIL format, not JSON."
+                            os.remove(dest_path)
+                        else:
+                            success, error = True, None
+                else:
+                    success, error = True, None
             except Exception as e:
                 success, error = False, str(e)
 
