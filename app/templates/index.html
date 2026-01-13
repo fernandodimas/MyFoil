@@ -6,52 +6,6 @@
 <section class="section">
     <div class="container is-fluid px-5">
 
-        <!-- Stats Section -->
-        <div class="box p-0 overflow-hidden mb-4 shadow-sm border-none bg-light-soft">
-            <div class="p-3 is-flex is-justify-content-between is-align-items-center"
-                style="border-bottom: 1px solid rgba(0,0,0,0.05)">
-                <div class="is-flex is-align-items-center gap-3">
-                    <span class="has-text-weight-bold tracking-tight is-size-6">Resumo da Biblioteca</span>
-                    <span class="tag is-primary is-rounded has-text-weight-black">{{ total_files }} itens</span>
-                </div>
-                <button class="button is-ghost is-small p-0" onclick="$('#statsContent').toggleClass('is-hidden')">
-                    <span class="icon"><i class="bi bi-chevron-bar-expand"></i></span>
-                </button>
-            </div>
-
-            <div id="statsContent" class="p-3 is-hidden">
-                <div class="columns is-variable is-2">
-                    <!-- Owned Stats -->
-                    <div class="column">
-                        <div class="box is-shadowless border p-3 mb-0" style="background: rgba(72, 199, 142, 0.05)">
-                            <p class="heading mb-1 opacity-70">Acervo</p>
-                            <p class="title is-5 mb-1">{{ total_games + total_updates + total_dlcs }}</p>
-                            <p class="is-size-7 opacity-60">{{ total_games }}J | {{ total_updates }}U | {{ total_dlcs
-                                }}D</p>
-                        </div>
-                    </div>
-
-                    <!-- Library Status -->
-                    <div class="column">
-                        <div class="box is-shadowless border p-3 mb-0" style="background: rgba(255, 221, 87, 0.1)">
-                            <p class="heading mb-1 opacity-70">Pendências</p>
-                            <p class="title is-5 mb-1">{{ games_missing_updates + games_missing_dlcs }}</p>
-                            <p class="is-size-7 opacity-60">{{ games_missing_updates }} Upds | {{ games_missing_dlcs }}
-                                DLCs</p>
-                        </div>
-                    </div>
-
-                    <!-- Missing Content -->
-                    <div class="column">
-                        <div class="box is-shadowless border p-3 mb-0" style="background: rgba(241, 70, 104, 0.05)">
-                            <p class="heading mb-1 opacity-70">Desejado</p>
-                            <p class="title is-5 mb-1">{{ missing_games + missing_dlcs }}</p>
-                            <p class="is-size-7 opacity-60">{{ missing_games }} Base | {{ missing_dlcs }} DLCs</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <!-- Controls Row -->
         <div class="box p-2 mb-4 shadow-sm border-none">
@@ -471,24 +425,19 @@
             const card = $(`
                 <div class="grid-item">
                     <div class="card game-card box is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')">
-                        <div class="card-image position-relative overflow-hidden" style="padding-top: 52%;">
-                            <figure class="image position-absolute" style="top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: #333;">
-                                <img src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" 
-                                     style="width: 100%; height: 100%; object-fit: ${game.bannerUrl ? 'cover' : 'contain'}; padding: ${game.bannerUrl ? '0' : '10px'};">
+                        <div class="card-image position-relative overflow-hidden" style="padding-top: 100%;">
+                            <figure class="image position-absolute" style="top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: #f0f0f0;">
+                                <img src="${game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" style="width: 100%; height: 100%; object-fit: cover;">
                             </figure>
                         </div>
-                        <div class="card-content p-3" style="display: flex; flex-direction: column; min-height: 100px;">
-                            <div class="columns is-mobile is-gapless mb-1">
-                                <div class="column">
-                                    <span class="tag is-white p-0 font-mono is-size-7 opacity-50">${game.id}</span>
-                                </div>
-                                <div class="column has-text-right">
-                                    <span class="tag is-white p-0 font-mono is-shadowless has-text-weight-bold has-text-primary is-size-7">v${game.display_version}</span>
+                        <div class="card-content p-3" style="flex-grow: 1; display: flex; flex-direction: column;">
+                            <div class="is-flex is-justify-content-between mb-2">
+                                <span class="tag is-white p-0 font-mono is-size-7 opacity-50">${game.id}</span>
+                                <div class="has-text-right">
+                                    <span class="tag is-white p-0 font-mono is-size-7 has-text-weight-bold has-text-primary">v${game.display_version}</span>
                                 </div>
                             </div>
-                            
-                            <p class="is-size-6 has-text-weight-bold mb-2 truncate" title="${game.name}">${game.name}</p>
-                            
+                            <p class="is-size-6 has-text-weight-bold mb-3 truncate" style="margin-top: auto;" title="${game.name}">${game.name}</p>
                             <div class="mt-auto is-flex is-justify-content-between is-align-items-center">
                                 <div class="is-flex is-align-items-center gap-1">
                                     <span class="status-dot ${statusDotClass}"></span>
@@ -663,12 +612,8 @@
             ` : '';
 
             let content = `
-                <div class="modal-banner-container mb-4" style="margin: -20px -20px 20px -20px; position: relative; height: 250px; overflow: hidden; background: #eee;">
+                <div class="modal-banner-container mb-4" style="margin: -20px -20px 20px -20px; position: relative; height: 200px; overflow: hidden; background: #eee;">
                     <img src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" style="width: 100%; height: 100%; object-fit: cover;">
-                    <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.7)); padding: 20px 20px 10px;">
-                        <p class="title is-4 has-text-white mb-0">${game.name}</p>
-                        <p class="subtitle is-6 has-text-grey-lighter">${game.publisher || '--'}</p>
-                    </div>
                 </div>
                 <div class="columns">
                     <div class="column is-4">

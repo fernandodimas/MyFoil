@@ -36,36 +36,37 @@ Refinamentos detalhados da interface do usuário e funcionalidades da biblioteca
 - [x] **4.3** - Remover termos "BASE" e "DLC" do dropdown de filtros avançados
 - [x] **4.4** - Remover badge "Possui" dos cards
 - [x] **4.5** - Adicionar botões de filtro rápido "Pendente Atualização" e "Pendente DLC"
-- [x] **4.6** - Organizar melhor os números de resumo na parte superior (mais compacto)
+- [x] **4.6** - Organizar melhor os números de resumo na parte superior (mais compacto) -> **Movido para página dedicada**
 
+### 5. Página de Estatísticas e Ajustes Finais
+- [x] **5.1** - Remover resumo da biblioteca da página principal
+- [x] **5.2** - Criar página dedicada `/stats` com dashboard completo
+- [x] **5.3** - Reverter cards para formato quadrado (foco no ícone)
+- [x] **5.4** - Remover overlay de texto sobre o banner no modal de detalhes
+- [x] **5.5** - Adicionar link "Estatísticas" no menu superior
 
 ---
 
 ## 📊 Resumo de Progresso
 
-**Concluídas:** 25 de 25 tarefas (100%) ✅ FINALIZADO
+**Concluídas:** 30 de 30 tarefas (100%) ✅ FINALIZADO
 
-**Última atualização:** 2026-01-13 15:55
+**Última atualização:** 2026-01-13 16:00
 
-**Commit:** `Refinamentos globais de UI/UX concluídos: Cards, Modais, Filtros e Rodapé`
+**Commit:** `Estatísticas movidas para nova página e design de cards quadrado restaurado`
 
 ### ✅ Implementações Concluídas
 
-**Layout e Organização Visual:**
-- Cards compactos com altura ajustada e sem espaços vazios.
-- Versão e ID alinhados estrategicamente.
-- Modal com largura responsiva (maior em telas grandes).
-- Componente de DLC corrigido para suportar quebras de linha longas.
-- List View ocupando 100% da largura com colunas detalhadas.
+**Estatísticas (Novo):**
+- Página exclusiva com visão clara de acervo, pendências e conteúdo desejado.
+- Dashboard visual com cards informativos e melhor uso de espaço.
 
-**Informações e Rodapé:**
-- Rodapé detalhado com Build, Fonte de Identificação e Fonte de Updates.
-- Tamanho dos arquivos visível em todos os modos de visualização.
+**Layout do Card:**
+- Voltamos ao formato 1:1 (quadrado) que valoriza os ícones dos jogos.
+- Informações de ID e Versão mantidas de forma organizada.
 
-**Filtros e Controles:**
-- Novos botões de atalho: "Update" e "DLC" para pendências rápidas.
-- Cabeçalho de estatísticas (Overview) extremamente compacto e expansível.
-- Contador de jogos em tempo real no filtro.
+**Modal de Detalhes:**
+- Banner limpo, sem textos sobrepostos, para melhor visualização da arte do jogo.
 
 ---
 

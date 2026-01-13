@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% include 'nav.html' %}
+
+<section class="section">
+    <div class="container is-fluid px-5">
+        <div class="is-flex is-align-items-center mb-6">
+            <h1 class="title is-3 mb-0 mr-4">Estatísticas da Biblioteca</h1>
+            <span class="tag is-primary is-medium has-text-weight-bold">{{ total_files }} arquivos no total</span>
+        </div>
+
+        <div class="columns is-multiline">
+            <!-- Row 1: General Counts -->
+            <div class="column is-4">
+                <div class="card shadow-sm border-none h-100">
+                    <div class="card-content">
+                        <p class="heading has-text-success has-text-weight-bold mb-4">Acervo Local (Owned)</p>
+                        <div class="is-flex is-justify-content-between is-align-items-center mb-4">
+                            <div>
+                                <p class="title is-2 mb-0">{{ total_games + total_updates + total_dlcs }}</p>
+                                <p class="is-size-7 opacity-60">Total de itens identificados</p>
+                            </div>
+                            <span class="icon is-large has-text-success opacity-20"><i class="bi bi-check-circle-fill is-size-1"></i></span>
+                        </div>
+                        <hr class="my-4">
+                        <div class="columns is-mobile has-text-centered">
+                            <div class="column">
+                                <p class="has-text-weight-bold">{{ total_games }}</p>
+                                <p class="is-size-7 opacity-50">Jogos</p>
+                            </div>
+                            <div class="column">
+                                <p class="has-text-weight-bold">{{ total_updates }}</p>
+                                <p class="is-size-7 opacity-50">Updates</p>
+                            </div>
+                            <div class="column">
+                                <p class="has-text-weight-bold">{{ total_dlcs }}</p>
+                                <p class="is-size-7 opacity-50">DLCs</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column is-4">
+                <div class="card shadow-sm border-none h-100">
+                    <div class="card-content">
+                        <p class="heading has-text-warning has-text-weight-bold mb-4">Resumo de Pendências</p>
+                        <div class="is-flex is-justify-content-between is-align-items-center mb-4">
+                            <div>
+                                <p class="title is-2 mb-0">{{ games_missing_updates + games_missing_dlcs }}</p>
+                                <p class="is-size-7 opacity-60">Jogos precisando de atenção</p>
+                            </div>
+                            <span class="icon is-large has-text-warning opacity-20"><i class="bi bi-clock-history is-size-1"></i></span>
+                        </div>
+                        <hr class="my-4">
+                        <div class="columns is-mobile has-text-centered">
+                            <div class="column">
+                                <p class="has-text-weight-bold">{{ games_missing_updates }}</p>
+                                <p class="is-size-7 opacity-50">Pend. Update</p>
+                            </div>
+                            <div class="column">
+                                <p class="has-text-weight-bold">{{ games_missing_dlcs }}</p>
+                                <p class="is-size-7 opacity-50">Pend. DLCs</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column is-4">
+                <div class="card shadow-sm border-none h-100">
+                    <div class="card-content">
+                        <p class="heading has-text-danger has-text-weight-bold mb-4">Conteúdo Desejado (Missing)</p>
+                        <div class="is-flex is-justify-content-between is-align-items-center mb-4">
+                            <div>
+                                <p class="title is-2 mb-0">{{ missing_games + missing_dlcs }}</p>
+                                <p class="is-size-7 opacity-60">Itens em falta no disco</p>
+                            </div>
+                            <span class="icon is-large has-text-danger opacity-20"><i class="bi bi-exclamation-triangle-fill is-size-1"></i></span>
+                        </div>
+                        <hr class="my-4">
+                        <div class="columns is-mobile has-text-centered">
+                            <div class="column">
+                                <p class="has-text-weight-bold">{{ missing_games }}</p>
+                                <p class="is-size-7 opacity-50">Jogos Base</p>
+                            </div>
+                            <div class="column">
+                                <p class="has-text-weight-bold">{{ missing_dlcs }}</p>
+                                <p class="is-size-7 opacity-50">DLCs</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6">
+            <a href="/" class="button is-light">
+                <span class="icon"><i class="bi bi-arrow-left"></i></span>
+                <span>Voltar para Biblioteca</span>
+            </a>
+        </div>
+    </div>
+</section>
+
+<style>
+    .h-100 { height: 100%; }
+    .border-none { border: none !important; }
+    .opacity-20 { opacity: 0.2; }
+    .opacity-50 { opacity: 0.5; }
+    .opacity-60 { opacity: 0.6; }
+</style>
+
+{% endblock %}

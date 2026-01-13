@@ -19,6 +19,11 @@
                     <i class="bi bi-collection-play mr-2"></i> Biblioteca
                 </a>
 
+                <a class="navbar-item {% if title=='Statistics' %}is-active has-text-primary has-text-weight-bold{% endif %}"
+                    href="/stats">
+                    <i class="bi bi-bar-chart mr-2"></i> Estatísticas
+                </a>
+
                 {% if current_user.is_admin or admin_account_created == false %}
                 <a class="navbar-item {% if title=='Settings' %}is-active has-text-primary has-text-weight-bold{% endif %}"
                     href="/settings">

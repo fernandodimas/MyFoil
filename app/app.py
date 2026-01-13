@@ -302,36 +302,27 @@ def tinfoil_access(f):
     return _tinfoil_access
 
 def access_shop():
-    total_files = Files.query.count()
-    
-    # Owned counts
-    total_games = Apps.query.filter_by(app_type=APP_TYPE_BASE, owned=True).count()
-    total_dlcs = Apps.query.filter_by(app_type=APP_TYPE_DLC, owned=True).count()
-    total_updates = Apps.query.filter_by(app_type=APP_TYPE_UPD, owned=True).count()
-    
-    # Explicitly calculate missing counts
-    # Missing Games: Total in DB - Owned
-    # Note: Titles table has all known titles (if imported from TitleDB)
-    # But usually Titles table only populates if files are found or titles are known?
-    # Actually library.py logic: Titles are added if found in file identification or if missing apps are added.
-    # missing_games = Apps.query.filter_by(app_type=APP_TYPE_BASE, owned=False).count()
-    
-    # Let's trust the Apps table "owned=False" entries which are populated by 'add_missing_apps_to_db'
-    missing_games = Apps.query.filter_by(app_type=APP_TYPE_BASE, owned=False).count()
-    missing_updates = Apps.query.filter_by(app_type=APP_TYPE_UPD, owned=False).count()
-    missing_dlcs = Apps.query.filter_by(app_type=APP_TYPE_DLC, owned=False).count()
-    
-    # For "missing update games", we normally mean games that have an update available but we don't have the latest.
-    # This is slightly different from "missing_updates" which counts total missing update files.
-    # "Games with missing updates" = Titles where up_to_date=False
-    games_missing_updates = Titles.query.filter_by(up_to_date=False, have_base=True).count()
-    
-    # "Games with missing DLCs" = Titles where complete=False
-    games_missing_dlcs = Titles.query.filter_by(complete=False, have_base=True).count()
-
     return render_template('index.html', title='Library', 
                            admin_account_created=admin_account_created(), 
                            valid_keys=app_settings['titles']['valid_keys'],
+                           total_files=Files.query.count(),
+                           games=None)
+
+@app.route('/stats')
+@access_required('shop')
+def stats_page():
+    total_files = Files.query.count()
+    total_games = Apps.query.filter_by(app_type=APP_TYPE_BASE, owned=True).count()
+    total_dlcs = Apps.query.filter_by(app_type=APP_TYPE_DLC, owned=True).count()
+    total_updates = Apps.query.filter_by(app_type=APP_TYPE_UPD, owned=True).count()
+    missing_games = Apps.query.filter_by(app_type=APP_TYPE_BASE, owned=False).count()
+    missing_updates = Apps.query.filter_by(app_type=APP_TYPE_UPD, owned=False).count()
+    missing_dlcs = Apps.query.filter_by(app_type=APP_TYPE_DLC, owned=False).count()
+    games_missing_updates = Titles.query.filter_by(up_to_date=False, have_base=True).count()
+    games_missing_dlcs = Titles.query.filter_by(complete=False, have_base=True).count()
+
+    return render_template('stats.html', title='Statistics',
+                           admin_account_created=admin_account_created(),
                            total_files=total_files,
                            total_games=total_games,
                            total_dlcs=total_dlcs,
@@ -340,8 +331,7 @@ def access_shop():
                            missing_updates=missing_updates,
                            missing_dlcs=missing_dlcs,
                            games_missing_updates=games_missing_updates,
-                           games_missing_dlcs=games_missing_dlcs,
-                           games=None)
+                           games_missing_dlcs=games_missing_dlcs)
 
 @access_required('shop')
 def access_shop_auth():
