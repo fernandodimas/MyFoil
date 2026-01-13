@@ -10,10 +10,10 @@
         <div class="alert alert-error shadow-lg">
             <i class="bi bi-exclamation-triangle-fill text-2xl"></i>
             <div>
-                <h3 class="font-bold">Missing admin account!</h3>
-                <div class="text-xs">Authentication is disabled. Anyone can access and change your configuration until
-                    an admin is created. <a href="#Authentication" class="link link-hover font-bold underline">Add one
-                        here</a>.</div>
+                <h3 class="font-bold">{{ t('Missing admin account!') }}</h3>
+                <div class="text-xs">{{ t('Authentication is disabled. Anyone can access and change your configuration
+                    until an admin is created.') }} <a href="#Authentication"
+                        class="link link-hover font-bold underline">{{ t('Add one here') }}</a>.</div>
             </div>
         </div>
         {% endif %}
@@ -22,11 +22,11 @@
         <div class="alert alert-warning shadow-lg">
             <i class="bi bi-key-fill text-2xl"></i>
             <div>
-                <h3 class="font-bold">Missing console keys!</h3>
-                <div class="text-xs">Nintendo content decryption requires keys. Titles will be misidentified. <a
-                        target="_blank"
+                <h3 class="font-bold">{{ t('Missing console keys!') }}</h3>
+                <div class="text-xs">{{ t('Nintendo content decryption requires keys. Titles will be misidentified.') }}
+                    <a target="_blank"
                         href="https://gitlab.com/easyhacking/switch/-/wikis/home/getting-started/dump-keys"
-                        class="link link-hover font-bold underline">Extraction guide</a>.</div>
+                        class="link link-hover font-bold underline">{{ t('Extraction guide') }}</a>.</div>
             </div>
         </div>
         {% endif %}
@@ -253,8 +253,8 @@
                     <div class="form-control w-full">
                         <label class="label"><span class="label-text font-bold">{{ t('Shop URL') }}</span></label>
                         <input id="shopHostInput" placeholder="shop.domain.tld" class="input input-bordered w-full" />
-                        <span class="label-text-alt opacity-50 mt-1">Configure your shop URL to enable host
-                            verification.</span>
+                        <span class="label-text-alt opacity-50 mt-1">{{ t('Configure your shop URL to enable host
+                            verification.') }}</span>
                     </div>
 
                     <div class="flex flex-wrap gap-8">

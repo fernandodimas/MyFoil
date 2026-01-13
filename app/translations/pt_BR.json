@@ -123,6 +123,15 @@
     "Use DBI versions database instead of TitleDB for updates and DLCs": "Usar base de dados de versões do DBI ao invés do TitleDB para atualizações e DLCs",
     "Description": "Descrição",
     "No description available": "Nenhuma descrição disponível",
+    "Authentication": "Autenticação",
+    "Missing admin account!": "Conta de administrador ausente!",
+    "Authentication is disabled. Anyone can access and change your configuration until an admin is created.": "A autenticação está desativada. Qualquer pessoa pode acessar e alterar sua configuração até que um administrador seja criado.",
+    "Add one here": "Adicione um aqui",
+    "Missing console keys!": "Chaves do console ausentes!",
+    "Nintendo content decryption requires keys. Titles will be misidentified.": "A descriptografia de conteúdo da Nintendo requer chaves. Os títulos serão identificados incorretamente.",
+    "Extraction guide": "Guia de extração",
+    "Configure your shop URL to enable host verification.": "Configure a URL da sua loja para habilitar a verificação de host.",
+    "Shop URL": "URL da Loja",
     "Versions": "Versões",
     "close": "fechar"
 }
