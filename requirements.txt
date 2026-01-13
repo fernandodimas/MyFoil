@@ -13,3 +13,4 @@ zstandard
 unzip-http
 celery
 redis
+flask-restx

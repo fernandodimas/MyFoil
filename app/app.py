@@ -25,6 +25,7 @@ import os
 from i18n import I18n
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
+from rest_api import init_rest_api
 
 # Optional Celery for async tasks
 try:
@@ -250,6 +251,9 @@ def create_app():
     # Initialize I18n
     app.i18n = I18n(app)
 
+    # Initialize REST API
+    init_rest_api(app)
+
     return app
 
 # Create app
@@ -399,6 +403,10 @@ def index():
     if not app_settings['shop']['public']:
         return access_shop_auth()
     return access_shop()
+
+@app.route('/api/docs')
+def api_docs_redirect():
+    return redirect('/api/docs/')
 
 @app.route('/settings')
 @access_required('admin')

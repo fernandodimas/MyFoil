@@ -111,7 +111,7 @@ MyFoil/
 
 ### 3.1 Backend e Performance
 
-#### 3.1.1 Sistema de Filas Assíncronas
+#### 3.1.1 Sistema de Filas Assíncronas ✅ CONCLUÍDO
 **Prioridade:** 🟠 ALTA  
 **Complexidade:** Média  
 **Impacto:** Alto
@@ -149,7 +149,7 @@ def scan_library_async(library_path):
 
 ---
 
-#### 3.1.2 API REST Completa e Documentada
+#### 3.1.2 API REST Completa e Documentada ✅ CONCLUÍDO
 **Prioridade:** 🟠 ALTA  
 **Complexidade:** Média  
 **Impacto:** Alto
@@ -409,7 +409,7 @@ self.addEventListener('fetch', event => {
 
 ---
 
-#### 3.2.3 Modo Escuro Automático
+#### 3.2.3 Modo Escuro Automático ✅ CONCLUÍDO/MELHORADO
 **Prioridade:** 🟢 BAIXA  
 **Complexidade:** Baixa  
 **Impacto:** Baixo

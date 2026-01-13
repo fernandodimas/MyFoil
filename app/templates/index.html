@@ -821,7 +821,7 @@
 
     function updatePageSizeButtons() {
         $('.btn-page-size').removeClass('is-primary');
-        $(`.btn - page - size[data - size="${pageSize}"]`).addClass('is-primary');
+        $(`.btn-page-size[data-size="${pageSize}"]`).addClass('is-primary');
     }
 
     function goToPage(page) {
