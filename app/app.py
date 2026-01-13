@@ -53,11 +53,10 @@ def update_titledb_job(force=False):
                 logger.info("Syncing new TitleDB versions to library...")
                 add_missing_apps_to_db()
                 update_titles()
-        
-        # Clear library cache to force regeneration with new TitleDB data
-        if os.path.exists(LIBRARY_CACHE_FILE):
-            os.remove(LIBRARY_CACHE_FILE)
-            logger.info("Library cache cleared after TitleDB update.")
+                
+                # Regenerate library cache with new TitleDB data
+                generate_library(force=True)
+                logger.info("Library cache regenerated after TitleDB update.")
             
         logger.info("TitleDB update job completed.")
         return True
@@ -360,7 +359,9 @@ def index():
             # enforce client side host verification
             shop["referrer"] = f"https://{request.verified_host}"
             
-        shop["files"] = gen_shop_files(db)
+        files_list, titles_map = gen_shop_files(db)
+        shop["files"] = files_list
+        shop["titles"] = titles_map
 
         if app_settings['shop']['encrypt']:
             return Response(encrypt_shop(shop), mimetype='application/octet-stream')
@@ -789,6 +790,8 @@ def app_info_api(id):
     updates_list = []
     for upd in update_apps:
         v_int = int(upd['app_version'])
+        if v_int == 0: continue # Skip base version in updates history
+        
         # Get file IDs for owned updates
         files = []
         if upd['owned']:
@@ -834,14 +837,20 @@ def app_info_api(id):
     result['id'] = tid
     result['app_id'] = tid
     result['title_id'] = tid
+    
+    # Calculate corrected owned version considering all owned apps (Base + Update)
+    owned_versions = [int(a['app_version']) for a in all_title_apps if a['owned']]
+    result['owned_version'] = max(owned_versions) if owned_versions else 0
+    result['display_version'] = result['owned_version']
+    
+    # Use status from title_obj (re-calculated with corrected logic in library.py/update_titles)
     result['has_base'] = title_obj.have_base
     result['has_latest_version'] = title_obj.up_to_date
     result['has_all_dlcs'] = title_obj.complete
+    
     result['files'] = unique_base_files
     result['updates'] = sorted(updates_list, key=lambda x: x['version'])
     result['dlcs'] = sorted(dlcs_list, key=lambda x: x['name'])
-    result['owned_version'] = max([u['version'] for u in updates_list if u['owned']], default=0)
-    result['display_version'] = result['owned_version'] 
     result['category'] = info.get('category', []) # Genre/Categories
     
     # Calculate status_color consistent with library list
@@ -870,7 +879,18 @@ def get_unidentified_files_api():
 @app.route('/api/files/delete/<int:file_id>', methods=['POST'])
 @access_required('admin')
 def delete_file_api(file_id):
+    # Find associated TitleID before deletion for cache update
+    file_obj = db.session.get(Files, file_id)
+    title_ids = []
+    if file_obj and file_obj.apps:
+        title_ids = list(set([a.title.title_id for a in file_obj.apps if a.title]))
+
     success, error = delete_file_from_db_and_disk(file_id)
+    
+    if success:
+        for tid in title_ids:
+            library_lib.update_game_in_cache(tid)
+            
     return jsonify({'success': success, 'error': error})
 
 def format_size_py(size):

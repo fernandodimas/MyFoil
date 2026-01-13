@@ -289,7 +289,8 @@ def get_shop_files():
         shop_files.append({
             "id": file.id,
             "filename": final_filename,
-            "size": file.size
+            "size": file.size,
+            "title_id": app.title.title_id if app else None
         })
 
     return shop_files

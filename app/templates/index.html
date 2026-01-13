@@ -388,8 +388,8 @@
 
     function initGenders(gamesList) {
         const genders = new Set();
-        gamesList.forEach(g => {
-            if (g.category && Array.isArray(g.category)) {
+        games.forEach(g => {
+            if (g && g.category && Array.isArray(g.category)) {
                 g.category.forEach(c => genders.add(c));
             }
         });
@@ -581,7 +581,7 @@
                                         <td class="has-text-weight-bold">v${u.version}</td>
                                         <td class="opacity-70">${u.release_date || '--'}</td>
                                         <td class="has-text-centered">
-                                            ${u.owned ? `
+                                            ${u.owned && file ? `
                                                 <div class="field is-grouped is-grouped-centered">
                                                     <p class="control">
                                                         <a href="/api/get_game/${file.id}" class="button is-primary is-small" title="Download">
@@ -594,7 +594,7 @@
                                                         </button>
                                                     </p>
                                                 </div>
-                                            ` : '<span class="tag is-danger is-light is-small">Falta</span>'}
+                                            ` : (u.owned ? '<span class="tag is-warning is-light is-small">Erro</span>' : '<span class="tag is-danger is-light is-small">Falta</span>')}
                                         </td>
                                     </tr>
                                     `;
@@ -626,7 +626,7 @@
                                         <td class="has-text-weight-bold" onclick="showGameDetails('${d.app_id}')" style="cursor: pointer; color: inherit;" title="Ver detalhes desta DLC">${d.name}</td>
                                         <td class="opacity-50 font-mono">${d.app_id}</td>
                                         <td class="has-text-centered">
-                                            ${d.owned ? `
+                                            ${d.owned && file ? `
                                                 <div class="field is-grouped is-grouped-centered">
                                                     <p class="control">
                                                         <a href="/api/get_game/${file.id}" class="button is-primary is-light is-small" title="Download">
@@ -639,7 +639,7 @@
                                                         </button>
                                                     </p>
                                                 </div>
-                                            ` : '<span class="tag is-danger is-light is-small">Falta</span>'}
+                                            ` : (d.owned ? '<span class="tag is-warning is-light is-small">Erro</span>' : '<span class="tag is-danger is-light is-small">Falta</span>')}
                                         </td>
                                     </tr>
                                     `;
@@ -699,6 +699,7 @@
 
 
         filteredGames = games.filter(g => {
+            if (!g) return false;
             const gName = g.name || '';
             const gId = g.id || '';
             const matchesSearch = !query || gName.toLowerCase().includes(query) || gId.toLowerCase().includes(query);
@@ -727,7 +728,6 @@
             }
 
             const matchesGender = !gender || (g.category && g.category.includes(gender));
-
             return matchesSearch && matchesSource && matchesStatus && matchesGender;
         });
 
