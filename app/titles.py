@@ -80,13 +80,31 @@ def robust_json_load(filepath):
     # Try 3: Nuclear Cleanup - if still failing, it's likely structural or has nested escape issues
     try:
         # Bruteforce: replace all \ with \\ then restore common escapes
-        nuclear = content.replace('\\', '\\\\').replace('\\\\"', '\\"').replace('\\\\n', '\\n')
+        # This fixes bare backslashes but we MUST restore valid sequences or it will remain invalid
+        nuclear = content.replace('\\', '\\\\')
+        for escape in ['"', '\\', '/', 'b', 'f', 'n', 'r', 't']:
+            nuclear = nuclear.replace('\\\\' + escape, '\\' + escape)
+        # Restore unicode
+        nuclear = re.sub(r'\\\\u([0-9a-fA-F]{4})', r'\\u\1', nuclear)
+        
         nuclear = "".join(ch for ch in nuclear if ord(ch) >= 32 or ch in '\n\r\t')
         data = json.loads(nuclear, strict=False)
         return data if not isinstance(data, dict) else (data.get('data') or data.get('items') or data.get('titles') or data)
     except Exception as e:
         logger.error(f"Nuclear cleanup failed for {filepath}: {e}")
             
+    # Try 4: Desperate Measure - Remove all quotes AND backslashes then try to re-structure? No.
+    # Let's just try to remove problematic quotes that are likely content
+    try:
+        # This regex tries to find quotes that are not followed by structural characters
+        # Extremely risky but might work for simple key-value pairs
+        desperate = re.sub(r'(?<![:\s])"(?![\s,}\]])', r'\\"', content)
+        desperate = "".join(ch for ch in desperate if ord(ch) >= 32 or ch in '\n\r\t')
+        data = json.loads(desperate, strict=False)
+        return data if not isinstance(data, dict) else (data.get('data') or data.get('items') or data.get('titles') or data)
+    except:
+        pass
+
     return None
 
 def getDirsAndFiles(path):
