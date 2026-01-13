@@ -685,6 +685,22 @@ def get_app_id_version_from_versions_txt(app_id):
     if _versions_txt_db is None:
         logger.error("versions_txt_db is not loaded. Call load_titledb first.")
         return None
+    
+    app_id = app_id.lower()
+    if app_id in _versions_txt_db:
+        return _versions_txt_db[app_id]
+    return None
+
+def get_loaded_titles_file():
+    global _loaded_titles_file
+    if isinstance(_loaded_titles_file, list):
+        # Prefer showing the most specific/regional file if multiple were merged
+        # The regional ones are at the end of the load_order
+        for f in reversed(_loaded_titles_file):
+            if '.' in f and any(ext in f.lower() for ext in ['.br', 'pt', 'pt.json', 'br.json']):
+                return f
+        return _loaded_titles_file[-1] if _loaded_titles_file else "None"
+    return _loaded_titles_file or "None"
     return _versions_txt_db.get(app_id, None)
     
 def get_all_existing_dlc(title_id):

@@ -130,12 +130,49 @@
                 transform: translateY(0);
             }
         }
+
+        /* Sticky Footer */
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        main {
+            flex: 1;
+        }
     </style>
 </head>
 
 <body>
-    {% block content %}
-    {% endblock %}
+    <main>
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- Footer with System Information -->
+    <footer class="footer has-background-dark has-text-light py-2 mt-auto">
+        <div class="container is-fluid">
+            <div class="columns is-vcentered is-mobile is-multiline">
+                <div class="column is-12-mobile is-4-tablet">
+                    <p class="is-size-7 opacity-70">
+                        <span class="has-text-weight-bold">Build:</span> {{ build_version }}
+                    </p>
+                </div>
+                <div class="column is-12-mobile is-4-tablet has-text-centered-tablet">
+                    <p class="is-size-7 opacity-70">
+                        <span class="has-text-weight-bold">Identificação:</span> <span
+                            id="idSource">Carregando...</span>
+                    </p>
+                </div>
+                <div class="column is-12-mobile is-4-tablet has-text-right-tablet">
+                    <p class="is-size-7 opacity-70">
+                        <span class="has-text-weight-bold">Updates:</span> <span id="updateSource">Carregando...</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <div id="toastContainer"></div>
 
@@ -173,6 +210,15 @@
         document.addEventListener('DOMContentLoaded', function () {
             const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
             document.documentElement.setAttribute('data-theme', savedTheme);
+
+            // Load system information for footer (Global)
+            $.getJSON('/api/system/info', function (data) {
+                $('#idSource').text(data.id_source);
+                $('#updateSource').text(data.update_source);
+            }).fail(function () {
+                $('#idSource').text('N/A');
+                $('#updateSource').text('N/A');
+            });
         });
     </script>
 </body>

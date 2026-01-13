@@ -151,28 +151,8 @@
     </div>
 </section>
 
-<!-- Footer with System Information -->
-<footer class="footer has-background-dark has-text-light py-2 mt-6">
-    <div class="container is-fluid">
-        <div class="columns is-vcentered is-mobile is-multiline">
-            <div class="column is-12-mobile is-4-tablet">
-                <p class="is-size-7 opacity-70">
-                    <span class="has-text-weight-bold">Build:</span> {{ BUILD_VERSION }}
-                </p>
-            </div>
-            <div class="column is-12-mobile is-4-tablet has-text-centered-tablet">
-                <p class="is-size-7 opacity-70">
-                    <span class="has-text-weight-bold">Identificação:</span> <span id="idSource">Carregando...</span>
-                </p>
-            </div>
-            <div class="column is-12-mobile is-4-tablet has-text-right-tablet">
-                <p class="is-size-7 opacity-70">
-                    <span class="has-text-weight-bold">Updates:</span> <span id="updateSource">Carregando...</span>
-                </p>
-            </div>
-        </div>
-    </div>
-</footer>
+<!-- Page Content follows -->
+
 
 <!-- Game Details Modal -->
 <div class="modal" id="gameDetailsModal">
@@ -372,8 +352,9 @@
     }
 </style>
 
-{% raw %}
 <script>
+    {% raw %}
+
     let games = [];
     let filteredGames = [];
     let currentPage = 1;
@@ -787,21 +768,15 @@
     // Event Listeners
     $('.filterInput').on('change', applyFilters);
     $('#navbarSearch').on('input', applyFilters);
+    // Modal closers
     $('.modal-background').on('click', () => closeModal('gameDetailsModal'));
 
-    // Load system information for footer
-    $.getJSON('/api/system/info', function (data) {
-        $('#idSource').text(data.id_source);
-        $('#updateSource').text(data.update_source);
-    }).fail(function () {
-        $('#idSource').text('N/A');
-        $('#updateSource').text('N/A');
-    });
 
     {% endraw %}
 </script>
 
 <script>
+
     // Initialize empty
     games = [];
     filteredGames = [];
