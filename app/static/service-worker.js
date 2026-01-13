@@ -8,17 +8,22 @@ const STATIC_ASSETS = [
     '/static/manifest.json',
     'https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css',
     'https://code.jquery.com/jquery-3.6.0.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css',
     'https://cdn.socket.io/4.7.2/socket.io.min.js'
 ];
 
-// Install event - cache static assets
+// Install event - cache static assets individually to be resilient
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
-                console.log('Service Worker: Caching static assets');
-                return cache.addAll(STATIC_ASSETS);
+                console.log('Service Worker: Caching assets');
+                return Promise.allSettled(
+                    STATIC_ASSETS.map(url =>
+                        cache.add(url).catch(err => console.warn(`Failed to cache ${url}:`, err))
+                    )
+                );
             })
             .then(() => self.skipWaiting())
     );

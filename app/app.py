@@ -37,12 +37,8 @@ try:
     from celery_app import celery
     from tasks import scan_library_async, identify_file_async
     CELERY_ENABLED = True
-    logger.info("Celery tasks loaded and enabled.")
 except ImportError as e:
     CELERY_ENABLED = False
-    logger.warning(f"Celery not found or not configured, falling back to synchronous processing: {e}")
-from sqlalchemy import event
-from sqlalchemy.engine import Engine
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -133,7 +129,7 @@ def create_automatic_backup():
         else:
             logger.error("Automatic backup failed")
 
-def init():
+def init_internal(app):
     global watcher
     global watcher_thread
     # Create and start the file watcher
@@ -143,12 +139,8 @@ def init():
     watcher_thread.daemon = True
     watcher_thread.start()
 
-    # Load initial configuration
-    logger.info('Loading initial configuration...')
-    reload_conf()
-
     # init libraries
-    library_paths = app_settings['library']['paths']
+    library_paths = app_settings.get('library', {}).get('paths', [])
     init_libraries(app, watcher, library_paths)
 
      # Initialize job scheduler
@@ -293,8 +285,6 @@ def create_app():
 
     app.register_blueprint(auth_blueprint)
 
-
-
     # Initialize I18n
     app.i18n = I18n(app)
 
@@ -306,6 +296,25 @@ def create_app():
 
     # Initialize SocketIO
     socketio.init_app(app, cors_allowed_origins="*")
+
+    # Initialization that should happen even on import
+    with app.app_context():
+        # Initialize Backup Manager
+        global backup_manager
+        backup_manager = BackupManager(CONFIG_DIR, DATA_DIR)
+        
+        # Load configuration
+        reload_conf()
+        
+        # Initialize DB and Users
+        init_db(app)
+        init_users(app)
+        
+        # Initialize Libraries and Watcher
+        init_internal(app)
+        
+    if CELERY_ENABLED:
+        logger.info("Celery tasks loaded and enabled.")
 
     return app
 
@@ -1172,19 +1181,7 @@ def restore_backup_api():
 
 if __name__ == '__main__':
     logger.info(f'Build Version: {BUILD_VERSION}')
-    logger.info('Starting initialization of MyFoil...')
-    
-    # Initialize backup manager
-    backup_manager = BackupManager(CONFIG_DIR, DATA_DIR)
-    logger.info('Backup manager initialized')
-    
-    init_db(app)
-    init_users(app)
-    init()
-    logger.info('Registered routes:')
-    for rule in app.url_map.iter_rules():
-        logger.info(f"{rule.endpoint}: {rule}")
-    logger.info('Initialization steps done, starting server...')
+    logger.info('Starting server on port 8465...')
     socketio.run(app, debug=False, use_reloader=False, host="0.0.0.0", port=8465)
     # Shutdown server
     logger.info('Shutting down server...')
