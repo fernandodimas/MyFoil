@@ -367,10 +367,10 @@ def load_titledb(force=False):
                     if '|' in line_strip:
                         parts = line_strip.split('|')
                         if len(parts) >= 3:
-                            app_id, rightsId, version = parts[0], parts[1], parts[2]
+                            app_id, rightsId, version = parts[0].strip(), parts[1].strip(), parts[2].strip()
                             if not version:
                                 version = "0"
-                            _versions_txt_db[app_id] = version
+                            _versions_txt_db[app_id.lower()] = version
         except Exception as e:
             logger.warning(f"Error loading versions.txt: {e}")
 
@@ -633,32 +633,39 @@ def get_all_existing_versions(titleid):
 
     titleid = titleid.lower()
     app_settings = load_settings()
-    use_dbi = app_settings.get('shop', {}).get('dbi_versions', False)
+    use_dbi = app_settings.get('titles', {}).get('dbi_versions', False)
+    versions_dict = {} # Key: version_int, Value: release_date
 
-    # Priority 1: JSON Versions DB
-    if titleid in _versions_db:
-        versions_from_db = _versions_db[titleid].keys()
-        return [
-            {
-                'version': int(version_from_db),
-                'update_number': get_update_number(version_from_db),
-                'release_date': _versions_db[titleid][str(version_from_db)],
-            }
-            for version_from_db in versions_from_db
-        ]
+    # Priority 1: JSON Versions DB (Full History)
+    if _versions_db and titleid in _versions_db:
+        for v_str, release_date in _versions_db[titleid].items():
+            try:
+                versions_dict[int(v_str)] = release_date
+            except:
+                continue
     
-    # Priority 2: Fallback to versions.txt (DBI) if enabled
+    # Priority 2: DBI versions.txt (Often more up-to-date for latest version)
     if use_dbi and _versions_txt_db and titleid in _versions_txt_db:
         v_str = _versions_txt_db[titleid]
         try:
             v_int = int(v_str)
-            return [{
-                'version': v_int,
-                'update_number': get_update_number(v_str),
-                'release_date': 'Unknown',
-            }]
+            if v_int not in versions_dict:
+                versions_dict[v_int] = "Unknown (DBI)"
         except:
             pass
+
+    if not versions_dict:
+        return []
+
+    # Convert back to list format expected by caller
+    return [
+        {
+            'version': v,
+            'update_number': get_update_number(v),
+            'release_date': rd,
+        }
+        for v, rd in sorted(versions_dict.items())
+    ]
 
     return []
 

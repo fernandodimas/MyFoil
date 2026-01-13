@@ -45,10 +45,20 @@ def update_titledb_job(force=False):
     try:
         current_settings = load_settings()
         titledb.update_titledb(current_settings, force=force)
+        
+        # Sync DB with new versions from TitleDB (including DBI versions.txt if enabled)
+        # We need app context for DB operations
+        if 'app' in globals():
+            with app.app_context():
+                logger.info("Syncing new TitleDB versions to library...")
+                add_missing_apps_to_db()
+                update_titles()
+        
         # Clear library cache to force regeneration with new TitleDB data
         if os.path.exists(LIBRARY_CACHE_FILE):
             os.remove(LIBRARY_CACHE_FILE)
             logger.info("Library cache cleared after TitleDB update.")
+            
         logger.info("TitleDB update job completed.")
         return True
     except Exception as e:
@@ -914,7 +924,7 @@ def system_info_api():
     titledb_file = titles.get_loaded_titles_file()
     
     # Check what update source we are using
-    use_dbi = settings.get('titles/dbi_versions', False)
+    use_dbi = settings.get('titles', {}).get('dbi_versions', False)
     update_src = "DBI (versions.txt)" if use_dbi else "TitleDB (versions.json)"
     
     # Identification source - show Source Name + Region File
