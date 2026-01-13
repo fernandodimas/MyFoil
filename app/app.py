@@ -841,8 +841,17 @@ def app_info_api(id):
     result['updates'] = sorted(updates_list, key=lambda x: x['version'])
     result['dlcs'] = sorted(dlcs_list, key=lambda x: x['name'])
     result['owned_version'] = max([u['version'] for u in updates_list if u['owned']], default=0)
+    result['display_version'] = result['owned_version'] 
     result['category'] = info.get('category', []) # Genre/Categories
     
+    # Calculate status_color consistent with library list
+    if result['has_base'] and (not result['has_latest_version'] or not result['has_all_dlcs']):
+        result['status_color'] = 'orange'
+    elif result['has_base']:
+         result['status_color'] = 'green'
+    else:
+         result['status_color'] = 'gray'
+
     return jsonify(result)
 
 @app.route('/api/files/unidentified')

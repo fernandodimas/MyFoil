@@ -386,6 +386,23 @@
     const openModal = (id) => $(`#${id}`).addClass('is-active');
     const closeModal = (id) => $(`#${id}`).removeClass('is-active');
 
+    function initGenders(gamesList) {
+        const genders = new Set();
+        gamesList.forEach(g => {
+            if (g.category && Array.isArray(g.category)) {
+                g.category.forEach(c => genders.add(c));
+            }
+        });
+
+        // Save current selection
+        const currentVal = $('#filterGender').val();
+
+        const genderSelect = $('#filterGender').empty().append('<option value="">Todos os Gêneros</option>');
+        Array.from(genders).sort().forEach(g => genderSelect.append(new Option(g, g)));
+
+        if (currentVal) $('#filterGender').val(currentVal);
+    }
+
     // Bulma Dropdown Toggle
     $('#filterDropdown .dropdown-trigger').on('click', function (e) {
         e.stopPropagation();
@@ -807,6 +824,19 @@
                 // Refresh modal info
                 if (fileToDeleteTitleId) {
                     showGameDetails(fileToDeleteTitleId);
+
+                    // Partial Update: Update specific game in the list without full reload
+                    $.getJSON(`/api/app_info/${fileToDeleteTitleId}`, (updatedGame) => {
+                        if (!updatedGame || !updatedGame.id) return; // Safety check
+
+                        const idx = games.findIndex(g => g && g.id === fileToDeleteTitleId);
+                        if (idx !== -1) {
+                            games[idx] = updatedGame;
+                            // Update local cache
+                            localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
+                            applyFilters();
+                        }
+                    });
                 }
                 showToast('Arquivo excluído com sucesso.');
             } else {
@@ -847,34 +877,46 @@
     filteredGames = [];
 
     // Fetch games from API
+    // Fetch games from API
     $(document).ready(() => {
-        // Show loading state if needed, though view is already set
-        const loadingHtml = `
-        <div class="column is-12 has-text-centered p-6">
-            <span class="loader is-loading is-inline-block" style="width: 3rem; height: 3rem; border-width: 3px;"></span>
-            <p class="mt-4 is-size-6 has-text-weight-bold opacity-60">Carregando Biblioteca...</p>
-        </div>
-        `;
-        $('#libraryContainer').html(loadingHtml);
+        // 1. Try to load from cache first
+        const cached = localStorage.getItem('myfoil_library_cache');
+        if (cached) {
+            try {
+                games = JSON.parse(cached);
+                initGenders(games);
+                filteredGames = [...games];
+                applyFilters(); // Render cached data immediately
+            } catch (e) {
+                console.error("Cache parse error", e);
+            }
+        } else {
+            const loadingHtml = `
+            <div class="column is-12 has-text-centered p-6">
+                <span class="loader is-loading is-inline-block" style="width: 3rem; height: 3rem; border-width: 3px;"></span>
+                <p class="mt-4 is-size-6 has-text-weight-bold opacity-60">Carregando Biblioteca...</p>
+            </div>
+            `;
+            $('#libraryContainer').html(loadingHtml);
+        }
 
+        // 2. Fetch fresh data
         $.getJSON('/api/library', function (data) {
             games = data || [];
 
-            // Populate Genders
-            const genders = new Set();
-            games.forEach(g => {
-                if (g.category && Array.isArray(g.category)) {
-                    g.category.forEach(c => genders.add(c));
-                }
-            });
-            const genderSelect = $('#filterGender').empty().append('<option value="">Todos os Gêneros</option>');
-            Array.from(genders).sort().forEach(g => genderSelect.append(new Option(g, g)));
+            // Update cache
+            localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
 
+            initGenders(games);
             filteredGames = [...games];
             applyFilters();
         })
             .fail(function () {
-                $('#libraryContainer').html(`<div class="notification is-danger">Falha ao carregar biblioteca</div>`);
+                if (games.length === 0) {
+                    $('#libraryContainer').html(`<div class="notification is-danger">Falha ao carregar biblioteca</div>`);
+                } else {
+                    showToast('Falha ao atualizar biblioteca (Modo Offline)', 'error');
+                }
             });
 
         // Initialize zoom from localStorage
