@@ -1,11 +1,12 @@
 :root {
     --bg-color: #f8f9fa;
-    --text-color: #1a1a1b;
+    --text-color: #1e293b;
     --text-muted: #64748b;
     --card-bg: #ffffff;
     --card-border: #e2e8f0;
     --primary: #7c3aed;
     --border-color: #e2e8f0;
+    --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 [data-theme="dark"] {
@@ -16,6 +17,7 @@
     --card-border: #334155;
     --primary: #7c3aed;
     --border-color: #334155;
+    --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
 body {
@@ -28,14 +30,28 @@ body {
     background-color: var(--card-bg) !important;
     border: 1px solid var(--card-border) !important;
     color: var(--text-color) !important;
+    box-shadow: var(--card-shadow) !important;
 }
 
 .title, .label, strong {
     color: var(--text-color) !important;
 }
 
+[data-theme="dark"] .opacity-50 { opacity: 0.6; }
+[data-theme="dark"] .opacity-70 { opacity: 0.8; }
+[data-theme="dark"] .bg-light-soft { background-color: #1e293b !important; }
+[data-theme="dark"] .border { border-color: #334155 !important; }
+
 .subtitle, .help {
     color: var(--text-muted) !important;
+}
+
+.has-background-light-soft {
+    background-color: #fafafa !important;
+}
+
+[data-theme="dark"] .has-background-light-soft {
+    background-color: #1e293b !important;
 }
 
 body {

@@ -181,8 +181,11 @@ def identify_library_files(library):
             filename = file.filename
 
             if not os.path.exists(filepath):
-                logger.warning(f'Identifying file ({n+1}/{nb_to_identify}): {filename} no longer exists, deleting from database.')
+                logger.warning(f'Identifying file ({n+1}/{nb_to_identify}): {filename} no longer exists, clearing from database.')
+                # Use helper to ensure ownership is updated
+                remove_file_from_apps(file_id)
                 Files.query.filter_by(id=file_id).delete(synchronize_session=False)
+                db.session.commit()
                 continue
 
             logger.info(f'Identifying file ({n+1}/{nb_to_identify}): {filename}')
@@ -519,12 +522,13 @@ def get_game_info_item(tid, title_data):
     game['owned'] = game['has_base']
     
     # Determine status color for UI
-    if game['has_base'] and (not game['has_latest_version'] or not game['has_all_dlcs']):
-        game['status_color'] = 'orange'
-    elif game['has_base']:
-        game['status_color'] = 'green'
+    if not game['has_base']:
+        game['status_color'] = 'orange'  # Critical: missing base
+    elif not game['has_latest_version'] or not game['has_all_dlcs']:
+        game['status_color'] = 'orange'  # Pending: missing update or DLC
     else:
-        game['status_color'] = 'gray'
+        game['status_color'] = 'green'   # Complete
+
 
     # Files and details
     game['base_files'] = []

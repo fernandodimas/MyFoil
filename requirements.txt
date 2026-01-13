@@ -11,3 +11,5 @@ watchdog
 Werkzeug
 zstandard
 unzip-http
+celery
+redis

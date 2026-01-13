@@ -58,6 +58,11 @@
 
                     <div class="level-item mr-2">
                         <div class="buttons has-addons">
+                            <button class="button is-small is-light" id="btnFilterPendingBase"
+                                title="Falta Arquivo Base">
+                                <span class="icon is-small"><i class="bi bi-disc"></i></span>
+                                <span class="is-hidden-mobile">Base</span>
+                            </button>
                             <button class="button is-small is-light" id="btnFilterPendingUpd"
                                 title="Pendente Atualização">
                                 <span class="icon is-small"><i class="bi bi-arrow-up-circle"></i></span>
@@ -157,15 +162,10 @@
 <!-- Game Details Modal -->
 <div class="modal" id="gameDetailsModal">
     <div class="modal-background"></div>
-    <div class="modal-card" style="max-height: 90vh;">
-        <header class="modal-card-head border-none">
-            <p class="modal-card-title has-text-weight-black tracking-tight" id="modalTitle"></p>
-            <button class="delete" aria-label="close" onclick="closeModal('gameDetailsModal')"></button>
-        </header>
-        <section class="modal-card-body overflow-y-auto" id="modalContent">
+    <div class="modal-card" style="max-height: 90vh; overflow: hidden; border-radius: 12px;">
+        <section class="modal-card-body p-0 overflow-y-auto" id="modalContent">
             <!-- Injected via JS -->
         </section>
-
     </div>
 </div>
 
@@ -499,7 +499,7 @@
                 <div class="table-container box is-paddingless shadow-sm overflow-hidden border-none">
                     <table class="table is-fullwidth is-hoverable game-list-table mb-0">
                         <thead>
-                            <tr style="background: #f8f9fa; border-bottom: 2px solid #570df8">
+                            <tr class="has-background-light-soft" style="border-bottom: 2px solid #7c3aed">
                                 <th width="65" class="has-text-centered p-1">Ícone</th>
                                 <th>Título do Jogo</th>
                                 <th width="140">Title ID</th>
@@ -558,7 +558,7 @@
                         </div>
                     `).join('')}
                 </div>
-            ` : (game.has_base ? '<p class="notification is-warning is-light p-2 is-size-7">Arquivo base não identificado localmente.</p>' : '');
+            ` : (game.has_base ? '<p class="notification is-warning is-light p-2 is-size-7" style="border: 1px solid rgba(0,0,0,0.1)">Arquivo base não identificado localmente.</p>' : '');
 
             // Updates Section
             let updatesHtml = game.updates && game.updates.length > 0 ? `
@@ -651,31 +651,56 @@
             ` : '';
 
             let content = `
-                <div class="modal-banner-container mb-4" style="margin: -20px -20px 20px -20px; position: relative; height: 200px; overflow: hidden; background: #eee;">
-                    <img src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" style="width: 100%; height: 100%; object-fit: cover;">
-                </div>
-                <div class="columns">
-                    <div class="column is-4">
-                        <figure class="image is-square box p-0 shadow-sm overflow-hidden mb-4">
-                            <img src="${game.iconUrl || '/static/img/no-icon.png'}" alt="Icon">
-                        </figure>
-                        <div class="box p-3 is-shadowless border bg-light-soft">
-                            <p class="is-size-7 mb-1"><strong>ID:</strong> <span class="font-mono">${game.app_id}</span></p>
-                            <p class="is-size-7 mb-1"><strong>Gênero:</strong> ${Array.isArray(game.category) ? game.category.join(', ') : (game.category || '--')}</p>
-                            <p class="is-size-7 mb-1"><strong>Editora:</strong> ${game.publisher || '--'}</p>
-                            <p class="is-size-7 mb-1"><strong>Lançamento:</strong> ${game.release_date || '--'}</p>
-                            <p class="is-size-7"><strong>Versão Atual:</strong> v${game.owned_version}</p>
-                        </div>
+                <div class="modal-banner-container" style="position: relative; height: 240px; overflow: hidden; background: #1a1a1a;">
+                    <img src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.6; filter: blur(2px);">
+                    <button class="delete is-large" aria-label="close" onclick="closeModal('gameDetailsModal')" style="position: absolute; top: 1.5rem; right: 1.5rem; background-color: rgba(255,255,255,0.2); backdrop-filter: blur(8px); z-index: 20; border: 1px solid rgba(255,255,255,0.1);"></button>
+                    <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 60px 2rem 2rem; background: linear-gradient(transparent, rgba(0,0,0,0.9)); z-index: 10;">
+                         <h2 class="title is-3 has-text-white mb-0" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-weight: 800; letter-spacing: -0.5px;">${game.name}</h2>
+                         <div class="is-flex is-align-items-center mt-2 gap-2">
+                            <span class="tag is-primary has-text-weight-bold">v${game.display_version}</span>
+                            <span class="tag is-dark opacity-70 font-mono">${game.id}</span>
+                         </div>
                     </div>
-                    <div class="column is-8">
-                        <p class="heading has-text-weight-bold mb-2">Descrição</p>
-                        <div class="content is-size-7 opacity-70 mb-5" style="max-height: 150px; overflow-y: auto;">
-                            ${game.description || 'Nenhuma descrição disponível.'}
+                </div>
+                <div class="p-6">
+                    <div class="columns is-variable is-6">
+                        <div class="column is-4">
+                            <figure class="image is-square box p-0 shadow-lg overflow-hidden mb-5" style="margin-top: -100px; position: relative; z-index: 15; border: 4px solid #fff; border-radius: 12px; transition: transform 0.3s ease;">
+                                <img src="${game.iconUrl || '/static/img/no-icon.png'}" alt="Icon" style="height: 100%; width: 100%; object-fit: cover;">
+                            </figure>
+                            <div class="box p-4 is-shadowless border bg-light-soft" style="border-radius: 12px;">
+                                <div class="mb-3">
+                                    <p class="is-size-7 heading mb-1 opacity-50">Publisher</p>
+                                    <p class="is-size-6 has-text-weight-bold">${game.publisher || '--'}</p>
+                                </div>
+                                <div class="mb-3">
+                                    <p class="is-size-7 heading mb-1 opacity-50">Lançamento</p>
+                                    <p class="is-size-6">${game.release_date || '--'}</p>
+                                </div>
+                                <div>
+                                    <p class="is-size-7 heading mb-1 opacity-50">Gênero</p>
+                                    <div class="tags">
+                                        ${Array.isArray(game.category) ? game.category.map(c => `<span class="tag is-small is-light">${c}</span>`).join('') : `<span class="tag is-small is-light">${game.category || '--'}</span>`}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        
-                        ${filesHtml}
-                        ${updatesHtml}
-                        ${dlcsHtml}
+                        <div class="column is-8">
+                            <div class="mb-6">
+                                <h3 class="is-size-5 has-text-weight-bold mb-3">Sobre o Jogo</h3>
+                                <div class="content is-size-6 opacity-80" style="line-height: 1.7;">
+                                    ${game.description || 'Nenhuma descrição disponível.'}
+                                </div>
+                            </div>
+                            
+                            <hr class="my-5 opacity-10">
+                            
+                            <div class="details-sections mt-4">
+                                ${filesHtml}
+                                ${updatesHtml}
+                                ${dlcsHtml}
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -692,6 +717,7 @@
         const showMissingUpdate = $('#filterCheckMissingUpdate').is(':checked'); // General "Issues" filter from dropdown
 
         // Specific button filters
+        const showOnlyBase = $('#btnFilterPendingBase').hasClass('is-primary');
         const showOnlyUpdates = $('#btnFilterPendingUpd').hasClass('is-primary');
         const showOnlyDlcs = $('#btnFilterPendingDlc').hasClass('is-primary');
 
@@ -705,8 +731,12 @@
             const matchesSearch = !query || gName.toLowerCase().includes(query) || gId.toLowerCase().includes(query);
 
             let matchesSource = true;
-            if (showOwned && !showMissing) matchesSource = g.has_base;
-            else if (showMissing && !showOwned) matchesSource = !g.has_base;
+            const isPendingFilterActive = showOnlyBase || showOnlyUpdates || showOnlyDlcs;
+
+            if (!isPendingFilterActive) {
+                if (showOwned && !showMissing) matchesSource = g.has_base;
+                else if (showMissing && !showOwned) matchesSource = !g.has_base;
+            }
 
             let matchesStatus = true;
 
@@ -718,6 +748,9 @@
             }
 
             // 2. Specific "Pending" Filters (Additive restriction)
+            if (showOnlyBase) {
+                matchesStatus = matchesStatus && !g.has_base;
+            }
             if (showOnlyUpdates) {
                 // Must have base AND missing latest version
                 matchesStatus = matchesStatus && (g.has_base && !g.has_latest_version);
@@ -740,7 +773,7 @@
         // Reset checkboxes
         $('#filterCheckOwned').prop('checked', true);
         $('#filterCheckMissing, #filterCheckUpToDate, #filterCheckMissingUpdate').prop('checked', false);
-        $('#btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
+        $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
 
         // Reset gender
         $('#filterGender').val('');
@@ -752,11 +785,19 @@
         applyFilters();
     }
 
+    $('#btnFilterPendingBase').on('click', function () {
+        $(this).toggleClass('is-primary is-light');
+        if ($(this).hasClass('is-primary')) {
+            $('#btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
+        }
+        applyFilters();
+    });
+
     $('#btnFilterPendingUpd').on('click', function () {
         $(this).toggleClass('is-primary is-light');
         // If enabling this, disable the other to avoid confusion (optional, but requested behavior implied "filters")
         if ($(this).hasClass('is-primary')) {
-            $('#btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
+            $('#btnFilterPendingBase, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
         }
         applyFilters();
     });
@@ -764,7 +805,7 @@
     $('#btnFilterPendingDlc').on('click', function () {
         $(this).toggleClass('is-primary is-light');
         if ($(this).hasClass('is-primary')) {
-            $('#btnFilterPendingUpd').removeClass('is-primary').addClass('is-light');
+            $('#btnFilterPendingBase, #btnFilterPendingUpd').removeClass('is-primary').addClass('is-light');
         }
         applyFilters();
     });
@@ -780,7 +821,7 @@
 
     function updatePageSizeButtons() {
         $('.btn-page-size').removeClass('is-primary');
-        $(`.btn-page-size[data-size="${pageSize}"]`).addClass('is-primary');
+        $(`.btn - page - size[data - size="${pageSize}"]`).addClass('is-primary');
     }
 
     function goToPage(page) {
@@ -816,7 +857,7 @@
         const btnFn = $('#btnConfirmDelete');
         btnFn.addClass('is-loading');
 
-        $.post(`/api/files/delete/${fileToDeleteId}`, (res) => {
+        $.post(`/ api / files / delete/${fileToDeleteId}`, (res) => {
             $('#confirmDeleteModal').removeClass('is-active');
             btnFn.removeClass('is-loading');
 

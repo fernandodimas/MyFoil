@@ -26,6 +26,18 @@ from i18n import I18n
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
+# Optional Celery for async tasks
+try:
+    from celery_app import celery
+    from tasks import scan_library_async, identify_file_async
+    CELERY_ENABLED = True
+    logger.info("Celery tasks loaded and enabled.")
+except ImportError as e:
+    CELERY_ENABLED = False
+    logger.warning(f"Celery not found or not configured, falling back to synchronous processing: {e}")
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
@@ -207,8 +219,19 @@ def on_library_change(events):
             for library_path in directories:
                 new_files = [e.src_path for e in created_events if e.directory == library_path]
                 add_files_to_library(library_path, new_files)
+                
+                # If Celery is enabled, identify files asynchronously
+                if CELERY_ENABLED:
+                    for f_path in new_files:
+                        identify_file_async.delay(f_path)
+                    logger.info(f"Queued async identification for {len(new_files)} files in {library_path}")
 
-    post_library_change()
+    if not CELERY_ENABLED:
+        post_library_change()
+    else:
+        # In async mode, we usually let the task trigger the update or use a final cleanup
+        # For now, let's still call post_library_change to update UI state if it's lightweight
+        post_library_change()
 
 def create_app():
     app = Flask(__name__)
@@ -934,19 +957,29 @@ def scan_library_api():
     scan_in_progress = True
 
     try:
-        if path is None:
-            scan_library()
+        if CELERY_ENABLED:
+            if path is None:
+                scan_all_libraries_async.delay()
+                logger.info("Triggered asynchronous full library scan.")
+            else:
+                scan_library_async.delay(path)
+                logger.info(f"Triggered asynchronous library scan for: {path}")
+            return jsonify({'success': True, 'async': True, 'errors': []})
         else:
-            scan_library_path(path)
+            if path is None:
+                scan_library()
+            else:
+                scan_library_path(path)
+            post_library_change()
+            return jsonify({'success': True, 'async': False, 'errors': []})
     except Exception as e:
-        errors.append(e)
+        errors.append(str(e))
         success = False
         logger.error(f"Error during library scan: {e}")
     finally:
-        with scan_lock:
-            scan_in_progress = False
-
-    post_library_change()
+        if not CELERY_ENABLED:
+            with scan_lock:
+                scan_in_progress = False
     resp = {
         'success': success,
         'errors': errors

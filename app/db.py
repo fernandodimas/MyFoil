@@ -524,7 +524,7 @@ def remove_missing_files_from_db():
             if not os.path.exists(file_entry.filepath):
                 # If the file does not exist, mark this entry for deletion
                 ids_to_delete.append(file_entry.id)
-                logger.debug(f"File not found, marking file for deletion: {file_entry.filepath}")
+                logger.info(f"File not found on disk, marking for deletion: {file_entry.filepath}")
         
         # Update Apps table before deleting files
         total_apps_updated = 0
@@ -535,17 +535,14 @@ def remove_missing_files_from_db():
                 total_apps_updated += apps_updated
             
             # Delete all marked entries from the Files table
-            Files.query.filter(Files.id.in_(ids_to_delete)).delete(synchronize_session=False)
+            # use a more direct way since we already confirmed they're gone
+            count = Files.query.filter(Files.id.in_(ids_to_delete)).delete(synchronize_session=False)
             
             db.session.commit()
-            
-            logger.info(f"Deleted {len(ids_to_delete)} files from the database.")
-            if total_apps_updated > 0:
-                logger.info(f"Updated {total_apps_updated} app entries to remove missing file references.")
-
+            logger.info(f"Cleanup done: removed {count} missing files from DB, updated {total_apps_updated} app entries.")
         else:
-            logger.debug("No files were deleted. All files are present on disk.")
-    
+            logger.debug("No missing files found to cleanup.")
+            
     except Exception as e:
-        db.session.rollback()  # Rollback in case of an error
-        logger.error(f"An error occurred while removing missing files: {str(e)}")
+        db.session.rollback()
+        logger.error(f"An error occurred while cleaning up missing files: {str(e)}")
