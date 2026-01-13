@@ -21,70 +21,78 @@
 
     <style>
         /* Dark Mode Support for Bulma */
-        :root[data-theme="night"] {
-            --bulma-background: #1a1a2e;
-            --bulma-text: #e1e1e6;
-            --bulma-card-background: #16213e;
-            --bulma-card-header-color: #e1e1e6;
-            --bulma-input-background: #0f3460;
-            --bulma-input-color: #e1e1e6;
-            --bulma-input-border: #570df8;
-            --bulma-border: #2d3436;
+        :root[data-theme="dark"] {
+            --bulma-background-scheme: #0f172a;
+            --bulma-background: #0f172a;
+            --bulma-text-strong: #f1f5f9;
+            --bulma-text: #f1f5f9;
+            --bulma-card-background: #1e293b;
+            --bulma-card-header-color: #f1f5f9;
+            --bulma-input-background: #1e293b;
+            --bulma-input-color: #f1f5f9;
+            --bulma-input-border: #334155;
+            --bulma-border: #334155;
+            --bulma-navbar-background-color: #1e293b;
+            --bulma-navbar-item-color: #f1f5f9;
+            --bulma-navbar-item-hover-background-color: #334155;
+            --bulma-modal-card-head-background-color: #1e293b;
+            --bulma-modal-card-body-background-color: #0f172a;
+            --bulma-modal-card-foot-background-color: #1e293b;
         }
 
-        [data-theme="night"] body {
+        [data-theme="dark"] body {
             background-color: var(--bulma-background);
             color: var(--bulma-text);
         }
 
-        [data-theme="night"] .card,
-        [data-theme="night"] .box,
-        [data-theme="night"] .navbar,
-        [data-theme="night"] .modal-card-body,
-        [data-theme="night"] .modal-card-head,
-        [data-theme="night"] .modal-card-foot {
-            background-color: var(--bulma-card-background);
-            color: var(--bulma-text);
+        [data-theme="dark"] .card,
+        [data-theme="dark"] .box,
+        [data-theme="dark"] .navbar,
+        [data-theme="dark"] .modal-card-body,
+        [data-theme="dark"] .modal-card-head,
+        [data-theme="dark"] .modal-card-foot {
+            background-color: var(--bulma-card-background) !important;
+            color: var(--bulma-text) !important;
         }
 
-        [data-theme="night"] .title,
-        [data-theme="night"] .subtitle,
-        [data-theme="night"] .label,
-        [data-theme="night"] strong {
-            color: var(--bulma-text);
+        [data-theme="dark"] .title,
+        [data-theme="dark"] .subtitle,
+        [data-theme="dark"] .label,
+        [data-theme="dark"] strong {
+            color: var(--bulma-text-strong) !important;
         }
 
-        [data-theme="night"] .input,
-        [data-theme="night"] .select select,
-        [data-theme="night"] .textarea {
-            background-color: var(--bulma-input-background);
-            color: var(--bulma-input-color);
-            border-color: rgba(87, 13, 248, 0.4);
+        [data-theme="dark"] .input,
+        [data-theme="dark"] .select select,
+        [data-theme="dark"] .textarea {
+            background-color: var(--bulma-input-background) !important;
+            color: var(--bulma-input-color) !important;
+            border-color: var(--bulma-input-border) !important;
         }
 
-        [data-theme="night"] .navbar-item,
-        [data-theme="night"] .navbar-link {
-            color: var(--bulma-text);
+        [data-theme="dark"] .navbar-item,
+        [data-theme="dark"] .navbar-link {
+            color: var(--bulma-navbar-item-color) !important;
         }
 
-        [data-theme="night"] .navbar-item:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-            color: #570df8;
+        [data-theme="dark"] .navbar-item:hover,
+        [data-theme="dark"] .navbar-link:hover {
+            background-color: var(--bulma-navbar-item-hover-background-color) !important;
         }
 
-        [data-theme="night"] .table {
-            background-color: transparent;
-            color: var(--bulma-text);
+        [data-theme="dark"] .table {
+            background-color: transparent !important;
+            color: var(--bulma-text) !important;
         }
 
-        [data-theme="night"] .table thead th {
-            color: var(--bulma-text);
+        [data-theme="dark"] .table thead th {
+            color: var(--bulma-text-strong) !important;
             border-bottom-color: var(--bulma-border);
         }
 
-        [data-theme="night"] .table td,
-        [data-theme="night"] .table th {
-            border-color: var(--bulma-border);
+        [data-theme="dark"] .table td,
+        [data-theme="dark"] .table th {
+            border-color: var(--bulma-border) !important;
         }
 
         /* Custom primary color to match old design */

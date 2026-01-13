@@ -1,25 +1,41 @@
 :root {
     --bg-color: #f8f9fa;
-    --text-color: #212529;
+    --text-color: #1a1a1b;
+    --text-muted: #64748b;
     --card-bg: #ffffff;
-    --card-border: rgba(0,0,0,.125);
-    --header-bg: #ffffff;
-    --header-text: #212529;
-    --nav-bg: #ffffff;
-    --border-color: #dee2e6;
+    --card-border: #e2e8f0;
+    --primary: #570df8;
+    --border-color: #e2e8f0;
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg-color: #0f172a; /* Slate 900 - Darker background */
-        --text-color: #f1f5f9; /* Slate 100 - Lighter text */
-        --card-bg: #1e293b; /* Slate 800 - Slightly lighter than bg */
-        --card-border: #334155; /* Slate 700 */
-        --header-bg: #1e293b;
-        --header-text: #f1f5f9;
-        --nav-bg: #1e293b;
-        --border-color: #334155;
-    }
+[data-theme="dark"] {
+    --bg-color: #0f172a;
+    --text-color: #f1f5f9;
+    --text-muted: #94a3b8;
+    --card-bg: #1e293b;
+    --card-border: #334155;
+    --primary: #570df8;
+    --border-color: #334155;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.card, .box {
+    background-color: var(--card-bg) !important;
+    border: 1px solid var(--card-border) !important;
+    color: var(--text-color) !important;
+}
+
+.title, .label, strong {
+    color: var(--text-color) !important;
+}
+
+.subtitle, .help {
+    color: var(--text-muted) !important;
 }
 
 body {

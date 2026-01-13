@@ -156,7 +156,7 @@ logging.getLogger('alembic.runtime.migration').setLevel(logging.WARNING)
 @login_manager.user_loader
 def load_user(user_id):
     # since the user_id is just the primary key of our user table, use it in the query for the user
-    return User.query.filter_by(id=user_id).first()
+    return db.session.get(User, int(user_id))
 
 def reload_conf():
     global app_settings

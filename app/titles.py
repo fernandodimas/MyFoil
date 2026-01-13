@@ -225,12 +225,17 @@ def load_titledb(force=False):
             if os.path.exists(filepath):
                 logger.info(f"Attempting to load titles from {filename}...")
                 _titles_db = robust_json_load(filepath)
-                if _titles_db and len(_titles_db) > 0:
-                    logger.info(f"SUCCESS: Loaded {len(_titles_db)} titles from {filename}")
-                    _loaded_titles_file = filename  # Track which file was loaded
-                    break
+                if _titles_db:
+                    # Check if it's a dict or list
+                    count = len(_titles_db) if isinstance(_titles_db, (dict, list)) else 0
+                    if count > 0:
+                        logger.info(f"SUCCESS: Loaded {count} titles from {filename} (Type: {type(_titles_db).__name__})")
+                        _loaded_titles_file = filename  # Track which file was loaded
+                        break
+                    else:
+                        logger.warning(f"{filename} loaded but is empty.")
                 else:
-                    logger.warning(f"Could not use {filename}, trying next fallback...")
+                    logger.warning(f"Could not parse {filename}, trying next fallback...")
         
         if not _titles_db:
             # FINAL STAND: If everything failed, try ANY .json file in the folder that has 'titles' in the name
@@ -419,26 +424,34 @@ def get_game_info(title_id):
 
     try:
         info = None
-        search_id = title_id.upper()
+        search_id = str(title_id).upper()
 
-        if isinstance(_titles_db, dict):
-            # Format A: { "ID": { "name": "..." } }
-            info = _titles_db.get(search_id) or _titles_db.get(search_id.lower())
+        if not _titles_db:
+            logger.warning(f"TitleDB not loaded for lookup of {search_id}")
+        else:
+            if isinstance(_titles_db, dict):
+                # Format A: { "ID": { "name": "..." } }
+                info = _titles_db.get(search_id)
+                if not info:
+                    # Case insensitive lookup
+                    for k in [search_id, search_id.lower()]:
+                        if k in _titles_db:
+                            info = _titles_db[k]
+                            break
+                
+                if not info:
+                    # Format B: { "some_key": { "id": "ID", "name": "..." } }
+                    for k, v in _titles_db.items():
+                        if isinstance(v, dict) and str(v.get('id', '')).upper() == search_id:
+                            info = v
+                            break
             
-            if not info:
-                logger.debug(f"Direct lookup failed for {search_id}. Checking keys...")
-                # Format B: { "some_key": { "id": "ID", "name": "..." } }
-                for k, v in _titles_db.items():
-                    if isinstance(v, dict) and v.get('id', '').upper() == search_id:
-                        info = v
+            elif isinstance(_titles_db, list):
+                # Format C: [ { "id": "ID", "name": "..." }, ... ]
+                for item in _titles_db:
+                    if isinstance(item, dict) and str(item.get('id', '')).upper() == search_id:
+                        info = item
                         break
-        
-        elif isinstance(_titles_db, list):
-            # Format C: [ { "id": "ID", "name": "..." }, ... ]
-            for item in _titles_db:
-                if isinstance(item, dict) and item.get('id', '').upper() == search_id:
-                    info = item
-                    break
 
         if info:
             return {
@@ -453,11 +466,29 @@ def get_game_info(title_id):
                 'description': info.get('description', '')
             }
         
+        # If not found, try to find parent BASE game if this is a DLC/UPD
+        if not search_id.endswith('000'):
+            base_id = search_id[:-3] + '000'
+            logger.debug(f"ID {search_id} not found, attempting fallback to base {base_id}")
+            base_info = get_game_info(base_id)
+            if base_info and not base_info['name'].startswith('Unknown'):
+                return {
+                    'name': f"{base_info['name']} [DLC/UPD]",
+                    'bannerUrl': base_info['bannerUrl'],
+                    'iconUrl': base_info['iconUrl'],
+                    'id': title_id,
+                    'category': base_info['category'],
+                    'releaseDate': base_info['releaseDate'],
+                    'size': 0,
+                    'publisher': base_info['publisher'],
+                    'description': f"Informação estendida do jogo base: {base_info['name']}"
+                }
+
         raise Exception(f"ID {search_id} not found in database")
     except Exception as e:
         logger.debug(f"Identification failed for {title_id}: {e}")
         return {
-            'name': 'Unknown Title',
+            'name': f'Unknown ({title_id})',
             'bannerUrl': '',
             'iconUrl': '',
             'id': title_id.upper(),
@@ -465,7 +496,7 @@ def get_game_info(title_id):
             'releaseDate': '',
             'size': 0,
             'publisher': '--',
-            'description': 'Title ID not found in database. Please update TitleDB in settings to identify this content.'
+            'description': 'ID não encontrado no banco de dados. Por favor, atualize o TitleDB nas configurações.'
         }
 
 def get_update_number(version):
