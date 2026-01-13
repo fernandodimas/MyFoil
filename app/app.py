@@ -170,6 +170,7 @@ os.makedirs(DATA_DIR, exist_ok=True)
 ## Global variables
 app_settings = {}
 socketio = SocketIO()
+limiter = Limiter(key_func=get_remote_address, default_limits=["300 per day", "100 per hour"])
 backup_manager = None
 # Create a global variable and lock for scan_in_progress
 scan_in_progress = False
@@ -273,6 +274,9 @@ def on_library_change(events):
         # For now, let's still call post_library_change to update UI state if it's lightweight
         post_library_change()
 
+# Create main blueprint for UI routes
+main_bp = Blueprint('main', __name__)
+
 def create_app():
     app = Flask(__name__)
     app.config["SQLALCHEMY_DATABASE_URI"] = MYFOIL_DB
@@ -282,14 +286,19 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
-
-    app.register_blueprint(auth_blueprint)
+    limiter.init_app(app)
 
     # Initialize I18n
     app.i18n = I18n(app)
 
-    # Initialize REST API
-    init_rest_api(app)
+    # Register Blueprints
+    app.register_blueprint(auth_blueprint)
+    app.register_blueprint(main_bp)
+
+    # Initialize REST API (using a blueprint for safety)
+    api_bp = Blueprint('api', __name__, url_prefix='/api')
+    init_rest_api(api_bp)
+    app.register_blueprint(api_bp)
 
     # Initialize Metrics
     init_metrics(app)
@@ -297,40 +306,23 @@ def create_app():
     # Initialize SocketIO
     socketio.init_app(app, cors_allowed_origins="*")
 
-    # Initialization that should happen even on import
+    # Global initialization (run even if imported)
     with app.app_context():
-        # Initialize Backup Manager
         global backup_manager
         backup_manager = BackupManager(CONFIG_DIR, DATA_DIR)
-        
-        # Load configuration
         reload_conf()
-        
-        # Initialize DB and Users
         init_db(app)
         init_users(app)
-        
-        # Initialize Libraries and Watcher
         init_internal(app)
         
     if CELERY_ENABLED:
         logger.info("Celery tasks loaded and enabled.")
-
+        
     return app
 
-# Create app
-app = create_app()
+# Create app factory
 
-# Initialize rate limiter
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
-    storage_uri="memory://",
-    strategy="fixed-window"
-)
-
-@app.context_processor
+@main_bp.context_processor
 def inject_version():
     return dict(build_version=BUILD_VERSION)
 
@@ -406,7 +398,7 @@ def access_shop():
                            total_files=Files.query.count(),
                            games=None)
 
-@app.route('/stats')
+@main_bp.route('/stats')
 @access_required('shop')
 def stats_page():
     total_files = Files.query.count()
@@ -435,7 +427,7 @@ def stats_page():
 def access_shop_auth():
     return access_shop()
 
-@app.route('/')
+@main_bp.route('/')
 def index():
 
     @tinfoil_access
@@ -466,11 +458,11 @@ def index():
         return access_shop_auth()
     return access_shop()
 
-@app.route('/api/docs')
+@main_bp.route('/api/docs')
 def api_docs_redirect():
     return redirect('/api/docs/')
 
-@app.route('/settings')
+@main_bp.route('/settings')
 @access_required('admin')
 def settings_page():
     with open(os.path.join(TITLEDB_DIR, 'languages.json')) as f:
@@ -484,7 +476,7 @@ def settings_page():
         valid_keys=app_settings['titles']['valid_keys'],
         active_source=titledb.get_active_source_info())
 
-@app.get('/api/settings')
+@main_bp.route('/api/settings')
 @access_required('admin')
 def get_settings_api():
     reload_conf()
@@ -507,7 +499,7 @@ def get_settings_api():
         
     return jsonify(flattened)
 
-@app.post('/api/settings/titles')
+@main_bp.post('/api/settings/titles')
 @access_required('admin')
 def set_titles_settings_api():
     settings = request.json
@@ -545,7 +537,7 @@ def set_titles_settings_api():
     }
     return jsonify(resp)
 
-@app.route('/api/settings/regions')
+@main_bp.route('/api/settings/regions')
 @access_required('admin')
 def get_regions_api():
     languages_path = os.path.join(TITLEDB_DIR, 'languages.json')
@@ -558,7 +550,7 @@ def get_regions_api():
     except:
         return jsonify({'regions': []})
 
-@app.route('/api/settings/languages')
+@main_bp.route('/api/settings/languages')
 @access_required('admin')
 def get_languages_api():
     languages_path = os.path.join(TITLEDB_DIR, 'languages.json')
@@ -574,7 +566,7 @@ def get_languages_api():
     except:
         return jsonify({'languages': []})
 
-@app.post('/api/settings/shop')
+@main_bp.post('/api/settings/shop')
 def set_shop_settings_api():
     data = request.json
     set_shop_settings(data)
@@ -585,7 +577,7 @@ def set_shop_settings_api():
     } 
     return jsonify(resp)
 
-@app.route('/api/settings/library/paths', methods=['GET', 'POST', 'DELETE'])
+@main_bp.route('/api/settings/library/paths', methods=['GET', 'POST', 'DELETE'])
 @access_required('admin')
 def library_paths_api():
     global watcher
@@ -618,7 +610,7 @@ def library_paths_api():
         }
     return jsonify(resp)
 
-@app.post('/api/settings/keys')
+@main_bp.post('/api/settings/keys')
 @access_required('admin')
 def set_keys_api():
     errors = []
@@ -647,7 +639,7 @@ def set_keys_api():
     return jsonify(resp)
 
 
-@app.route('/api/settings/titledb/sources', methods=['GET', 'POST', 'PUT', 'DELETE'])
+@main_bp.route('/api/settings/titledb/sources', methods=['GET', 'POST', 'PUT', 'DELETE'])
 @access_required('admin')
 def titledb_sources_api():
     """Manage TitleDB sources"""
@@ -728,7 +720,7 @@ def titledb_sources_api():
 
 
 
-@app.post('/api/settings/titledb/sources/reorder')
+@main_bp.post('/api/settings/titledb/sources/reorder')
 @access_required('admin')
 def reorder_titledb_sources_api():
     """
@@ -743,7 +735,7 @@ def reorder_titledb_sources_api():
         'success': success
     })
 
-@app.post('/api/settings/titledb/update')
+@main_bp.post('/api/settings/titledb/update')
 @access_required('admin')
 def force_titledb_update_api():
     """Force a TitleDB update in background"""
@@ -754,7 +746,7 @@ def force_titledb_update_api():
     })
 
 
-@app.route('/api/titles', methods=['GET'])
+@main_bp.route('/api/titles', methods=['GET'])
 @access_required('shop')
 def get_all_titles_api():
     titles_library = generate_library()
@@ -764,7 +756,7 @@ def get_all_titles_api():
         'games': titles_library
     })
 
-@app.route('/api/set_language/<lang>', methods=['POST'])
+@main_bp.route('/api/set_language/<lang>', methods=['POST'])
 def set_language(lang):
     if lang in ['en', 'pt_BR']:
         resp = jsonify({'success': True})
@@ -773,7 +765,7 @@ def set_language(lang):
         return resp
     return jsonify({'success': False, 'error': 'Invalid language'}), 400
 
-@app.route('/api/get_game/<int:id>')
+@main_bp.route('/api/get_game/<int:id>')
 @tinfoil_access
 def serve_game(id):
     # TODO add download count increment
@@ -783,7 +775,7 @@ def serve_game(id):
     filedir, filename = os.path.split(file.filepath)
     return send_from_directory(filedir, filename)
 
-@app.route('/api/app_info/<id>')
+@main_bp.route('/api/app_info/<id>')
 @access_required('shop')
 def app_info_api(id):
     # Try to get by TitleID first (hex string)
@@ -956,7 +948,7 @@ def app_info_api(id):
 
     return jsonify(result)
 
-@app.route('/api/files/unidentified')
+@main_bp.route('/api/files/unidentified')
 @access_required('admin')
 def get_unidentified_files_api():
     files = get_all_unidentified_files()
@@ -969,7 +961,7 @@ def get_unidentified_files_api():
         'error': f.identification_error
     } for f in files])
 
-@app.route('/api/files/delete/<int:file_id>', methods=['POST'])
+@main_bp.route('/api/files/delete/<int:file_id>', methods=['POST'])
 @access_required('admin')
 def delete_file_api(file_id):
     # Find associated TitleID before deletion for cache update
@@ -1013,7 +1005,7 @@ def post_library_change():
         # Notify clients about the change
         socketio.emit('library_updated', {'timestamp': datetime.datetime.now().isoformat()}, namespace='/')
 
-@app.post('/api/library/scan')
+@main_bp.post('/api/library/scan')
 @access_required('admin')
 def scan_library_api():
     data = request.json
@@ -1059,7 +1051,7 @@ def scan_library_api():
     } 
     return jsonify(resp)
 
-@app.route('/api/system/info')
+@main_bp.route('/api/system/info')
 @access_required('shop')
 def system_info_api():
     from settings import load_settings
@@ -1095,7 +1087,7 @@ def scan_library():
     for library in libraries:
         scan_library_path(library.path) # Only scan, identification will be done globally
 
-@app.route('/api/library')
+@main_bp.route('/api/library')
 @access_required('shop')
 def library_api():
     # Fast check for cache and ETag
@@ -1117,14 +1109,14 @@ def library_api():
         resp.set_etag(full_cache['hash'])
     return resp
 
-@app.route('/api/status')
+@main_bp.route('/api/status')
 def process_status_api():
     return jsonify({
         'scanning': scan_in_progress,
         'updating_titledb': is_titledb_update_running
     })
 
-@app.post('/api/backup/create')
+@main_bp.post('/api/backup/create')
 @access_required('admin')
 def create_backup_api():
     """Create a manual backup"""
@@ -1142,7 +1134,7 @@ def create_backup_api():
     else:
         return jsonify({'success': False, 'error': 'Backup failed'}), 500
 
-@app.get('/api/backup/list')
+@main_bp.get('/api/backup/list')
 @access_required('admin')
 def list_backups_api():
     """List all available backups"""
@@ -1156,7 +1148,7 @@ def list_backups_api():
         'backups': backups
     })
 
-@app.post('/api/backup/restore')
+@main_bp.post('/api/backup/restore')
 @access_required('admin')
 def restore_backup_api():
     """Restore from a backup"""
@@ -1178,6 +1170,9 @@ def restore_backup_api():
         })
     else:
         return jsonify({'success': False, 'error': 'Restore failed'}), 500
+
+# Create global app instance
+app = create_app()
 
 if __name__ == '__main__':
     logger.info(f'Build Version: {BUILD_VERSION}')
