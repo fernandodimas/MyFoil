@@ -238,16 +238,34 @@ def load_titledb(force=False):
                 else:
                     logger.warning(f"Could not parse {filename}, trying next fallback...")
         
-        if not _titles_db:
-            # FINAL STAND: If everything failed, try ANY .json file in the folder that has 'titles' in the name
-            logger.error("All preferred databases failed. Searching for any title file...")
-            for f in os.listdir(TITLEDB_DIR):
-                if f.endswith('.json') and 'titles' in f:
-                    _titles_db = robust_json_load(os.path.join(TITLEDB_DIR, f))
-                    if _titles_db:
-                        logger.info(f"EMERGENCY: Using {f} as TitleDB")
-                        break
-        
+        if _titles_db:
+            # INDEXING: Ensure TitleDB is indexed by TitleID for O(1) lookups
+            indexed_db = {}
+            logger.info(f"Indexing TitleDB by TitleID...")
+            
+            items = []
+            if isinstance(_titles_db, dict):
+                items = _titles_db.values()
+                # Also include keys if they look like TitleIDs (Fallback)
+                for k, v in _titles_db.items():
+                    if len(k) == 16 and isinstance(v, dict):
+                        tid = k.upper()
+                        if tid not in indexed_db or not indexed_db[tid].get('name'):
+                            indexed_db[tid] = v
+            elif isinstance(_titles_db, list):
+                items = _titles_db
+            
+            for item in items:
+                if isinstance(item, dict):
+                    tid = str(item.get('id', '')).upper()
+                    if len(tid) == 16:
+                        # Only overwrite if we have a name (don't let empty entries from titles.json overwrite good ones)
+                        if tid not in indexed_db or (item.get('name') and not indexed_db[tid].get('name')):
+                            indexed_db[tid] = item
+            
+            _titles_db = indexed_db
+            logger.info(f"TitleDB indexed. Total unique TitleIDs: {len(_titles_db)}")
+
         if not _titles_db:
             logger.error("CRITICAL: Failed to load any TitleDB. Game identification will be limited.")
 
@@ -430,29 +448,11 @@ def get_game_info(title_id):
         if not _titles_db:
             logger.warning(f"TitleDB not loaded for lookup of {search_id}")
         else:
-            if isinstance(_titles_db, dict):
-                # Format A: { "ID": { "name": "..." } }
+            if _titles_db:
                 info = _titles_db.get(search_id)
                 if not info:
-                    # Case insensitive lookup
-                    for k in [search_id, search_id.lower()]:
-                        if k in _titles_db:
-                            info = _titles_db[k]
-                            break
-                
-                if not info:
-                    # Format B: { "some_key": { "id": "ID", "name": "..." } }
-                    for k, v in _titles_db.items():
-                        if isinstance(v, dict) and str(v.get('id', '')).upper() == search_id:
-                            info = v
-                            break
-            
-            elif isinstance(_titles_db, list):
-                # Format C: [ { "id": "ID", "name": "..." }, ... ]
-                for item in _titles_db:
-                    if isinstance(item, dict) and str(item.get('id', '')).upper() == search_id:
-                        info = item
-                        break
+                    # Case-insensitive fallback
+                    info = _titles_db.get(search_id.upper()) or _titles_db.get(search_id.lower())
 
         if info:
             res = {

@@ -43,6 +43,10 @@ def update_titledb_job(force=False):
     try:
         current_settings = load_settings()
         titledb.update_titledb(current_settings, force=force)
+        # Clear library cache to force regeneration with new TitleDB data
+        if os.path.exists(LIBRARY_CACHE_FILE):
+            os.remove(LIBRARY_CACHE_FILE)
+            logger.info("Library cache cleared after TitleDB update.")
         logger.info("TitleDB update job completed.")
         return True
     except Exception as e:
