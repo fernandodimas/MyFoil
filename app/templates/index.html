@@ -438,6 +438,21 @@
         updatePagination();
     }
 
+    function refreshLibrary() {
+        console.log("Refreshing library data...");
+        $.getJSON('/api/library', function (data) {
+            games = data || [];
+            localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
+            initGenders(games);
+
+            // If we're on page 1, we can just apply filters to refresh everything
+            // but if we're on another page, we might want to stay there
+            // For simplicity, let's just apply filters which will trigger renderLibrary
+            applyFilters();
+            showToast('Biblioteca atualizada!', 'success');
+        });
+    }
+
     function renderCardView(items) {
         items.forEach(game => {
             const statusDotClass = game.status_color === 'orange' ? 'bg-orange' : (game.status_color === 'green' ? 'bg-green' : 'bg-gray');
@@ -942,23 +957,7 @@
         }
 
         // 2. Fetch fresh data
-        $.getJSON('/api/library', function (data) {
-            games = data || [];
-
-            // Update cache
-            localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
-
-            initGenders(games);
-            filteredGames = [...games];
-            applyFilters();
-        })
-            .fail(function () {
-                if (games.length === 0) {
-                    $('#libraryContainer').html(`<div class="notification is-danger">Falha ao carregar biblioteca</div>`);
-                } else {
-                    showToast('Falha ao atualizar biblioteca (Modo Offline)', 'error');
-                }
-            });
+        refreshLibrary();
 
         // Initialize zoom from localStorage
         const savedZoom = localStorage.getItem('gridZoom') || 240;

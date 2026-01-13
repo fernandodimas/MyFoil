@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, send_from_directory, Response
 from flask_login import LoginManager
+from flask_socketio import SocketIO, emit
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from scheduler import init_scheduler
@@ -154,6 +155,7 @@ os.makedirs(DATA_DIR, exist_ok=True)
 
 ## Global variables
 app_settings = {}
+socketio = SocketIO()
 # Create a global variable and lock for scan_in_progress
 scan_in_progress = False
 scan_lock = threading.Lock()
@@ -278,6 +280,9 @@ def create_app():
 
     # Initialize Metrics
     init_metrics(app)
+
+    # Initialize SocketIO
+    socketio.init_app(app, cors_allowed_origins="*")
 
     return app
 
@@ -972,6 +977,9 @@ def post_library_change():
         generate_library(force=True)
         titles.identification_in_progress_count -= 1
         titles.unload_titledb()
+        
+        # Notify clients about the change
+        socketio.emit('library_updated', {'timestamp': datetime.now().isoformat()}, namespace='/')
 
 @app.post('/api/library/scan')
 @access_required('admin')
@@ -1094,7 +1102,7 @@ if __name__ == '__main__':
     for rule in app.url_map.iter_rules():
         logger.info(f"{rule.endpoint}: {rule}")
     logger.info('Initialization steps done, starting server...')
-    app.run(debug=False, use_reloader=False, host="0.0.0.0", port=8465)
+    socketio.run(app, debug=False, use_reloader=False, host="0.0.0.0", port=8465)
     # Shutdown server
     logger.info('Shutting down server...')
     watcher.stop()

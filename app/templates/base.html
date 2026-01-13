@@ -16,6 +16,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
@@ -241,6 +242,18 @@
                 $('#idSource').text('N/A');
                 $('#updateSource').text('N/A');
             });
+
+            // WebSocket Global Listener
+            if (typeof io !== 'undefined') {
+                const socket = io();
+                socket.on('connect', () => console.log('WebSocket: Connected'));
+                socket.on('library_updated', (data) => {
+                    console.log('WebSocket: Library update received', data);
+                    if (typeof refreshLibrary === 'function') {
+                        refreshLibrary();
+                    }
+                });
+            }
         });
     </script>
 </body>

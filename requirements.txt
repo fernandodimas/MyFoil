@@ -16,3 +16,5 @@ redis
 flask-restx
 structlog
 prometheus-client
+flask-socketio
+eventlet
