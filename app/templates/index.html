@@ -114,12 +114,10 @@
                     </div>
 
                     <div class="level-item">
-                        <div class="buttons has-addons">
-                            <button id="btnFilterBase" class="button is-small is-outlined"
-                                onclick="toggleTypeFilter('BASE')">BASE</button>
-                            <button id="btnFilterDlc" class="button is-small is-outlined"
-                                onclick="toggleTypeFilter('DLC')">DLC</button>
-                        </div>
+                        <button class="button is-small is-outlined" onclick="clearFilters()">
+                            <span class="icon is-small"><i class="bi bi-x-circle"></i></span>
+                            <span>Limpar Filtros</span>
+                        </button>
                     </div>
                 </div>
 
@@ -193,6 +191,29 @@
 
     </div>
 </section>
+
+<!-- Footer with System Information -->
+<footer class="footer has-background-dark has-text-light py-3 mt-6">
+    <div class="container">
+        <div class="columns is-vcentered is-mobile">
+            <div class="column is-4">
+                <p class="is-size-7">
+                    <strong>Build:</strong> {{ BUILD_VERSION }}
+                </p>
+            </div>
+            <div class="column is-4 has-text-centered">
+                <p class="is-size-7">
+                    <strong>TitleDB:</strong> <span id="titledbInfo">Carregando...</span>
+                </p>
+            </div>
+            <div class="column is-4 has-text-right">
+                <p class="is-size-7">
+                    <strong>Updates:</strong> <span id="updateSource">Carregando...</span>
+                </p>
+            </div>
+        </div>
+    </div>
+</footer>
 
 <!-- Game Details Modal -->
 <div class="modal" id="gameDetailsModal">
@@ -349,6 +370,18 @@
             max-width: 1400px !important;
         }
     }
+
+    @media screen and (min-width: 1600px) {
+        .container {
+            max-width: 1500px !important;
+        }
+    }
+
+    @media screen and (min-width: 1920px) {
+        .container {
+            max-width: 1800px !important;
+        }
+    }
 </style>
 
 {% raw %}
@@ -410,9 +443,12 @@
                             </figure>
                         </div>
                         <div class="card-content p-3">
-                            <div class="is-flex is-justify-content-between mb-2">
+                            <div class="is-flex is-justify-content-between mb-2 gap-2">
                                 <span class="tag is-white p-0 font-mono is-size-7 opacity-50">${game.id}</span>
-                                <span class="tag is-white p-0 font-mono is-size-7 opacity-50">v${game.display_version}</span>
+                                <div class="is-flex gap-1">
+                                    <span class="tag is-white p-0 font-mono is-size-7 opacity-30">v${game.display_version}</span>
+                                    ${game.size_formatted ? `<span class="tag is-white p-0 font-mono is-size-7 opacity-30">${game.size_formatted}</span>` : ''}
+                                </div>
                             </div>
                             <p class="is-size-6 has-text-weight-bold mb-3 truncate" title="${game.name}">${game.name}</p>
                             <div class="is-flex is-justify-content-between is-align-items-center">
@@ -421,7 +457,6 @@
                                     ${!game.has_latest_version && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1" style="height: 1.2rem; font-size: 0.65rem; font-weight: bold;">UPDATE</span>' : ''}
                                     ${!game.has_all_dlcs && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1" style="height: 1.2rem; font-size: 0.65rem; font-weight: bold;">DLC</span>' : ''}
                                 </div>
-                                ${game.owned ? '<span class="tag is-success is-light is-small" style="font-weight: bold;"><i class="bi bi-check mr-1"></i>Possui</span>' : '<span class="tag is-grey-lighter has-text-grey is-small" style="font-weight: bold;"><i class="bi bi-x mr-1"></i>Vazio</span>'}
                             </div>
                         </div>
                     </div>
@@ -552,7 +587,7 @@
                     <p class="heading has-text-weight-bold mb-3 has-text-success">Conteúdo Adicional (DLCs)</p>
                     <div class="is-flex is-flex-wrap-wrap gap-2">
                         ${game.dlcs.map(d => `
-                            <span class="tag ${d.owned ? 'is-success' : 'is-danger'} is-light is-small" title="${d.app_id}" onclick="showGameDetails('${d.app_id}')" style="cursor: pointer;">
+                            <span class="tag ${d.owned ? 'is-success' : 'is-danger'} is-light is-small dlc-tag" title="${d.app_id}" onclick="showGameDetails('${d.app_id}')" style="cursor: pointer; max-width: 250px; white-space: normal; word-wrap: break-word;">
                                 ${d.owned ? '<i class="bi bi-check-circle-fill mr-1"></i>' : '<i class="bi bi-x-circle mr-1"></i>'}
                                 ${d.name}
                             </span>
@@ -593,9 +628,7 @@
     }
 
     function applyFilters() {
-        const query = $('#navbarSearch').val().toLowerCase();
-        const showBase = $('#filterCheckBase').is(':checked');
-        const showDlc = $('#filterCheckDlc').is(':checked');
+        const query = ($('#navbarSearch').val() || '').toLowerCase();
         const showOwned = $('#filterCheckOwned').is(':checked');
         const showMissing = $('#filterCheckMissing').is(':checked');
         const showUpToDate = $('#filterCheckUpToDate').is(':checked');
@@ -604,10 +637,6 @@
 
         filteredGames = games.filter(g => {
             const matchesSearch = !query || (g.name && g.name.toLowerCase().includes(query)) || (g.id && g.id.toLowerCase().includes(query));
-
-            let matchesType = true;
-            if (showBase && !showDlc) matchesType = g.has_base;
-            else if (showDlc && !showBase) matchesType = !g.has_base;
 
             let matchesSource = true;
             if (showOwned && !showMissing) matchesSource = g.has_base;
@@ -619,24 +648,28 @@
 
             const matchesGender = !gender || (g.category && g.category.includes(gender));
 
-            return matchesSearch && matchesType && matchesSource && matchesStatus && matchesGender;
+            return matchesSearch && matchesSource && matchesStatus && matchesGender;
         });
 
         currentPage = 1;
         renderLibrary();
     }
 
-    function toggleTypeFilter(type) {
-        const check = type === 'BASE' ? '#filterCheckBase' : '#filterCheckDlc';
-        $(check).prop('checked', !$(check).is(':checked'));
-        updateShortcutButtons();
+    function clearFilters() {
+        // Reset checkboxes
+        $('#filterCheckOwned').prop('checked', true);
+        $('#filterCheckMissing, #filterCheckUpToDate, #filterCheckMissingUpdate').prop('checked', false);
+
+        // Reset gender
+        $('#filterGender').val('');
+
+        // Reset search
+        $('#navbarSearch').val('');
+
+        // Apply
         applyFilters();
     }
 
-    function updateShortcutButtons() {
-        $('#btnFilterBase').toggleClass('is-primary', $('#filterCheckBase').is(':checked'));
-        $('#btnFilterDlc').toggleClass('is-primary', $('#filterCheckDlc').is(':checked'));
-    }
 
     function setPageSize(size) {
         pageSize = size;
@@ -698,9 +731,18 @@
     }
 
     // Event Listeners
-    $('.filterInput').on('change', () => { updateShortcutButtons(); applyFilters(); });
+    $('.filterInput').on('change', applyFilters);
     $('#navbarSearch').on('input', applyFilters);
     $('.modal-background').on('click', () => closeModal('gameDetailsModal'));
+
+    // Load system information for footer
+    $.getJSON('/api/system/info', function (data) {
+        $('#titledbInfo').text(`${data.titledb_region}/${data.titledb_language}`);
+        $('#updateSource').text(data.update_source);
+    }).fail(function () {
+        $('#titledbInfo').text('N/A');
+        $('#updateSource').text('N/A');
+    });
 
     {% endraw %}
 </script>

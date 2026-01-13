@@ -550,6 +550,17 @@ def generate_library(force=False):
         
         # For card display, use owned_version
         game['display_version'] = str(game['owned_version'])
+        
+        # Calculate total size of owned files
+        total_size = 0
+        for b in base_app_entries:
+            if 'files' in b:
+                for file_obj in b['files']:
+                    if hasattr(file_obj, 'size') and file_obj.size:
+                        total_size += file_obj.size
+        
+        game['size'] = total_size
+        game['size_formatted'] = format_size(total_size) if total_size > 0 else None
 
         # DLC details
         # Group DLCs by their unique app_id (a game can have many DLCs)

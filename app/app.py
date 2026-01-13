@@ -893,6 +893,21 @@ def scan_library_api():
     } 
     return jsonify(resp)
 
+@app.route('/api/system/info')
+@access_required('shop')
+def system_info_api():
+    from settings import load_settings
+    settings = load_settings()
+    titledb_file = titles_lib.get_loaded_titles_file() if hasattr(titles_lib, 'get_loaded_titles_file') else 'Unknown'
+    
+    return jsonify({
+        'build_version': BUILD_VERSION,
+        'titledb_region': settings.get('titles/region', 'US'),
+        'titledb_language': settings.get('titles/language', 'en'),
+        'titledb_file': titledb_file,
+        'update_source': 'DBI versions.txt' if settings.get('titles/dbi_versions') else 'TitleDB'
+    })
+
 def scan_library():
     logger.info(f'Scanning whole library ...')
     libraries = get_libraries()
