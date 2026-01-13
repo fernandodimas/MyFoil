@@ -27,6 +27,7 @@ from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from rest_api import init_rest_api
 import structlog
+from metrics import init_metrics, ACTIVE_SCANS, IDENTIFICATION_DURATION
 
 # Optional Celery for async tasks
 try:
@@ -102,8 +103,9 @@ def scan_library_job():
             return
         scan_in_progress = True
     try:
-        scan_library()
-        post_library_change()
+        with ACTIVE_SCANS.track_inprogress():
+            scan_library()
+            post_library_change()
         logger.info("Library scan job completed.")
     except Exception as e:
         logger.error(f"Error during library scan job: {e}")
@@ -273,6 +275,9 @@ def create_app():
 
     # Initialize REST API
     init_rest_api(app)
+
+    # Initialize Metrics
+    init_metrics(app)
 
     return app
 

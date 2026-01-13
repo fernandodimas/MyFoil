@@ -1,6 +1,8 @@
 import hashlib
 from constants import *
 from db import *
+from i18n import t
+from metrics import FILES_IDENTIFIED, IDENTIFICATION_DURATION, LIBRARY_SIZE
 import titles as titles_lib
 import datetime
 from pathlib import Path
@@ -189,8 +191,12 @@ def identify_library_files(library):
                 continue
 
             logger.info(f'Identifying file ({n+1}/{nb_to_identify}): {filename}')
-            identification, success, file_contents, error = titles_lib.identify_file(filepath)
+            with IDENTIFICATION_DURATION.time():
+                identification, success, file_contents, error = titles_lib.identify_file(filepath)
+            
             if success and file_contents and not error:
+                # Increment metrics
+                FILES_IDENTIFIED.labels(app_type="multiple" if len(file_contents) > 1 else file_contents[0]["type"]).inc()
                 # find all unique Titles ID to add to the Titles db
                 title_ids = list(dict.fromkeys([c['title_id'] for c in file_contents]))
 
@@ -632,6 +638,10 @@ def generate_library(force=False):
 
     titles_lib.identification_in_progress_count -= 1
     titles_lib.unload_titledb()
+
+    # Update library size metric
+    total_size = sum(g.get('size', 0) for g in games_info)
+    LIBRARY_SIZE.set(total_size)
 
     logger.info(f'Generating library done. Found {len(games_info)} games.')
     return sorted_library
