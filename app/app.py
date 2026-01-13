@@ -403,30 +403,27 @@ def get_settings_api():
 @access_required('admin')
 def set_titles_settings_api():
     settings = request.json
-    region = settings['region']
-    language = settings['language']
-    dbi_versions = settings.get('dbi_versions', False)
+    current_settings = load_settings()
+    
+    region = settings.get('region', current_settings['titles'].get('region', 'US'))
+    language = settings.get('language', current_settings['titles'].get('language', 'en'))
+    dbi_versions = settings.get('dbi_versions', current_settings['titles'].get('dbi_versions', False))
     
     languages_path = os.path.join(TITLEDB_DIR, 'languages.json')
-    if not os.path.exists(languages_path):
-        return jsonify({
-            'success': False,
-            'errors': [{'path': 'titles', 'error': 'TitleDB not loaded. Please update TitleDB first.'}]
-        })
+    if os.path.exists(languages_path):
+        with open(languages_path) as f:
+            languages = json.load(f)
+            languages = dict(sorted(languages.items()))
 
-    with open(languages_path) as f:
-        languages = json.load(f)
-        languages = dict(sorted(languages.items()))
-
-    if region not in languages or language not in languages[region]:
-        resp = {
-            'success': False,
-            'errors': [{
-                    'path': 'titles',
-                    'error': f"The region/language pair {region}/{language} is not available."
-                }]
-        }
-        return jsonify(resp)
+        if region not in languages or language not in languages[region]:
+            resp = {
+                'success': False,
+                'errors': [{
+                        'path': 'titles',
+                        'error': f"The region/language pair {region}/{language} is not available."
+                    }]
+            }
+            return jsonify(resp)
     
     set_titles_settings(region, language, dbi_versions)
     reload_conf()
