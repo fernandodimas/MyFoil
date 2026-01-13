@@ -256,3 +256,21 @@ class TitleDBSourceManager:
     def get_sources_status(self) -> List[Dict]:
         """Get status of all sources for display"""
         return [s.to_dict() for s in sorted(self.sources, key=lambda x: x.priority)]
+
+    def update_priorities(self, priority_map: Dict[str, int]) -> bool:
+        """
+        Batch update priorities.
+        priority_map: { 'source_name': new_priority_int }
+        """
+        changed = False
+        for source in self.sources:
+            if source.name in priority_map:
+                new_prio = priority_map[source.name]
+                if source.priority != new_prio:
+                    source.priority = new_prio
+                    changed = True
+        
+        if changed:
+            self.save_sources()
+            logger.info("Batch updated TitleDB source priorities")
+        return True

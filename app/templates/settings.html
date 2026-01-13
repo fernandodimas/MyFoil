@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 {% include 'nav.html' %}
 
 <section class="section">
@@ -661,6 +662,35 @@
         $.getJSON("/api/settings/titledb/sources", (result) => {
             if (!result.success) return;
             const tbody = $('#titledbSourcesTable tbody').empty();
+            // Initialize Sortable only if not exists
+            if (!tbody.data('sortable-init')) {
+                new Sortable(document.getElementById('titledbSourcesTable').querySelector('tbody'), {
+                    handle: '.drag-handle',
+                    animation: 150,
+                    onEnd: function (evt) {
+                        const rows = Array.from(tbody.find('tr'));
+                        const priorities = {};
+                        rows.forEach((row, index) => {
+                            const name = $(row).find('p.has-text-weight-bold').text();
+                            priorities[name] = index * 10;
+                            $(row).find('input[type="number"]').val(index * 10);
+                        });
+
+                        $.ajax({
+                            url: '/api/settings/titledb/sources/reorder',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(priorities),
+                            success: function (res) {
+                                if (res.success) showToast('{{ t("Priorities updated") }}');
+                                else showToast('{{ t("Failed to update priorities") }}', 'error');
+                            }
+                        });
+                    }
+                });
+                tbody.data('sortable-init', true);
+            }
+
             result.sources.forEach(source => {
                 tbody.append(`
                     <tr>
@@ -682,6 +712,9 @@
                                 </button>
                                 <button class="button is-small is-ghost has-text-danger" onclick="deleteSource('${source.name}')">
                                     <i class="bi bi-trash3"></i>
+                                </button>
+                                <button class="button is-small is-ghost drag-handle" style="cursor: move">
+                                    <i class="bi bi-grip-vertical"></i>
                                 </button>
                             </div>
                         </td>

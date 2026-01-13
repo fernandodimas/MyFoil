@@ -391,3 +391,9 @@ def update_titledb_source(name: str, **kwargs) -> bool:
     """Update a TitleDB source"""
     source_manager = get_source_manager()
     return source_manager.update_source(name, **kwargs)
+
+
+def update_titledb_priorities(priority_map: Dict[str, int]) -> bool:
+    """Batch update priorities"""
+    source_manager = get_source_manager()
+    return source_manager.update_priorities(priority_map)

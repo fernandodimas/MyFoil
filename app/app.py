@@ -612,6 +612,23 @@ def titledb_sources_api():
         })
 
 
+
+
+@app.post('/api/settings/titledb/sources/reorder')
+@access_required('admin')
+def reorder_titledb_sources_api():
+    """
+    Expects JSON: { "source_name_1": 0, "source_name_2": 1, ... }
+    """
+    data = request.json
+    if not data:
+        return jsonify({'success': False, 'errors': ['No data provided']})
+    
+    success = titledb.update_titledb_priorities(data)
+    return jsonify({
+        'success': success
+    })
+
 @app.post('/api/settings/titledb/update')
 @access_required('admin')
 def force_titledb_update_api():
