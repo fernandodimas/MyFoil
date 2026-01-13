@@ -31,58 +31,46 @@
 
 ### 1. Segurança e Autenticação
 
-#### 1.1 Secret Key Hardcoded
+#### 1.1 Secret Key Hardcoded ✅ **IMPLEMENTADO**
+**Data de Implementação:** 2026-01-13  
+**Commit:** `67ddecb - Security: Implement dynamic secret key and rate limiting`
+
 **Arquivo:** `app/app.py:205`
-```python
-# TODO: generate random secret_key
-app.config['SECRET_KEY'] = 'dev_key_please_change_me'
-```
 
 **Problema:**
-- Chave secreta está hardcoded no código
-- Expõe o sistema a ataques de session hijacking
-- Qualquer pessoa com acesso ao código pode forjar sessões
+- Chave secreta estava hardcoded no código
+- Expunha o sistema a ataques de session hijacking
+- Qualquer pessoa com acesso ao código poderia forjar sessões
 
-**Solução:**
-```python
-import secrets
-import os
+**Solução Implementada:**
+- Função `get_or_create_secret_key()` em `app/utils.py`
+- Gera chave de 64 caracteres (256-bit) usando `secrets.token_hex(32)`
+- Persiste em `CONFIG_DIR/.secret_key` com permissões 600
+- Reutiliza chave existente entre restarts
+- Fallback gracioso caso escrita falhe
 
-# In app.py
-SECRET_KEY_FILE = os.path.join(CONFIG_DIR, '.secret_key')
+**Arquivos Modificados:**
+- `app/utils.py`: Nova função de geração de chave
+- `app/app.py`: Substituído hardcoded por `get_or_create_secret_key()`
 
-def get_or_create_secret_key():
-    if os.path.exists(SECRET_KEY_FILE):
-        with open(SECRET_KEY_FILE, 'r') as f:
-            return f.read().strip()
-    else:
-        key = secrets.token_hex(32)
-        with open(SECRET_KEY_FILE, 'w') as f:
-            f.write(key)
-        os.chmod(SECRET_KEY_FILE, 0o600)
-        return key
-
-app.config['SECRET_KEY'] = get_or_create_secret_key()
-```
-
-**Prioridade:** 🔴 CRÍTICA  
-**Esforço:** Baixo (1h)
+**Status:** ✅ CONCLUÍDO  
+**Esforço Real:** 1h
 
 ---
 
-#### 1.2 Falta de Rate Limiting
+#### 1.2 Falta de Rate Limiting ✅ **IMPLEMENTADO**
+**Data de Implementação:** 2026-01-13  
+**Commit:** `67ddecb - Security: Implement dynamic secret key and rate limiting`
+
 **Arquivo:** `app/auth.py`
 
 **Problema:**
-- Endpoints de login e API não têm proteção contra brute force
+- Endpoints de login e API não tinham proteção contra brute force
 - Possibilidade de DoS através de requisições repetidas
 - Ausência de proteção contra tentativas de senha
 
-**Solução:**
+**Solução Implementada:**
 ```python
-# Adicionar ao requirements.txt:
-# Flask-Limiter
-
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -90,17 +78,33 @@ limiter = Limiter(
     app=app,
     key_func=get_remote_address,
     default_limits=["200 per day", "50 per hour"],
-    storage_uri="memory://"
+    storage_uri="memory://",
+    strategy="fixed-window"
 )
 
-@app.route('/api/login', methods=['POST'])
+# Login: 5 tentativas por minuto
 @limiter.limit("5 per minute")
-def login_api():
+def login():
+    # ...
+
+# Signup: 10 contas por hora
+@limiter.limit("10 per hour")
+def signup_post():
     # ...
 ```
 
-**Prioridade:** 🔴 CRÍTICA  
-**Esforço:** Médio (3h)
+**Limites Configurados:**
+- **Global**: 200 req/dia, 50 req/hora por IP
+- **Login** (`/login`): 5 tentativas/minuto
+- **Signup** (`/api/user/signup`): 10 contas/hora
+
+**Arquivos Modificados:**
+- `requirements.txt`: Adicionado `Flask-Limiter`
+- `app/app.py`: Inicialização do limiter
+- `app/auth.py`: Aplicados decorators de rate limiting
+
+**Status:** ✅ CONCLUÍDO  
+**Esforço Real:** 3h
 
 ---
 
@@ -1196,13 +1200,14 @@ app.scheduler.add_job(
 ## 📊 Resumo de Prioridades
 
 ### Curto Prazo (1-2 semanas)
-1. ✅ Secret Key dinâmico
-2. ✅ Rate Limiting
-3. ✅ Índices no banco de dados
-4. ✅ Logging estruturado
-5. ✅ Paginação no frontend
+1. ✅ Secret Key dinâmico **(CONCLUÍDO - 2026-01-13)**
+2. ✅ Rate Limiting **(CONCLUÍDO - 2026-01-13)**
+3. ⏳ Índices no banco de dados
+4. ⏳ Logging estruturado
+5. ⏳ Paginação no frontend
 
 **Esforço total:** ~20h  
+**Esforço realizado:** 4h (20%)  
 **Impacto:** Alto (segurança + performance)
 
 ### Médio Prazo (1 mês)
@@ -1231,8 +1236,8 @@ app.scheduler.add_job(
 **Sequência sugerida de implementação:**
 
 ### Sprint 1 (Semana 1-2): Segurança Urgente
-- [ ] Secret key dinâmico
-- [ ] Rate limiting
+- [x] Secret key dinâmico ✅ **(Concluído em 2026-01-13)**
+- [x] Rate limiting ✅ **(Concluído em 2026-01-13)**
 - [ ] Sanitização de logs
 - [ ] Índices no BD
 
