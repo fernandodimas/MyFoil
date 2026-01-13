@@ -48,7 +48,7 @@ Refinamentos detalhados da interface do usuário e funcionalidades da biblioteca
 ### 6. Estabilidade e Correções de Bugs
 - [x] **6.1** - Implementar sanitização agressiva para arquivos JSON corrompidos (TitleDB)
 - [x] **6.2** - Corrigir falha crítica no carregamento do TitleDB com fallback automático
-- [x] **6.3** - Ajustar proporção dos cards para 4:3 (quase quadrado) utilizando banners
+- [x] **6.3** - Ajustar proporção dos cards para 1:1 (quadrado) utilizando banners art
 - [x] **6.4** - Validar integridade dos arquivos TitleDB antes do carregamento (tamanho > 0)
 
 ---
@@ -57,9 +57,9 @@ Refinamentos detalhados da interface do usuário e funcionalidades da biblioteca
 
 **Concluídas:** 30 de 30 tarefas (100%) ✅ FINALIZADO
 
-**Última atualização:** 2026-01-13 16:00
+**Última atualização:** 2026-01-13 16:30
 
-**Commit:** `Estatísticas movidas para nova página e design de cards quadrado restaurado`
+**Commit:** `UI/Stability: Final square card adjustment with banners and robust TitleDB handling`
 
 ### ✅ Implementações Concluídas
 
