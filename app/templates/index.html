@@ -427,7 +427,7 @@
                     <div class="card game-card box is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')">
                         <div class="card-image position-relative overflow-hidden">
                             <figure class="image is-16by9">
-                                <img src="${game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" style="object-fit: cover;">
+                                <img src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" style="object-fit: cover;">
                             </figure>
                         </div>
                         <div class="card-content p-3">
