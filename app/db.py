@@ -317,6 +317,23 @@ def set_library_scan_time(library_id, scan_time=None):
 def get_all_titles():
     return Titles.query.all()
 
+def get_all_titles_with_apps():
+    """Get all titles with apps and files pre-loaded to avoid N+1 queries during library generation"""
+    titles = Titles.query.options(
+        db.joinedload(Titles.apps).db.joinedload(Apps.files)
+    ).all()
+    
+    results = []
+    for t in titles:
+        t_dict = to_dict(t)
+        t_dict['apps'] = []
+        for a in t.apps:
+            a_dict = to_dict(a)
+            a_dict['files'] = [f.filepath for f in a.files]
+            t_dict['apps'].append(a_dict)
+        results.append(t_dict)
+    return results
+
 def get_title(title_id):
     return Titles.query.filter_by(title_id=title_id).first()
 

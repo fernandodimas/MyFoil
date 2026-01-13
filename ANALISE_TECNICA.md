@@ -45,9 +45,8 @@
 #### 3.1 Ausência de Índices ✅ **IMPLEMENTADO**
 *(Implementado em 2026-01-13: Índices em Apps e Titles)*
 
-#### 3.2 N+1 Query Problem
-**Problema:** Geração da biblioteca faz centenas de queries individuais para buscar Apps de cada Título.
-**Solução:** Implementar `joinedload` ou `subqueryload` no SQLAlchemy para trazer Títulos e Apps em uma única query.
+#### 3.2 N+1 Query Problem ✅ **IMPLEMENTADO**
+*(Implementado em 2026-01-13: Otimização de queries em generate_library e update_titles)*
 **Sprint:** Sprint 2 (Backend de Suporte à UI).
 
 ---

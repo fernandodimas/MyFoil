@@ -323,14 +323,16 @@ def update_titles():
     if titles_removed > 0:
             logger.info(f"Removed {titles_removed} titles with no owned apps.")
 
-    titles = get_all_titles()
+    # Optimized query to fetch titles and their apps in fixed number of queries
+    titles = Titles.query.options(db.joinedload(Titles.apps)).all()
     for n, title in enumerate(titles):
         have_base = False
         up_to_date = False
         complete = False
 
         title_id = title.title_id
-        title_apps = get_all_title_apps(title_id)
+        # Use child apps collection instead of a new query
+        title_apps = [to_dict(app) for app in title.apps]
 
         # check have_base - look for owned base apps
         owned_base_apps = [app for app in title_apps if app.get('app_type') == APP_TYPE_BASE and app.get('owned')]
@@ -460,15 +462,15 @@ def generate_library():
     logger.info(f'Generating library (grouped by Title)...')
     titles_lib.load_titledb()
     
-    # Get all Titles known to the system
-    all_titles = get_all_titles()
+    # Get all Titles known to the system with their apps and files pre-loaded
+    all_titles_data = get_all_titles_with_apps()
     games_info = []
 
-    for title_obj in all_titles:
-        tid = title_obj.title_id
+    for title_data in all_titles_data:
+        tid = title_data['title_id']
         
-        # Get all apps for this title (both owned and missing)
-        all_title_apps = get_all_title_apps(tid)
+        # All apps for this title (already pre-loaded in title_data['apps'])
+        all_title_apps = title_data['apps']
         
         # We only show games that have at least one OWNED app in the library
         owned_apps = [a for a in all_title_apps if a.get('owned')]
@@ -485,9 +487,9 @@ def generate_library():
         game['id'] = tid  # For display on card as game ID
         
         # Status indicators
-        game['has_base'] = title_obj.have_base
-        game['has_latest_version'] = title_obj.up_to_date
-        game['has_all_dlcs'] = title_obj.complete
+        game['has_base'] = title_data['have_base']
+        game['has_latest_version'] = title_data['up_to_date']
+        game['has_all_dlcs'] = title_data['complete']
         
         # Determine status color for UI
         # Orange if missing updates or DLCs (for games with base)
