@@ -213,8 +213,9 @@ def load_titledb(force=False):
         _cnmts_db = robust_json_load(os.path.join(TITLEDB_DIR, 'cnmts.json'))
         
         # Database fallback chain: Region -> US/en -> Generic titles.json
-        region_file = titledb.get_region_titles_file(app_settings)
-        possible_files = [region_file, "titles.US.en.json", "titles.json"]
+        region = app_settings['titles'].get('region', 'US')
+        language = app_settings['titles'].get('language', 'en')
+        possible_files = titledb.get_region_titles_filenames(region, language) + ["titles.US.en.json", "US.en.json", "titles.json"]
         
         _titles_db = None
         global _loaded_titles_file

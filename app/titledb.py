@@ -41,15 +41,12 @@ def get_source_manager() -> TitleDBSourceManager:
     return _source_manager
 
 
-def get_region_titles_file(app_settings: Dict) -> str:
-    """Get the region-specific titles filename"""
-    region = app_settings['titles']['region']
-    language = app_settings['titles']['language']
-    
-    # Try both naming conventions
-    # blawar/titledb uses: titles.US.en.json
-    # Some sources use: titles.json (generic)
-    return f"titles.{region}.{language}.json"
+def get_region_titles_filenames(region: str, language: str) -> List[str]:
+    """Get possible filenames for regional titles"""
+    return [
+        f"titles.{region}.{language}.json",
+        f"{region}.{language}.json"
+    ]
 
 
 def get_version_hash() -> str:
@@ -276,20 +273,28 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
                     results[filename] = download_titledb_file(filename, force=force)
                 
                 # PRIORITY: Try to download the region-specific file based on settings FIRST
-                region_titles_file = get_region_titles_file(app_settings)
-                logger.info(f"Attempting to download region-specific file: {region_titles_file}")
-                region_success = download_titledb_file(region_titles_file, force=force, silent_404=True)
-                results[region_titles_file] = region_success
+                region = app_settings['titles'].get('region', 'US')
+                language = app_settings['titles'].get('language', 'en')
+                region_filenames = get_region_titles_filenames(region, language)
                 
-                # Fallback downloads (only if region-specific fails)
+                region_success = False
+                for region_filename in region_filenames:
+                    logger.info(f"Attempting to download region-specific file: {region_filename}")
+                    if download_titledb_file(region_filename, force=force, silent_404=True):
+                        region_success = True
+                        results[region_filename] = True
+                        break
+                
+                results['region_titles'] = region_success
+                
+                # Fallback downloads
                 if not region_success:
-                    logger.warning(f"Region-specific file {region_titles_file} not available, trying fallbacks...")
+                    logger.warning(f"Region-specific files {region_filenames} not available, trying fallbacks...")
                     download_titledb_file("titles.US.en.json", force=force, silent_404=True)
+                    download_titledb_file("US.en.json", force=force, silent_404=True)
                     download_titledb_file("titles.json", force=force, silent_404=True)
                 else:
-                    logger.info(f"Successfully downloaded region-specific file: {region_titles_file}")
-                    # Optionally download fallbacks but don't fail if they're missing
-                    download_titledb_file("titles.US.en.json", force=force, silent_404=True)
+                    # Optionally download major fallbacks
                     download_titledb_file("titles.json", force=force, silent_404=True)
                 
                 if all(results.get(f) for f in core_files):
