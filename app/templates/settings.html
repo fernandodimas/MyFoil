@@ -311,9 +311,14 @@
                                     </div>
                                     <div class="level-item has-text-centered">
                                         <div>
-                                            <p class="heading">{{ t('Last Update') }}</p>
-                                            <p class="title is-5">{{ active_source.time_since }} <small
-                                                    class="is-size-7 opacity-50">{{ t('ago') }}</small></p>
+                                            <p class="heading">{{ t('Last Download') }}</p>
+                                            <p class="title is-5">{{ active_source.last_download_date }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="level-item has-text-centered">
+                                        <div>
+                                            <p class="heading">{{ t('Titles Detected') }}</p>
+                                            <p class="title is-5">{{ active_source.titles_count }}</p>
                                         </div>
                                     </div>
                                     <div class="level-item has-text-centered">
@@ -344,17 +349,7 @@
                                 </div>
 
 
-                                <div class="field mt-5 mb-5 px-1">
-                                    <div class="control">
-                                        <label class="checkbox has-text-weight-bold">
-                                            <input type="checkbox" id="useDbiVersionsCheck"
-                                                onchange="updateDbiSetting()">
-                                            {{ t('Fetch updates from DBI database') }}
-                                        </label>
-                                    </div>
-                                    <p class="help opacity-50 ml-4">{{ t('Use local versions.txt file from DBI if
-                                        available') }}</p>
-                                </div>
+
 
                                 <div class="block mt-6">
                                     <button class="button is-small is-primary is-outlined" id="toggleAddSource">
@@ -979,15 +974,7 @@
         }
     }
 
-    function updateDbiSetting() {
-        const data = {
-            dbi_versions: getCheckboxStatus('useDbiVersionsCheck')
-        };
-        $.ajax({
-            url: "/api/settings/titles", type: 'POST', data: JSON.stringify(data), contentType: "application/json",
-            success: (r) => { if (r.success) showToast('{{ t("Settings saved") }}'); }
-        });
-    }
+
 
     function submitShopSettings() {
         const data = {
@@ -1038,8 +1025,7 @@
             languagesData.languages.forEach(l => selectLanguage.append(new Option(l, l)));
             selectLanguage.val(settingsData['titles/language']);
 
-            // General & DBI
-            $('#useDbiVersionsCheck').prop('checked', settingsData['titles/dbi_versions']);
+            // General
             $('#languageSelect').val(document.cookie.match(/language=([^;]+)/)?.[1] || 'en');
 
             // Shop

@@ -46,7 +46,7 @@ def update_titledb_job(force=False):
         current_settings = load_settings()
         titledb.update_titledb(current_settings, force=force)
         
-        # Sync DB with new versions from TitleDB (including DBI versions.txt if enabled)
+        # Sync DB with new versions from TitleDB
         # We need app context for DB operations
         if 'app' in globals():
             with app.app_context():
@@ -924,8 +924,7 @@ def system_info_api():
     titledb_file = titles.get_loaded_titles_file()
     
     # Check what update source we are using
-    use_dbi = settings.get('titles', {}).get('dbi_versions', False)
-    update_src = "DBI (versions.txt)" if use_dbi else "TitleDB (versions.json)"
+    update_src = "TitleDB (versions.json)"
     
     # Identification source - show Source Name + Region File
     if titledb_file != "None":

@@ -224,7 +224,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
                     zip_files = [f.filename for f in rzf.infolist()]
                     
                     # Always ensure we try to get core files + region + fallback safety net
-                    files_to_update = ['cnmts.json', 'versions.json', 'versions.txt', 'languages.json', region_titles_file, fallback_titles_file, ultimate_fallback]
+                    files_to_update = ['cnmts.json', 'versions.json', 'languages.json', region_titles_file, fallback_titles_file, ultimate_fallback]
                     
                     # Update all files from ZIP - handles potential paths in ZIP
                     for filename in files_to_update:
@@ -261,7 +261,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
                     source.last_error = None
                 else:
                     logger.info("TitleDB already up to date (Legacy)")
-                    for f in ['cnmts.json', 'versions.json', 'versions.txt', 'languages.json', get_region_titles_file(app_settings)]:
+                    for f in ['cnmts.json', 'versions.json', 'languages.json', get_region_titles_file(app_settings)]:
                         results[f] = True
                 
                 source_manager.save_sources()
@@ -275,7 +275,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
         else:
             # --- NEW JSON MULTI-SOURCE LOGIC ---
             try:
-                core_files = ['cnmts.json', 'versions.json', 'versions.txt', 'languages.json']
+                core_files = ['cnmts.json', 'versions.json', 'languages.json']
                 for filename in core_files:
                     results[filename] = download_titledb_file(filename, force=force)
                 
@@ -396,6 +396,8 @@ def get_active_source_info() -> Dict:
             'last_success': active.last_success,
             'is_updated': is_updated,
             'time_since': str(time_since).split('.')[0], # Simple formatting
+            'last_download_date': active.last_success.strftime('%Y-%m-%d %H:%M') if active.last_success else 'Never',
+            'titles_count': titles.get_titles_count(),
             'remote_date': remote_date_str,
             'loaded_titles_file': loaded_file
         }

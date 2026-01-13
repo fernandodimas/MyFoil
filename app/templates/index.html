@@ -651,7 +651,12 @@
         const showOwned = $('#filterCheckOwned').is(':checked');
         const showMissing = $('#filterCheckMissing').is(':checked');
         const showUpToDate = $('#filterCheckUpToDate').is(':checked');
-        const showMissingUpdate = $('#filterCheckMissingUpdate').is(':checked');
+        const showMissingUpdate = $('#filterCheckMissingUpdate').is(':checked'); // General "Issues" filter from dropdown
+
+        // Specific button filters
+        const showOnlyUpdates = $('#btnFilterPendingUpd').hasClass('is-primary');
+        const showOnlyDlcs = $('#btnFilterPendingDlc').hasClass('is-primary');
+
         const gender = $('#filterGender').val();
 
         filteredGames = games.filter(g => {
@@ -662,8 +667,23 @@
             else if (showMissing && !showOwned) matchesSource = !g.has_base;
 
             let matchesStatus = true;
-            if (showUpToDate && !showMissingUpdate) matchesStatus = g.status_color === 'green';
-            else if (showMissingUpdate && !showUpToDate) matchesStatus = g.status_color === 'orange';
+
+            // 1. General Status Filters
+            if (showUpToDate && !showMissingUpdate) {
+                matchesStatus = g.status_color === 'green';
+            } else if (showMissingUpdate && !showUpToDate) {
+                matchesStatus = g.status_color === 'orange';
+            }
+
+            // 2. Specific "Pending" Filters (Additive restriction)
+            if (showOnlyUpdates) {
+                // Must have base AND missing latest version
+                matchesStatus = matchesStatus && (g.has_base && !g.has_latest_version);
+            }
+            if (showOnlyDlcs) {
+                // Must have base AND missing DLCs
+                matchesStatus = matchesStatus && (g.has_base && !g.has_all_dlcs);
+            }
 
             const matchesGender = !gender || (g.category && g.category.includes(gender));
 
@@ -692,16 +712,19 @@
     }
 
     $('#btnFilterPendingUpd').on('click', function () {
-        const active = $(this).toggleClass('is-primary is-light').hasClass('is-primary');
-        $('#filterCheckMissingUpdate').prop('checked', active);
-        if (active) $('#btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
+        $(this).toggleClass('is-primary is-light');
+        // If enabling this, disable the other to avoid confusion (optional, but requested behavior implied "filters")
+        if ($(this).hasClass('is-primary')) {
+            $('#btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
+        }
         applyFilters();
     });
 
     $('#btnFilterPendingDlc').on('click', function () {
-        const active = $(this).toggleClass('is-primary is-light').hasClass('is-primary');
-        $('#filterCheckMissingUpdate').prop('checked', active);
-        if (active) $('#btnFilterPendingUpd').removeClass('is-primary').addClass('is-light');
+        $(this).toggleClass('is-primary is-light');
+        if ($(this).hasClass('is-primary')) {
+            $('#btnFilterPendingUpd').removeClass('is-primary').addClass('is-light');
+        }
         applyFilters();
     });
 

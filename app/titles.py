@@ -29,8 +29,13 @@ _titles_db_loaded = False
 _cnmts_db = None
 _titles_db = None
 _versions_db = None
-_versions_txt_db = None
+_versions_db = None
 _loaded_titles_file = None  # Track which titles file was loaded
+
+def get_titles_count():
+    global _titles_db
+    return len(_titles_db) if _titles_db else 0
+
 
 def robust_json_load(filepath):
     """Reliably load JSON files even with invalid escape sequences or control characters."""
@@ -359,21 +364,6 @@ def load_titledb(force=False):
 
         _versions_db = robust_json_load(os.path.join(TITLEDB_DIR, 'versions.json'))
 
-        _versions_txt_db = {}
-        try:
-            with open(os.path.join(TITLEDB_DIR, 'versions.txt'), encoding='utf-8', errors='ignore') as f:
-                for line in f:
-                    line_strip = line.rstrip("\n")
-                    if '|' in line_strip:
-                        parts = line_strip.split('|')
-                        if len(parts) >= 3:
-                            app_id, rightsId, version = parts[0].strip(), parts[1].strip(), parts[2].strip()
-                            if not version:
-                                version = "0"
-                            _versions_txt_db[app_id.lower()] = version
-        except Exception as e:
-            logger.warning(f"Error loading versions.txt: {e}")
-
         _titles_db_loaded = True
         logger.info("TitleDBs loaded.")
 
@@ -394,7 +384,6 @@ def unload_titledb():
     _cnmts_db = None
     _titles_db = None
     _versions_db = None
-    _versions_txt_db = None
     _titles_db_loaded = False
     logger.info("TitleDBs unloaded.")
 
@@ -625,15 +614,12 @@ def get_game_latest_version(all_existing_versions):
 
 def get_all_existing_versions(titleid):
     global _versions_db
-    global _versions_txt_db
     
     if _versions_db is None:
         logger.error("versions_db is not loaded. Call load_titledb first.")
         return []
 
     titleid = titleid.lower()
-    app_settings = load_settings()
-    use_dbi = app_settings.get('titles', {}).get('dbi_versions', False)
     versions_dict = {} # Key: version_int, Value: release_date
 
     # Priority 1: JSON Versions DB (Full History)
@@ -644,16 +630,6 @@ def get_all_existing_versions(titleid):
             except:
                 continue
     
-    # Priority 2: DBI versions.txt (Often more up-to-date for latest version)
-    if use_dbi and _versions_txt_db and titleid in _versions_txt_db:
-        v_str = _versions_txt_db[titleid]
-        try:
-            v_int = int(v_str)
-            if v_int not in versions_dict:
-                versions_dict[v_int] = "Unknown (DBI)"
-        except:
-            pass
-
     if not versions_dict:
         return []
 
