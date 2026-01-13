@@ -4,6 +4,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from db import *
 from flask_login import LoginManager
+from utils import sanitize_sensitive_data
 
 import logging
 
@@ -255,6 +256,9 @@ def signup_post():
                 'location': '/settings',
             } 
             return jsonify(resp)
+
+        # Log sanitized request data
+        logger.info(f'Creating new user: {username} with sanitized data: {sanitize_sensitive_data(data)}')
 
         # create a new user with the form data. Hash the password so the plaintext version isn't saved.
         create_or_update_user(username, password, admin_access, shop_access, backup_access)

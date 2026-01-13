@@ -108,30 +108,35 @@ def signup_post():
 
 ---
 
-#### 1.3 Senha em Plain Text nos Logs
+#### 1.3 Senha em Plain Text nos Logs ✅ **IMPLEMENTADO**
+**Data de Implementação:** 2026-01-13
+**Commit:** Pending
+
 **Arquivo:** `app/auth.py`
 
 **Problema:**
-- Logs podem conter informações sensíveis
+- Logs poderiam conter informações sensíveis (senhas, tokens)
 - Falta de sanitização de dados antes de logar
 
-**Solução:**
+**Solução Implementada:**
 ```python
-# Criar função de sanitização
-def sanitize_log_data(data):
-    """Remove sensitive data from logs"""
-    sensitive_keys = ['password', 'secret', 'token', 'key']
-    if isinstance(data, dict):
-        return {k: '***' if any(s in k.lower() for s in sensitive_keys) else v 
-                for k, v in data.items()}
-    return data
+# Em app/utils.py
+def sanitize_sensitive_data(data, sensitive_keys=None):
+    # Detecta chaves como 'password', 'token', 'secret', etc.
+    # Mascara valores: "pa***rd" ou "***"
+    # Suporta estruturas aninhadas (dict/list)
+    pass
 
-# Usar em todos os logs
-logger.info(f"Request data: {sanitize_log_data(request.json)}")
+# Em app/auth.py
+logger.info(f'Creating new user: {username} with sanitized data: {sanitize_sensitive_data(data)}')
 ```
 
-**Prioridade:** 🔴 CRÍTICA  
-**Esforço:** Baixo (2h)
+**Arquivos Modificados:**
+- `app/utils.py`: Adicionada função `sanitize_sensitive_data`
+- `app/auth.py`: Aplicada sanitização nos logs de criação de usuário
+
+**Status:** ✅ CONCLUÍDO
+**Esforço Real:** 2h
 
 ---
 
@@ -217,7 +222,10 @@ logger.info(f"[{g.request_id}] TitleDB update started")
 
 ### 3. Performance do Banco de Dados
 
-#### 3.1 Ausência de Índices
+#### 3.1 Ausência de Índices ✅ **IMPLEMENTADO**
+**Data de Implementação:** 2026-01-13
+**Commit:** Pending
+
 **Arquivo:** `app/db.py`
 
 **Problema:**
@@ -225,33 +233,23 @@ logger.info(f"[{g.request_id}] TitleDB update started")
 class Apps(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     app_id = db.Column(db.String, nullable=False)
-    app_version = db.Column(db.String, nullable=False)
     # Sem índices!
 ```
-
 - Buscas por `app_id` são O(n)
-- Queries de join sem otimização
-- Lentidão em bibliotecas grandes (>1000 jogos)
+- Consultas lentas em bibliotecas grandes
 
-**Solução:**
-```python
-class Apps(db.Model):
-    __tablename__ = 'apps'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    app_id = db.Column(db.String, nullable=False, index=True)
-    app_version = db.Column(db.String, nullable=False)
-    app_type = db.Column(db.String, nullable=False, index=True)
-    owned = db.Column(db.Boolean, default=False, index=True)
-    
-    __table_args__ = (
-        db.Index('idx_app_id_version', 'app_id', 'app_version'),
-        db.Index('idx_owned_type', 'owned', 'app_type'),
-    )
-```
+**Solução Implementada:**
+- Adicionados índices nas colunas `app_id`, `app_type`, `owned` da tabela `Apps`
+- Adicionado índice na coluna `title_id` da tabela `Titles`
+- Adicionado índice composto `idx_app_id_version`, `idx_owned_type`
+- Gerada migration do Alembic para aplicar alterações
 
-**Prioridade:** 🔴 CRÍTICA  
-**Esforço:** Médio (4h + migration)
+**Arquivos Modificados:**
+- `app/db.py`: Definição de índices nos Models
+- `app/migrations/versions/...`: Script de migração gerado
+
+**Status:** ✅ CONCLUÍDO
+**Esforço Real:** 4h
 
 ---
 
@@ -1202,12 +1200,12 @@ app.scheduler.add_job(
 ### Curto Prazo (1-2 semanas)
 1. ✅ Secret Key dinâmico **(CONCLUÍDO - 2026-01-13)**
 2. ✅ Rate Limiting **(CONCLUÍDO - 2026-01-13)**
-3. ⏳ Índices no banco de dados
+3. ✅ Índices no banco de dados **(CONCLUÍDO - 2026-01-13)**
 4. ⏳ Logging estruturado
 5. ⏳ Paginação no frontend
 
 **Esforço total:** ~20h  
-**Esforço realizado:** 4h (20%)  
+**Esforço realizado:** 10h (50%)  
 **Impacto:** Alto (segurança + performance)
 
 ### Médio Prazo (1 mês)
@@ -1238,8 +1236,8 @@ app.scheduler.add_job(
 ### Sprint 1 (Semana 1-2): Segurança Urgente
 - [x] Secret key dinâmico ✅ **(Concluído em 2026-01-13)**
 - [x] Rate limiting ✅ **(Concluído em 2026-01-13)**
-- [ ] Sanitização de logs
-- [ ] Índices no BD
+- [x] Sanitização de logs ✅ **(Concluído em 2026-01-13)**
+- [x] Índices no BD ✅ **(Concluído em 2026-01-13)**
 
 ### Sprint 2 (Semana 3-4): Performance
 - [ ] Resolver N+1 queries

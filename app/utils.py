@@ -86,6 +86,60 @@ def get_or_create_secret_key():
     return key
 
 
+def sanitize_sensitive_data(data, sensitive_keys=None):
+    """
+    Remove or mask sensitive data before logging.
+    
+    Args:
+        data: Dictionary, string, or other data to sanitize
+        sensitive_keys: List of keys to mask (default: common sensitive keys)
+        
+    Returns:
+        Sanitized version of the data
+    """
+    if sensitive_keys is None:
+        sensitive_keys = [
+            'password', 'passwd', 'pwd',
+            'secret', 'secret_key', 'api_key', 'apikey',
+            'token', 'access_token', 'refresh_token',
+            'key', 'private_key', 'session',
+            'authorization', 'auth',
+            'credit_card', 'cvv', 'ssn'
+        ]
+    
+    if isinstance(data, dict):
+        sanitized = {}
+        for k, v in data.items():
+            key_lower = k.lower()
+            # Check if key contains any sensitive keyword
+            is_sensitive = any(sens in key_lower for sens in sensitive_keys)
+            
+            if is_sensitive:
+                # Show only first 2 and last 2 chars if string, else mask completely
+                if isinstance(v, str) and len(v) > 4:
+                    sanitized[k] = f"{v[:2]}***{v[-2:]}"
+                else:
+                    sanitized[k] = "***"
+            elif isinstance(v, dict):
+                sanitized[k] = sanitize_sensitive_data(v, sensitive_keys)
+            elif isinstance(v, list):
+                sanitized[k] = [sanitize_sensitive_data(item, sensitive_keys) if isinstance(item, (dict, list)) else item for item in v]
+            else:
+                sanitized[k] = v
+        return sanitized
+    
+    elif isinstance(data, list):
+        return [sanitize_sensitive_data(item, sensitive_keys) if isinstance(item, (dict, list)) else item for item in data]
+    
+    elif isinstance(data, str):
+        # Check if string looks like a password/token (heuristic)
+        if len(data) > 16 and any(c.isdigit() for c in data) and any(c.isalpha() for c in data):
+            return f"{data[:2]}***{data[-2:]}"
+        return data
+    
+    return data
+
+
 def debounce(wait):
     """Decorator that postpones a function's execution until after `wait` seconds
     have elapsed since the last time it was invoked."""
