@@ -93,17 +93,51 @@ def robust_json_load(filepath):
     except Exception as e:
         logger.error(f"Nuclear cleanup failed for {filepath}: {e}")
             
-    # Try 4: Desperate Measure - Remove all quotes AND backslashes then try to re-structure? No.
-    # Let's just try to remove problematic quotes that are likely content
-    try:
-        # This regex tries to find quotes that are not followed by structural characters
-        # Extremely risky but might work for simple key-value pairs
-        desperate = re.sub(r'(?<![:\s])"(?![\s,}\]])', r'\\"', content)
-        desperate = "".join(ch for ch in desperate if ord(ch) >= 32 or ch in '\n\r\t')
-        data = json.loads(desperate, strict=False)
-        return data if not isinstance(data, dict) else (data.get('data') or data.get('items') or data.get('titles') or data)
     except:
         pass
+
+    # Try 5: Chunked Recovery (Absolute Last Resort)
+    # If the file is so corrupted it has binary garbage or missing structural chars
+    # we can try to recover individual game objects one by one using Regex.
+    logger.warning(f"Whole-file parsing failed for {filepath}. Attempting chunked recovery...")
+    try:
+        recovered = {}
+        # Pattern for "TitleID": { ... }
+        # Matches 16 hex characters as a key
+        pattern = re.compile(r'\"([0-9A-F]{16})\":\s*\{')
+        
+        # We need the full content for this
+        parts = pattern.split(content)
+        # parts[0] is garbage or opening brace
+        # parts[1] is ID, parts[2] is Body, etc.
+        
+        for i in range(1, len(parts), 2):
+            tid = parts[i]
+            body = parts[i+1]
+            
+            # Find the end of this object (the last closing brace)
+            last_brace = body.rfind('}')
+            if last_brace != -1:
+                clean_body = '{' + body[:last_brace+1]
+                try:
+                    # Try to parse this individual object
+                    obj = json.loads(clean_body, strict=False)
+                    recovered[tid] = obj
+                except:
+                    # Partial cleanup for the chunk
+                    try:
+                        # Basic escape fix for the chunk
+                        chunk_sanitized = re.sub(r'\\(?!(["\\/bfnrt]|u[0-9a-fA-F]{4}))', r'\\\\', clean_body)
+                        obj = json.loads(chunk_sanitized, strict=False)
+                        recovered[tid] = obj
+                    except:
+                        continue # Skip this specific corrupt entry
+        
+        if len(recovered) > 0:
+            logger.info(f"Chunked recovery successful! Salvaged {len(recovered)} entries from corrupted file {filepath}.")
+            return recovered
+    except Exception as e:
+        logger.error(f"Chunked recovery failed for {filepath}: {e}")
 
     return None
 
