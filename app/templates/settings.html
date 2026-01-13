@@ -157,139 +157,139 @@
                     </div>
                 </div>
 
-                <button class="btn btn-primary mt-4 w-full md:w-auto" onclick="submitTitlesSettings()">{{ t('Save')
-                    }}</button>
             </div>
-        </section>
 
-        <!-- TitleDB Sources -->
-        <section id="TitleDB" class="card bg-base-100 shadow-xl border border-primary/20 overflow-hidden">
-            <div class="card-body">
-                <h2 class="card-title text-2xl mb-4 flex items-center gap-2 text-primary">
-                    <i class="bi bi-database-fill"></i> {{ t('TitleDB Sources') }}
-                </h2>
+            <div class="divider"></div>
 
-                {% if active_source %}
-                <div
-                    class="alert {{ 'alert-success' if active_source.is_updated else 'alert-warning' }} shadow-sm mb-6">
-                    <i
-                        class="bi {{ 'bi-check-circle-fill' if active_source.is_updated else 'bi-exclamation-triangle-fill' }} text-xl"></i>
-                    <div class="text-sm">
-                        <div class="font-bold">{{ t('Current Active Source') }}: {{ active_source.name }}</div>
-                        <div class="opacity-70">{{ t('Last local update') }}: {{ active_source.time_since }} {{ t('ago')
-                            }} ({{ t('Up to date') if active_source.is_updated else t('Outdated') }})</div>
-                        <div class="mt-1">
-                            <span class="opacity-70">{{ t('Loaded Titles File') }}:</span>
-                            <a href="/static/titledb/{{ active_source.loaded_titles_file }}" target="_blank"
-                                class="badge badge-ghost hover:badge-primary font-mono text-xs cursor-pointer tracking-tighter">{{
-                                active_source.loaded_titles_file }}</a>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
-                <div class="overflow-x-auto mb-6">
-                    <table class="table table-sm w-full" id="titledbSourcesTable">
-                        <thead>
-                            <tr>
-                                <th>{{ t('Name') }}</th>
-                                <th>{{ t('Type') }}</th>
-                                <th>{{ t('Priority') }}</th>
-                                <th>{{ t('Status') }}</th>
-                                <th class="text-right">{{ t('Actions') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-
-                <div class="flex flex-wrap gap-4 items-center">
-                    <div class="collapse collapse-arrow bg-primary/5 border border-primary/20 flex-grow">
-                        <input type="checkbox" id="collapseNewSource" />
-                        <div class="collapse-title font-bold">{{ t('Add custom source') }}</div>
-                        <div class="collapse-content p-4">
-                            <div class="bg-base-100/50 border border-primary/20 rounded-xl p-4 space-y-4">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <input type="text" id="inputSourceName" placeholder="{{ t('Source Name') }}"
-                                        class="input input-bordered w-full" />
-                                    <input type="text" id="inputSourceUrl" placeholder="https://..."
-                                        class="input input-bordered w-full" />
-                                    <select id="inputSourceType" class="select select-bordered w-full">
-                                        <option value="json" selected>{{ t('JSON (Direct)') }}</option>
-                                        <option value="zip_legacy">{{ t('Legacy (ZIP)') }}</option>
-                                    </select>
-                                    <input type="number" id="inputSourcePriority" value="50"
-                                        class="input input-bordered w-full" />
-                                </div>
-                                <button class="btn btn-primary w-full md:w-auto"
-                                    onclick="submitNewSource()">Add</button>
-                            </div>
-                        </div>
-                    </div>
-                    <button class="btn btn-neutral updateTitleDBBtn" onclick="forceTitleDBUpdate()">{{ t('Force TitleDB
-                        Update') }}</button>
-                </div>
-
-                <div class="divider"></div>
-
-                <div class="form-control">
-                    <label class="label cursor-pointer justify-start gap-4">
-                        <input type="checkbox" id="useDbiVersionsCheck" class="checkbox checkbox-primary" />
-                        <span class="label-text font-bold">{{ t('Fetch updates from DBI database') }}</span>
-                    </label>
-                    <span class="text-xs opacity-50 ml-12">{{ t('Use DBI versions database instead of TitleDB for
-                        updates and DLCs') }}</span>
-                </div>
+            <div class="form-control">
+                <label class="label cursor-pointer justify-start gap-4">
+                    <input type="checkbox" id="useDbiVersionsCheck" class="checkbox checkbox-primary" />
+                    <span class="label-text font-bold">{{ t('Fetch updates from DBI database') }}</span>
+                </label>
+                <span class="text-xs opacity-50 ml-12">{{ t('Use DBI versions database instead of TitleDB for
+                    updates and DLCs') }}</span>
             </div>
-        </section>
 
-        <!-- Shop Configuration -->
-        <section id="Shop" class="card bg-base-100 shadow-xl border border-primary/20 overflow-hidden mb-12">
-            <div class="card-body">
-                <h2 class="card-title text-2xl mb-4 flex items-center gap-2 text-primary">
-                    <i class="bi bi-cart-fill"></i> {{ t('Shop') }}
-                </h2>
-
-                <div class="space-y-6">
-                    <div class="form-control w-full">
-                        <label class="label"><span class="label-text font-bold">{{ t('Shop URL') }}</span></label>
-                        <input id="shopHostInput" placeholder="shop.domain.tld" class="input input-bordered w-full" />
-                        <span class="label-text-alt opacity-50 mt-1">{{ t('Configure your shop URL to enable host
-                            verification.') }}</span>
-                    </div>
-
-                    <div class="flex flex-wrap gap-8">
-                        <label class="label cursor-pointer gap-2"><input type="checkbox" id="publicShopCheck"
-                                class="checkbox checkbox-primary" /> <span class="label-text font-bold">{{ t('Public
-                                shop') }}</span></label>
-                        <label class="label cursor-pointer gap-2"><input type="checkbox" id="encryptShopCheck"
-                                class="checkbox checkbox-primary" /> <span class="label-text font-bold">{{ t('Encrypt
-                                shop') }}</span></label>
-                    </div>
-
-                    <div class="form-control w-full">
-                        <label class="label"><span class="label-text font-bold">{{ t('Message of the day')
-                                }}</span></label>
-                        <textarea id="motdTextArea" rows="3" class="textarea textarea-bordered w-full"></textarea>
-                    </div>
-
-                    <div class="form-control w-full max-w-xs">
-                        <label class="label"><span class="label-text font-bold">{{ t('Application language')
-                                }}</span></label>
-                        <select id="languageSelect" class="select select-bordered"
-                            onchange="changeLanguage(this.value)">
-                            <option value="en">{{ t('English (Default)') }}</option>
-                            <option value="pt_BR">{{ t('Português (Brasil)') }}</option>
-                        </select>
-                    </div>
-                </div>
-
-                <button class="btn btn-primary mt-8 w-full md:w-auto" onclick="submitShopSettings()">{{ t('Save')
-                    }}</button>
-            </div>
-        </section>
-
+            <button class="btn btn-primary mt-4 w-full md:w-auto" onclick="submitTitlesSettings()">{{ t('Save')
+                }}</button>
     </div>
+    </section>
+
+    <!-- TitleDB Sources -->
+    <section id="TitleDB" class="card bg-base-100 shadow-xl border border-primary/20 overflow-hidden">
+        <div class="card-body">
+            <h2 class="card-title text-2xl mb-4 flex items-center gap-2 text-primary">
+                <i class="bi bi-database-fill"></i> {{ t('TitleDB Sources') }}
+            </h2>
+
+            {% if active_source %}
+            <div class="alert {{ 'alert-success' if active_source.is_updated else 'alert-warning' }} shadow-sm mb-6">
+                <i
+                    class="bi {{ 'bi-check-circle-fill' if active_source.is_updated else 'bi-exclamation-triangle-fill' }} text-xl"></i>
+                <div class="text-sm">
+                    <div class="font-bold">{{ t('Current Active Source') }}: {{ active_source.name }}</div>
+                    <div class="opacity-70">{{ t('Last local update') }}: {{ active_source.time_since }} {{ t('ago')
+                        }} ({{ t('Up to date') if active_source.is_updated else t('Outdated') }})</div>
+                    <div class="mt-1">
+                        <span class="opacity-70">{{ t('Loaded Titles File') }}:</span>
+                        <a href="/static/titledb/{{ active_source.loaded_titles_file }}" target="_blank"
+                            class="badge badge-ghost hover:badge-primary font-mono text-xs cursor-pointer tracking-tighter">{{
+                            active_source.loaded_titles_file }}</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="overflow-x-auto mb-6">
+                <table class="table table-sm w-full" id="titledbSourcesTable">
+                    <thead>
+                        <tr>
+                            <th>{{ t('Name') }}</th>
+                            <th>{{ t('Type') }}</th>
+                            <th>{{ t('Priority') }}</th>
+                            <th>{{ t('Status') }}</th>
+                            <th class="text-right">{{ t('Actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="flex flex-wrap gap-4 items-center">
+                <div class="collapse collapse-arrow bg-primary/5 border border-primary/20 flex-grow">
+                    <input type="checkbox" id="collapseNewSource" />
+                    <div class="collapse-title font-bold">{{ t('Add custom source') }}</div>
+                    <div class="collapse-content p-4">
+                        <div class="bg-base-100/50 border border-primary/20 rounded-xl p-4 space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <input type="text" id="inputSourceName" placeholder="{{ t('Source Name') }}"
+                                    class="input input-bordered w-full" />
+                                <input type="text" id="inputSourceUrl" placeholder="https://..."
+                                    class="input input-bordered w-full" />
+                                <select id="inputSourceType" class="select select-bordered w-full">
+                                    <option value="json" selected>{{ t('JSON (Direct)') }}</option>
+                                    <option value="zip_legacy">{{ t('Legacy (ZIP)') }}</option>
+                                </select>
+                                <input type="number" id="inputSourcePriority" value="50"
+                                    class="input input-bordered w-full" />
+                            </div>
+                            <button class="btn btn-primary w-full md:w-auto" onclick="submitNewSource()">Add</button>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-neutral updateTitleDBBtn" onclick="forceTitleDBUpdate()">{{ t('Force TitleDB
+                    Update') }}</button>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Shop Configuration -->
+    <section id="Shop" class="card bg-base-100 shadow-xl border border-primary/20 overflow-hidden mb-12">
+        <div class="card-body">
+            <h2 class="card-title text-2xl mb-4 flex items-center gap-2 text-primary">
+                <i class="bi bi-cart-fill"></i> {{ t('Shop') }}
+            </h2>
+
+            <div class="space-y-6">
+                <div class="form-control w-full">
+                    <label class="label"><span class="label-text font-bold">{{ t('Shop URL') }}</span></label>
+                    <input id="shopHostInput" placeholder="shop.domain.tld" class="input input-bordered w-full" />
+                    <span class="label-text-alt opacity-50 mt-1">{{ t('Configure your shop URL to enable host
+                        verification.') }}</span>
+                </div>
+
+                <div class="flex flex-wrap gap-8">
+                    <label class="label cursor-pointer gap-2"><input type="checkbox" id="publicShopCheck"
+                            class="checkbox checkbox-primary" /> <span class="label-text font-bold">{{ t('Public
+                            shop') }}</span></label>
+                    <label class="label cursor-pointer gap-2"><input type="checkbox" id="encryptShopCheck"
+                            class="checkbox checkbox-primary" /> <span class="label-text font-bold">{{ t('Encrypt
+                            shop') }}</span></label>
+                </div>
+
+                <div class="form-control w-full">
+                    <label class="label"><span class="label-text font-bold">{{ t('Message of the day')
+                            }}</span></label>
+                    <textarea id="motdTextArea" rows="3" class="textarea textarea-bordered w-full"></textarea>
+                </div>
+
+                <div class="form-control w-full max-w-xs">
+                    <label class="label"><span class="label-text font-bold">{{ t('Application language')
+                            }}</span></label>
+                    <select id="languageSelect" class="select select-bordered" onchange="changeLanguage(this.value)">
+                        <option value="en">{{ t('English (Default)') }}</option>
+                        <option value="pt_BR">{{ t('Português (Brasil)') }}</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn btn-primary mt-8 w-full md:w-auto" onclick="submitShopSettings()">{{ t('Save')
+                }}</button>
+        </div>
+    </section>
+
+</div>
 </div>
 
 <!-- Custom Modals (Using daisyUI Dialog) -->
@@ -489,7 +489,11 @@
     }
 
     function submitTitlesSettings() {
-        const data = { region: $('#selectRegion').val(), language: $('#selectLanguage').val() };
+        const data = {
+            region: $('#selectRegion').val(),
+            language: $('#selectLanguage').val(),
+            dbi_versions: getCheckboxStatus('useDbiVersionsCheck')
+        };
         $.ajax({ url: "/api/settings/titles", type: 'POST', data: JSON.stringify(data), contentType: "application/json", success: () => showToast('{{ t("Saved") }}!') });
 
         const keysFile = $('#consoleKeysInput')[0].files[0];
@@ -505,8 +509,7 @@
             host: getInputVal('shopHostInput'),
             public: getCheckboxStatus('publicShopCheck'),
             encrypt: getCheckboxStatus('encryptShopCheck'),
-            motd: getInputVal('motdTextArea'),
-            dbi_versions: getCheckboxStatus('useDbiVersionsCheck')
+            motd: getInputVal('motdTextArea')
         };
         $.ajax({ url: "/api/settings/shop", type: 'POST', data: JSON.stringify(data), contentType: "application/json", success: () => showToast('{{ t("Saved") }}!') });
     }

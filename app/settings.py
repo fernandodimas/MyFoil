@@ -100,10 +100,12 @@ def delete_library_path_from_settings(path):
                 })
     return success, errors
 
-def set_titles_settings(region, language):
+def set_titles_settings(region, language, dbi_versions=None):
     settings = load_settings()
     settings['titles']['region'] = region
     settings['titles']['language'] = language
+    if dbi_versions is not None:
+        settings['titles']['dbi_versions'] = dbi_versions
     with open(CONFIG_FILE, 'w') as yaml_file:
         yaml.dump(settings, yaml_file)
 

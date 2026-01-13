@@ -35,6 +35,7 @@ DEFAULT_SETTINGS = {
         "language": "en",
         "region": "US",
         "valid_keys": False,
+        "dbi_versions": False,
     },
     "shop": {
         "motd": "Welcome to your own shop!",
@@ -44,7 +45,6 @@ DEFAULT_SETTINGS = {
         "clientCertKey": "-----BEGIN PRIVATE KEY-----",
         "host": "",
         "hauth": "",
-        "dbi_versions": False,
     }
 }
 

@@ -401,6 +401,8 @@ def set_titles_settings_api():
     settings = request.json
     region = settings['region']
     language = settings['language']
+    dbi_versions = settings.get('dbi_versions', False)
+    
     languages_path = os.path.join(TITLEDB_DIR, 'languages.json')
     if not os.path.exists(languages_path):
         return jsonify({
@@ -422,7 +424,7 @@ def set_titles_settings_api():
         }
         return jsonify(resp)
     
-    set_titles_settings(region, language)
+    set_titles_settings(region, language, dbi_versions)
     reload_conf()
     
     # Run update in background
