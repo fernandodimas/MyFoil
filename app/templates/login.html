@@ -13,24 +13,24 @@
                                 <i class="bi bi-box-seam-fill is-size-1 has-text-white"></i>
                             </div>
                             <h2 class="title is-2 has-text-weight-black tracking-tighter">MyFoil</h2>
-                            <p class="subtitle is-6 opacity-50">{{ t('Login') }}</p>
+                            <p class="subtitle is-6 opacity-50">Entrar</p>
                         </div>
 
                         <form method="POST" action="/login">
                             <div class="field mb-5">
-                                <label class="label">{{ t('Username') }}</label>
+                                <label class="label">Usuário</label>
                                 <div class="control has-icons-left">
-                                    <input class="input is-medium" type="text" name="user"
-                                        placeholder="{{ t('Username') }}" required>
+                                    <input class="input is-medium" type="text" name="user" placeholder="Usuário"
+                                        required>
                                     <span class="icon is-small is-left"><i class="bi bi-person-fill"></i></span>
                                 </div>
                             </div>
 
                             <div class="field mb-5">
-                                <label class="label">{{ t('Password') }}</label>
+                                <label class="label">Senha</label>
                                 <div class="control has-icons-left">
-                                    <input class="input is-medium" type="password" name="password"
-                                        placeholder="{{ t('Password') }}" required>
+                                    <input class="input is-medium" type="password" name="password" placeholder="Senha"
+                                        required>
                                     <span class="icon is-small is-left"><i class="bi bi-lock-fill"></i></span>
                                 </div>
                             </div>
@@ -39,7 +39,7 @@
                                 <div class="control">
                                     <label class="checkbox">
                                         <input type="checkbox" name="remember" id="remember">
-                                        {{ t('Remember me') }}
+                                        Lembrar-me
                                     </label>
                                 </div>
                             </div>
@@ -49,7 +49,7 @@
                             <div class="field">
                                 <button type="submit"
                                     class="button is-primary is-medium is-fullwidth has-text-weight-bold shadow-lg">
-                                    {{ t('Login') }}
+                                    Entrar
                                 </button>
                             </div>
                         </form>

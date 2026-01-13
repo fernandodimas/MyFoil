@@ -98,27 +98,27 @@ class TitleDBSourceManager:
     # Default sources
     DEFAULT_SOURCES = [
         TitleDBSource(
+            name="tinfoil.media",
+            base_url="https://tinfoil.media/repo/db",
+            priority=1,
+            source_type='json'
+        ),
+        TitleDBSource(
             name="MyFoil (Legacy)",
             base_url="https://nightly.link/a1ex4/ownfoil/workflows/region_titles/master/titledb.zip",
             enabled=True,
-            priority=1,
+            priority=2,
             source_type='zip_legacy'
         ),
         TitleDBSource(
             name="blawar/titledb (GitHub)",
             base_url="https://raw.githubusercontent.com/blawar/titledb/master",
-            priority=2,
+            priority=3,
             source_type='json'
         ),
         TitleDBSource(
             name="bottle/titledb (GitHub)",
             base_url="https://raw.githubusercontent.com/Big-On-The-Bottle/titledb/main",
-            priority=3,
-            source_type='json'
-        ),
-        TitleDBSource(
-            name="tinfoil.media",
-            base_url="https://tinfoil.media/repo/db",
             priority=4,
             source_type='json'
         )

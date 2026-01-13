@@ -3,15 +3,22 @@
     --text-color: #212529;
     --card-bg: #ffffff;
     --card-border: rgba(0,0,0,.125);
-    --header-bg: linear-gradient(to top, rgba(7, 0, 91, 0.71), #001233a1);
+    --header-bg: #ffffff;
+    --header-text: #212529;
+    --nav-bg: #ffffff;
+    --border-color: #dee2e6;
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg-color: #2a3a4f;
-        --text-color: #e9ecef;
-        --card-bg: #34495e;
-        --card-border: #455a64;
+        --bg-color: #0f172a; /* Slate 900 - Darker background */
+        --text-color: #f1f5f9; /* Slate 100 - Lighter text */
+        --card-bg: #1e293b; /* Slate 800 - Slightly lighter than bg */
+        --card-border: #334155; /* Slate 700 */
+        --header-bg: #1e293b;
+        --header-text: #f1f5f9;
+        --nav-bg: #1e293b;
+        --border-color: #334155;
     }
 }
 

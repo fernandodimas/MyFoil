@@ -402,6 +402,9 @@ def identify_file(filepath):
 def get_game_info(title_id):
     global _titles_db
     if not _titles_db:
+        load_titledb()
+    
+    if not _titles_db:
         return {
             'name': f'Unknown ({title_id})',
             'bannerUrl': '',
@@ -422,8 +425,9 @@ def get_game_info(title_id):
             # Format A: { "ID": { "name": "..." } }
             info = _titles_db.get(search_id) or _titles_db.get(search_id.lower())
             
-            # Format B: { "some_key": { "id": "ID", "name": "..." } }
             if not info:
+                logger.debug(f"Direct lookup failed for {search_id}. Checking keys...")
+                # Format B: { "some_key": { "id": "ID", "name": "..." } }
                 for k, v in _titles_db.items():
                     if isinstance(v, dict) and v.get('id', '').upper() == search_id:
                         info = v

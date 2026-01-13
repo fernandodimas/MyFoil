@@ -11,10 +11,10 @@
             <div class="is-clickable p-4 is-flex is-justify-content-between is-align-items-center"
                 onclick="$('#statsContent').toggleClass('is-hidden')">
                 <div class="is-flex is-align-items-center gap-4">
-                    <span class="has-text-weight-bold tracking-tight">{{ t('Library Overview') }}</span>
+                    <span class="has-text-weight-bold tracking-tight">Visão Geral</span>
                     <span class="tag is-primary is-medium has-text-weight-black">{{ total_files }}</span>
                 </div>
-                <span class="is-size-7 opacity-50">{{ t('Click to toggle') }}</span>
+                <span class="is-size-7 opacity-50">Clique para expandir</span>
             </div>
 
             <div id="statsContent" class="p-4 border-top">
@@ -22,11 +22,10 @@
                     <!-- Owned Stats -->
                     <div class="column">
                         <div class="notification is-success is-light border-success-soft">
-                            <p class="heading opacity-70">{{ t('Owned Content') }}</p>
+                            <p class="heading opacity-70">Conteúdo Adquirido</p>
                             <p class="title is-4 mb-2">{{ total_games + total_updates + total_dlcs }}</p>
                             <p class="is-size-7 opacity-70">
-                                {{ total_games }} {{ t('Games') }} | {{ total_updates }} {{ t('Updates') }} | {{
-                                total_dlcs }} {{ t('DLCs') }}
+                                {{ total_games }} Jogos | {{ total_updates }} Updates | {{ total_dlcs }} DLCs
                             </p>
                         </div>
                     </div>
@@ -34,11 +33,11 @@
                     <!-- Library Status -->
                     <div class="column">
                         <div class="notification is-warning is-light border-warning-soft">
-                            <p class="heading opacity-70">{{ t('Library Status') }}</p>
+                            <p class="heading opacity-70">Status da Biblioteca</p>
                             <p class="title is-4 mb-2">{{ games_missing_updates + games_missing_dlcs }}</p>
                             <p class="is-size-7 opacity-70">
-                                {{ games_missing_updates }} {{ t('Games needing Update') }}<br>
-                                {{ games_missing_dlcs }} {{ t('Games missing DLCs') }}
+                                {{ games_missing_updates }} Atualizações Pendentes<br>
+                                {{ games_missing_dlcs }} DLCs Faltando
                             </p>
                         </div>
                     </div>
@@ -46,11 +45,10 @@
                     <!-- Missing Content -->
                     <div class="column">
                         <div class="notification is-danger is-light border-danger-soft">
-                            <p class="heading opacity-70">{{ t('Missing Content') }}</p>
+                            <p class="heading opacity-70">Conteúdo Faltando</p>
                             <p class="title is-4 mb-2">{{ missing_games + missing_dlcs }}</p>
                             <p class="is-size-7 opacity-70">
-                                {{ missing_games }} {{ t('Missing Base Games') }} | {{ missing_dlcs }} {{ t('Missing
-                                DLCs') }}
+                                {{ missing_games }} Jogos Base | {{ missing_dlcs }} DLCs
                             </p>
                         </div>
                     </div>
@@ -75,7 +73,7 @@
                                 <div class="dropdown-content p-2" style="min-width: 200px;">
                                     <label class="checkbox block py-1 px-2">
                                         <input type="checkbox" class="filterInput" id="filterCheckBase"> <span
-                                            class="ml-2">BASE</span>
+                                            class="ml-2">JOGO BASE</span>
                                     </label>
                                     <label class="checkbox block py-1 px-2">
                                         <input type="checkbox" class="filterInput" id="filterCheckDlc"> <span
@@ -84,20 +82,20 @@
                                     <hr class="dropdown-divider">
                                     <label class="checkbox block py-1 px-2">
                                         <input type="checkbox" class="filterInput" id="filterCheckOwned"> <span
-                                            class="ml-2">Owned</span>
+                                            class="ml-2">Adquirido</span>
                                     </label>
                                     <label class="checkbox block py-1 px-2">
                                         <input type="checkbox" class="filterInput" id="filterCheckMissing"> <span
-                                            class="ml-2">Missing</span>
+                                            class="ml-2">Faltando</span>
                                     </label>
                                     <hr class="dropdown-divider">
                                     <label class="checkbox block py-1 px-2">
                                         <input type="checkbox" class="filterInput" id="filterCheckUpToDate"> <span
-                                            class="ml-2">Up to date</span>
+                                            class="ml-2">Atualizado</span>
                                     </label>
                                     <label class="checkbox block py-1 px-2">
                                         <input type="checkbox" class="filterInput" id="filterCheckMissingUpdate"> <span
-                                            class="ml-2">Missing Update</span>
+                                            class="ml-2">Falta Atualização</span>
                                     </label>
                                 </div>
                             </div>
@@ -117,12 +115,12 @@
                 <div class="level-right">
                     <div class="level-item">
                         <div class="buttons has-addons" id="viewToggleButtons">
-                            <button class="button is-small" onclick="setView('card')" id="btnViewCard"
-                                title="Card View"><i class="bi bi-grid-fill"></i></button>
-                            <button class="button is-small" onclick="setView('icon')" id="btnViewIcon"
-                                title="Icon View"><i class="bi bi-app"></i></button>
-                            <button class="button is-small" onclick="setView('list')" id="btnViewList"
-                                title="List View"><i class="bi bi-list-ul"></i></button>
+                            <button class="button is-small" onclick="setView('card')" id="btnViewCard" title="Grade"><i
+                                    class="bi bi-grid-fill"></i></button>
+                            <button class="button is-small" onclick="setView('icon')" id="btnViewIcon" title="Ícones"><i
+                                    class="bi bi-app"></i></button>
+                            <button class="button is-small" onclick="setView('list')" id="btnViewList" title="Lista"><i
+                                    class="bi bi-list-ul"></i></button>
                         </div>
                     </div>
                 </div>
@@ -138,16 +136,15 @@
         <div id="noResults" class="is-hidden has-text-centered py-6">
             <div class="notification is-light">
                 <i class="bi bi-search is-size-1 opacity-20 block mb-4"></i>
-                <h3 class="title is-4">{{ t('No games found') }}</h3>
-                <p class="subtitle is-6 opacity-50">{{ t('Try adjusting your filters or checking your library paths.')
-                    }}</p>
+                <h3 class="title is-4">Nenhum jogo encontrado</h3>
+                <p class="subtitle is-6 opacity-50">Tente ajustar seus filtros ou verifique as configurações.</p>
             </div>
         </div>
 
         <!-- Pagination -->
         <nav class="pagination is-centered mt-6" role="navigation" aria-label="pagination">
-            <a class="pagination-previous" id="btnPrev" onclick="changePage(-1)">{{ t('Previous') }}</a>
-            <a class="pagination-next" id="btnNext" onclick="changePage(1)">{{ t('Next page') }}</a>
+            <a class="pagination-previous" id="btnPrev" onclick="changePage(-1)">Anterior</a>
+            <a class="pagination-next" id="btnNext" onclick="changePage(1)">Próxima</a>
             <ul class="pagination-list" id="paginationSummary">
                 <!-- Injected via JS -->
             </ul>
@@ -168,7 +165,7 @@
             <!-- Injected via JS -->
         </section>
         <footer class="modal-card-foot border-none is-justify-content-flex-end">
-            <button class="button is-primary" onclick="closeModal('gameDetailsModal')">{{ t('Close') }}</button>
+            <button class="button is-primary" onclick="closeModal('gameDetailsModal')">Fechar</button>
         </footer>
     </div>
 </div>
@@ -336,10 +333,10 @@
                     <table class="table is-fullwidth is-hoverable game-list-table">
                         <thead>
                             <tr class="is-selected" style="background: #570df8">
-                                <th>Title</th>
+                                <th>Título</th>
                                 <th>ID</th>
-                                <th>Version</th>
-                                <th class="is-hidden-mobile">Size</th>
+                                <th>Versão</th>
+                                <th class="is-hidden-mobile">Tamanho</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -365,7 +362,7 @@
             $('#modalTitle').text(game.name);
             let filesHtml = game.files && game.files.length > 0 ? `
                 <div class="mt-5">
-                    <p class="heading has-text-weight-bold mb-3 has-text-primary">Associated Files</p>
+                    <p class="heading has-text-weight-bold mb-3 has-text-primary">Arquivos Associados</p>
                     <div class="field">
                         ${game.files.map(f => `
                             <div class="box is-shadowless border p-3 mb-3">
@@ -385,7 +382,7 @@
                         `).join('')}
                     </div>
                 </div>
-            ` : '<p class="notification is-warning is-light mt-5">No local files found for this title.</p>';
+            ` : '<p class="notification is-warning is-light mt-5">Nenhum arquivo local encontrado.</p>';
 
             let content = `
                 <div class="columns">
@@ -399,16 +396,16 @@
                         </div>
                     </div>
                     <div class="column is-8">
-                        <p class="subtitle is-6 has-text-weight-bold mb-2">Overview</p>
-                        <p class="is-size-7 mb-4 opacity-70">${game.description || 'No description available.'}</p>
+                        <p class="subtitle is-6 has-text-weight-bold mb-2">Resumo</p>
+                        <p class="is-size-7 mb-4 opacity-70">${game.description || 'Nenhuma descrição disponível.'}</p>
                         
                         <div class="columns is-multiline is-mobile is-gapless mb-4">
-                            <div class="column is-6"><p class="is-size-7"><strong>Publisher:</strong> ${game.publisher || '--'}</p></div>
-                            <div class="column is-6"><p class="is-size-7"><strong>Release:</strong> ${game.release_date || '--'}</p></div>
+                            <div class="column is-6"><p class="is-size-7"><strong>Editora:</strong> ${game.publisher || '--'}</p></div>
+                            <div class="column is-6"><p class="is-size-7"><strong>Lançamento:</strong> ${game.release_date || '--'}</p></div>
                         </div>
 
                         ${game.dlcs && game.dlcs.length ? `
-                            <p class="heading has-text-primary has-text-weight-bold mt-5 mb-2">Available DLCs (${game.dlcs.length})</p>
+                            <p class="heading has-text-primary has-text-weight-bold mt-5 mb-2">DLCs Disponíveis (${game.dlcs.length})</p>
                             <div class="tags">
                                 ${game.dlcs.map(d => `<span class="tag is-light is-size-7">${d.name}</span>`).join('')}
                             </div>
@@ -478,8 +475,8 @@
         $('#btnNext').toggleClass('is-disabled', currentPage === totalPages);
 
         $('#paginationSummary').html(`
-            <li><span class="pagination-link is-current bg-primary shadow-sm border-none">Pagina ${currentPage} de ${totalPages}</span></li>
-            <li class="ml-4 is-size-7 opacity-50 has-text-weight-bold">(${filteredGames.length} items)</li>
+            <li><span class="pagination-link is-current bg-primary shadow-sm border-none">Página ${currentPage} de ${totalPages}</span></li>
+            <li class="ml-4 is-size-7 opacity-50 has-text-weight-bold">(${filteredGames.length} itens)</li>
         `);
     }
 
@@ -502,7 +499,7 @@
         const loadingHtml = `
         <div class="column is-12 has-text-centered p-6">
             <span class="loader is-loading is-inline-block" style="width: 3rem; height: 3rem; border-width: 3px;"></span>
-            <p class="mt-4 is-size-6 has-text-weight-bold opacity-60">{{ t('Loading Library...') }}</p>
+            <p class="mt-4 is-size-6 has-text-weight-bold opacity-60">Carregando Biblioteca...</p>
         </div>
         `;
         $('#libraryContainer').html(loadingHtml);
@@ -518,7 +515,7 @@
             applyFilters();
         })
             .fail(function () {
-                $('#libraryContainer').html(`<div class="notification is-danger">{{ t('Failed to load library') }}</div>`);
+                $('#libraryContainer').html(`<div class="notification is-danger">Falha ao carregar biblioteca</div>`);
             });
 
         // Populated globally outside raw block

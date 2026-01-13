@@ -16,13 +16,13 @@
             <div class="navbar-start">
                 <a class="navbar-item {% if title=='Library' %}is-active has-text-primary has-text-weight-bold{% endif %}"
                     href="/">
-                    <i class="bi bi-collection-play mr-2"></i> {{ t('Library') }}
+                    <i class="bi bi-collection-play mr-2"></i> Biblioteca
                 </a>
 
                 {% if current_user.is_admin or admin_account_created == false %}
                 <a class="navbar-item {% if title=='Settings' %}is-active has-text-primary has-text-weight-bold{% endif %}"
                     href="/settings">
-                    <i class="bi bi-sliders mr-2"></i> {{ t('Settings') }}
+                    <i class="bi bi-sliders mr-2"></i> Configurações
                 </a>
                 {% endif %}
             </div>
@@ -31,14 +31,14 @@
                 <div class="navbar-item is-hidden" id="processIndicator">
                     <span class="tag is-info is-light is-rounded">
                         <i class="fas fa-spinner fa-pulse mr-2"></i>
-                        <span class="is-size-7 has-text-weight-bold" id="processText">{{ t('Processing...') }}</span>
+                        <span class="is-size-7 has-text-weight-bold" id="processText">Processando...</span>
                     </span>
                 </div>
                 {% if title == 'Library' %}
                 <div class="navbar-item">
                     <div class="control has-icons-right">
                         <input class="input is-rounded is-small" id="navbarSearch" type="text"
-                            placeholder="{{ t('Search titles...') }}" list="gameTitlesList">
+                            placeholder="Buscar jogos..." list="gameTitlesList">
                         <span class="icon is-small is-right">
                             <i class="bi bi-search"></i>
                         </span>
@@ -50,7 +50,7 @@
                 <div class="navbar-item">
                     <div class="buttons">
                         <button class="button is-ghost is-small" id="themeToggle" onclick="toggleTheme()"
-                            title="{{ t('Toggle Theme') }}">
+                            title="Alternar Tema">
                             <span class="icon">
                                 <i class="bi bi-circle-half"></i>
                             </span>
@@ -58,11 +58,11 @@
 
                         {% if current_user.is_authenticated %}
                         <a href="/logout" class="button is-light is-small">
-                            <strong>{{ t('Logout') }}</strong>
+                            <strong>Sair</strong>
                         </a>
                         {% else %}
                         <a href="/login" class="button is-primary is-small">
-                            <strong>{{ t('Login') }}</strong>
+                            <strong>Entrar</strong>
                         </a>
                         {% endif %}
                     </div>
@@ -104,9 +104,9 @@
             if (data.scanning || data.updating_titledb) {
                 indicator.removeClass('is-hidden');
                 if (data.updating_titledb) {
-                    text.text('{{ t("Updating TitleDB...") }}');
+                    text.text('Atualizando TitleDB...');
                 } else if (data.scanning) {
-                    text.text('{{ t("Scanning Library...") }}');
+                    text.text('Escaneando Biblioteca...');
                 }
             } else {
                 indicator.addClass('is-hidden');
