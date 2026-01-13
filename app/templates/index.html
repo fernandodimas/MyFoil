@@ -288,7 +288,8 @@
             const card = $(`
                 <div class="column is-3-desktop is-4-tablet is-12-mobile">
                     <div class="card game-card box is-paddingless is-shadowless border" onclick="showGameDetails('${game.id}')">
-                        <div class="card-image">
+                        <div class="card-image position-relative">
+                            <span class="tag ${game.app_type === 'BASE' ? 'is-success' : 'is-info'} type-badge">${game.app_type}</span>
                             <figure class="image is-16by9">
                                 <img src="${game.iconUrl || '/static/no-icon.png'}" alt="${game.name}" style="object-fit: cover;">
                             </figure>
@@ -301,7 +302,6 @@
                                     <span class="tag is-primary is-light is-small font-mono">${game.app_id}</span>
                                     <span class="tag is-info is-light is-small">v${game.version_name || game.version}</span>
                                 </div>
-                                <span class="tag ${game.app_type === 'BASE' ? 'is-success' : 'is-warning'} is-light is-small">${game.app_type}</span>
                             </div>
                         </div>
                     </div>
@@ -318,7 +318,7 @@
                 <div class="game-icon-item" onclick="showGameDetails('${game.id}')" title="${game.name}">
                     <figure class="image is-square box p-0 overflow-hidden shadow-sm relative">
                         <img src="${game.iconUrl || '/static/no-icon.png'}" alt="${game.name}">
-                        <span class="tag ${game.app_type === 'BASE' ? 'is-success' : 'is-warning'} is-small" style="position: absolute; bottom: 0; right: 0; opacity: 0.8;">${game.app_type}</span>
+                        <span class="tag ${game.app_type === 'BASE' ? 'is-success' : 'is-info'} type-badge is-small">${game.app_type}</span>
                     </figure>
                 </div>
             `);
@@ -348,7 +348,7 @@
         items.forEach(game => {
             table.find('tbody').append(`
                 <tr onclick="showGameDetails('${game.id}')">
-                    <td><span class="tag ${game.app_type === 'BASE' ? 'is-success' : 'is-warning'} is-light is-small">${game.app_type}</span></td>
+                    <td><span class="tag ${game.app_type === 'BASE' ? 'is-success' : 'is-info'} is-small">${game.app_type}</span></td>
                     <td><strong>${game.name}</strong></td>
                     <td class="font-mono is-size-7">${game.app_id}</td>
                     <td><span class="tag is-light">v${game.version}</span></td>

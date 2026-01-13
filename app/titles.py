@@ -454,17 +454,27 @@ def get_game_info(title_id):
                         break
 
         if info:
-            return {
-                'name': info.get('name', 'Unknown'),
-                'bannerUrl': info.get('bannerUrl', ''),
-                'iconUrl': info.get('iconUrl', ''),
-                'id': info.get('id', title_id),
+            res = {
+                'name': info.get('name') or 'Unknown Title',
+                'bannerUrl': info.get('bannerUrl') or '',
+                'iconUrl': info.get('iconUrl') or '',
+                'id': info.get('id') or title_id,
                 'category': info.get('category', []) if isinstance(info.get('category'), list) else [info.get('category')] if info.get('category') else [],
-                'releaseDate': info.get('releaseDate', ''),
-                'size': info.get('size', 0),
-                'publisher': info.get('publisher', 'Nintendo'),
-                'description': info.get('description', '')
+                'release_date': info.get('releaseDate') or '',
+                'size': info.get('size') or 0,
+                'publisher': info.get('publisher') or 'Nintendo',
+                'description': info.get('description') or ''
             }
+            
+            # DLC/Update Icon Fallback: If icon is missing, try to inherit from base game
+            if (not res['iconUrl'] or res['iconUrl'] == '') and not search_id.endswith('000'):
+                base_id = search_id[:-3] + '000'
+                base_info = get_game_info(base_id)
+                if base_info and base_info.get('iconUrl'):
+                    res['iconUrl'] = base_info['iconUrl']
+                    logger.debug(f"Inherited icon from base game {base_id} for {search_id}")
+            
+            return res
         
         # If not found, try to find parent BASE game if this is a DLC/UPD
         if not search_id.endswith('000'):
@@ -478,7 +488,7 @@ def get_game_info(title_id):
                     'iconUrl': base_info['iconUrl'],
                     'id': title_id,
                     'category': base_info['category'],
-                    'releaseDate': base_info['releaseDate'],
+                    'release_date': base_info['release_date'],
                     'size': 0,
                     'publisher': base_info['publisher'],
                     'description': f"Informação estendida do jogo base: {base_info['name']}"
@@ -493,7 +503,7 @@ def get_game_info(title_id):
             'iconUrl': '',
             'id': title_id.upper(),
             'category': [],
-            'releaseDate': '',
+            'release_date': '',
             'size': 0,
             'publisher': '--',
             'description': 'ID não encontrado no banco de dados. Por favor, atualize o TitleDB nas configurações.'

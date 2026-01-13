@@ -681,7 +681,7 @@ def serve_game(id):
 @app.route('/api/app_info/<int:id>')
 @access_required('shop')
 def app_info_api(id):
-    app_obj = Apps.query.get(id)
+    app_obj = db.session.get(Apps, id)
     if not app_obj:
         return jsonify({'success': False, 'error': 'App not found'})
     

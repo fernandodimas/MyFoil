@@ -4,7 +4,7 @@
     --text-muted: #64748b;
     --card-bg: #ffffff;
     --card-border: #e2e8f0;
-    --primary: #570df8;
+    --primary: #7c3aed;
     --border-color: #e2e8f0;
 }
 
@@ -14,7 +14,7 @@
     --text-muted: #94a3b8;
     --card-bg: #1e293b;
     --card-border: #334155;
-    --primary: #570df8;
+    --primary: #7c3aed;
     --border-color: #334155;
 }
 
@@ -133,4 +133,25 @@ p.game-description {
 .popover-body {
     max-height: 200px; /* Set your desired max height */
     overflow-y: auto; /* Enable vertical scrolling */
+}
+
+/* Badge Overlay */
+.type-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 10;
+    font-weight: 800;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+[data-theme="dark"] .tag {
+    color: #fff !important;
+}
+
+[data-theme="dark"] .title, 
+[data-theme="dark"] .subtitle, 
+[data-theme="dark"] .card-content p {
+    color: #f1f5f9 !important;
 }

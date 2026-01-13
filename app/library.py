@@ -476,7 +476,12 @@ def generate_library():
         if info_from_titledb is None:
             logger.warning(f'Info not found for game: {title}')
             continue
+            
+        # VERY IMPORTANT: Preserve the database integer ID! 
+        # TitleDB info contains 'id' as a hex string which would overwrite our database PK
+        db_id = title['id']
         title.update(info_from_titledb)
+        title['id'] = db_id 
         
         if title['app_type'] == APP_TYPE_BASE:
             # Get title status from Titles table (already calculated by update_titles)
