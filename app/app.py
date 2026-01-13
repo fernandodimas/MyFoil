@@ -918,12 +918,20 @@ def system_info_api():
     settings = load_settings()
     titledb_file = titles_lib.get_loaded_titles_file() if hasattr(titles_lib, 'get_loaded_titles_file') else 'Unknown'
     
+    # Check what update source we are using
+    use_dbi = settings.get('titles/dbi_versions', False)
+    update_src = "DBI (versions.txt)" if use_dbi else "TitleDB (versions.json)"
+    
+    # Identification source
+    id_src = f"TitleDB ({settings.get('titles/region', 'US')}/{settings.get('titles/language', 'en')})"
+    
     return jsonify({
         'build_version': BUILD_VERSION,
+        'id_source': id_src,
+        'update_source': update_src,
         'titledb_region': settings.get('titles/region', 'US'),
         'titledb_language': settings.get('titles/language', 'en'),
-        'titledb_file': titledb_file,
-        'update_source': 'DBI versions.txt' if settings.get('titles/dbi_versions') else 'TitleDB'
+        'titledb_file': titledb_file
     })
 
 def scan_library():

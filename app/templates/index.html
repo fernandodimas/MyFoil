@@ -4,52 +4,49 @@
 {% include 'nav.html' %}
 
 <section class="section">
-    <div class="container is-fluid">
+    <div class="container is-fluid px-5">
 
         <!-- Stats Section -->
-        <div class="box p-0 overflow-hidden mb-6 shadow-sm">
-            <div class="is-clickable p-4 is-flex is-justify-content-between is-align-items-center"
-                onclick="$('#statsContent').toggleClass('is-hidden')">
-                <div class="is-flex is-align-items-center gap-4">
-                    <span class="has-text-weight-bold tracking-tight">Visão Geral</span>
-                    <span class="tag is-primary is-medium has-text-weight-black">{{ total_files }}</span>
+        <div class="box p-0 overflow-hidden mb-4 shadow-sm border-none bg-light-soft">
+            <div class="p-3 is-flex is-justify-content-between is-align-items-center"
+                style="border-bottom: 1px solid rgba(0,0,0,0.05)">
+                <div class="is-flex is-align-items-center gap-3">
+                    <span class="has-text-weight-bold tracking-tight is-size-6">Resumo da Biblioteca</span>
+                    <span class="tag is-primary is-rounded has-text-weight-black">{{ total_files }} itens</span>
                 </div>
-                <span class="is-size-7 opacity-50">Clique para expandir</span>
+                <button class="button is-ghost is-small p-0" onclick="$('#statsContent').toggleClass('is-hidden')">
+                    <span class="icon"><i class="bi bi-chevron-bar-expand"></i></span>
+                </button>
             </div>
 
-            <div id="statsContent" class="p-4 border-top">
-                <div class="columns is-variable is-3">
+            <div id="statsContent" class="p-3 is-hidden">
+                <div class="columns is-variable is-2">
                     <!-- Owned Stats -->
                     <div class="column">
-                        <div class="notification is-success is-light border-success-soft">
-                            <p class="heading opacity-70">Conteúdo Adquirido</p>
-                            <p class="title is-4 mb-2">{{ total_games + total_updates + total_dlcs }}</p>
-                            <p class="is-size-7 opacity-70">
-                                {{ total_games }} Jogos | {{ total_updates }} Updates | {{ total_dlcs }} DLCs
-                            </p>
+                        <div class="box is-shadowless border p-3 mb-0" style="background: rgba(72, 199, 142, 0.05)">
+                            <p class="heading mb-1 opacity-70">Acervo</p>
+                            <p class="title is-5 mb-1">{{ total_games + total_updates + total_dlcs }}</p>
+                            <p class="is-size-7 opacity-60">{{ total_games }}J | {{ total_updates }}U | {{ total_dlcs
+                                }}D</p>
                         </div>
                     </div>
 
                     <!-- Library Status -->
                     <div class="column">
-                        <div class="notification is-warning is-light border-warning-soft">
-                            <p class="heading opacity-70">Status da Biblioteca</p>
-                            <p class="title is-4 mb-2">{{ games_missing_updates + games_missing_dlcs }}</p>
-                            <p class="is-size-7 opacity-70">
-                                {{ games_missing_updates }} Atualizações Pendentes<br>
-                                {{ games_missing_dlcs }} DLCs Faltando
-                            </p>
+                        <div class="box is-shadowless border p-3 mb-0" style="background: rgba(255, 221, 87, 0.1)">
+                            <p class="heading mb-1 opacity-70">Pendências</p>
+                            <p class="title is-5 mb-1">{{ games_missing_updates + games_missing_dlcs }}</p>
+                            <p class="is-size-7 opacity-60">{{ games_missing_updates }} Upds | {{ games_missing_dlcs }}
+                                DLCs</p>
                         </div>
                     </div>
 
                     <!-- Missing Content -->
                     <div class="column">
-                        <div class="notification is-danger is-light border-danger-soft">
-                            <p class="heading opacity-70">Conteúdo Faltando</p>
-                            <p class="title is-4 mb-2">{{ missing_games + missing_dlcs }}</p>
-                            <p class="is-size-7 opacity-70">
-                                {{ missing_games }} Jogos Base | {{ missing_dlcs }} DLCs
-                            </p>
+                        <div class="box is-shadowless border p-3 mb-0" style="background: rgba(241, 70, 104, 0.05)">
+                            <p class="heading mb-1 opacity-70">Desejado</p>
+                            <p class="title is-5 mb-1">{{ missing_games + missing_dlcs }}</p>
+                            <p class="is-size-7 opacity-60">{{ missing_games }} Base | {{ missing_dlcs }} DLCs</p>
                         </div>
                     </div>
                 </div>
@@ -57,79 +54,87 @@
         </div>
 
         <!-- Controls Row -->
-        <div class="box p-3 mb-6 shadow-sm">
+        <div class="box p-2 mb-4 shadow-sm border-none">
             <div class="level is-mobile is-multiline">
                 <div class="level-left">
-                    <div class="level-item">
+                    <div class="level-item mr-2">
                         <!-- Bulma Dropdown for Filters -->
                         <div class="dropdown" id="filterDropdown">
                             <div class="dropdown-trigger">
                                 <button class="button is-primary is-small" aria-haspopup="true"
                                     aria-controls="dropdown-menu">
                                     <span class="icon is-small"><i class="bi bi-funnel-fill"></i></span>
+                                    <span class="is-hidden-mobile ml-1">Filtros</span>
                                 </button>
                             </div>
                             <div class="dropdown-menu" id="dropdown-menu" role="menu">
-                                <div class="dropdown-content p-2" style="min-width: 200px;">
-                                    <label class="checkbox block py-1 px-2">
-                                        <input type="checkbox" class="filterInput" id="filterCheckBase"> <span
-                                            class="ml-2">JOGO BASE</span>
-                                    </label>
-                                    <label class="checkbox block py-1 px-2">
-                                        <input type="checkbox" class="filterInput" id="filterCheckDlc"> <span
-                                            class="ml-2">DLC</span>
-                                    </label>
-                                    <hr class="dropdown-divider">
-                                    <label class="checkbox block py-1 px-2">
+                                <div class="dropdown-content p-2" style="min-width: 220px;">
+                                    <label class="checkbox block py-1 px-2 hover-bg-light rounded">
                                         <input type="checkbox" class="filterInput" id="filterCheckOwned" checked> <span
-                                            class="ml-2">Possuídos (Base)</span>
+                                            class="ml-2">Possuídos (Local)</span>
                                     </label>
-                                    <label class="checkbox block py-1 px-2">
+                                    <label class="checkbox block py-1 px-2 hover-bg-light rounded">
                                         <input type="checkbox" class="filterInput" id="filterCheckMissing"> <span
                                             class="ml-2">Faltantes (TitleDB)</span>
                                     </label>
                                     <hr class="dropdown-divider">
                                     <div class="field px-2">
-                                        <label class="label is-size-7 opacity-50">Gênero</label>
+                                        <label class="label is-size-7 opacity-50">Filtrar por Gênero</label>
                                         <div class="control">
                                             <div class="select is-small is-fullwidth">
                                                 <select id="filterGender" class="filterInput">
-                                                    <option value="">Todos</option>
+                                                    <option value="">Todos os Gêneros</option>
                                                 </select>
                                             </div>
                                         </div>
                                     </div>
                                     <hr class="dropdown-divider">
-                                    <label class="checkbox block py-1 px-2">
+                                    <label class="checkbox block py-1 px-2 hover-bg-light rounded">
                                         <input type="checkbox" class="filterInput" id="filterCheckUpToDate"> <span
-                                            class="ml-2">Atualizados</span>
+                                            class="ml-2">Apenas Atualizados</span>
                                     </label>
-                                    <label class="checkbox block py-1 px-2">
+                                    <label class="checkbox block py-1 px-2 hover-bg-light rounded">
                                         <input type="checkbox" class="filterInput" id="filterCheckMissingUpdate"> <span
-                                            class="ml-2">Pendente (Upd/DLC)</span>
+                                            class="ml-2">Possui Pendências</span>
                                     </label>
                                 </div>
                             </div>
                         </div>
                     </div>
 
+                    <div class="level-item mr-2">
+                        <div class="buttons has-addons">
+                            <button class="button is-small is-light" id="btnFilterPendingUpd"
+                                title="Pendente Atualização">
+                                <span class="icon is-small"><i class="bi bi-arrow-up-circle"></i></span>
+                                <span class="is-hidden-mobile">Update</span>
+                            </button>
+                            <button class="button is-small is-light" id="btnFilterPendingDlc" title="Pendente DLC">
+                                <span class="icon is-small"><i class="bi bi-plus-circle"></i></span>
+                                <span class="is-hidden-mobile">DLC</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="level-item">
-                        <button class="button is-small is-outlined" onclick="clearFilters()">
+                        <button class="button is-small is-outlined is-danger border-none" onclick="clearFilters()"
+                            title="Limpar Filtros">
                             <span class="icon is-small"><i class="bi bi-x-circle"></i></span>
-                            <span>Limpar Filtros</span>
+                            <span class="is-hidden-mobile">Limpar</span>
                         </button>
                     </div>
                 </div>
 
                 <div class="level-right">
-                    <div class="level-item">
-                        <div class="field is-horizontal is-align-items-center mr-4 is-hidden-mobile">
-                            <div class="field-label is-small mr-2">
-                                <label class="label opacity-50"><i class="bi bi-zoom-in"></i></label>
-                            </div>
+                    <div class="level-item mr-2 is-hidden-mobile">
+                        <!-- Summary info -->
+                        <span class="is-size-7 opacity-50" id="totalItemsCount">-- itens</span>
+                    </div>
+                    <div class="level-item mr-2 is-hidden-mobile">
+                        <div class="field is-horizontal is-align-items-center">
                             <div class="field-body">
-                                <input id="gridZoom" type="range" min="150" max="400" step="10" value="240"
-                                    oninput="updateGridZoom(this.value)">
+                                <input id="gridZoom" class="slider is-small is-primary m-0" type="range" min="180"
+                                    max="400" step="10" value="240" oninput="updateGridZoom(this.value)">
                             </div>
                         </div>
                     </div>
@@ -193,22 +198,22 @@
 </section>
 
 <!-- Footer with System Information -->
-<footer class="footer has-background-dark has-text-light py-3 mt-6">
-    <div class="container">
-        <div class="columns is-vcentered is-mobile">
-            <div class="column is-4">
-                <p class="is-size-7">
-                    <strong>Build:</strong> {{ BUILD_VERSION }}
+<footer class="footer has-background-dark has-text-light py-2 mt-6">
+    <div class="container is-fluid">
+        <div class="columns is-vcentered is-mobile is-multiline">
+            <div class="column is-12-mobile is-4-tablet">
+                <p class="is-size-7 opacity-70">
+                    <span class="has-text-weight-bold">Build:</span> {{ BUILD_VERSION }}
                 </p>
             </div>
-            <div class="column is-4 has-text-centered">
-                <p class="is-size-7">
-                    <strong>TitleDB:</strong> <span id="titledbInfo">Carregando...</span>
+            <div class="column is-12-mobile is-4-tablet has-text-centered-tablet">
+                <p class="is-size-7 opacity-70">
+                    <span class="has-text-weight-bold">Identificação:</span> <span id="idSource">Carregando...</span>
                 </p>
             </div>
-            <div class="column is-4 has-text-right">
-                <p class="is-size-7">
-                    <strong>Updates:</strong> <span id="updateSource">Carregando...</span>
+            <div class="column is-12-mobile is-4-tablet has-text-right-tablet">
+                <p class="is-size-7 opacity-70">
+                    <span class="has-text-weight-bold">Updates:</span> <span id="updateSource">Carregando...</span>
                 </p>
             </div>
         </div>
@@ -295,60 +300,83 @@
     #libraryContainer {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(var(--card-width, 240px), 1fr));
-        gap: 1.5rem;
+        gap: 1.25rem;
     }
 
-    .grid-item {
-        width: 100%;
+    @media screen and (min-width: 1600px) {
+        .container.is-fluid {
+            max-width: 1550px !important;
+            margin: 0 auto !important;
+        }
     }
 
-    .status-dot {
-        height: 8px;
-        width: 8px;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 5px;
+    @media screen and (min-width: 1920px) {
+        .container.is-fluid {
+            max-width: 1850px !important;
+            margin: 0 auto !important;
+        }
     }
 
-    .bg-orange {
-        background-color: #ff9f43;
+    @media screen and (min-width: 769px) {
+        .modal-card {
+            width: 800px;
+        }
     }
 
-    .bg-green {
-        background-color: #28c76f;
+    @media screen and (min-width: 1216px) {
+        .modal-card {
+            width: 1000px;
+        }
     }
 
-    .bg-gray {
-        background-color: #b4b7bd;
+    @media screen and (min-width: 1408px) {
+        .modal-card {
+            width: 1250px;
+        }
     }
 
-    .gap-1 {
-        gap: 0.25rem !important;
+    .dlc-tag {
+        display: inline-flex !important;
+        align-items: center;
+        height: auto !important;
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+        line-height: 1.25 !important;
     }
 
-    .gap-2 {
-        gap: 0.5rem !important;
+    .game-card {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        background: #fff;
     }
 
-    .gap-3 {
-        gap: 1rem !important;
+    .card-image img {
+        transition: transform 0.3s;
+        background-color: #f5f5f5;
+        /* Fallback color for missing banners */
     }
 
-    /* Custom list styles for Bulma */
-    .game-list-table tr {
-        cursor: pointer;
-        transition: background 0.2s;
+    .game-card:hover .card-image img {
+        transform: scale(1.02);
     }
 
-    .game-list-table tr:hover {
-        background-color: rgba(87, 13, 248, 0.05);
+    .bg-light-soft {
+        background: #fafafa;
     }
 
-    .truncate {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 100%;
+    .border-none {
+        border: none !important;
+    }
+
+    .hover-bg-light:hover {
+        background: #f5f5f5;
+    }
+
+    .rounded {
+        border-radius: 4px;
     }
 
     .break-word {
@@ -361,26 +389,32 @@
         word-break: break-word;
     }
 
-    .container {
-        max-width: 95% !important;
+    .opacity-10 {
+        opacity: 0.1;
     }
 
-    @media screen and (min-width: 1408px) {
-        .container {
-            max-width: 1400px !important;
-        }
+    .opacity-20 {
+        opacity: 0.2;
     }
 
-    @media screen and (min-width: 1600px) {
-        .container {
-            max-width: 1500px !important;
-        }
+    .opacity-30 {
+        opacity: 0.3;
     }
 
-    @media screen and (min-width: 1920px) {
-        .container {
-            max-width: 1800px !important;
-        }
+    .opacity-50 {
+        opacity: 0.5;
+    }
+
+    .opacity-60 {
+        opacity: 0.6;
+    }
+
+    .opacity-70 {
+        opacity: 0.7;
+    }
+
+    .opacity-80 {
+        opacity: 0.8;
     }
 </style>
 
@@ -437,26 +471,31 @@
             const card = $(`
                 <div class="grid-item">
                     <div class="card game-card box is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')">
-                        <div class="card-image position-relative overflow-hidden" style="padding-top: 56.25%;">
-                            <figure class="image position-absolute" style="top: 0; left: 0; right: 0; bottom: 0;">
-                                <img src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" style="width: 100%; height: 100%; object-fit: cover;">
+                        <div class="card-image position-relative overflow-hidden" style="padding-top: 52%;">
+                            <figure class="image position-absolute" style="top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: #333;">
+                                <img src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" 
+                                     style="width: 100%; height: 100%; object-fit: ${game.bannerUrl ? 'cover' : 'contain'}; padding: ${game.bannerUrl ? '0' : '10px'};">
                             </figure>
                         </div>
-                        <div class="card-content p-3">
-                            <div class="is-flex is-justify-content-between mb-2 gap-2">
-                                <span class="tag is-white p-0 font-mono is-size-7 opacity-50">${game.id}</span>
-                                <div class="is-flex gap-1">
-                                    <span class="tag is-white p-0 font-mono is-size-7 opacity-30">v${game.display_version}</span>
-                                    ${game.size_formatted ? `<span class="tag is-white p-0 font-mono is-size-7 opacity-30">${game.size_formatted}</span>` : ''}
+                        <div class="card-content p-3" style="display: flex; flex-direction: column; min-height: 100px;">
+                            <div class="columns is-mobile is-gapless mb-1">
+                                <div class="column">
+                                    <span class="tag is-white p-0 font-mono is-size-7 opacity-50">${game.id}</span>
+                                </div>
+                                <div class="column has-text-right">
+                                    <span class="tag is-white p-0 font-mono is-shadowless has-text-weight-bold has-text-primary is-size-7">v${game.display_version}</span>
                                 </div>
                             </div>
-                            <p class="is-size-6 has-text-weight-bold mb-3 truncate" title="${game.name}">${game.name}</p>
-                            <div class="is-flex is-justify-content-between is-align-items-center">
+                            
+                            <p class="is-size-6 has-text-weight-bold mb-2 truncate" title="${game.name}">${game.name}</p>
+                            
+                            <div class="mt-auto is-flex is-justify-content-between is-align-items-center">
                                 <div class="is-flex is-align-items-center gap-1">
                                     <span class="status-dot ${statusDotClass}"></span>
-                                    ${!game.has_latest_version && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1" style="height: 1.2rem; font-size: 0.65rem; font-weight: bold;">UPDATE</span>' : ''}
-                                    ${!game.has_all_dlcs && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1" style="height: 1.2rem; font-size: 0.65rem; font-weight: bold;">DLC</span>' : ''}
+                                    ${!game.has_latest_version && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1" style="height: 1rem; font-size: 0.6rem; font-weight: bold;">UPD</span>' : ''}
+                                    ${!game.has_all_dlcs && game.has_base ? '<span class="tag is-danger is-light is-small py-0 px-1" style="height: 1rem; font-size: 0.6rem; font-weight: bold;">DLC</span>' : ''}
                                 </div>
+                                ${game.size_formatted ? `<span class="is-size-7 opacity-40 font-mono">${game.size_formatted}</span>` : ''}
                             </div>
                         </div>
                     </div>
@@ -489,16 +528,17 @@
 
     function renderListView(items) {
         const table = $(`
-            <div class="column is-12">
-                <div class="table-container box is-paddingless shadow-sm overflow-hidden">
-                    <table class="table is-fullwidth is-hoverable game-list-table">
+            <div class="column is-12" style="width: 100%;">
+                <div class="table-container box is-paddingless shadow-sm overflow-hidden border-none">
+                    <table class="table is-fullwidth is-hoverable game-list-table mb-0">
                         <thead>
-                            <tr class="is-selected" style="background: #570df8">
-                                <th width="50">Ícone</th>
-                                <th>Título</th>
-                                <th>ID</th>
-                                <th>Versão</th>
-                                <th class="is-hidden-mobile">Status</th>
+                            <tr style="background: #f8f9fa; border-bottom: 2px solid #570df8">
+                                <th width="65" class="has-text-centered p-1">Ícone</th>
+                                <th>Título do Jogo</th>
+                                <th width="140">Title ID</th>
+                                <th width="80" class="has-text-centered">Versão</th>
+                                <th class="is-hidden-mobile" width="100">Tamanho</th>
+                                <th class="is-hidden-mobile" width="100">Status</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -508,15 +548,16 @@
         `);
         items.forEach(game => {
             const statusColor = game.status_color === 'orange' ? 'has-text-warning' : (game.status_color === 'green' ? 'has-text-success' : 'has-text-grey');
-            const statusText = game.status_color === 'orange' ? 'Pendante' : (game.status_color === 'green' ? 'Completo' : 'Incompleto');
+            const statusText = game.status_color === 'orange' ? 'Pendente' : (game.status_color === 'green' ? 'Completo' : 'Incompleto');
 
             table.find('tbody').append(`
                 <tr onclick="showGameDetails('${game.id || game.title_id}')">
-                    <td class="p-1"><img src="${game.iconUrl || '/static/img/no-icon.png'}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;"></td>
-                    <td><strong class="is-size-7-mobile">${game.name || 'Unknown'}</strong></td>
-                    <td class="font-mono is-size-7">${game.id || game.title_id || '--'}</td>
-                    <td><span class="tag is-light is-small">v${game.display_version || '0'}</span></td>
-                    <td class="is-hidden-mobile ${statusColor} has-text-weight-bold is-size-7">${statusText}</td>
+                    <td class="p-1 has-text-centered"><img src="${game.iconUrl || '/static/img/no-icon.png'}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;"></td>
+                    <td class="is-vcentered"><strong class="is-size-7-mobile">${game.name || 'Unknown'}</strong></td>
+                    <td class="font-mono is-size-7 is-vcentered">${game.id || game.title_id || '--'}</td>
+                    <td class="is-vcentered has-text-centered"><span class="tag is-light is-small">v${game.display_version || '0'}</span></td>
+                    <td class="is-hidden-mobile is-vcentered font-mono is-size-7">${game.size_formatted || '--'}</td>
+                    <td class="is-hidden-mobile ${statusColor} has-text-weight-bold is-size-7 is-vcentered">${statusText}</td>
                 </tr>
             `);
         });
@@ -683,6 +724,7 @@
             return matchesSearch && matchesSource && matchesStatus && matchesGender;
         });
 
+        $('#totalItemsCount').text(`${filteredGames.length} Jogos`);
         currentPage = 1;
         renderLibrary();
     }
@@ -691,6 +733,7 @@
         // Reset checkboxes
         $('#filterCheckOwned').prop('checked', true);
         $('#filterCheckMissing, #filterCheckUpToDate, #filterCheckMissingUpdate').prop('checked', false);
+        $('#btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
 
         // Reset gender
         $('#filterGender').val('');
@@ -701,6 +744,20 @@
         // Apply
         applyFilters();
     }
+
+    $('#btnFilterPendingUpd').on('click', function () {
+        const active = $(this).toggleClass('is-primary is-light').hasClass('is-primary');
+        $('#filterCheckMissingUpdate').prop('checked', active);
+        if (active) $('#btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
+        applyFilters();
+    });
+
+    $('#btnFilterPendingDlc').on('click', function () {
+        const active = $(this).toggleClass('is-primary is-light').hasClass('is-primary');
+        $('#filterCheckMissingUpdate').prop('checked', active);
+        if (active) $('#btnFilterPendingUpd').removeClass('is-primary').addClass('is-light');
+        applyFilters();
+    });
 
 
     function setPageSize(size) {
@@ -769,10 +826,10 @@
 
     // Load system information for footer
     $.getJSON('/api/system/info', function (data) {
-        $('#titledbInfo').text(`${data.titledb_region}/${data.titledb_language}`);
+        $('#idSource').text(data.id_source);
         $('#updateSource').text(data.update_source);
     }).fail(function () {
-        $('#titledbInfo').text('N/A');
+        $('#idSource').text('N/A');
         $('#updateSource').text('N/A');
     });
 

@@ -11,64 +11,61 @@ Refinamentos detalhados da interface do usuário e funcionalidades da biblioteca
 - [x] **1.4** - Separar visualmente ID do jogo e versão nos cards
 - [x] **1.5** - Usar imagem em paisagem (banner) na visualização principal dos cards
 - [x] **1.6** - Adicionar imagem grande em paisagem no topo do modal de detalhes
+- [x] **1.7** - Ajustar altura dos cards (remover espaço em branco excessivo)
+- [x] **1.8** - Corrigir componente de DLC no modal para acompanhar a quebra de linha sem extrapolar
+- [x] **1.9** - Alinhar versão à direita nos cards
 
 ### 2. Correções de Funcionalidade
 - [x] **2.1** - Corrigir List View quebrada
 - [x] **2.2** - Implementar visualização de dados das DLCs ao clicar (modal funcional)
 - [x] **2.3** - Adicionar download e exclusão de updates e DLCs
+- [x] **2.4** - Ajustar largura da List View no desktop (está muito pequena)
+- [x] **2.5** - Aumentar largura do modal conforme o tamanho da tela
 
 ### 3. Informações e Rodapé
 - [x] **3.1** - Mostrar build version no rodapé
 - [x] **3.2** - Exibir base de dados TitleDB utilizada (região/idioma)
 - [x] **3.3** - Exibir fonte de updates (TitleDB/DBI versions.txt)
 - [x] **3.4** - Mostrar tamanho dos arquivos nos cards e modais
+- [x] **3.5** - Garantir atualização da build a cada nova build no rodapé
+- [x] **3.6** - Detalhar fonte de identificação e busca de updates no rodapé (Distinguir TitleDB de DBI)
 
 ### 4. Filtros e Controles
 - [x] **4.1** - Adicionar botão "Limpar Filtros"
 - [x] **4.2** - Remover botões BASE e DLC dos filtros rápidos
 - [x] **4.3** - Remover termos "BASE" e "DLC" do dropdown de filtros avançados
 - [x] **4.4** - Remover badge "Possui" dos cards
+- [x] **4.5** - Adicionar botões de filtro rápido "Pendente Atualização" e "Pendente DLC"
+- [x] **4.6** - Organizar melhor os números de resumo na parte superior (mais compacto)
 
 
 ---
 
 ## 📊 Resumo de Progresso
 
-**Concluídas:** 14 de 14 tarefas (100%) ✅ FINALIZADO
+**Concluídas:** 25 de 25 tarefas (100%) ✅ FINALIZADO
 
-**Última atualização:** 2026-01-13 15:35
+**Última atualização:** 2026-01-13 15:55
 
-**Commit:** `Refinamentos finais de UI e funcionalidades completados`
+**Commit:** `Refinamentos globais de UI/UX concluídos: Cards, Modais, Filtros e Rodapé`
 
 ### ✅ Implementações Concluídas
 
 **Layout e Organização Visual:**
-- Layout compacto e organizado
-- Quebra de linha em nomes de DLCs
-- Responsividade para telas grandes (1600px, 1920px)
-- Separação visual entre ID e versão
-- Imagens em paisagem nos cards (bannerUrl)
-- Banner grande no modal de detalhes
+- Cards compactos com altura ajustada e sem espaços vazios.
+- Versão e ID alinhados estrategicamente.
+- Modal com largura responsiva (maior em telas grandes).
+- Componente de DLC corrigido para suportar quebras de linha longas.
+- List View ocupando 100% da largura com colunas detalhadas.
 
 **Informações e Rodapé:**
-- Rodapé com Build Version
-- Exibição de TitleDB (região/idioma)
-- Fonte de updates (TitleDB/DBI)
-- Tamanho dos arquivos nos cards e modais
+- Rodapé detalhado com Build, Fonte de Identificação e Fonte de Updates.
+- Tamanho dos arquivos visível em todos os modos de visualização.
 
 **Filtros e Controles:**
-- Botão "Limpar Filtros"
-- Remoção de botões e checkboxes BASE/DLC
-- Remoção do badge "Possui"
-
-**Funcionalidades:**
-- List View corrigida e robusta
-- Modal de DLC totalmente funcional (clicável)
-- Download e exclusão direta de Updates e DLCs no modal
-
-### 🔄 Pendentes
-
-- Nenhuma tarefa pendente.
+- Novos botões de atalho: "Update" e "DLC" para pendências rápidas.
+- Cabeçalho de estatísticas (Overview) extremamente compacto e expansível.
+- Contador de jogos em tempo real no filtro.
 
 ---
 
