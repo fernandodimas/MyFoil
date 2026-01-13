@@ -46,49 +46,48 @@ def robust_json_load(filepath):
         logger.error(f"Error reading {filepath}: {e}")
         return None
 
-    data = None
+    # Try 1: Standard load - fast and correct
     try:
-        # First try: Standard load
         data = json.loads(content)
-    except json.JSONDecodeError as e:
-        logger.warning(f"JSON error in {filepath} at {e.pos}, attempting multi-stage sanitization...")
-        try:
-            # Stage 1: Escape all backslashes EXCEPT those that are part of valid JSON escape sequences
-            # This is a more robust version: catch any \ that isn't followed by ["\/bfnrt] or uXXXX
-            sanitized = re.sub(r'\\(?!(["\\/bfnrt]|u[0-9a-fA-F]{4}))', r'\\\\', content)
-            
-            # Additional cleanup: remove control characters (except common ones like \n, \r, \t)
-            sanitized = "".join(ch for ch in sanitized if ord(ch) >= 32 or ch in '\n\r\t')
-            
-            data = json.loads(sanitized, strict=False)
-        except Exception:
-            try:
-                # Stage 2: Bruteforce escape EVERYTHING and then restore known valid sequences
-                # This is a "nuclear" option to make it valid JSON at the cost of double-escaping some things
-                bruteforce = content.replace('\\', '\\\\')
-                # Restore common valid escapes that we probably just broke
-                for valid in ['"', '\\', '/', 'b', 'f', 'n', 'r', 't']:
-                    bruteforce = bruteforce.replace('\\\\' + valid, '\\' + valid)
-                # Restore unicode escapes
-                bruteforce = re.sub(r'\\\\u([0-9a-fA-F]{4})', r'\\u\1', bruteforce)
-                data = json.loads(bruteforce, strict=False)
-            except Exception as ex:
-                # Last resort: Try simple replacement of all invalid escapes with just the character
-                try:
-                    # Remove all problematic backslashes entirely as a last-second attempt
-                    desperate = re.sub(r'\\', '', content) 
-                    data = json.loads(desperate, strict=False)
-                except Exception:
-                    logger.error(f"All sanitization attempts failed for {filepath}: {ex}")
-                    return None
+        return data if not isinstance(data, dict) else (data.get('data') or data.get('items') or data.get('titles') or data)
+    except json.JSONDecodeError:
+        pass
 
-    # Handle common TitleDB wrapper structures (tinfoil.media, etc.)
-    if isinstance(data, dict):
-        for wrapper in ['data', 'items', 'titles', 'success']:
-            if wrapper in data and isinstance(data[wrapper], (dict, list)):
-                return data[wrapper]
+    # Try 2: More aggressive sanitization for escape sequences
+    logger.warning(f"JSON error in {filepath}, attempting aggressive sanitization...")
+    try:
+        # Pattern to match a valid escape or a bare backslash
+        # Group 1 captures valid escape sequences: \", \\, \/, \b, \f, \n, \r, \t, or \uXXXX
+        pattern = re.compile(r'(\\([\"\\/bfnrt]|u[0-9a-fA-F]{4}))|(\\)')
+        
+        def replace_func(m):
+            if m.group(1):
+                return m.group(1) # Valid escape, keep it
+            else:
+                return r'\\' # Bare backslash, escape it
+
+        sanitized = pattern.sub(replace_func, content)
+        
+        # Strip ALL non-printable control characters except whitespace
+        sanitized = "".join(ch for ch in sanitized if ord(ch) >= 32 or ch in '\n\r\t')
+        
+        # Try loading the sanitized version
+        data = json.loads(sanitized, strict=False)
+        return data if not isinstance(data, dict) else (data.get('data') or data.get('items') or data.get('titles') or data)
+    except Exception as e:
+        logger.error(f"Aggressive sanitization failed for {filepath}: {e}")
+
+    # Try 3: Nuclear Cleanup - if still failing, it's likely structural or has nested escape issues
+    try:
+        # Bruteforce: replace all \ with \\ then restore common escapes
+        nuclear = content.replace('\\', '\\\\').replace('\\\\"', '\\"').replace('\\\\n', '\\n')
+        nuclear = "".join(ch for ch in nuclear if ord(ch) >= 32 or ch in '\n\r\t')
+        data = json.loads(nuclear, strict=False)
+        return data if not isinstance(data, dict) else (data.get('data') or data.get('items') or data.get('titles') or data)
+    except Exception as e:
+        logger.error(f"Nuclear cleanup failed for {filepath}: {e}")
             
-    return data
+    return None
 
 def getDirsAndFiles(path):
     entries = os.listdir(path)
