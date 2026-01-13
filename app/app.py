@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, send_from_directory, Response
 from flask_login import LoginManager
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from scheduler import init_scheduler
 from functools import wraps
 from file_watcher import Watcher
@@ -202,8 +204,7 @@ def on_library_change(events):
 def create_app():
     app = Flask(__name__)
     app.config["SQLALCHEMY_DATABASE_URI"] = MYFOIL_DB
-    # TODO: generate random secret_key
-    app.config['SECRET_KEY'] = '8accb915665f11dfa15c2db1a4e8026905f57716'
+    app.config['SECRET_KEY'] = get_or_create_secret_key()
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
@@ -221,6 +222,15 @@ def create_app():
 
 # Create app
 app = create_app()
+
+# Initialize rate limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",
+    strategy="fixed-window"
+)
 
 @app.context_processor
 def inject_version():

@@ -39,6 +39,53 @@ class FilterRemoveDateFromWerkzeugLogs(logging.Filter):
         return True
 
 
+def get_or_create_secret_key():
+    """
+    Generate or load a persistent secret key for Flask sessions.
+    The key is stored in CONFIG_DIR/.secret_key with restricted permissions.
+    
+    Returns:
+        str: 64-character hex secret key
+    """
+    import secrets
+    from constants import CONFIG_DIR
+    
+    logger = logging.getLogger('main')
+    secret_key_file = os.path.join(CONFIG_DIR, '.secret_key')
+    
+    # Try to load existing key
+    if os.path.exists(secret_key_file):
+        try:
+            with open(secret_key_file, 'r') as f:
+                key = f.read().strip()
+                if len(key) == 64:  # Validate key length
+                    return key
+                logger.warning("Invalid secret key found, generating new one")
+        except Exception as e:
+            logger.error(f"Error reading secret key: {e}")
+    
+    # Generate new key
+    key = secrets.token_hex(32)  # 32 bytes = 64 hex chars
+    
+    try:
+        # Ensure CONFIG_DIR exists
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        
+        # Write key with restricted permissions
+        with open(secret_key_file, 'w') as f:
+            f.write(key)
+        
+        # Set file permissions to 600 (owner read/write only)
+        os.chmod(secret_key_file, 0o600)
+        
+        logger.info("Generated new secret key and saved to disk")
+    except Exception as e:
+        logger.error(f"Error saving secret key: {e}")
+        logger.warning("Using non-persistent secret key")
+    
+    return key
+
+
 def debounce(wait):
     """Decorator that postpones a function's execution until after `wait` seconds
     have elapsed since the last time it was invoked."""

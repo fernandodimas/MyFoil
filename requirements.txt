@@ -3,6 +3,7 @@ flask
 Flask-Login
 Flask-Migrate
 flask-sqlalchemy
+Flask-Limiter
 nstools
 PyYAML
 requests

@@ -147,31 +147,39 @@ def init_users(app):
 
 @auth_blueprint.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == "GET":
-        next_url = request.args.get('next', '')
-        if current_user.is_authenticated:
-            return redirect(next_url if len(next_url) else '/')
-        return render_template('login.html', title='Login')
-        
-    # login code goes here
-    username = request.form.get('user')
-    password = request.form.get('password')
-    remember = bool(request.form.get('remember'))
-    next_url = request.form.get('next', '')
+    # Import here to avoid circular dependency
+    from app import limiter
+    
+    # Apply rate limiting: 5 login attempts per minute per IP
+    @limiter.limit("5 per minute")
+    def _rate_limited_login():
+        if request.method == "GET":
+            next_url = request.args.get('next', '')
+            if current_user.is_authenticated:
+                return redirect(next_url if len(next_url) else '/')
+            return render_template('login.html', title='Login')
+            
+        # login code goes here
+        username = request.form.get('user')
+        password = request.form.get('password')
+        remember = bool(request.form.get('remember'))
+        next_url = request.form.get('next', '')
 
-    user = User.query.filter_by(user=username).first()
+        user = User.query.filter_by(user=username).first()
 
-    # check if the user actually exists
-    # take the user-supplied password, hash it, and compare it to the hashed password in the database
-    if not user or not check_password_hash(user.password, password):
-        logger.warning(f'Incorrect login for user {username}')
-        return redirect(url_for('auth.login')) # if the user doesn't exist or password is wrong, reload the page
+        # check if the user actually exists
+        # take the user-supplied password, hash it, and compare it to the hashed password in the database
+        if not user or not check_password_hash(user.password, password):
+            logger.warning(f'Incorrect login for user {username}')
+            return redirect(url_for('auth.login')) # if the user doesn't exist or password is wrong, reload the page
 
-    # if the above check passes, then we know the user has the right credentials
-    logger.info(f'Sucessfull login for user {username}')
-    login_user(user, remember=remember)
+        # if the above check passes, then we know the user has the right credentials
+        logger.info(f'Sucessfull login for user {username}')
+        login_user(user, remember=remember)
 
-    return redirect(next_url if len(next_url) else '/')
+        return redirect(next_url if len(next_url) else '/')
+    
+    return _rate_limited_login()
 
 @auth_blueprint.route('/profile')
 @login_required
@@ -212,51 +220,59 @@ def delete_user():
 @auth_blueprint.route('/api/user/signup', methods=['POST'])
 @access_required('admin')
 def signup_post():
-    signup_success = True
-    data = request.json
-
-    username = data['user']
-    password = data['password']
-    admin_access = data['admin_access']
-    if admin_access:
-        shop_access = True
-        backup_access = True
-    else:
-        shop_access = data['shop_access']
-        backup_access = data['backup_access']
-
-    user = User.query.filter_by(user=username).first() # if this returns a user, then the user already exists in database
+    # Import here to avoid circular dependency
+    from app import limiter
     
-    if user: # if a user is found, we want to redirect back to signup page so user can try again
-        logger.error(f'Error creating user {username}, user already exists')
-        # Todo redirect to incoming page or return success: false
-        return redirect(url_for('auth.signup'))
-    
-    existing_admin = admin_account_created()
-    if not existing_admin and not admin_access:
-        logger.error(f'Error creating user {username}, first account created must be admin')
+    # Rate limit: 10 signups per hour (prevent mass account creation)
+    @limiter.limit("10 per hour")
+    def _rate_limited_signup():
+        signup_success = True
+        data = request.json
+
+        username = data['user']
+        password = data['password']
+        admin_access = data['admin_access']
+        if admin_access:
+            shop_access = True
+            backup_access = True
+        else:
+            shop_access = data['shop_access']
+            backup_access = data['backup_access']
+
+        user = User.query.filter_by(user=username).first() # if this returns a user, then the user already exists in database
+        
+        if user: # if a user is found, we want to redirect back to signup page so user can try again
+            logger.error(f'Error creating user {username}, user already exists')
+            # Todo redirect to incoming page or return success: false
+            return redirect(url_for('auth.signup'))
+        
+        existing_admin = admin_account_created()
+        if not existing_admin and not admin_access:
+            logger.error(f'Error creating user {username}, first account created must be admin')
+            resp = {
+                'success': False,
+                'status_code': 400,
+                'location': '/settings',
+            } 
+            return jsonify(resp)
+
+        # create a new user with the form data. Hash the password so the plaintext version isn't saved.
+        create_or_update_user(username, password, admin_access, shop_access, backup_access)
+        
+        logger.info(f'Successfully created user {username}.')
+
         resp = {
-            'success': False,
-            'status_code': 400,
-            'location': '/settings',
+            'success': signup_success
         } 
+
+        if not existing_admin and admin_access:
+            logger.debug('First admin account created')
+            resp['status_code'] = 302,
+            resp['location'] = '/settings'
+        
         return jsonify(resp)
-
-    # create a new user with the form data. Hash the password so the plaintext version isn't saved.
-    create_or_update_user(username, password, admin_access, shop_access, backup_access)
     
-    logger.info(f'Successfully created user {username}.')
-
-    resp = {
-        'success': signup_success
-    } 
-
-    if not existing_admin and admin_access:
-        logger.debug('First admin account created')
-        resp['status_code'] = 302,
-        resp['location'] = '/settings'
-    
-    return jsonify(resp)
+    return _rate_limited_signup()
 
 
 @auth_blueprint.route('/logout')
