@@ -36,10 +36,10 @@
     <div class="grid grid-cols-1 gap-12">
 
         <!-- Authentication -->
-        <section id="Authentication" class="card bg-base-100 shadow-xl border border-base-content/10 overflow-hidden">
+        <section id="Authentication" class="card bg-base-100 shadow-xl border border-primary/20 overflow-hidden">
             <div class="card-body">
-                <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
-                    <i class="bi bi-people text-primary"></i> {{ t('Authentication') }}
+                <h2 class="card-title text-2xl mb-4 flex items-center gap-2 text-primary">
+                    <i class="bi bi-people"></i> {{ t('Authentication') }}
                 </h2>
 
                 <div class="overflow-x-auto">
@@ -57,10 +57,10 @@
 
                 <div class="divider"></div>
 
-                <div class="collapse collapse-arrow bg-primary/5 border border-primary/10">
+                <div class="collapse collapse-arrow bg-primary/5 border border-primary/20">
                     <input type="checkbox" id="collapseNewUser" />
-                    <div class="collapse-title font-bold">{{ t('Add new user') }}</div>
-                    <div class="bg-base-100/50 border border-base-content/10 rounded-xl p-4">
+                    <div class="collapse-title font-bold text-primary">{{ t('Add new user') }}</div>
+                    <div class="bg-base-100/50 border border-primary/20 rounded-xl p-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <input type="text" id="inputNewUser" placeholder="{{ t('Username') }}"
                                 class="input input-bordered w-full" />
@@ -86,10 +86,10 @@
         </section>
 
         <!-- Library Paths -->
-        <section id="Library" class="card bg-base-100 shadow-xl border border-base-content/10 overflow-hidden">
+        <section id="Library" class="card bg-base-100 shadow-xl border border-primary/20 overflow-hidden">
             <div class="card-body">
-                <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
-                    <i class="bi bi-folder2-open text-primary"></i> {{ t('Library') }}
+                <h2 class="card-title text-2xl mb-4 flex items-center gap-2 text-primary">
+                    <i class="bi bi-folder2-open"></i> {{ t('Library') }}
                 </h2>
                 <p class="text-sm opacity-60 mb-4">{{ t('Path of directory containing your games') }}</p>
 
@@ -108,11 +108,11 @@
                 <div class="divider"></div>
 
                 <div class="flex flex-wrap gap-4">
-                    <div class="collapse collapse-arrow bg-primary/5 border border-primary/10 flex-grow">
+                    <div class="collapse collapse-arrow bg-primary/5 border border-primary/20 flex-grow">
                         <input type="checkbox" id="collapseNewPath" />
-                        <div class="collapse-title font-bold">{{ t('Add library path') }}</div>
+                        <div class="collapse-title font-bold text-primary">{{ t('Add library path') }}</div>
                         <div class="collapse-content p-4">
-                            <div class="bg-base-100/50 border border-base-content/10 rounded-xl p-4 flex gap-2">
+                            <div class="bg-base-100/50 border border-primary/20 rounded-xl p-4 flex gap-2">
                                 <input type="text" id="libraryPathInput" placeholder="/path/to/games"
                                     class="input input-bordered flex-grow" />
                                 <button class="btn btn-primary" onclick="submitNewLibraryPath()">{{ t('Save')
@@ -128,10 +128,10 @@
         </section>
 
         <!-- Titles Configuration -->
-        <section id="Titles" class="card bg-base-100 shadow-xl border border-base-content/10 overflow-hidden">
+        <section id="Titles" class="card bg-base-100 shadow-xl border border-primary/20 overflow-hidden">
             <div class="card-body">
-                <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
-                    <i class="bi bi-gear-fill text-primary"></i> {{ t('Titles') }}
+                <h2 class="card-title text-2xl mb-4 flex items-center gap-2 text-primary">
+                    <i class="bi bi-gear-fill"></i> {{ t('Titles') }}
                 </h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -162,10 +162,10 @@
         </section>
 
         <!-- TitleDB Sources -->
-        <section id="TitleDB" class="card bg-base-100 shadow-xl border border-base-content/10 overflow-hidden">
+        <section id="TitleDB" class="card bg-base-100 shadow-xl border border-primary/20 overflow-hidden">
             <div class="card-body">
-                <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
-                    <i class="bi bi-database-fill text-primary"></i> {{ t('TitleDB Sources') }}
+                <h2 class="card-title text-2xl mb-4 flex items-center gap-2 text-primary">
+                    <i class="bi bi-database-fill"></i> {{ t('TitleDB Sources') }}
                 </h2>
 
                 {% if active_source %}
@@ -203,11 +203,11 @@
                 </div>
 
                 <div class="flex flex-wrap gap-4 items-center">
-                    <div class="collapse collapse-arrow bg-primary/5 border border-primary/10 flex-grow">
+                    <div class="collapse collapse-arrow bg-primary/5 border border-primary/20 flex-grow">
                         <input type="checkbox" id="collapseNewSource" />
                         <div class="collapse-title font-bold">{{ t('Add custom source') }}</div>
                         <div class="collapse-content p-4">
-                            <div class="bg-base-100/50 border border-base-content/10 rounded-xl p-4 space-y-4">
+                            <div class="bg-base-100/50 border border-primary/20 rounded-xl p-4 space-y-4">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <input type="text" id="inputSourceName" placeholder="{{ t('Source Name') }}"
                                         class="input input-bordered w-full" />
@@ -243,10 +243,10 @@
         </section>
 
         <!-- Shop Configuration -->
-        <section id="Shop" class="card bg-base-100 shadow-xl border border-base-content/10 overflow-hidden mb-12">
+        <section id="Shop" class="card bg-base-100 shadow-xl border border-primary/20 overflow-hidden mb-12">
             <div class="card-body">
-                <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
-                    <i class="bi bi-cart-fill text-primary"></i> {{ t('Shop') }}
+                <h2 class="card-title text-2xl mb-4 flex items-center gap-2 text-primary">
+                    <i class="bi bi-cart-fill"></i> {{ t('Shop') }}
                 </h2>
 
                 <div class="space-y-6">

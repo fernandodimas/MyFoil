@@ -6,7 +6,12 @@ import os
 import json
 import logging
 import requests
-import unzip_http
+try:
+    import unzip_http
+    HAS_UNZIP_HTTP = True
+except ImportError:
+    logger.warning("unzip-http module not found. Legacy ZIP TitleDB source will not be available.")
+    HAS_UNZIP_HTTP = False
 import re
 import shutil
 from pathlib import Path
@@ -158,6 +163,10 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
         if source.source_type == 'zip_legacy':
             # --- ORIGINAL PROJECT LOGIC FOR LEGACY ZIP ---
             try:
+                if not HAS_UNZIP_HTTP:
+                    logger.error("Cannot update from legacy ZIP: unzip-http module is missing.")
+                    continue
+
                 r = requests.get(source.base_url, allow_redirects=False, timeout=10)
                 direct_url = r.next.url if hasattr(r, 'next') else source.base_url
                 rzf = unzip_http.RemoteZipFile(direct_url)

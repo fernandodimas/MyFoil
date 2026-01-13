@@ -402,13 +402,16 @@ def identify_file(filepath):
 def get_game_info(title_id):
     global _titles_db
     if not _titles_db:
-        logger.error("titles_db is empty or not loaded.")
         return {
-            'name': 'Unrecognized (No DB)',
-            'bannerUrl': '//placehold.it/400x200',
+            'name': f'Unknown ({title_id})',
+            'bannerUrl': '',
             'iconUrl': '',
             'id': title_id,
-            'category': '',
+            'category': [],
+            'releaseDate': '',
+            'size': 0,
+            'publisher': '--',
+            'description': 'Database not loaded. Please update TitleDB in settings.'
         }
 
     try:
@@ -435,7 +438,7 @@ def get_game_info(title_id):
 
         if info:
             return {
-                'name': info.get('name', 'Unrecognized'),
+                'name': info.get('name', 'Unknown'),
                 'bannerUrl': info.get('bannerUrl', ''),
                 'iconUrl': info.get('iconUrl', ''),
                 'id': info.get('id', title_id),
@@ -450,15 +453,15 @@ def get_game_info(title_id):
     except Exception as e:
         logger.debug(f"Identification failed for {title_id}: {e}")
         return {
-            'name': 'Unrecognized',
+            'name': 'Unknown Title',
             'bannerUrl': '',
             'iconUrl': '',
-            'id': title_id,
+            'id': title_id.upper(),
             'category': [],
             'releaseDate': '',
             'size': 0,
-            'publisher': 'Nintendo',
-            'description': ''
+            'publisher': '--',
+            'description': 'Title ID not found in database. Please update TitleDB in settings to identify this content.'
         }
 
 def get_update_number(version):
