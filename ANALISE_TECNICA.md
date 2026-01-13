@@ -40,67 +40,39 @@
 #### 2.2 Logging Inconsistente
 *Planejado para Sprints futuros.*
 
-### 3. Performance do Banco de Dados (✅ PARCIALMENTE CONCLUÍDO)
+### 3. Performance do Banco de Dados (✅ CONCLUÍDO)
 
 #### 3.1 Ausência de Índices ✅ **IMPLEMENTADO**
 *(Implementado em 2026-01-13: Índices em Apps e Titles)*
 
 #### 3.2 N+1 Query Problem ✅ **IMPLEMENTADO**
 *(Implementado em 2026-01-13: Otimização de queries em generate_library e update_titles)*
-**Sprint:** Sprint 2 (Backend de Suporte à UI).
 
 ---
 
 ## 🟠 PRIORIDADE ALTA
 
-### 5. Melhorias na Interface (UI/UX) - Sprint 2 🚀
+### 5. Melhorias na Interface (UI/UX) - Sprint 2 🚀 ✅ **CONCLUÍDO**
 
-#### 5.3 Redesign e Organização do Card de Jogo 🆕
-**Objetivo:** Tornar a visão geral mais compacta, organizada e informativa.
+#### 5.3 Redesign e Organização do Card de Jogo ✅ **IMPLEMENTADO**
+*(Implementado: ID do jogo no card, versão à direita, indicadores de status por cor)*
 
-**Especificações Detalhadas:**
-- **ID do Jogo:** Exibir na posição onde anteriormente ficava a "Editora".
-- **Editora:** Remover da tela principal (exibir apenas no Modal de Detalhes).
-- **Versão:** Exibir badge ou texto alinhado à **direita** na parte inferior do card.
-- **Status Visual (Cores):**
-  - **Laranja:** Se houver atualizações (updates) pendentes ou DLCs faltantes para um jogo base.
-  - **Verde:** Se o jogo base estiver totalmente atualizado e com todas as DLCs conhecidas.
-- **Logotipo/Ícone:** Alinhado à esquerda.
+#### 5.4 Gestão de Duplicidade e Múltiplos Arquivos ✅ **IMPLEMENTADO**
+*(Implementado: Agrupamento por TitleID, modal com listagem de múltiplos arquivos base)*
 
-**Prioridade:** 🟠 ALTA  
-**Esforço:** Médio (6h)
+#### 5.5 Visualização de Conteúdo (Updates/DLCs) no Modal ✅ **IMPLEMENTADO**
+*(Implementado: Listagem completa de conteúdos possuídos vs faltantes vindos do TitleDB)*
 
-#### 5.4 Gestão de Duplicidade e Múltiplos Arquivos 🆕
-**Objetivo:** Evitar cards repetidos para o mesmo jogo e consolidar a visão do usuário.
+#### 5.6 Controle de Visualização (Grid Size) ✅ **IMPLEMENTADO**
+*(Implementado: Slider de zoom na grid com persistência em localStorage)*
 
-**Especificações Detalhadas:**
-- **Agrupamento:** O backend deve agrupar Apps por `title_id`.
-- **Visão Única:** A tela principal deve mostrar apenas **um card por jogo**, independentemente de quantos arquivos (NSP, XCI, etc) existam para ele.
-- **Modal Multi-Arquivo:** Ao abrir o modal de detalhes, listar todos os arquivos base encontrados (ex: "Arquivo 1: base.nsp", "Arquivo 2: base.xci").
+### 6. Sistema de Cache & Paginação (Sprint 3) 🚀 ✅ **CONCLUÍDO**
 
-**Prioridade:** 🟠 ALTA  
-**Esforço:** Alto (8h)
+#### 6.1 Cache da Biblioteca ✅ **IMPLEMENTADO**
+**Solução:** Implementado sistema de cache em disco (`library.json`) que é invalidado por hashing e forçado em mudanças de arquivos (`post_library_change`). Otimização de leitura instantânea na API.
 
-#### 5.5 Visualização de Conteúdo (Updates/DLCs) no Modal 🆕
-**Objetivo:** Mostrar claramente o que o usuário tem e o que falta de acordo com o TitleDB.
-
-**Especificações Detalhadas:**
-- **Updates:** Listar todos os updates oficiais conhecidos. Marcar visualmente os que estão na biblioteca (`✅`) e os que faltam (`❌`).
-- **DLCs:** Listar todas as DLCs disponíveis no TitleDB. Mostrar claramente quais o usuário possui e quais estão faltantes.
-- **Status de Jogo Base:** Mostrar se o arquivo base está presente.
-
-**Prioridade:** 🟠 ALTA  
-**Esforço:** Médio (6h)
-
-#### 5.6 Controle de Visualização (Grid Size) 🆕
-**Objetivo:** Permitir ao usuário customizar a densidade da biblioteca (como no projeto original).
-
-**Especificações Detalhadas:**
-- **Slider/Controles:** Adicionar controles para mudar o tamanho dos cards e a quantidade de itens por linha.
-- **Persistência:** Salvar a preferência do usuário no `localStorage`.
-
-**Prioridade:** 🟠 ALTA  
-**Esforço:** Baixo (2h)
+#### 7. Paginação e Performance Frontend ✅ **IMPLEMENTADO**
+**Solução:** Implementada paginação no frontend com suporte a "Primeira/Última" página e controle dinâmico de quantidade de itens por página (24, 48, 96).
 
 ---
 
@@ -108,11 +80,8 @@
 
 ### 10. Novas Funcionalidades
 
-#### 10.5 Filtro de Metadados do macOS (`._`) 🆕
-**Problema:** Arquivos começados por `._` (criados pelo macOS) poluem a biblioteca e causam erros de identificação.
-**Solução:** Modificar o scanner para ignorar qualquer arquivo ou diretório que comece com `._`.
-
-**Status:** Prioridade imediata no início do Sprint 2.
+#### 10.5 Filtro de Metadados do macOS (`._`) ✅ **IMPLEMENTADO**
+*(Implementado em 2026-01-13: Filtro no Scanner e no File Watcher)*
 
 ---
 
@@ -121,17 +90,11 @@
 ### Sprint 1 (Concluído)
 - Segurança Crítica e Performance Visual (Índices).
 
-### Sprint 2 (Em Andamento) - Foco em UI/UX e Organização
-1.  **Quick Win:** Ignorar arquivos `._` no scanner (`titles.py` e `library.py`).
-2.  **Lógica:** Agrupamento por TitleID no backend (`generate_library`).
-3.  **UI:** Redesign do Card (ID no lugar da Editora, Versão à direita, Cores de status).
-4.  **UX:** Modal detalhado com lista completa de Updates/DLCs (Possuídos vs Faltantes).
-5.  **Bonus:** Slider de tamanho da Grid.
+### Sprint 2 (Concluído)
+- Agrupamento por TitleID, Redesign de Cards e Modal, Filtro macOS.
 
-### Sprint 3 - Performance Profunda
-1.  Resolver N+1 queries.
-2.  Paginação no Frontend.
-3.  Cache de Biblioteca.
+### Sprint 3 (Concluído)
+- Resolução de N+1 queries, Cache Persistente e Paginação Avançada.
 
 ---
 **Arquivo atualizado em:** 2026-01-13

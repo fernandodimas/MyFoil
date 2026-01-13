@@ -152,12 +152,31 @@
 
         <!-- Pagination -->
         <nav class="pagination is-centered mt-6" role="navigation" aria-label="pagination">
+            <a class="pagination-previous" id="btnFirst" onclick="goToPage(1)">Primeira</a>
             <a class="pagination-previous" id="btnPrev" onclick="changePage(-1)">Anterior</a>
             <a class="pagination-next" id="btnNext" onclick="changePage(1)">Próxima</a>
+            <a class="pagination-next" id="btnLast" onclick="goToPage(-1)">Última</a>
             <ul class="pagination-list" id="paginationSummary">
                 <!-- Injected via JS -->
             </ul>
         </nav>
+
+        <div class="level mt-4 is-mobile">
+            <div class="level-left"></div>
+            <div class="level-right">
+                <div class="level-item">
+                    <span class="is-size-7 mr-2 opacity-50">Itens por página:</span>
+                    <div class="buttons has-addons">
+                        <button class="button is-small p-2 btn-page-size" data-size="24"
+                            onclick="setPageSize(24)">24</button>
+                        <button class="button is-small p-2 btn-page-size" data-size="48"
+                            onclick="setPageSize(48)">48</button>
+                        <button class="button is-small p-2 btn-page-size" data-size="96"
+                            onclick="setPageSize(96)">96</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     </div>
 </section>
@@ -539,16 +558,43 @@
         $('#btnFilterDlc').toggleClass('is-primary', $('#filterCheckDlc').is(':checked'));
     }
 
-    function changePage(delta) {
-        currentPage += delta;
+    function setPageSize(size) {
+        pageSize = size;
+        localStorage.setItem('pageSize', size);
+        currentPage = 1;
+        updatePageSizeButtons();
+        renderLibrary();
+    }
+
+    function updatePageSizeButtons() {
+        $('.btn-page-size').removeClass('is-primary');
+        $(`.btn-page-size[data-size="${pageSize}"]`).addClass('is-primary');
+    }
+
+    function goToPage(page) {
+        const totalPages = Math.ceil(filteredGames.length / pageSize) || 1;
+        if (page === -1) currentPage = totalPages;
+        else currentPage = page;
         renderLibrary();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    function changePage(delta) {
+        const totalPages = Math.ceil(filteredGames.length / pageSize) || 1;
+        const newPage = currentPage + delta;
+        if (newPage >= 1 && newPage <= totalPages) {
+            currentPage = newPage;
+            renderLibrary();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+
     function updatePagination() {
         const totalPages = Math.ceil(filteredGames.length / pageSize) || 1;
+        $('#btnFirst').toggleClass('is-disabled', currentPage === 1);
         $('#btnPrev').toggleClass('is-disabled', currentPage === 1);
         $('#btnNext').toggleClass('is-disabled', currentPage === totalPages);
+        $('#btnLast').toggleClass('is-disabled', currentPage === totalPages);
 
         $('#paginationSummary').html(`
             <li><span class="pagination-link is-current bg-primary shadow-sm border-none">Página ${currentPage} de ${totalPages}</span></li>
@@ -598,6 +644,10 @@
         const savedZoom = localStorage.getItem('gridZoom') || 240;
         $('#gridZoom').val(savedZoom);
         updateGridZoom(savedZoom);
+
+        // Initialize pageSize from localStorage
+        pageSize = parseInt(localStorage.getItem('pageSize')) || 24;
+        updatePageSizeButtons();
 
         // Populated globally outside raw block
         setView(currentView);

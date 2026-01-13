@@ -320,7 +320,7 @@ def get_all_titles():
 def get_all_titles_with_apps():
     """Get all titles with apps and files pre-loaded to avoid N+1 queries during library generation"""
     titles = Titles.query.options(
-        db.joinedload(Titles.apps).db.joinedload(Apps.files)
+        joinedload(Titles.apps).joinedload(Apps.files)
     ).all()
     
     results = []

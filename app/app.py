@@ -808,7 +808,7 @@ def post_library_change():
         remove_missing_files_from_db()
         # The process_library_identification already handles updating titles and generating library
         # So, we just need to ensure titles_library is updated from the generated library
-        generate_library()
+        generate_library(force=True)
         titles.identification_in_progress_count -= 1
         titles.unload_titledb()
 
@@ -857,7 +857,24 @@ def scan_library():
 @app.route('/api/library')
 @access_required('shop')
 def library_api():
-    return jsonify(generate_library())
+    # Fast check for cache and ETag
+    cached = load_library_from_disk()
+    if cached and 'hash' in cached:
+        etag = cached['hash']
+        if request.headers.get('If-None-Match') == etag:
+            return '', 304
+    
+    # generate_library will use cache if force=False (default)
+    lib_data = generate_library()
+    
+    # We need the hash for the header, so we reload from disk to get the full dict
+    # or we can modify generate_library to return it. 
+    # For now, just reload the small file header.
+    full_cache = load_library_from_disk()
+    resp = jsonify(lib_data)
+    if full_cache and 'hash' in full_cache:
+        resp.set_etag(full_cache['hash'])
+    return resp
 
 @app.route('/api/status')
 def process_status_api():

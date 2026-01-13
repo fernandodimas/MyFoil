@@ -324,7 +324,7 @@ def update_titles():
             logger.info(f"Removed {titles_removed} titles with no owned apps.")
 
     # Optimized query to fetch titles and their apps in fixed number of queries
-    titles = Titles.query.options(db.joinedload(Titles.apps)).all()
+    titles = Titles.query.options(joinedload(Titles.apps)).all()
     for n, title in enumerate(titles):
         have_base = False
         up_to_date = False
@@ -452,14 +452,16 @@ def load_library_from_disk():
     except:
         return None
 
-def generate_library():
+def generate_library(force=False):
     """Generate the game library grouped by TitleID, using cached version if unchanged"""
-    if is_library_unchanged():
+    cache_path = Path(LIBRARY_CACHE_FILE)
+    
+    if not force and cache_path.exists():
         saved_library = load_library_from_disk()
-        if saved_library:
+        if saved_library and 'library' in saved_library:
             return saved_library['library']
     
-    logger.info(f'Generating library (grouped by Title)...')
+    logger.info(f'Generating library (force={force})...')
     titles_lib.load_titledb()
     
     # Get all Titles known to the system with their apps and files pre-loaded
