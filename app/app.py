@@ -906,14 +906,22 @@ def scan_library_api():
 def system_info_api():
     from settings import load_settings
     settings = load_settings()
+    
+    # Get detailed source info
+    source_info = titledb.get_active_source_info()
+    source_name = source_info.get('name', 'TitleDB') if source_info else 'TitleDB'
+    
     titledb_file = titles.get_loaded_titles_file()
     
     # Check what update source we are using
     use_dbi = settings.get('titles/dbi_versions', False)
     update_src = "DBI (versions.txt)" if use_dbi else "TitleDB (versions.json)"
     
-    # Identification source - use the actual file name
-    id_src = f"TitleDB ({titledb_file})" if titledb_file != "None" else "Nenhum"
+    # Identification source - show Source Name + Region File
+    if titledb_file != "None":
+        id_src = f"{source_name} ({titledb_file})"
+    else:
+        id_src = f"{source_name} (Não carregado)"
     
     return jsonify({
         'build_version': BUILD_VERSION,
