@@ -169,6 +169,29 @@
     </div>
 </div>
 
+<!-- Confirmation Modal -->
+<div class="modal" id="confirmDeleteModal" style="z-index: 9999;">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head has-background-danger-dark border-none">
+            <p class="modal-card-title has-text-white has-text-weight-bold">Confirmar Exclusão</p>
+            <button class="delete" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body">
+            <div class="content has-text-centered p-4">
+                <i class="bi bi-exclamation-triangle-fill has-text-danger is-size-1 mb-3"></i>
+                <p class="is-size-5 has-text-weight-medium">Tem certeza que deseja excluir este arquivo?</p>
+                <p class="is-size-6 opacity-70">Esta ação removerá o arquivo permanentemente do seu disco. Não pode ser
+                    desfeita.</p>
+            </div>
+        </section>
+        <footer class="modal-card-foot border-none is-justify-content-center">
+            <button class="button is-danger px-6" id="btnConfirmDelete" onclick="confirmDeleteFile()">Excluir</button>
+            <button class="button close-modal">Cancelar</button>
+        </footer>
+    </div>
+</div>
+
 <style>
     .gap-4 {
         gap: 1rem;
@@ -437,7 +460,7 @@
             const statusDotClass = game.status_color === 'orange' ? 'bg-orange' : (game.status_color === 'green' ? 'bg-green' : 'bg-gray');
             const card = $(`
                 <div class="grid-item">
-                    <div class="card game-card box is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')" title="${game.name}">
+                    <div class="card game-card is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')" title="${game.name}">
                         <div class="card-image">
                             <figure class="image is-square bg-light relative">
                                 <img src="${game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" class="p-0" loading="lazy">
@@ -657,8 +680,11 @@
 
         const gender = $('#filterGender').val();
 
+
         filteredGames = games.filter(g => {
-            const matchesSearch = !query || (g.name && g.name.toLowerCase().includes(query)) || (g.id && g.id.toLowerCase().includes(query));
+            const gName = g.name || '';
+            const gId = g.id || '';
+            const matchesSearch = !query || gName.toLowerCase().includes(query) || gId.toLowerCase().includes(query);
 
             let matchesSource = true;
             if (showOwned && !showMissing) matchesSource = g.has_base;
@@ -758,18 +784,36 @@
         }
     }
 
-    function deleteGameFile(fileId, titleId) {
-        if (!confirm('Tem certeza que deseja excluir ESTE arquivo do disco? Esta ação não pode ser desfeita.')) return;
+    let fileToDeleteId = null;
+    let fileToDeleteTitleId = null;
 
-        $.post(`/api/files/delete/${fileId}`, (res) => {
+    function deleteGameFile(fileId, titleId) {
+        fileToDeleteId = fileId;
+        fileToDeleteTitleId = titleId;
+        $('#confirmDeleteModal').addClass('is-active');
+    }
+
+    function confirmDeleteFile() {
+        if (!fileToDeleteId) return;
+
+        const btnFn = $('#btnConfirmDelete');
+        btnFn.addClass('is-loading');
+
+        $.post(`/api/files/delete/${fileToDeleteId}`, (res) => {
+            $('#confirmDeleteModal').removeClass('is-active');
+            btnFn.removeClass('is-loading');
+
             if (res.success) {
                 // Refresh modal info
-                showGameDetails(titleId);
-                // Also trigger library refresh
+                if (fileToDeleteTitleId) {
+                    showGameDetails(fileToDeleteTitleId);
+                }
                 showToast('Arquivo excluído com sucesso.');
             } else {
                 showToast('Erro ao excluir: ' + (res.error || 'Erro desconhecido'), 'error');
             }
+            fileToDeleteId = null;
+            fileToDeleteTitleId = null;
         });
     }
 
