@@ -11,7 +11,7 @@ import logging
 import sys
 import copy
 import flask.cli
-from datetime import timedelta
+from datetime import timedelta, datetime
 flask.cli.show_server_banner = lambda *args: None
 from constants import *
 from settings import *
@@ -29,6 +29,7 @@ from sqlalchemy.engine import Engine
 from rest_api import init_rest_api
 import structlog
 from metrics import init_metrics, ACTIVE_SCANS, IDENTIFICATION_DURATION
+from backup import BackupManager
 
 # Optional Celery for async tasks
 try:
@@ -120,6 +121,17 @@ def update_db_and_scan_job():
     scan_library_job()
     logger.info("Update job completed.")
 
+def create_automatic_backup():
+    """Scheduled job for automatic backups"""
+    global backup_manager
+    if backup_manager:
+        logger.info("Starting automatic backup...")
+        success, timestamp = backup_manager.create_backup()
+        if success:
+            logger.info(f"Automatic backup completed: {timestamp}")
+        else:
+            logger.error("Automatic backup failed")
+
 def init():
     global watcher
     global watcher_thread
@@ -149,6 +161,15 @@ def init():
         interval=timedelta(hours=24),
         run_first=True
     )
+    
+    # Schedule daily backup at 3 AM
+    app.scheduler.add_job(
+        job_id='daily_backup',
+        func=create_automatic_backup,
+        interval=timedelta(days=1),
+        run_first=False,
+        start_date=datetime.now().replace(hour=3, minute=0, second=0, microsecond=0)
+    )
 
 os.makedirs(CONFIG_DIR, exist_ok=True)
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -156,6 +177,7 @@ os.makedirs(DATA_DIR, exist_ok=True)
 ## Global variables
 app_settings = {}
 socketio = SocketIO()
+backup_manager = None
 # Create a global variable and lock for scan_in_progress
 scan_in_progress = False
 scan_lock = threading.Lock()
@@ -1092,9 +1114,69 @@ def process_status_api():
         'updating_titledb': is_titledb_update_running
     })
 
+@app.post('/api/backup/create')
+@access_required('admin')
+def create_backup_api():
+    """Create a manual backup"""
+    global backup_manager
+    if not backup_manager:
+        return jsonify({'success': False, 'error': 'Backup manager not initialized'}), 500
+    
+    success, timestamp = backup_manager.create_backup()
+    if success:
+        return jsonify({
+            'success': True,
+            'timestamp': timestamp,
+            'message': 'Backup created successfully'
+        })
+    else:
+        return jsonify({'success': False, 'error': 'Backup failed'}), 500
+
+@app.get('/api/backup/list')
+@access_required('admin')
+def list_backups_api():
+    """List all available backups"""
+    global backup_manager
+    if not backup_manager:
+        return jsonify({'success': False, 'error': 'Backup manager not initialized'}), 500
+    
+    backups = backup_manager.list_backups()
+    return jsonify({
+        'success': True,
+        'backups': backups
+    })
+
+@app.post('/api/backup/restore')
+@access_required('admin')
+def restore_backup_api():
+    """Restore from a backup"""
+    global backup_manager
+    if not backup_manager:
+        return jsonify({'success': False, 'error': 'Backup manager not initialized'}), 500
+    
+    data = request.json
+    filename = data.get('filename')
+    
+    if not filename:
+        return jsonify({'success': False, 'error': 'Filename required'}), 400
+    
+    success = backup_manager.restore_backup(filename)
+    if success:
+        return jsonify({
+            'success': True,
+            'message': f'Restored from {filename}. Please restart the application.'
+        })
+    else:
+        return jsonify({'success': False, 'error': 'Restore failed'}), 500
+
 if __name__ == '__main__':
     logger.info(f'Build Version: {BUILD_VERSION}')
     logger.info('Starting initialization of MyFoil...')
+    
+    # Initialize backup manager
+    backup_manager = BackupManager(CONFIG_DIR, DATA_DIR)
+    logger.info('Backup manager initialized')
+    
     init_db(app)
     init_users(app)
     init()
