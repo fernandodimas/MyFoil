@@ -785,8 +785,29 @@ def app_info_api(id):
     result['files'] = unique_base_files
     result['updates'] = sorted(updates_list, key=lambda x: x['version'])
     result['dlcs'] = sorted(dlcs_list, key=lambda x: x['name'])
+    result['owned_version'] = max([u['version'] for u in updates_list if u['owned']], default=0)
+    result['category'] = info.get('category', []) # Genre/Categories
     
     return jsonify(result)
+
+@app.route('/api/files/unidentified')
+@access_required('admin')
+def get_unidentified_files_api():
+    files = get_all_unidentified_files()
+    return jsonify([{
+        'id': f.id,
+        'filename': f.filename,
+        'filepath': f.filepath,
+        'size': f.size,
+        'size_formatted': format_size_py(f.size),
+        'error': f.identification_error
+    } for f in files])
+
+@app.route('/api/files/delete/<int:file_id>', methods=['POST'])
+@access_required('admin')
+def delete_file_api(file_id):
+    success, error = delete_file_from_db_and_disk(file_id)
+    return jsonify({'success': success, 'error': error})
 
 def format_size_py(size):
     if size is None: return "0 B"
@@ -884,6 +905,7 @@ def process_status_api():
     })
 
 if __name__ == '__main__':
+    logger.info(f'Build Version: {BUILD_VERSION}')
     logger.info('Starting initialization of MyFoil...')
     init_db(app)
     init_users(app)

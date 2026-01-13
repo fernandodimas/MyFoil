@@ -239,6 +239,30 @@ def get_all_apps():
 def get_all_non_identified_files_from_library(library_id):
     return Files.query.filter_by(identified=False, library_id=library_id).all()
 
+def get_all_unidentified_files():
+    """Get all files that are not identified across all libraries"""
+    return Files.query.filter_by(identified=False).all()
+
+def delete_file_from_db_and_disk(file_id):
+    """Delete a file from the database and the filesystem"""
+    file = db.session.get(Files, file_id)
+    if not file:
+        return False, "File not found in database"
+    
+    filepath = file.filepath
+    try:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            logger.info(f"Deleted file from disk: {filepath}")
+        
+        # Delete from DB (cascade should handle associations)
+        db.session.delete(file)
+        db.session.commit()
+        return True, None
+    except Exception as e:
+        logger.error(f"Error deleting file {filepath}: {e}")
+        return False, str(e)
+
 def get_files_with_identification_from_library(library_id, identification_type):
     return Files.query.filter_by(library_id=library_id, identification_type=identification_type).all()
 

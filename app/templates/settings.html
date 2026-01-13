@@ -21,6 +21,8 @@
                         <li><a data-target="TitleDB"><i class="bi bi-database-fill mr-2"></i> TitleDB</a>
                         </li>
                         <li><a data-target="Shop"><i class="bi bi-cart-fill mr-2"></i> Loja</a></li>
+                        <li><a data-target="Errors"><i class="bi bi-exclamation-octagon-fill mr-2"></i>
+                                Erros/Identificação</a></li>
                     </ul>
                 </aside>
             </div>
@@ -450,6 +452,39 @@
                             </div>
                         </div>
                     </section>
+
+                    <!-- Errors Section -->
+                    <section id="section-Errors" class="settings-section is-hidden">
+                        <div class="card box shadow-sm">
+                            <header class="card-header border-none shadow-none">
+                                <p class="card-header-title has-text-danger">
+                                    <i class="bi bi-exclamation-octagon-fill mr-2"></i> Arquivos não Identificados
+                                </p>
+                                <div class="card-header-icon pt-4 pr-5">
+                                    <button class="button is-small is-dark is-outlined" onclick="fillErrorsTable()">
+                                        <i class="bi bi-arrow-clockwise mr-1"></i> Atualizar
+                                    </button>
+                                </div>
+                            </header>
+                            <div class="card-content pt-0">
+                                <p class="is-size-7 mb-4 opacity-70">Abaixo estão listados os arquivos que o MyFoil não
+                                    conseguiu identificar automaticamente. Você pode verificar o motivo do erro ou
+                                    excluir o arquivo se for lixo.</p>
+                                <div class="table-container">
+                                    <table class="table is-fullwidth is-hoverable" id="errorsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Arquivo</th>
+                                                <th>Erro</th>
+                                                <th class="has-text-right">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
             </div>
         </div>
@@ -726,6 +761,44 @@
         });
     }
 
+    function fillErrorsTable() {
+        $.getJSON("/api/files/unidentified", (result) => {
+            const tbody = $('#errorsTable tbody').empty();
+            if (!result || !result.length) {
+                tbody.append('<tr><td colspan="3" class="has-text-centered py-6 opacity-40 italic">Nenhum erro de identificação encontrado.</td></tr>');
+            } else {
+                result.forEach(file => {
+                    tbody.append(`
+                        <tr>
+                            <td>
+                                <p class="has-text-weight-bold is-size-7 break-word">${file.filename}</p>
+                                <p class="is-family-monospace is-size-7 opacity-40 break-word">${file.filepath}</p>
+                            </td>
+                            <td><span class="is-size-7 has-text-danger">${file.error || 'Erro desconhecido'}</span></td>
+                            <td class="has-text-right">
+                                <button class="button is-small is-ghost has-text-danger" onclick="deleteErrorFile(${file.id})">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `);
+                });
+            }
+        });
+    }
+
+    function deleteErrorFile(id) {
+        if (!confirm('Deseja realmente excluir este arquivo do DISCO?')) return;
+        $.post(`/api/files/delete/${id}`, (res) => {
+            if (res.success) {
+                showToast('Arquivo excluído');
+                fillErrorsTable();
+            } else {
+                showToast('Erro ao excluir: ' + res.error, 'error');
+            }
+        });
+    }
+
     // Modal Triggers
     function showDeleteUserModal(id, user) {
         $('#deleteUserModal .modal-text').text(`{{ t('Are you sure you want to delete user') }} "${user}"? {{ t('This action cannot be undone.') }}`);
@@ -946,6 +1019,7 @@
         fillUserTable();
         fillLibraryTable();
         fillTitleDBSourcesTable();
+        fillErrorsTable();
 
         try {
             const [regionsData, languagesData, settingsData] = await Promise.all([

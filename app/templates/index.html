@@ -81,21 +81,32 @@
                                     </label>
                                     <hr class="dropdown-divider">
                                     <label class="checkbox block py-1 px-2">
-                                        <input type="checkbox" class="filterInput" id="filterCheckOwned"> <span
-                                            class="ml-2">Adquirido</span>
+                                        <input type="checkbox" class="filterInput" id="filterCheckOwned" checked> <span
+                                            class="ml-2">Possuídos (Base)</span>
                                     </label>
                                     <label class="checkbox block py-1 px-2">
                                         <input type="checkbox" class="filterInput" id="filterCheckMissing"> <span
-                                            class="ml-2">Faltando</span>
+                                            class="ml-2">Faltantes (TitleDB)</span>
                                     </label>
+                                    <hr class="dropdown-divider">
+                                    <div class="field px-2">
+                                        <label class="label is-size-7 opacity-50">Gênero</label>
+                                        <div class="control">
+                                            <div class="select is-small is-fullwidth">
+                                                <select id="filterGender" class="filterInput">
+                                                    <option value="">Todos</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <hr class="dropdown-divider">
                                     <label class="checkbox block py-1 px-2">
                                         <input type="checkbox" class="filterInput" id="filterCheckUpToDate"> <span
-                                            class="ml-2">Atualizado</span>
+                                            class="ml-2">Atualizados</span>
                                     </label>
                                     <label class="checkbox block py-1 px-2">
                                         <input type="checkbox" class="filterInput" id="filterCheckMissingUpdate"> <span
-                                            class="ml-2">Falta Atualização</span>
+                                            class="ml-2">Pendente (Upd/DLC)</span>
                                     </label>
                                 </div>
                             </div>
@@ -128,6 +139,8 @@
                         <div class="buttons has-addons" id="viewToggleButtons">
                             <button class="button is-small" onclick="setView('card')" id="btnViewCard" title="Grade"><i
                                     class="bi bi-grid-fill"></i></button>
+                            <button class="button is-small" onclick="setView('icon')" id="btnViewIcon" title="Ícones"><i
+                                    class="bi bi-image"></i></button>
                             <button class="button is-small" onclick="setView('list')" id="btnViewList" title="Lista"><i
                                     class="bi bi-list-ul"></i></button>
                         </div>
@@ -304,6 +317,26 @@
         text-overflow: ellipsis;
         max-width: 100%;
     }
+
+    .break-word {
+        word-wrap: break-word;
+        word-break: break-all;
+        overflow-wrap: break-word;
+    }
+
+    #modalTitle {
+        word-break: break-word;
+    }
+
+    .container {
+        max-width: 95% !important;
+    }
+
+    @media screen and (min-width: 1408px) {
+        .container {
+            max-width: 1400px !important;
+        }
+    }
 </style>
 
 {% raw %}
@@ -347,6 +380,7 @@
         $('#noResults').toggleClass('is-hidden', paged.length > 0);
 
         if (currentView === 'card') renderCardView(paged);
+        else if (currentView === 'icon') renderIconView(paged);
         else renderListView(paged);
 
         updatePagination();
@@ -360,19 +394,43 @@
                     <div class="card game-card box is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')">
                         <div class="card-image position-relative overflow-hidden">
                             <figure class="image is-16by9">
-                                <img src="${game.iconUrl || '/static/no-icon.png'}" alt="${game.name}" style="object-fit: cover;">
+                                <img src="${game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" style="object-fit: cover;">
                             </figure>
                         </div>
                         <div class="card-content p-3">
-                            <p class="is-size-6 has-text-weight-bold mb-1 truncate">${game.name}</p>
-                            <p class="is-size-7 opacity-50 mb-3 font-mono truncate">${game.id}</p>
+                            <div class="is-flex is-justify-content-between mb-2">
+                                <span class="tag is-white p-0 font-mono is-size-7 opacity-50">${game.id}</span>
+                                <span class="tag is-white p-0 font-mono is-size-7 opacity-50">v${game.display_version}</span>
+                            </div>
+                            <p class="is-size-6 has-text-weight-bold mb-3 truncate" title="${game.name}">${game.name}</p>
                             <div class="is-flex is-justify-content-between is-align-items-center">
                                 <div class="is-flex is-align-items-center">
                                     <span class="status-dot ${statusDotClass}"></span>
-                                    <span class="is-size-7 opacity-70">${game.has_base ? 'Base' : 'Extra'}</span>
+                                    <span class="is-size-7 opacity-70">${game.has_base ? 'Jogo Base' : 'Extra'}</span>
                                 </div>
-                                <span class="tag is-info is-light is-small has-text-weight-bold">${game.display_version}</span>
+                                ${game.owned ? '<span class="tag is-success is-light is-small"><i class="bi bi-check mr-1"></i>Possui</span>' : '<span class="tag is-danger is-light is-small"><i class="bi bi-x mr-1"></i>Faltando</span>'}
                             </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+            $('#libraryContainer').append(card);
+        });
+    }
+
+    function renderIconView(items) {
+        items.forEach(game => {
+            const statusDotClass = game.status_color === 'orange' ? 'bg-orange' : (game.status_color === 'green' ? 'bg-green' : 'bg-gray');
+            const card = $(`
+                <div class="grid-item">
+                    <div class="card game-card box is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')" title="${game.name}">
+                        <div class="card-image">
+                            <figure class="image is-square bg-light relative">
+                                <img src="${game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" class="p-0" loading="lazy">
+                                <div class="status-indicator position-absolute" style="bottom: 5px; right: 5px;">
+                                    <span class="status-dot ${statusDotClass}"></span>
+                                </div>
+                            </figure>
                         </div>
                     </div>
                 </div>
@@ -388,11 +446,11 @@
                     <table class="table is-fullwidth is-hoverable game-list-table">
                         <thead>
                             <tr class="is-selected" style="background: #570df8">
-                                <th>Tipo</th>
+                                <th width="50">Ícone</th>
                                 <th>Título</th>
                                 <th>ID</th>
                                 <th>Versão</th>
-                                <th class="is-hidden-mobile">Tamanho</th>
+                                <th class="is-hidden-mobile">Status</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -401,13 +459,16 @@
             </div>
         `);
         items.forEach(game => {
+            const statusColor = game.status_color === 'orange' ? 'has-text-warning' : (game.status_color === 'green' ? 'has-text-success' : 'has-text-grey');
+            const statusText = game.status_color === 'orange' ? 'Pendante' : (game.status_color === 'green' ? 'Completo' : 'Incompleto');
+
             table.find('tbody').append(`
                 <tr onclick="showGameDetails('${game.id}')">
-                    <td><span class="tag ${game.app_type === 'BASE' ? 'is-success' : 'is-info'} is-small">${game.app_type}</span></td>
+                    <td class="p-1"><img src="${game.iconUrl || '/static/img/no-icon.png'}" style="width: 32px; height: 32px; border-radius: 4px;"></td>
                     <td><strong>${game.name}</strong></td>
-                    <td class="font-mono is-size-7">${game.app_id}</td>
-                    <td><span class="tag is-light">v${game.version}</span></td>
-                    <td class="is-hidden-mobile opacity-50 font-mono is-size-7">${game.size_formatted || '--'}</td>
+                    <td class="font-mono is-size-7">${game.id}</td>
+                    <td><span class="tag is-light">v${game.display_version}</span></td>
+                    <td class="is-hidden-mobile ${statusColor} has-text-weight-bold is-size-7">${statusText}</td>
                 </tr>
             `);
         });
@@ -426,13 +487,16 @@
                         <div class="box is-shadowless border p-3 mb-2 bg-light-soft">
                             <div class="columns is-vcentered is-mobile is-gapless">
                                 <div class="column">
-                                    <p class="is-size-7 has-text-weight-bold truncate" title="${f.filename}">${f.filename}</p>
-                                    <p class="is-size-7 opacity-50 truncate" title="${f.filepath}">${f.filepath}</p>
+                                    <p class="is-size-7 has-text-weight-bold break-word" title="${f.filename}">${f.filename}</p>
+                                    <p class="is-size-7 opacity-50 break-word" title="${f.filepath}">${f.filepath}</p>
                                 </div>
-                                <div class="column is-narrow ml-2">
-                                    <a href="/api/get_game/${f.id}" class="button is-primary is-small" title="Download">
+                                <div class="column is-narrow ml-2 is-flex align-items-center">
+                                    <a href="/api/get_game/${f.id}" class="button is-primary is-small mr-1" title="Download">
                                         <span class="icon is-small"><i class="bi bi-download"></i></span>
                                     </a>
+                                    <button class="button is-danger is-small is-light" onclick="deleteGameFile(${f.id}, '${game.id}')" title="Excluir Arquivo">
+                                        <span class="icon is-small"><i class="bi bi-trash-fill"></i></span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -475,7 +539,7 @@
                     <p class="heading has-text-weight-bold mb-3 has-text-success">Conteúdo Adicional (DLCs)</p>
                     <div class="is-flex is-flex-wrap-wrap gap-2">
                         ${game.dlcs.map(d => `
-                            <span class="tag ${d.owned ? 'is-success' : 'is-danger'} is-light is-small" title="${d.app_id}">
+                            <span class="tag ${d.owned ? 'is-success' : 'is-danger'} is-light is-small" title="${d.app_id}" onclick="showGameDetails('${d.app_id}')" style="cursor: pointer;">
                                 ${d.owned ? '<i class="bi bi-check-circle-fill mr-1"></i>' : '<i class="bi bi-x-circle mr-1"></i>'}
                                 ${d.name}
                             </span>
@@ -488,10 +552,11 @@
                 <div class="columns">
                     <div class="column is-4">
                         <figure class="image is-square box p-0 shadow-sm overflow-hidden mb-4">
-                            <img src="${game.iconUrl || '/static/no-icon.png'}" alt="Icon">
+                            <img src="${game.iconUrl || '/static/img/no-icon.png'}" alt="Icon">
                         </figure>
                         <div class="box p-3 is-shadowless border bg-light-soft">
                             <p class="is-size-7 mb-1"><strong>ID:</strong> <span class="font-mono">${game.app_id}</span></p>
+                            <p class="is-size-7 mb-1"><strong>Gênero:</strong> ${Array.isArray(game.category) ? game.category.join(', ') : (game.category || '--')}</p>
                             <p class="is-size-7 mb-1"><strong>Editora:</strong> ${game.publisher || '--'}</p>
                             <p class="is-size-7 mb-1"><strong>Lançamento:</strong> ${game.release_date || '--'}</p>
                             <p class="is-size-7"><strong>Versão Atual:</strong> v${game.owned_version}</p>
@@ -522,24 +587,26 @@
         const showMissing = $('#filterCheckMissing').is(':checked');
         const showUpToDate = $('#filterCheckUpToDate').is(':checked');
         const showMissingUpdate = $('#filterCheckMissingUpdate').is(':checked');
+        const gender = $('#filterGender').val();
 
         filteredGames = games.filter(g => {
             const matchesSearch = !query || (g.name && g.name.toLowerCase().includes(query)) || (g.id && g.id.toLowerCase().includes(query));
 
             let matchesType = true;
             if (showBase && !showDlc) matchesType = g.has_base;
-            else if (showDlc && !showBase) matchesType = !g.has_base; // If it doesn't have base, it's likely just extra content
+            else if (showDlc && !showBase) matchesType = !g.has_base;
 
             let matchesSource = true;
-            // Since everything in library is technically owned (at least partially), we check if it has a base
             if (showOwned && !showMissing) matchesSource = g.has_base;
             else if (showMissing && !showOwned) matchesSource = !g.has_base;
 
             let matchesStatus = true;
-            if (showUpToDate && !showMissingUpdate) matchesStatus = g.has_latest_version;
-            else if (showMissingUpdate && !showUpToDate) matchesStatus = !g.has_latest_version;
+            if (showUpToDate && !showMissingUpdate) matchesStatus = g.status_color === 'green';
+            else if (showMissingUpdate && !showUpToDate) matchesStatus = g.status_color === 'orange';
 
-            return matchesSearch && matchesType && matchesSource && matchesStatus;
+            const matchesGender = !gender || (g.category && g.category.includes(gender));
+
+            return matchesSearch && matchesType && matchesSource && matchesStatus && matchesGender;
         });
 
         currentPage = 1;
@@ -589,6 +656,21 @@
         }
     }
 
+    function deleteGameFile(fileId, titleId) {
+        if (!confirm('Tem certeza que deseja excluir ESTE arquivo do disco? Esta ação não pode ser desfeita.')) return;
+
+        $.post(`/api/files/delete/${fileId}`, (res) => {
+            if (res.success) {
+                // Refresh modal info
+                showGameDetails(titleId);
+                // Also trigger library refresh
+                showToast('Arquivo excluído com sucesso.');
+            } else {
+                showToast('Erro ao excluir: ' + (res.error || 'Erro desconhecido'), 'error');
+            }
+        });
+    }
+
     function updatePagination() {
         const totalPages = Math.ceil(filteredGames.length / pageSize) || 1;
         $('#btnFirst').toggleClass('is-disabled', currentPage === 1);
@@ -628,10 +710,16 @@
 
         $.getJSON('/api/library', function (data) {
             games = data || [];
-            // Log to debug invalid icons
+
+            // Populate Genders
+            const genders = new Set();
             games.forEach(g => {
-                if (!g.iconUrl) console.log('Missing icon for:', g.name);
+                if (g.category && Array.isArray(g.category)) {
+                    g.category.forEach(c => genders.add(c));
+                }
             });
+            const genderSelect = $('#filterGender').empty().append('<option value="">Todos os Gêneros</option>');
+            Array.from(genders).sort().forEach(g => genderSelect.append(new Option(g, g)));
 
             filteredGames = [...games];
             applyFilters();

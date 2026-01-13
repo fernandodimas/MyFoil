@@ -6,6 +6,21 @@ import datetime
 from pathlib import Path
 from utils import *
 
+def cleanup_metadata_files(path):
+    """Recursively delete macOS metadata files (starting with ._)"""
+    logger.info(f"Cleaning up macOS metadata files in {path}...")
+    deleted_count = 0
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            if file.startswith('._'):
+                try:
+                    os.remove(os.path.join(root, file))
+                    deleted_count += 1
+                except Exception as e:
+                    logger.warning(f"Failed to delete metadata file {file}: {e}")
+    if deleted_count > 0:
+        logger.info(f"Deleted {deleted_count} metadata files.")
+
 def add_library_complete(app, watcher, path):
     """Add a library to settings, database, and watchdog"""
     from settings import add_library_path_to_settings
@@ -123,6 +138,7 @@ def add_files_to_library(library, files):
     db.session.commit()
 
 def scan_library_path(library_path):
+    cleanup_metadata_files(library_path)
     library_id = get_library_id(library_path)
     logger.info(f'Scanning library path {library_path} ...')
     if not os.path.isdir(library_path):
