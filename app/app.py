@@ -776,10 +776,18 @@ def app_info_api(id):
     updates_list = []
     for upd in update_apps:
         v_int = int(upd['app_version'])
+        # Get file IDs for owned updates
+        files = []
+        if upd['owned']:
+            app_model = db.session.get(Apps, upd['id'])
+            for f in app_model.files:
+                files.append({'id': f.id, 'filename': f.filename, 'size_formatted': format_size_py(f.size)})
+        
         updates_list.append({
             'version': v_int,
             'owned': upd['owned'],
-            'release_date': version_release_dates.get(v_int, 'Unknown')
+            'release_date': version_release_dates.get(v_int, 'Unknown'),
+            'files': files
         })
     
     # DLCs
@@ -792,11 +800,21 @@ def app_info_api(id):
         dlc_apps_grouped[aid].append(a)
         
     for dlc_id in dlc_ids:
-        owned = any(a['owned'] for a in dlc_apps_grouped.get(dlc_id, []))
+        apps_for_dlc = dlc_apps_grouped.get(dlc_id, [])
+        owned = any(a['owned'] for a in apps_for_dlc)
+        files = []
+        if owned:
+            for a in apps_for_dlc:
+                if a['owned']:
+                    app_model = db.session.get(Apps, a['id'])
+                    for f in app_model.files:
+                        files.append({'id': f.id, 'filename': f.filename, 'size_formatted': format_size_py(f.size)})
+        
         dlcs_list.append({
             'app_id': dlc_id,
             'name': titles_lib.get_game_info(dlc_id).get('name', f'DLC {dlc_id}'),
-            'owned': owned
+            'owned': owned,
+            'files': files
         })
 
     result = info.copy()

@@ -437,9 +437,9 @@
             const card = $(`
                 <div class="grid-item">
                     <div class="card game-card box is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')">
-                        <div class="card-image position-relative overflow-hidden">
-                            <figure class="image is-16by9">
-                                <img src="${game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" style="object-fit: cover;">
+                        <div class="card-image position-relative overflow-hidden" style="padding-top: 56.25%;">
+                            <figure class="image position-absolute" style="top: 0; left: 0; right: 0; bottom: 0;">
+                                <img src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" style="width: 100%; height: 100%; object-fit: cover;">
                             </figure>
                         </div>
                         <div class="card-content p-3">
@@ -511,11 +511,11 @@
             const statusText = game.status_color === 'orange' ? 'Pendante' : (game.status_color === 'green' ? 'Completo' : 'Incompleto');
 
             table.find('tbody').append(`
-                <tr onclick="showGameDetails('${game.id}')">
-                    <td class="p-1"><img src="${game.iconUrl || '/static/img/no-icon.png'}" style="width: 32px; height: 32px; border-radius: 4px;"></td>
-                    <td><strong>${game.name}</strong></td>
-                    <td class="font-mono is-size-7">${game.id}</td>
-                    <td><span class="tag is-light">v${game.display_version}</span></td>
+                <tr onclick="showGameDetails('${game.id || game.title_id}')">
+                    <td class="p-1"><img src="${game.iconUrl || '/static/img/no-icon.png'}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;"></td>
+                    <td><strong class="is-size-7-mobile">${game.name || 'Unknown'}</strong></td>
+                    <td class="font-mono is-size-7">${game.id || game.title_id || '--'}</td>
+                    <td><span class="tag is-light is-small">v${game.display_version || '0'}</span></td>
                     <td class="is-hidden-mobile ${statusColor} has-text-weight-bold is-size-7">${statusText}</td>
                 </tr>
             `);
@@ -566,15 +566,31 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                ${game.updates.map(u => `
+                                ${game.updates.map(u => {
+                const file = u.files && u.files.length > 0 ? u.files[0] : null;
+                return `
                                     <tr>
                                         <td class="has-text-weight-bold">v${u.version}</td>
                                         <td class="opacity-70">${u.release_date || '--'}</td>
                                         <td class="has-text-centered">
-                                            ${u.owned ? '<span class="tag is-success is-light is-small">Possui</span>' : '<span class="tag is-danger is-light is-small">Falta</span>'}
+                                            ${u.owned ? `
+                                                <div class="field is-grouped is-grouped-centered">
+                                                    <p class="control">
+                                                        <a href="/api/get_game/${file.id}" class="button is-primary is-small" title="Download">
+                                                            <i class="bi bi-download"></i>
+                                                        </a>
+                                                    </p>
+                                                    <p class="control">
+                                                        <button class="button is-danger is-small is-light" onclick="deleteGameFile(${file.id}, '${game.id}')" title="Excluir">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </p>
+                                                </div>
+                                            ` : '<span class="tag is-danger is-light is-small">Falta</span>'}
                                         </td>
                                     </tr>
-                                `).join('')}
+                                    `;
+            }).join('')}
                             </tbody>
                         </table>
                     </div>
@@ -586,17 +602,33 @@
                 <div class="mb-5">
                     <p class="heading has-text-weight-bold mb-3 has-text-success">Conteúdo Adicional (DLCs)</p>
                     <div class="is-flex is-flex-wrap-wrap gap-2">
-                        ${game.dlcs.map(d => `
-                            <span class="tag ${d.owned ? 'is-success' : 'is-danger'} is-light is-small dlc-tag" title="${d.app_id}" onclick="showGameDetails('${d.app_id}')" style="cursor: pointer; max-width: 250px; white-space: normal; word-wrap: break-word;">
-                                ${d.owned ? '<i class="bi bi-check-circle-fill mr-1"></i>' : '<i class="bi bi-x-circle mr-1"></i>'}
-                                ${d.name}
-                            </span>
-                        `).join('')}
+                        ${game.dlcs.map(d => {
+                const file = d.files && d.files.length > 0 ? d.files[0] : null;
+                return `
+                            <div class="tags has-addons mb-0">
+                                <span class="tag ${d.owned ? 'is-success' : 'is-danger'} is-light is-small dlc-tag" title="${d.app_id}" onclick="showGameDetails('${d.app_id}')" style="cursor: pointer; max-width: 200px; white-space: normal; word-wrap: break-word;">
+                                    ${d.owned ? '<i class="bi bi-check-circle-fill mr-1"></i>' : '<i class="bi bi-x-circle mr-1"></i>'}
+                                    ${d.name}
+                                </span>
+                                ${d.owned && file ? `
+                                    <a href="/api/get_game/${file.id}" class="tag is-primary is-small" title="Download"><i class="bi bi-download"></i></a>
+                                    <a class="tag is-danger is-small is-light" onclick="deleteGameFile(${file.id}, '${game.id}')" title="Excluir"><i class="bi bi-trash"></i></a>
+                                ` : ''}
+                            </div>
+                            `;
+            }).join('')}
                     </div>
                 </div>
             ` : '';
 
             let content = `
+                <div class="modal-banner-container mb-4" style="margin: -20px -20px 20px -20px; position: relative; height: 250px; overflow: hidden; background: #eee;">
+                    <img src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" style="width: 100%; height: 100%; object-fit: cover;">
+                    <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.7)); padding: 20px 20px 10px;">
+                        <p class="title is-4 has-text-white mb-0">${game.name}</p>
+                        <p class="subtitle is-6 has-text-grey-lighter">${game.publisher || '--'}</p>
+                    </div>
+                </div>
                 <div class="columns">
                     <div class="column is-4">
                         <figure class="image is-square box p-0 shadow-sm overflow-hidden mb-4">
