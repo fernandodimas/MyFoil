@@ -705,7 +705,15 @@ def app_info_api(id):
             title_obj = app_obj.title
 
     if not title_obj:
-        return jsonify({'success': False, 'error': 'Game not found'})
+        # Maybe it's a DLC app_id, try to find base TitleID
+        titles_lib.load_titledb() # Ensure loaded
+        base_tid, _ = titles_lib.identify_appId(tid)
+        if base_tid:
+            tid = base_tid
+            title_obj = Titles.query.filter_by(title_id=tid).first()
+    
+    # If still not found, we can't show much, but let's try to show TitleDB info
+    # if it's a valid TitleID even if not in our DB
     
     # Get basic info from titledb
     info = titles_lib.get_game_info(tid)
@@ -715,8 +723,24 @@ def app_info_api(id):
             'publisher': '--',
             'description': 'No information available.',
             'release_date': '--',
-            'iconUrl': '/static/no-icon.png'
+            'iconUrl': '/static/img/no-icon.png'
         }
+    
+    if not title_obj:
+        # Game/Title not in our database at all
+        result = info.copy()
+        result['id'] = tid
+        result['app_id'] = tid
+        result['owned_version'] = 0
+        result['has_base'] = False
+        result['has_latest_version'] = False
+        result['has_all_dlcs'] = False
+        result['owned'] = False
+        result['files'] = []
+        result['updates'] = []
+        result['dlcs'] = []
+        result['category'] = info.get('category', [])
+        return jsonify(result)
     
     # Get all apps for this title
     all_title_apps = get_all_title_apps(tid)

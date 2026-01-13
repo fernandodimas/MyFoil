@@ -508,6 +508,7 @@ def generate_library(force=False):
         game['has_base'] = title_data['have_base']
         game['has_latest_version'] = title_data['up_to_date']
         game['has_all_dlcs'] = title_data['complete']
+        game['owned'] = game['has_base']
         
         # Determine status color for UI
         # Orange if missing updates or DLCs (for games with base)
@@ -547,8 +548,8 @@ def generate_library(force=False):
         game['latest_version_available'] = max([v['version'] for v in available_versions], default=0)
         game['owned_version'] = max([v['version'] for v in version_list if v['owned']], default=0)
         
-        # For card display, use owned_version or 0
-        game['display_version'] = f"v{game['owned_version']}" if game['owned_version'] > 0 else "Base"
+        # For card display, use owned_version
+        game['display_version'] = str(game['owned_version'])
 
         # DLC details
         # Group DLCs by their unique app_id (a game can have many DLCs)

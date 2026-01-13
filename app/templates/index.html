@@ -301,6 +301,18 @@
         background-color: #b4b7bd;
     }
 
+    .gap-1 {
+        gap: 0.25rem !important;
+    }
+
+    .gap-2 {
+        gap: 0.5rem !important;
+    }
+
+    .gap-3 {
+        gap: 1rem !important;
+    }
+
     /* Custom list styles for Bulma */
     .game-list-table tr {
         cursor: pointer;
@@ -404,11 +416,12 @@
                             </div>
                             <p class="is-size-6 has-text-weight-bold mb-3 truncate" title="${game.name}">${game.name}</p>
                             <div class="is-flex is-justify-content-between is-align-items-center">
-                                <div class="is-flex is-align-items-center">
+                                <div class="is-flex is-align-items-center gap-1">
                                     <span class="status-dot ${statusDotClass}"></span>
-                                    <span class="is-size-7 opacity-70">${game.has_base ? 'Jogo Base' : 'Extra'}</span>
+                                    ${!game.has_latest_version && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1" style="height: 1.2rem; font-size: 0.65rem; font-weight: bold;">UPDATE</span>' : ''}
+                                    ${!game.has_all_dlcs && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1" style="height: 1.2rem; font-size: 0.65rem; font-weight: bold;">DLC</span>' : ''}
                                 </div>
-                                ${game.owned ? '<span class="tag is-success is-light is-small"><i class="bi bi-check mr-1"></i>Possui</span>' : '<span class="tag is-danger is-light is-small"><i class="bi bi-x mr-1"></i>Faltando</span>'}
+                                ${game.owned ? '<span class="tag is-success is-light is-small" style="font-weight: bold;"><i class="bi bi-check mr-1"></i>Possui</span>' : '<span class="tag is-grey-lighter has-text-grey is-small" style="font-weight: bold;"><i class="bi bi-x mr-1"></i>Vazio</span>'}
                             </div>
                         </div>
                     </div>
