@@ -26,6 +26,7 @@ from i18n import I18n
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from rest_api import init_rest_api
+import structlog
 
 # Optional Celery for async tasks
 try:
@@ -166,14 +167,33 @@ formatter = ColoredFormatter(
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(formatter)
 
+# Standard logging config
 logging.basicConfig(
     level=logging.INFO,
     handlers=[handler]
 )
 
-# Create main logger
-logger = logging.getLogger('main')
-logger.setLevel(logging.DEBUG)
+# Structlog configuration
+structlog.configure(
+    processors=[
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
+        structlog.processors.JSONRenderer() if os.environ.get('LOG_FORMAT') == 'json' else structlog.dev.ConsoleRenderer()
+    ],
+    context_class=dict,
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    wrapper_class=structlog.stdlib.BoundLogger,
+    cache_logger_on_first_use=True,
+)
+
+# Create main logger (bridged to structlog)
+logger = structlog.get_logger('main')
 
 # Apply filter to hide date from http access logs
 logging.getLogger('werkzeug').addFilter(FilterRemoveDateFromWerkzeugLogs())

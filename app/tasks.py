@@ -4,9 +4,9 @@ from db import db
 from library import scan_library_path, identify_library_files, update_titles, generate_library
 import titles as titles_lib
 import os
-import logging
+import structlog
 
-logger = logging.getLogger('main')
+logger = structlog.get_logger('main')
 
 def create_app_context():
     """Create a minimal app context for celery tasks"""
@@ -25,7 +25,7 @@ def scan_library_async(library_path):
     """Full library scan in background"""
     with flask_app.app_context():
         from db import remove_missing_files_from_db
-        logger.info(f"Background task: Starting scan for {library_path}")
+        logger.info("background_scan_started", library_path=library_path)
         
         # 1. Cleanup missing files first
         remove_missing_files_from_db()
@@ -40,7 +40,7 @@ def scan_library_async(library_path):
         update_titles()
         generate_library(force=True)
         
-        logger.info(f"Background task: Scan and cleanup completed for {library_path}")
+        logger.info("background_scan_completed", library_path=library_path)
         return True
 
 @celery.task(name='tasks.identify_file_async')
@@ -48,7 +48,7 @@ def identify_file_async(filepath):
     """Identify a single file in background (e.g. from watchdog)"""
     with flask_app.app_context():
         from db import remove_missing_files_from_db
-        logger.info(f"Background task: Processing library update after change in {filepath}")
+        logger.info("background_identification_started", triggered_by=filepath)
         
         # For simple file changes, we can just run the global cleanup and identification
         remove_missing_files_from_db()
@@ -72,7 +72,7 @@ def scan_all_libraries_async():
         
         libraries = get_libraries()
         for lib in libraries:
-            logger.info(f"Scanning {lib.path}...")
+            logger.info("scanning_path", path=lib.path)
             scan_library_path(lib.path)
             identify_library_files(lib.path)
             
