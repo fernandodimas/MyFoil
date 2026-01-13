@@ -1,7 +1,6 @@
 import hashlib
 from constants import *
 from db import *
-from i18n import t
 from metrics import FILES_IDENTIFIED, IDENTIFICATION_DURATION, LIBRARY_SIZE
 import titles as titles_lib
 import datetime
