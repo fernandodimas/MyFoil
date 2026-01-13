@@ -165,9 +165,7 @@
         <section class="modal-card-body overflow-y-auto" id="modalContent">
             <!-- Injected via JS -->
         </section>
-        <footer class="modal-card-foot border-none is-justify-content-flex-end">
-            <button class="button is-primary" onclick="closeModal('gameDetailsModal')">Fechar</button>
-        </footer>
+
     </div>
 </div>
 
@@ -405,7 +403,7 @@
             const statusDotClass = game.status_color === 'orange' ? 'bg-orange' : (game.status_color === 'green' ? 'bg-green' : 'bg-gray');
             const card = $(`
                 <div class="grid-item">
-                    <div class="card game-card box is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')">
+                    <div class="card game-card is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')">
                         <div class="card-image position-relative overflow-hidden">
                             <figure class="image is-16by9">
                                 <img src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" style="object-fit: cover;">

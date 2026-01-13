@@ -772,6 +772,19 @@ def app_info_api(id):
     available_versions = titles_lib.get_all_existing_versions(tid)
     version_release_dates = {v['version']: v['release_date'] for v in available_versions}
     
+    # Ensure v0 has the base game release date in YYYY-MM-DD format
+    base_release_date = info.get('release_date', '')
+    if base_release_date and len(str(base_release_date)) == 8 and str(base_release_date).isdigit():
+        # Format YYYYMMDD to YYYY-MM-DD
+        formatted_date = f"{str(base_release_date)[:4]}-{str(base_release_date)[4:6]}-{str(base_release_date)[6:]}"
+        # Update info for the main response
+        info['release_date'] = formatted_date
+        # Set for v0
+        version_release_dates[0] = formatted_date
+    elif base_release_date:
+        version_release_dates[0] = base_release_date
+
+
     update_apps = [a for a in all_title_apps if a['app_type'] == APP_TYPE_UPD]
     updates_list = []
     for upd in update_apps:

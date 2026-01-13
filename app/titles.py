@@ -320,7 +320,7 @@ def load_titledb(force=False):
                             for tid, data in current_batch.items():
                                 if tid in _titles_db:
                                     # Override specific fields but keep the rest
-                                    for field in ['name', 'description']:
+                                    for field in ['name', 'description', 'bannerUrl', 'iconUrl', 'publisher', 'releaseDate', 'size', 'category']:
                                         if data.get(field):
                                             _titles_db[tid][field] = data[field]
                                 else:

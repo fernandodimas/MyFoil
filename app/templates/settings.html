@@ -728,7 +728,7 @@
                     <tr>
                         <td>
                             <p class="has-text-weight-bold has-text-primary is-size-6">${source.name}</p>
-                            <p class="is-family-monospace is-size-7 opacity-40">${source.base_url}</p>
+                            <p class="is-family-monospace is-size-7 opacity-40" style="word-break: break-all;">${source.base_url}</p>
                         </td>
                         <td><span class="tag is-light is-small is-uppercase is-family-monospace">${source.source_type}</span></td>
                         <td><input type="number" class="input is-small w-16" value="${source.priority}" style="width: 70px" onchange="updateSourcePriority('${source.name}', this.value)" /></td>
