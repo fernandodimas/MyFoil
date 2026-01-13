@@ -21,6 +21,15 @@ from library import *
 import titledb
 import os
 from i18n import I18n
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.close()
 
 def update_titledb_job(force=False):
     global is_titledb_update_running
@@ -771,6 +780,13 @@ def scan_library():
     libraries = get_libraries()
     for library in libraries:
         scan_library_path(library.path) # Only scan, identification will be done globally
+
+@app.route('/api/status')
+def process_status_api():
+    return jsonify({
+        'scanning': scan_in_progress,
+        'updating_titledb': is_titledb_update_running
+    })
 
 if __name__ == '__main__':
     logger.info('Starting initialization of MyFoil...')

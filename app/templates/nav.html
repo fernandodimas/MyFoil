@@ -28,6 +28,12 @@
             </div>
 
             <div class="navbar-end">
+                <div class="navbar-item is-hidden" id="processIndicator">
+                    <span class="tag is-info is-light is-rounded">
+                        <i class="fas fa-spinner fa-pulse mr-2"></i>
+                        <span class="is-size-7 has-text-weight-bold" id="processText">{{ t('Processing...') }}</span>
+                    </span>
+                </div>
                 {% if title == 'Library' %}
                 <div class="navbar-item">
                     <div class="control has-icons-right">
@@ -87,6 +93,31 @@
             });
         }
     });
+
+
+    // Process Status Polling
+    function checkProcessStatus() {
+        $.getJSON('/api/status', function (data) {
+            const indicator = $('#processIndicator');
+            const text = $('#processText');
+
+            if (data.scanning || data.updating_titledb) {
+                indicator.removeClass('is-hidden');
+                if (data.updating_titledb) {
+                    text.text('{{ t("Updating TitleDB...") }}');
+                } else if (data.scanning) {
+                    text.text('{{ t("Scanning Library...") }}');
+                }
+            } else {
+                indicator.addClass('is-hidden');
+            }
+        });
+    }
+
+    // Check every 3 seconds
+    setInterval(checkProcessStatus, 3000);
+    // Initial check
+    checkProcessStatus();
 </script>
 
 <style>

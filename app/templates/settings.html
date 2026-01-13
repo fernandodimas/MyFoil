@@ -115,16 +115,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="column is-6">
-                                        <div class="field pt-5">
-                                            <div class="control">
-                                                <label class="checkbox has-text-weight-bold">
-                                                    <input type="checkbox" id="useDbiVersionsCheck">
-                                                    {{ t('Fetch updates from DBI database') }}
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
 
                                 <hr class="my-6 opacity-10">
@@ -350,6 +340,19 @@
                                         </thead>
                                         <tbody></tbody>
                                     </table>
+                                </div>
+
+
+                                <div class="field mt-5 mb-5 px-1">
+                                    <div class="control">
+                                        <label class="checkbox has-text-weight-bold">
+                                            <input type="checkbox" id="useDbiVersionsCheck"
+                                                onchange="updateDbiSetting()">
+                                            {{ t('Fetch updates from DBI database') }}
+                                        </label>
+                                    </div>
+                                    <p class="help opacity-50 ml-4">{{ t('Use local versions.txt file from DBI if
+                                        available') }}</p>
                                 </div>
 
                                 <div class="block mt-6">
@@ -866,8 +869,7 @@
     function submitTitlesSettings() {
         const data = {
             region: $('#selectRegion').val(),
-            language: $('#selectLanguage').val(),
-            dbi_versions: getCheckboxStatus('useDbiVersionsCheck')
+            language: $('#selectLanguage').val()
         };
 
         $.ajax({
@@ -903,6 +905,16 @@
                 }
             });
         }
+    }
+
+    function updateDbiSetting() {
+        const data = {
+            dbi_versions: getCheckboxStatus('useDbiVersionsCheck')
+        };
+        $.ajax({
+            url: "/api/settings/titles", type: 'POST', data: JSON.stringify(data), contentType: "application/json",
+            success: (r) => { if (r.success) showToast('{{ t("Settings saved") }}'); }
+        });
     }
 
     function submitShopSettings() {
