@@ -44,6 +44,7 @@ DEFAULT_SETTINGS = {
         "clientCertKey": "-----BEGIN PRIVATE KEY-----",
         "host": "",
         "hauth": "",
+        "dbi_versions": False,
     }
 }
 

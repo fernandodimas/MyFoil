@@ -22,6 +22,63 @@ import titledb
 import os
 from i18n import I18n
 
+def update_titledb_job(force=False):
+    global is_titledb_update_running
+    with titledb_update_lock:
+        if is_titledb_update_running:
+            logger.info("TitleDB update already in progress.")
+            return False
+        is_titledb_update_running = True
+    
+    logger.info("Starting TitleDB update job...")
+    try:
+        current_settings = load_settings()
+        titledb.update_titledb(current_settings, force=force)
+        logger.info("TitleDB update job completed.")
+        return True
+    except Exception as e:
+        logger.error(f"Error during TitleDB update job: {e}")
+        return False
+    finally:
+        with titledb_update_lock:
+            is_titledb_update_running = False
+
+def scan_library_job():
+    global is_titledb_update_running
+    with titledb_update_lock:
+        if is_titledb_update_running:
+            logger.info("Skipping scheduled library scan: update_titledb job is currently in progress. Rescheduling in 5 minutes.")
+            app.scheduler.add_job(
+                job_id=f'scan_library_rescheduled_{datetime.now().timestamp()}',
+                func=scan_library_job,
+                run_once=True,
+                start_date=datetime.now().replace(microsecond=0) + timedelta(minutes=5)
+            )
+            return
+            
+    logger.info("Starting library scan job...")
+    global scan_in_progress
+    with scan_lock:
+        if scan_in_progress:
+            logger.info('Skipping library scan: scan already in progress.')
+            return
+        scan_in_progress = True
+    try:
+        scan_library()
+        post_library_change()
+        logger.info("Library scan job completed.")
+    except Exception as e:
+        logger.error(f"Error during library scan job: {e}")
+    finally:
+        with scan_lock:
+            scan_in_progress = False
+
+def update_db_and_scan_job():
+    logger.info("Running update job (TitleDB update and library scan)...")
+    update_titledb_job()
+    scan_library_job()
+    logger.info("Update job completed.")
+
 def init():
     global watcher
     global watcher_thread
@@ -44,59 +101,11 @@ def init():
     logger.info('Initializing Scheduler...')
     init_scheduler(app)
     
-    # Define update_titledb_job
-    def update_titledb_job():
-        global is_titledb_update_running
-        with titledb_update_lock:
-            is_titledb_update_running = True
-        logger.info("Starting TitleDB update job...")
-        try:
-            current_settings = load_settings()
-            titledb.update_titledb(current_settings)
-            logger.info("TitleDB update job completed.")
-        except Exception as e:
-            logger.error(f"Error during TitleDB update job: {e}")
-        finally:
-            with titledb_update_lock:
-                is_titledb_update_running = False
-        
-    # Define scan_library_job
-    def scan_library_job():
-        global is_titledb_update_running
-        with titledb_update_lock:
-            if is_titledb_update_running:
-                logger.info("Skipping scheduled library scan: update_titledb job is currently in progress. Rescheduling in 5 minutes.")
-                # Reschedule the job for 5 minutes later
-                app.scheduler.add_job(
-                    job_id=f'scan_library_rescheduled_{datetime.now().timestamp()}', # Unique ID
-                    func=scan_library_job,
-                    run_once=True,
-                    start_date=datetime.now().replace(microsecond=0) + timedelta(minutes=5)
-                )
-                return
-        logger.info("Starting scheduled library scan job...")
-        global scan_in_progress
-        with scan_lock:
-            if scan_in_progress:
-                logger.info(f'Skipping scheduled library scan: scan already in progress.')
-                return # Skip the scan if already in progress
-            scan_in_progress = True
-        try:
-            scan_library()
-            post_library_change()
-            logger.info("Scheduled library scan job completed.")
-        except Exception as e:
-            logger.error(f"Error during scheduled library scan job: {e}")
-        finally:
-            with scan_lock:
-                scan_in_progress = False
-
-    # Update job: run update_titledb then scan_library once on startup
-    def update_db_and_scan_job():
-        logger.info("Running update job (TitleDB update and library scan)...")
-        update_titledb_job() # This will set/reset the flag
-        scan_library_job() # This will check the flag and run if update_titledb_job is done
-        logger.info("Update job completed.")
+    # Schedule periodic tasks
+    app.scheduler.add_job(job_id='update_db_and_scan', func=update_db_and_scan_job, trigger='interval', hours=24)
+    
+    # Run once on startup in background
+    threading.Thread(target=update_db_and_scan_job).start()
 
     # Schedule the update job to run immediately and only once
     app.scheduler.add_job(
@@ -368,11 +377,23 @@ def settings_page():
 def get_settings_api():
     reload_conf()
     settings = copy.deepcopy(app_settings)
-    if settings['shop'].get('hauth'):
-        settings['shop']['hauth'] = True
+    
+    # Flatten settings for the JS frontend
+    flattened = {}
+    for section, values in settings.items():
+        if isinstance(values, dict):
+            for key, value in values.items():
+                flattened[f"{section}/{key}"] = value
+        else:
+            flattened[section] = values
+
+    # Tinfoil Auth specific handling
+    if settings.get('shop', {}).get('hauth'):
+        flattened['shop/hauth'] = True
     else:
-        settings['shop']['hauth'] = False
-    return jsonify(settings)
+        flattened['shop/hauth'] = False
+        
+    return jsonify(flattened)
 
 @app.post('/api/settings/titles')
 @access_required('admin')
@@ -380,7 +401,14 @@ def set_titles_settings_api():
     settings = request.json
     region = settings['region']
     language = settings['language']
-    with open(os.path.join(TITLEDB_DIR, 'languages.json')) as f:
+    languages_path = os.path.join(TITLEDB_DIR, 'languages.json')
+    if not os.path.exists(languages_path):
+        return jsonify({
+            'success': False,
+            'errors': [{'path': 'titles', 'error': 'TitleDB not loaded. Please update TitleDB first.'}]
+        })
+
+    with open(languages_path) as f:
         languages = json.load(f)
         languages = dict(sorted(languages.items()))
 
@@ -396,12 +424,14 @@ def set_titles_settings_api():
     
     set_titles_settings(region, language)
     reload_conf()
-    titledb.update_titledb(app_settings)
-    post_library_change()
+    
+    # Run update in background
+    threading.Thread(target=update_titledb_job, args=(True,)).start()
+    
     resp = {
         'success': True,
         'errors': []
-    } 
+    }
     return jsonify(resp)
 
 @app.post('/api/settings/shop')
@@ -559,12 +589,11 @@ def titledb_sources_api():
 @app.post('/api/settings/titledb/update')
 @access_required('admin')
 def force_titledb_update_api():
-    """Force a TitleDB update"""
-    reload_conf()
-    success = titledb.update_titledb(app_settings, force=True)
+    """Force a TitleDB update in background"""
+    threading.Thread(target=update_titledb_job, args=(True,)).start()
     return jsonify({
-        'success': success,
-        'errors': [] if success else ['TitleDB update failed']
+        'success': True,
+        'message': 'Update started in background'
     })
 
 

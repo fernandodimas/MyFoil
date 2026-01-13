@@ -472,24 +472,42 @@ def get_game_latest_version(all_existing_versions):
 
 def get_all_existing_versions(titleid):
     global _versions_db
+    global _versions_txt_db
+    
     if _versions_db is None:
         logger.error("versions_db is not loaded. Call load_titledb first.")
         return []
 
     titleid = titleid.lower()
-    if titleid not in _versions_db:
-        # print(f'Title ID not in versions.json: {titleid.upper()}')
-        return []
+    app_settings = load_settings()
+    use_dbi = app_settings.get('shop', {}).get('dbi_versions', False)
 
-    versions_from_db = _versions_db[titleid].keys()
-    return [
-        {
-            'version': int(version_from_db),
-            'update_number': get_update_number(version_from_db),
-            'release_date': _versions_db[titleid][str(version_from_db)],
-        }
-        for version_from_db in versions_from_db
-    ]
+    # Priority 1: JSON Versions DB
+    if titleid in _versions_db:
+        versions_from_db = _versions_db[titleid].keys()
+        return [
+            {
+                'version': int(version_from_db),
+                'update_number': get_update_number(version_from_db),
+                'release_date': _versions_db[titleid][str(version_from_db)],
+            }
+            for version_from_db in versions_from_db
+        ]
+    
+    # Priority 2: Fallback to versions.txt (DBI) if enabled
+    if use_dbi and _versions_txt_db and titleid in _versions_txt_db:
+        v_str = _versions_txt_db[titleid]
+        try:
+            v_int = int(v_str)
+            return [{
+                'version': v_int,
+                'update_number': get_update_number(v_str),
+                'release_date': 'Unknown',
+            }]
+        except:
+            pass
+
+    return []
 
 def get_all_app_existing_versions(app_id):
     global _cnmts_db

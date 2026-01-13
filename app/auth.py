@@ -208,6 +208,7 @@ def delete_user():
     } 
     return jsonify(resp)
 
+@auth_blueprint.route('/api/user', methods=['POST'])
 @auth_blueprint.route('/api/user/signup', methods=['POST'])
 @access_required('admin')
 def signup_post():

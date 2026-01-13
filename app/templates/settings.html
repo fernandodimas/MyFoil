@@ -26,7 +26,8 @@
                 <div class="text-xs">{{ t('Nintendo content decryption requires keys. Titles will be misidentified.') }}
                     <a target="_blank"
                         href="https://gitlab.com/easyhacking/switch/-/wikis/home/getting-started/dump-keys"
-                        class="link link-hover font-bold underline">{{ t('Extraction guide') }}</a>.</div>
+                        class="link link-hover font-bold underline">{{ t('Extraction guide') }}</a>.
+                </div>
             </div>
         </div>
         {% endif %}
@@ -515,23 +516,39 @@
         window.location.reload();
     }
 
-    $(document).ready(() => {
+    $(document).ready(async () => {
         fillUserTable();
         fillLibraryTable();
         fillTitleDBSourcesTable();
 
-        $.getJSON("/api/settings/regions", (r) => r.regions.forEach(reg => $('#selectRegion').append(new Option(reg, reg))));
-        $.getJSON("/api/settings/languages", (r) => r.languages.forEach(l => $('#selectLanguage').append(new Option(l, l))));
-        $.getJSON("/api/settings", (r) => {
-            $('#selectRegion').val(r['titles/region']);
-            $('#selectLanguage').val(r['titles/language']);
-            $('#shopHostInput').val(r['shop/host']);
-            $('#publicShopCheck').prop('checked', r['shop/public']);
-            $('#encryptShopCheck').prop('checked', r['shop/encrypt']);
-            $('#motdTextArea').val(r['shop/motd']);
+        try {
+            // Load regions and languages first
+            const [regionsData, languagesData, settingsData] = await Promise.all([
+                $.getJSON("/api/settings/regions"),
+                $.getJSON("/api/settings/languages"),
+                $.getJSON("/api/settings")
+            ]);
+
+            // Populate select options
+            const selectRegion = $('#selectRegion').empty();
+            regionsData.regions.forEach(reg => selectRegion.append(new Option(reg, reg)));
+
+            const selectLanguage = $('#selectLanguage').empty();
+            languagesData.languages.forEach(l => selectLanguage.append(new Option(l, l)));
+
+            // Set values
+            $('#selectRegion').val(settingsData['titles/region']);
+            $('#selectLanguage').val(settingsData['titles/language']);
+            $('#shopHostInput').val(settingsData['shop/host']);
+            $('#publicShopCheck').prop('checked', settingsData['shop/public']);
+            $('#encryptShopCheck').prop('checked', settingsData['shop/encrypt']);
+            $('#motdTextArea').val(settingsData['shop/motd']);
+            $('#useDbiVersionsCheck').prop('checked', settingsData['shop/dbi_versions']);
+
             $('#languageSelect').val(document.cookie.match(/language=([^;]+)/)?.[1] || 'en');
-            $('#useDbiVersionsCheck').prop('checked', r['shop/dbi_versions']);
-        });
+        } catch (e) {
+            console.error("Failed to load settings:", e);
+        }
     });
 </script>
 {% endblock %}
