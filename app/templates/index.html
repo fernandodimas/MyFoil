@@ -590,22 +590,43 @@
             let dlcsHtml = game.dlcs && game.dlcs.length > 0 ? `
                 <div class="mb-5">
                     <p class="heading has-text-weight-bold mb-3 has-text-success">Conteúdo Adicional (DLCs)</p>
-                    <div class="is-flex is-flex-wrap-wrap gap-2">
-                        ${game.dlcs.map(d => {
+                    <div class="table-container">
+                        <table class="table is-narrow is-fullwidth is-size-7">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>ID</th>
+                                    <th class="has-text-centered">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${game.dlcs.map(d => {
                 const file = d.files && d.files.length > 0 ? d.files[0] : null;
                 return `
-                            <div class="tags has-addons mb-0">
-                                <span class="tag ${d.owned ? 'is-success' : 'is-danger'} is-light is-small dlc-tag" title="${d.app_id}" onclick="showGameDetails('${d.app_id}')" style="cursor: pointer; max-width: 200px; white-space: normal; word-wrap: break-word;">
-                                    ${d.owned ? '<i class="bi bi-check-circle-fill mr-1"></i>' : '<i class="bi bi-x-circle mr-1"></i>'}
-                                    ${d.name}
-                                </span>
-                                ${d.owned && file ? `
-                                    <a href="/api/get_game/${file.id}" class="tag is-primary is-small" title="Download"><i class="bi bi-download"></i></a>
-                                    <a class="tag is-danger is-small is-light" onclick="deleteGameFile(${file.id}, '${game.id}')" title="Excluir"><i class="bi bi-trash"></i></a>
-                                ` : ''}
-                            </div>
-                            `;
+                                    <tr>
+                                        <td class="has-text-weight-bold" onclick="showGameDetails('${d.app_id}')" style="cursor: pointer; color: inherit;" title="Ver detalhes desta DLC">${d.name}</td>
+                                        <td class="opacity-50 font-mono">${d.app_id}</td>
+                                        <td class="has-text-centered">
+                                            ${d.owned ? `
+                                                <div class="field is-grouped is-grouped-centered">
+                                                    <p class="control">
+                                                        <a href="/api/get_game/${file.id}" class="button is-primary is-light is-small" title="Download">
+                                                            <i class="bi bi-download"></i>
+                                                        </a>
+                                                    </p>
+                                                    <p class="control">
+                                                        <button class="button is-danger is-small is-light" onclick="deleteGameFile(${file.id}, '${game.id}')" title="Excluir">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </p>
+                                                </div>
+                                            ` : '<span class="tag is-danger is-light is-small">Falta</span>'}
+                                        </td>
+                                    </tr>
+                                    `;
             }).join('')}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             ` : '';
