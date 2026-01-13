@@ -45,6 +45,12 @@ Refinamentos detalhados da interface do usuário e funcionalidades da biblioteca
 - [x] **5.4** - Remover overlay de texto sobre o banner no modal de detalhes
 - [x] **5.5** - Adicionar link "Estatísticas" no menu superior
 
+### 6. Estabilidade e Correções de Bugs
+- [x] **6.1** - Implementar sanitização agressiva para arquivos JSON corrompidos (TitleDB)
+- [x] **6.2** - Corrigir falha crítica no carregamento do TitleDB com fallback automático
+- [x] **6.3** - Ajustar proporção dos cards para 4:3 (quase quadrado) utilizando banners
+- [x] **6.4** - Validar integridade dos arquivos TitleDB antes do carregamento (tamanho > 0)
+
 ---
 
 ## 📊 Resumo de Progresso

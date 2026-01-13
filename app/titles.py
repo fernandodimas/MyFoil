@@ -53,23 +53,34 @@ def robust_json_load(filepath):
     except json.JSONDecodeError as e:
         logger.warning(f"JSON error in {filepath} at {e.pos}, attempting multi-stage sanitization...")
         try:
-            # Stage 1: Smart regex cleanup
-            sanitized = re.sub(r'\\(?!(["\\\/bfnrt]|u[0-9a-fA-F]{4}))', r'\\\\', content)
+            # Stage 1: Escape all backslashes EXCEPT those that are part of valid JSON escape sequences
+            # This is a more robust version: catch any \ that isn't followed by ["\/bfnrt] or uXXXX
+            sanitized = re.sub(r'\\(?!(["\\/bfnrt]|u[0-9a-fA-F]{4}))', r'\\\\', content)
+            
+            # Additional cleanup: remove control characters (except common ones like \n, \r, \t)
+            sanitized = "".join(ch for ch in sanitized if ord(ch) >= 32 or ch in '\n\r\t')
+            
             data = json.loads(sanitized, strict=False)
         except Exception:
             try:
-                # Stage 2: Bruteforce escape and restore valid sequences
-                # This ensures the JSON is structurally parsable even if names/desc are slightly altered
+                # Stage 2: Bruteforce escape EVERYTHING and then restore known valid sequences
+                # This is a "nuclear" option to make it valid JSON at the cost of double-escaping some things
                 bruteforce = content.replace('\\', '\\\\')
-                # Restore common valid escapes
+                # Restore common valid escapes that we probably just broke
                 for valid in ['"', '\\', '/', 'b', 'f', 'n', 'r', 't']:
                     bruteforce = bruteforce.replace('\\\\' + valid, '\\' + valid)
-                # Restore unicode
+                # Restore unicode escapes
                 bruteforce = re.sub(r'\\\\u([0-9a-fA-F]{4})', r'\\u\1', bruteforce)
                 data = json.loads(bruteforce, strict=False)
             except Exception as ex:
-                logger.error(f"All sanitization attempts failed for {filepath}: {ex}")
-                return None
+                # Last resort: Try simple replacement of all invalid escapes with just the character
+                try:
+                    # Remove all problematic backslashes entirely as a last-second attempt
+                    desperate = re.sub(r'\\', '', content) 
+                    data = json.loads(desperate, strict=False)
+                except Exception:
+                    logger.error(f"All sanitization attempts failed for {filepath}: {ex}")
+                    return None
 
     # Handle common TitleDB wrapper structures (tinfoil.media, etc.)
     if isinstance(data, dict):
@@ -223,20 +234,24 @@ def load_titledb(force=False):
         
         for filename in possible_files:
             filepath = os.path.join(TITLEDB_DIR, filename)
-            if os.path.exists(filepath):
+            if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
                 logger.info(f"Attempting to load titles from {filename}...")
-                _titles_db = robust_json_load(filepath)
-                if _titles_db:
+                loaded = robust_json_load(filepath)
+                if loaded:
                     # Check if it's a dict or list
-                    count = len(_titles_db) if isinstance(_titles_db, (dict, list)) else 0
+                    count = len(loaded) if isinstance(loaded, (dict, list)) else 0
                     if count > 0:
-                        logger.info(f"SUCCESS: Loaded {count} titles from {filename} (Type: {type(_titles_db).__name__})")
+                        logger.info(f"SUCCESS: Loaded {count} titles from {filename} (Type: {type(loaded).__name__})")
+                        _titles_db = loaded
                         _loaded_titles_file = filename  # Track which file was loaded
                         break
                     else:
                         logger.warning(f"{filename} loaded but is empty.")
                 else:
-                    logger.warning(f"Could not parse {filename}, trying next fallback...")
+                    logger.warning(f"Could not parse or load valid data from {filename}, trying next fallback...")
+            else:
+                if os.path.exists(filepath):
+                    logger.warning(f"Skipping {filename}: File is exists but is empty (0 bytes).")
         
         if _titles_db:
             # INDEXING: Ensure TitleDB is indexed by TitleID for O(1) lookups
