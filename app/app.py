@@ -101,17 +101,11 @@ def init():
     logger.info('Initializing Scheduler...')
     init_scheduler(app)
     
-    # Schedule periodic tasks
-    app.scheduler.add_job(job_id='update_db_and_scan', func=update_db_and_scan_job, trigger='interval', hours=24)
-    
-    # Run once on startup in background
-    threading.Thread(target=update_db_and_scan_job).start()
-
-    # Schedule the update job to run immediately and only once
+    # Schedule periodic tasks (run every 24h, starting now)
     app.scheduler.add_job(
         job_id='update_db_and_scan',
         func=update_db_and_scan_job,
-        interval=timedelta(hours=2),
+        interval=timedelta(hours=24),
         run_first=True
     )
 
