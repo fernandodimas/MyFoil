@@ -61,6 +61,13 @@ body {
     font-family: Arial, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.footer {
+    margin-top: auto;
 }
 
 .card {

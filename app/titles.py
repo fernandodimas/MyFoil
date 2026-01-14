@@ -723,44 +723,7 @@ def get_custom_title_info(title_id):
     custom_db = robust_json_load(custom_path) or {}
     return custom_db.get(title_id.upper())
 
-def save_custom_title_info(title_id, data):
-    """
-    Save custom info for a TitleID to custom.json and update in-memory DB.
-    data should contain: name, description, publisher, iconUrl, bannerUrl, ...
-    """
-    global _titles_db
-    title_id = title_id.upper()
-    
-    custom_path = os.path.join(TITLEDB_DIR, 'custom.json')
-    
-    # 1. Load existing custom DB
-    custom_db = robust_json_load(custom_path) or {}
-    
-    # 2. Update entry
-    # Ensure ID is present in data
-    data['id'] = title_id
-    
-    if title_id in custom_db:
-        custom_db[title_id].update(data)
-    else:
-        custom_db[title_id] = data
-        
-    # 3. Write back to disk
-    try:
-        with open(custom_path, 'w', encoding='utf-8') as f:
-            json.dump(custom_db, f, indent=4, ensure_ascii=False)
-    except Exception as e:
-        logger.error(f"Failed to save custom.json: {e}")
-        return False, str(e)
 
-    # 4. Update in-memory DB immediately
-    if _titles_db:
-        if title_id in _titles_db:
-            _titles_db[title_id].update(data)
-        else:
-            _titles_db[title_id] = data
-            
-    return True, None
 
 def search_titledb_by_name(query):
     """Search for games in the loaded TitleDB by name."""
@@ -787,3 +750,48 @@ def search_titledb_by_name(query):
             if len(results) >= 50: break
             
     return results
+
+def save_custom_title_info(title_id, data):
+    """
+    Save custom info for a TitleID to custom.json and update in-memory DB.
+    data should contain: name, description, publisher, iconUrl, bannerUrl, ...
+    """
+    global _titles_db
+    
+    if not title_id or not data:
+        return False, "Missing TitleID or Data"
+
+    title_id = title_id.upper()
+    custom_path = os.path.join(TITLEDB_DIR, 'custom.json')
+    
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(custom_path), exist_ok=True)
+    
+    # 1. Load existing custom DB
+    custom_db = robust_json_load(custom_path) or {}
+    
+    # 2. Update entry
+    # Ensure ID is present in data
+    data['id'] = title_id
+    
+    if title_id in custom_db and isinstance(custom_db[title_id], dict):
+        custom_db[title_id].update(data)
+    else:
+        custom_db[title_id] = data
+        
+    # 3. Write back to disk
+    try:
+        with open(custom_path, 'w', encoding='utf-8') as f:
+            json.dump(custom_db, f, indent=4, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"Failed to save custom.json: {e}")
+        return False, str(e)
+
+    # 4. Update in-memory DB immediately
+    if _titles_db:
+        if title_id in _titles_db and isinstance(_titles_db[title_id], dict):
+            _titles_db[title_id].update(data)
+        else:
+            _titles_db[title_id] = data
+            
+    return True, None
