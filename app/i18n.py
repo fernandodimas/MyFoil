@@ -43,5 +43,9 @@ class I18n:
         # Fallback to default if key missing in locale
         return self.translations.get(locale, {}).get(key, self.translations.get(self.default_locale, {}).get(key, key))
 
+    def get_translations_dict(self):
+        locale = self.get_locale()
+        return self.translations.get(locale, self.translations.get(self.default_locale, {}))
+
     def context_processor(self):
-        return dict(t=self.t, get_locale=self.get_locale)
+        return dict(t=self.t, get_locale=self.get_locale, get_translations=self.get_translations_dict)

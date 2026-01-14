@@ -208,6 +208,17 @@
     <div id="toastContainer"></div>
 
     <script>
+        // Inject server-side translations
+        {% if get_translations %}
+        window.translations = {{ get_translations() | tojson }};
+        {% else %}
+        window.translations = {};
+        {% endif %}
+        
+        window.t = function(key) {
+            return window.translations[key] || key;
+        };
+
         function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
             const notification = document.createElement('div');

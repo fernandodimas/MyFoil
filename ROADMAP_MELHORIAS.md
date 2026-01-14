@@ -654,7 +654,27 @@ Permitir que o usuário defina um padrão de nome (ex: `{Name} [{TitleID}] [v{Ve
 
 ---
 
-#### 4.1.5 Ignorar Atualizações e DLCs
+---
+
+#### 4.1.6 Opções de Ordenação Avançada 🆕
+**Prioridade:** 🔵 ALTA  
+**Complexidade:** Baixa  
+**Impacto:** Médio
+
+**Descrição:**
+Implementar um sistema de ordenação flexível na visualização da biblioteca (Card, Ícone e Lista) para facilitar a navegação.
+
+**Critérios de Ordenação:**
+- **Alfabética**: Por nome do jogo (A-Z / Z-A).
+- **ID (Title ID)**: Por identificador único do Switch.
+- **Data de Lançamento**: Baseado nos metadados do TitleDB.
+- **Data de Inclusão na Biblioteca**: Ordem cronológica de quando o arquivo físico foi detectado.
+- **Data da Última Atualização**: Data de lançamento da versão mais recente disponível no TitleDB.
+- **Status de Atualização**: Agrupar jogos que possuem updates pendentes ou DLCs faltando.
+
+---
+
+#### 4.1.7 Ignorar Atualizações e DLCs
 **Prioridade:** 🟡 MÉDIA  
 **Complexidade:** Baixa  
 **Impacto:** Médio
@@ -664,7 +684,7 @@ Permitir que o usuário marque um jogo para "Ignorar Atualizações" ou "Ignorar
 
 ---
 
-#### 4.1.6 Busca na Base Universal (TitleDB)
+#### 4.1.8 Busca na Base Universal (TitleDB)
 **Prioridade:** 🟡 MÉDIA  
 **Complexidade:** Média  
 **Impacto:** Alto

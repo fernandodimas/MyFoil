@@ -19,14 +19,20 @@
 
 ## ✨ Funcionalidades Mejoradas (vs Ownfoil)
 
- - **🔄 Múltiples Fuentes de TitleDB**: Soporte para blawar/titledb, tinfoil.media y fuentes personalizadas.
+  - **🔄 Múltiples Fuentes de TitleDB**: Soporte para blawar/titledb, tinfoil.media y fuentes personalizadas.
  - **⚡ Actualizaciones más Rápidas**: Descargas directas de JSON en lugar de extracción de ZIP.
- - **🎯 Fallback Inteligente**: Recuperación automática entre múltiples fuentes.
- - **🏷️ Sistema de Etiquetas**: Crea etiquetas personalizadas para organizar tu biblioteca más allá de los géneros.
- - **📑 Registro de Actividades**: Realiza un seguimiento de cada cambio y escaneo en tu biblioteca.
- - **🌐 Soporte Multi-idioma**: Interfaz totalmente traducible (EN, PT-BR, ES).
- - **⚙️ Fuentes Configurables**: Gestiona las fuentes de TitleDB a través de la interfaz web.
- - **📊 Cache Mejorado**: Caché inteligente con TTL configurable.
+ - **🎯 Fallback Inteligente**: Recuperación automática entre múltiples fuentes de metadados.
+ - **🏷️ Sistema de Etiquetas**: Crea etiquetas personalizadas, colores e iconos para organizar tus juegos.
+ - **📑 Registro de Actividades**: Historial completo de escaneos, cambios de archivos y eventos del sistema.
+ - **🌐 Soporte Multi-idioma**: Interfaz disponible en inglés, portugués (BR) y español.
+ - **📈 Estadísticas Detalladas**: Contadores en tiempo real de juegos, archivos y espacio en disco (global y por carpeta).
+ - **📂 Historial Amigable**: Vista de acordeón en el modal de detalles que prioriza la actualización más reciente.
+ - **⚖️ Cálculo Real de Tamaño**: La vista de lista muestra la suma real de todos los archivos en propiedad (Base + Updates + DLCs).
+ - **🔍 Filtrado Avanzado**: Combina género, etiquetas personalizadas y estado del contenido (Falta Update/DLC).
+ - **🛡️ Seguridad de API**: Limitación de tasa integrada y verificaciones de autenticación mejoradas.
+ - **💾 Gestión de Backups**: Sistema nativo para copia de seguridad de la base de datos y configuraciones.
+ - **⚙️ Fuentes Configurables**: Interfaz web completa para gestionar, priorizar y monitorear fuentes de TitleDB.
+ - **📊 Caché Mejorado**: Caché de biblioteca inteligente con TTL configurable.
 
 ## 🎯 Funcionalidades Principales
 
@@ -114,11 +120,92 @@ MyFoil viene con cuatro fuentes preconfiguradas (por orden de prioridad):
    - Excelente opción de fallback
    - Alojado en GitHub
 
+## Cómo Funciona
+
+Cuando MyFoil necesita actualizar el TitleDB:
+
+1. Intenta primero con la **fuente habilitada de mayor prioridad**.
+2. Si la descarga falla, intenta automáticamente con la siguiente fuente en la lista.
+3. Si todas las fuentes fallan, mantiene los datos existentes y registra el error.
+4. El proceso está optimizado para descargar solo los JSON necesarios, ahorrando ancho de banda y tiempo.
+
+# Referencia de la API (Fuentes TitleDB)
+
+Puedes gestionar las fuentes a través de la interfaz web o la API:
+
+### Listar Fuentes
+```bash
+curl http://localhost:8465/api/settings/titledb/sources
+```
+
+### Añadir una Fuente
+```bash
+curl -X POST http://localhost:8465/api/settings/titledb/sources \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Basic YWRtaW46cGFzc3dvcmQ=" \
+  -d '{
+    "name": "Mi Mirror",
+    "base_url": "https://mi-servidor.com/titledb",
+    "priority": 5,
+    "enabled": true
+  }'
+```
+
+### Actualizar una Fuente
+```bash
+curl -X PUT http://localhost:8465/api/settings/titledb/sources \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Basic YWRtaW46cGFzc3dvcmQ=" \
+  -d '{
+    "name": "blawar/titledb (GitHub)",
+    "enabled": false
+  }'
+```
+
+### Eliminar una Fuente
+```bash
+curl -X DELETE http://localhost:8465/api/settings/titledb/sources \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Basic YWRtaW46cGFzc3dvcmQ=" \
+  -d '{
+    "name": "Mi Mirror"
+  }'
+```
+
+### Forzar Actualización
+```bash
+curl -X POST http://localhost:8465/api/settings/titledb/update \
+  -H "Authorization: Basic YWRtaW46cGFzc3dvcmQ="
+```
+
+## Creación de Su Propia Fuente
+
+Para alojar su propio mirror de TitleDB:
+
+1. Clone blawar/titledb: `git clone https://github.com/blawar/titledb`
+2. Sirva los archivos a través de HTTP/HTTPS
+3. Añada su fuente a MyFoil con la URL base
+4. Archivos requeridos:
+   - `cnmts.json` - Metadatos de contenido
+   - `versions.json` - Información de versión
+   - `versions.txt` - Lista de versiones
+   - `languages.json` - Mapeo de idiomas
+   - `titles.{REGION}.{LANG}.json` - Nombres de juegos (ej: `titles.US.en.json`)
+
+## Resolución de Problemas
+
+**¿Las actualizaciones fallan?**
+- Compruebe el estado de la fuente en la respuesta de la API
+- Revise el campo `last_error` para cada fuente
+- Intente forzar una actualización
+- Verifique su conexión a Internet
+
+**¿Quiere actualizaciones más rápidas?**
+- Deshabilite las fuentes más lentas
+- Ajuste las prioridades (número menor = mayor prioridad)
+- Aloje su propio mirror más cerca de su servidor
+
 ---
 
-# Hoja de Ruta (Roadmap) de Futuras Implementaciones
-- **Renombre Automático**: Renombrar archivos físicos siguiendo patrones configurables.
-- **Filtrar por Wishlist**: Visualizar artículos deseados directamente en la biblioteca.
-- **Búsqueda Universal**: Buscar en todo el catálogo de TitleDB incluso para artículos que no posees.
-- **Optimización Móvil**: Diseño mejorado para pantallas pequeñas.
-- **Limpieza del Proyecto**: Eliminación de códigos y archivos heredados no utilizados.
+# Hoja de Ruta y Mejoras
+Para más detalles sobre el desarrollo futuro y las funcionalidades planeadas, vea el archivo [ROADMAP_MELHORIAS.md](ROADMAP_MELHORIAS.md).

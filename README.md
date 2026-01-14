@@ -1,7 +1,5 @@
 # MyFoil
 
-# MyFoil
-
 **MyFoil** is an enhanced fork of [Ownfoil](https://github.com/a1ex4/ownfoil) - a Nintendo Switch library manager that turns your library into a fully customizable and self-hosted Tinfoil Shop.
 
 ---
@@ -19,14 +17,20 @@
 
 ## ✨ Enhanced Features (vs Ownfoil)
 
- - **🔄 Multiple TitleDB Sources**: Support for blawar/titledb, tinfoil.media, and custom sources
- - **⚡ Faster Updates**: Direct JSON downloads instead of ZIP extraction
- - **🎯 Smart Fallback**: Automatic failover between multiple sources
- - **🏷️ Tagging System**: Create custom tags to organize your library beyond genres
- - **📑 Activities Log**: Track every change and scan in your library
- - **🌐 Multi-language Support**: Fully translatable interface (EN, PT-BR, ES)
- - **⚙️ Configurable Sources**: Manage TitleDB sources via web interface
- - **📊 Better Caching**: Intelligent cache with configurable TTL
+ - **🔄 Multiple TitleDB Sources**: Support for blawar/titledb, tinfoil.media, and custom sources.
+ - **⚡ Faster Updates**: Direct JSON downloads instead of ZIP extraction.
+ - **🎯 Smart Fallback**: Automatic failover between metadata sources.
+ - **🏷️ Tagging System**: Create and assign custom tags and colors to games.
+ - **📑 Activities Log**: Full audit trail of scans, file changes, and system events.
+ - **🌐 Multi-language Support**: Interface available in English, Portuguese (BR), and Spanish.
+ - **📈 Library Statistics**: Real-time counters for games, files, and disk usage per storage path.
+ - **📂 Smart Update History**: Accordion view in details modal that prioritizes the latest update.
+ - **⚖️ Accurate Size Calculation**: List view shows the real sum of all owned files (Base + Updates + DLCs).
+ - **🔍 Advanced Filtering**: Combine genre, custom tags, and content status (Missing Update/DLC).
+ - **🛡️ API Security**: Integrated rate limiting and enhanced authentication checks.
+ - **💾 Backup Management**: Built-in system for database and configuration backups.
+ - **⚙️ Configurable Sources**: Full web UI to manage, prioritize, and monitor TitleDB sources.
+ - **📊 Better Caching**: Intelligent library caching with configurable TTL.
 
 ## 🎯 Core Features
 
@@ -250,4 +254,9 @@ To host your own TitleDB mirror:
 - Disable slower sources
 - Adjust priorities (lower number = higher priority)
 - Host your own mirror closer to your server
+
+---
+
+# Roadmap and Enhancements
+For details about future development and planned features, please refer to the [ROADMAP_MELHORIAS.md](ROADMAP_MELHORIAS.md) file.
 

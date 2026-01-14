@@ -580,27 +580,39 @@ def get_game_info_item(tid, title_data):
 
     # Available versions from versions.json
     available_versions = titles_lib.get_all_existing_versions(tid)
-    game['latest_version_available'] = max([v['version'] for v in available_versions], default=0)
+    latest_v = max(available_versions, key=lambda x: x['version'], default=None)
+    game['latest_version_available'] = latest_v['version'] if latest_v else 0
+    game['latest_release_date'] = latest_v['release_date'] if latest_v else (game.get('release_date') or game.get('releaseDate') or '')
 
     # Status indicators
     game['has_base'] = any(a['app_type'] == APP_TYPE_BASE and a['owned'] for a in all_title_apps)
-    # Correct has_latest_version: compare max owned version with max available version
     game['has_latest_version'] = game['owned_version'] >= game['latest_version_available']
     
-    # Check DLCs completeness
     all_possible_dlc_ids = titles_lib.get_all_existing_dlc(tid)
     owned_dlc_ids = list(set([a['app_id'] for a in all_title_apps if a['app_type'] == APP_TYPE_DLC and a['owned']]))
     game['has_all_dlcs'] = all(d in owned_dlc_ids for d in all_possible_dlc_ids) if all_possible_dlc_ids else True
 
     game['owned'] = game['has_base']
     
-    # Determine status color for UI
+    # Determine status color for UI and numeric score for sorting
+    # Score: 2 = Complete (Green), 1 = Pending (Orange), 0 = No Base (Red/Orange)
     if not game['has_base']:
-        game['status_color'] = 'orange'  # Critical: missing base
+        game['status_color'] = 'orange'
+        game['status_score'] = 0
     elif not game['has_latest_version'] or not game['has_all_dlcs']:
-        game['status_color'] = 'orange'  # Pending: missing update or DLC
+        game['status_color'] = 'orange'
+        game['status_score'] = 1
     else:
-        game['status_color'] = 'green'   # Complete
+        game['status_color'] = 'green'
+        game['status_score'] = 2
+
+    # Added date proxy (minimum file ID)
+    file_ids = []
+    for a in all_title_apps:
+        if a.get('owned') and 'files_info' in a:
+            file_ids.extend([f.get('id') for f in a['files_info'] if f.get('id')])
+    game['added_at'] = min(file_ids) if file_ids else 999999
+
 
 
     # Tags from Title object

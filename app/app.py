@@ -471,7 +471,13 @@ def tinfoil_access(f):
         if not app_settings['shop']['public']:
             # Shop is private
             if auth_success is None:
-                auth_success, auth_error, _ = basic_auth(request)
+                # First check if user is logged in via session (Browser)
+                if current_user.is_authenticated and current_user.has_access('shop'):
+                    auth_success = True
+                else:
+                    # Fallback to Basic Auth (Tinfoil)
+                    auth_success, auth_error, _ = basic_auth(request)
+            
             if not auth_success:
                 return tinfoil_error(auth_error)
         # Auth success

@@ -8,97 +8,125 @@
 
 
         <!-- Controls Row -->
-        <div class="box p-2 mb-4 shadow-sm border-none">
-            <div class="level is-mobile is-multiline">
-                <div class="level-left">
-                    <div class="level-item mr-2">
-                        <!-- Bulma Dropdown for Filters -->
-                        <div class="dropdown" id="filterDropdown">
-                            <div class="dropdown-trigger">
-                                <button class="button is-primary is-small" aria-haspopup="true"
-                                    aria-controls="dropdown-menu">
-                                    <span class="icon is-small"><i class="bi bi-funnel-fill"></i></span>
-                                    <span class="is-hidden-mobile ml-1">Filtros</span>
-                                </button>
-                            </div>
-                            <div class="dropdown-menu" id="dropdown-menu" role="menu">
-                                <div class="dropdown-content p-4" style="min-width: 260px;">
-                                    <div class="field mb-3">
-                                        <label class="label is-size-7 opacity-70">Filtrar por Gênero</label>
-                                        <div class="control">
-                                            <div class="select is-small is-fullwidth">
-                                                <select id="filterGender" class="filterInput">
-                                                    <option value="">Todos os Gêneros</option>
-                                                </select>
-                                            </div>
+        <div class="box p-2 mb-4 shadow-sm border-none bg-glass">
+            <div class="is-flex is-flex-direction-row is-justify-content-between is-align-items-center mb-2 px-1">
+                <div class="is-flex gap-2">
+                    <!-- Filters Dropdown -->
+                    <div class="dropdown" id="filterDropdown">
+                        <div class="dropdown-trigger">
+                            <button class="button is-primary is-small" aria-haspopup="true">
+                                <span class="icon is-small"><i class="bi bi-funnel-fill"></i></span>
+                                <span class="is-hidden-mobile ml-1">Filtros</span>
+                                <span class="icon is-small ml-1 is-hidden-tablet"><i class="bi bi-caret-down-fill"
+                                        style="font-size: 0.5rem"></i></span>
+                            </button>
+                        </div>
+                        <div class="dropdown-menu" id="dropdown-menu" role="menu">
+                            <div class="dropdown-content p-4" style="min-width: 260px;">
+                                <div class="field mb-3">
+                                    <label class="label is-size-7 opacity-70">Gênero</label>
+                                    <div class="control">
+                                        <div class="select is-small is-fullwidth">
+                                            <select id="filterGender" class="filterInput">
+                                                <option value="">Todos os Gêneros</option>
+                                            </select>
                                         </div>
                                     </div>
-                                    <div class="field">
-                                        <label class="label is-size-7 opacity-70">Filtrar por Tag</label>
-                                        <div class="control">
-                                            <div class="select is-small is-fullwidth">
-                                                <select id="filterTag" class="filterInput">
-                                                    <option value="">Todas as Tags</option>
-                                                </select>
-                                            </div>
+                                </div>
+                                <div class="field">
+                                    <label class="label is-size-7 opacity-70">Tag</label>
+                                    <div class="control">
+                                        <div class="select is-small is-fullwidth">
+                                            <select id="filterTag" class="filterInput">
+                                                <option value="">Todas as Tags</option>
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="level-item mr-2">
-                        <div class="buttons has-addons">
-                            <button class="button is-small is-light" id="btnFilterPendingBase"
-                                title="Falta Arquivo Base">
-                                <span class="icon is-small"><i class="bi bi-disc"></i></span>
-                                <span class="is-hidden-mobile">Base</span>
-                            </button>
-                            <button class="button is-small is-light" id="btnFilterPendingUpd"
-                                title="Pendente Atualização">
-                                <span class="icon is-small"><i class="bi bi-arrow-up-circle"></i></span>
-                                <span class="is-hidden-mobile">Update</span>
-                            </button>
-                            <button class="button is-small is-light" id="btnFilterPendingDlc" title="Pendente DLC">
-                                <span class="icon is-small"><i class="bi bi-plus-circle"></i></span>
-                                <span class="is-hidden-mobile">DLC</span>
+
+                    <!-- Sorting Dropdown -->
+                    <div class="dropdown" id="sortDropdown">
+                        <div class="dropdown-trigger">
+                            <button class="button is-info is-small is-light" aria-haspopup="true">
+                                <span class="icon is-small"><i class="bi bi-sort-down"></i></span>
+                                <span class="is-hidden-mobile ml-1">Ordenar</span>
                             </button>
                         </div>
-                    </div>
-
-
-                    <div class="level-item">
-                        <button class="button is-small is-outlined is-danger border-none" onclick="clearFilters()"
-                            title="Limpar Filtros">
-                            <span class="icon is-small"><i class="bi bi-x-circle"></i></span>
-                            <span class="is-hidden-mobile">Limpar</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="level-right">
-                    <div class="level-item mr-2 is-hidden-mobile">
-                        <!-- Summary info -->
-                        <span class="is-size-7 opacity-50" id="totalItemsCount">-- itens</span>
-                    </div>
-                    <div class="level-item mr-2 is-hidden-mobile">
-                        <div class="field is-horizontal is-align-items-center">
-                            <div class="field-body">
-                                <input id="gridZoom" class="slider is-small is-primary m-0" type="range" min="180"
-                                    max="400" step="10" value="240" oninput="updateGridZoom(this.value)">
+                        <div class="dropdown-menu" id="sort-menu" role="menu">
+                            <div class="dropdown-content p-2" style="min-width: 200px;">
+                                <a class="dropdown-item is-size-7 sort-option" data-sort="name-asc">A-Z (Nome)</a>
+                                <a class="dropdown-item is-size-7 sort-option" data-sort="name-desc">Z-A (Nome)</a>
+                                <hr class="dropdown-divider">
+                                <a class="dropdown-item is-size-7 sort-option" data-sort="release-desc">Lançamento
+                                    (Novo)</a>
+                                <a class="dropdown-item is-size-7 sort-option" data-sort="release-asc">Lançamento
+                                    (Antigo)</a>
+                                <hr class="dropdown-divider">
+                                <a class="dropdown-item is-size-7 sort-option" data-sort="added-desc">Adicionado
+                                    Recentemente</a>
+                                <a class="dropdown-item is-size-7 sort-option" data-sort="added-asc">Adicionado
+                                    Antigamente</a>
+                                <hr class="dropdown-divider">
+                                <a class="dropdown-item is-size-7 sort-option" data-sort="id-asc">Title ID
+                                    (Crescente)</a>
+                                <a class="dropdown-item is-size-7 sort-option" data-sort="status-desc">Status de
+                                    Atualização</a>
                             </div>
                         </div>
                     </div>
-                    <div class="level-item">
-                        <div class="buttons has-addons" id="viewToggleButtons">
-                            <button class="button is-small" onclick="setView('card')" id="btnViewCard" title="Grade"><i
-                                    class="bi bi-grid-fill"></i></button>
-                            <button class="button is-small" onclick="setView('icon')" id="btnViewIcon" title="Ícones"><i
-                                    class="bi bi-image"></i></button>
-                            <button class="button is-small" onclick="setView('list')" id="btnViewList" title="Lista"><i
-                                    class="bi bi-list-ul"></i></button>
-                        </div>
+                </div>
+
+                <div class="is-flex gap-1 is-hidden-mobile">
+                    <span class="is-size-7 opacity-50" id="totalItemsCount">-- itens</span>
+                </div>
+
+                <div class="is-flex gap-2 is-align-items-center">
+                    <div class="buttons has-addons m-0" id="viewToggleButtons">
+                        <button class="button is-small p-2" onclick="setView('card')" id="btnViewCard" title="Grade"><i
+                                class="bi bi-grid-fill"></i></button>
+                        <button class="button is-small p-2" onclick="setView('icon')" id="btnViewIcon" title="Ícones"><i
+                                class="bi bi-image"></i></button>
+                        <button class="button is-small p-2" onclick="setView('list')" id="btnViewList" title="Lista"><i
+                                class="bi bi-list-ul"></i></button>
                     </div>
+                </div>
+            </div>
+
+            <!-- Second row on mobile / Extended row on desktop -->
+            <div class="is-flex is-justify-content-between is-align-items-center px-1">
+                <div class="is-flex gap-1 is-flex-grow-1 mr-2">
+                    <div class="buttons has-addons m-0">
+                        <button class="button is-small is-light" id="btnFilterPendingBase" title="Falta Arquivo Base">
+                            <span class="icon is-small"><i class="bi bi-disc"></i></span>
+                            <span class="is-hidden-mobile ml-1">Base</span>
+                        </button>
+                        <button class="button is-small is-light" id="btnFilterPendingUpd" title="Pendente Atualização">
+                            <span class="icon is-small"><i class="bi bi-arrow-up-circle"></i></span>
+                            <span class="is-hidden-mobile ml-1">Update</span>
+                        </button>
+                        <button class="button is-small is-light" id="btnFilterPendingDlc" title="Pendente DLC">
+                            <span class="icon is-small"><i class="bi bi-plus-circle"></i></span>
+                            <span class="is-hidden-mobile ml-1">DLC</span>
+                        </button>
+                    </div>
+
+                    <button class="button is-small is-outlined is-danger" onclick="clearFilters()"
+                        title="Limpar Filtros">
+                        <span class="icon is-small"><i class="bi bi-x"></i></span>
+                    </button>
+                </div>
+
+                <div class="is-flex is-align-items-center is-hidden-mobile" style="min-width: 150px;">
+                    <i class="bi bi-zoom-in is-size-7 mr-2 opacity-50"></i>
+                    <input id="gridZoom" class="slider is-small is-primary m-0" type="range" min="180" max="400"
+                        step="10" value="240" oninput="updateGridZoom(this.value)">
+                </div>
+
+                <div class="is-hidden-tablet">
+                    <span class="is-size-7 opacity-50" id="totalItemsCountMobile">-- itens</span>
                 </div>
             </div>
         </div>
@@ -376,7 +404,9 @@
     let filteredGames = [];
     let currentPage = 1;
     let pageSize = 24;
+    let currentSort = localStorage.getItem('myfoil_library_sort') || 'name-asc';
     let currentView = localStorage.getItem('viewMode') || 'card';
+
 
     // Helper functions
     const openModal = (id) => $(`#${id}`).addClass('is-active');
@@ -391,7 +421,7 @@
         });
 
         const currentVal = $('#filterGender').val();
-        const genderSelect = $('#filterGender').empty().append('<option value="">Todos os Gêneros</option>');
+        const genderSelect = $('#filterGender').empty().append(`<option value="">${t('All Genres')}</option>`);
         Array.from(genders).sort().forEach(g => genderSelect.append(new Option(g, g)));
         if (currentVal) $('#filterGender').val(currentVal);
     }
@@ -405,7 +435,7 @@
         });
 
         const currentVal = $('#filterTag').val();
-        const tagSelect = $('#filterTag').empty().append('<option value="">Todas as Tags</option>');
+        const tagSelect = $('#filterTag').empty().append(`<option value="">${t('All Tags')}</option>`);
         Array.from(tags).sort().forEach(t => tagSelect.append(new Option(t, t)));
         if (currentVal) $('#filterTag').val(currentVal);
     }
@@ -480,7 +510,7 @@
             // but if we're on another page, we might want to stay there
             // For simplicity, let's just apply filters which will trigger renderLibrary
             applyFilters();
-            showToast('Biblioteca atualizada!', 'success');
+            showToast(t('Library updated!'), 'success');
         });
     }
 
@@ -564,7 +594,7 @@
         `);
         items.forEach(game => {
             const statusColor = game.status_color === 'orange' ? 'has-text-warning' : (game.status_color === 'green' ? 'has-text-success' : 'has-text-grey');
-            const statusText = game.status_color === 'orange' ? 'Pendente' : (game.status_color === 'green' ? 'Completo' : 'Incompleto');
+            const statusText = game.status_color === 'orange' ? t('Missing') : (game.status_color === 'green' ? t('Owned') : t('Incomplete'));
 
             table.find('tbody').append(`
                 <tr onclick="showGameDetails('${game.id || game.title_id}')">
@@ -608,7 +638,7 @@
                         </div>
                     `).join('')}
                 </div>
-            ` : (game.has_base ? '<p class="notification is-warning is-light p-2 is-size-7" style="border: 1px solid rgba(0,0,0,0.1)">Arquivo base não identificado localmente.</p>' : '');
+            ` : (game.has_base ? `<p class="notification is-warning is-light p-2 is-size-7" style="border: 1px solid rgba(0,0,0,0.1)">${t('Missing Base File')}</p>` : '');
 
             // Updates Section
             const sortedUpdates = [...(game.updates || [])].sort((a, b) => b.version - a.version);
@@ -617,8 +647,8 @@
             if (sortedUpdates.length === 0) {
                 updatesHtml = `
                     <div class="mb-5">
-                        <p class="heading has-text-weight-bold mb-3 has-text-link">Histórico de Atualizações</p>
-                        <p class="is-size-7 opacity-50 italic">Não existem atualizações disponíveis.</p>
+                        <p class="heading has-text-weight-bold mb-3 has-text-link">${t('Updates')}</p>
+                        <p class="is-size-7 opacity-50 italic">${t('No DLCs or Updates available')}</p>
                     </div>
                 `;
             } else {
@@ -757,14 +787,20 @@
                                     <p class="is-size-6 has-text-weight-bold font-mono">${game.size_formatted || '--'}</p>
                                 </div>
                                 <div>
-                                    <p class="is-size-7 heading mb-1 opacity-50">Gênero</p>
+                                    <p class="is-size-7 heading mb-1 opacity-50">${t('Genre')}</p>
                                     <div class="tags">
                                         ${Array.isArray(game.category) ? game.category.map(c => `<span class="tag is-small is-light">${c}</span>`).join('') : `<span class="tag is-small is-light">${game.category || '--'}</span>`}
                                     </div>
                                 </div>
+                                <div class="mt-3">
+                                    <a href="https://www.google.com/search?q=${encodeURIComponent(game.name + ' nintendo eshop')}" target="_blank" class="button is-small is-light is-fullwidth" style="border-color: #e60012; color: #e60012;">
+                                        <span class="icon"><i class="bi bi-shop"></i></span>
+                                        <span>eShop</span>
+                                    </a>
+                                </div>
                                 <hr class="my-4 opacity-5">
                                 <div class="mb-3">
-                                    <p class="is-size-7 heading mb-1 opacity-50">Tags Personalizadas</p>
+                                    <p class="is-size-7 heading mb-1 opacity-50">${t('Custom Tags')}</p>
                                     <div id="gameModalTags" class="tags mb-2">
                                         <!-- Tags will be loaded here -->
                                     </div>
@@ -772,7 +808,7 @@
                                         <div class="control is-expanded">
                                             <div class="select is-small is-fullwidth">
                                                 <select id="modalAddTagSelect">
-                                                    <option value="">Adicionar Tag...</option>
+                                                    <option value="">${t('Add Tag...')}</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -787,7 +823,7 @@
                                 <div class="wishlist-section">
                                     <button id="btnWishlist" class="button is-fullwidth is-small is-light" onclick="toggleWishlist('${game.id}')">
                                         <span class="icon"><i class="bi bi-heart"></i></span>
-                                        <span>Wishlist</span>
+                                        <span>${t('Wishlist')}</span>
                                     </button>
                                 </div>
                             </div>
@@ -796,7 +832,7 @@
                             <div class="mb-6">
                                 <h2 class="title is-3 mb-4" style="font-weight: 800; letter-spacing: -0.5px;">${game.name}</h2>
                                 <div class="content is-size-6 opacity-80" style="line-height: 1.7;">
-                                    ${game.description || 'Nenhuma descrição disponível.'}
+                                    ${game.description || t('No description available')}
                                 </div>
                             </div>
                             
@@ -843,10 +879,36 @@
             return matchesSearch && matchesGender && matchesTag && matchesStatus;
         });
 
-        $('#totalItemsCount').text(`${filteredGames.length} Jogos`);
+        // Apply Sorting
+        filteredGames.sort((a, b) => {
+            const [field, order] = currentSort.split('-');
+            let comparison = 0;
+
+            if (field === 'name') {
+                comparison = (a.name || '').localeCompare(b.name || '');
+            } else if (field === 'release') {
+                const dateA = a.latest_release_date || a.release_date || '0000-00-00';
+                const dateB = b.latest_release_date || b.release_date || '0000-00-00';
+                comparison = dateA.localeCompare(dateB);
+            } else if (field === 'added') {
+                comparison = (a.added_at || 0) - (b.added_at || 0);
+            } else if (field === 'id') {
+                comparison = (a.id || '').localeCompare(b.id || '');
+            } else if (field === 'status') {
+                comparison = (a.status_score || 0) - (b.status_score || 0);
+                if (comparison === 0) {
+                    comparison = (a.name || '').localeCompare(b.name || '');
+                }
+            }
+
+            return order === 'asc' ? comparison : -comparison;
+        });
+
+        $('#totalItemsCount, #totalItemsCountMobile').text(`${filteredGames.length} Jogos`);
         currentPage = 1;
         renderLibrary();
     }
+
 
     function clearFilters() {
         $('#navbarSearch').val('');
@@ -976,13 +1038,31 @@
     $('.filterInput').on('change', applyFilters);
     $('#navbarSearch').on('input', applyFilters);
 
-    // Dropdown toggle
-    $('#filterDropdown .dropdown-trigger button').on('click', function (e) {
+    // Sorting dropdown toggle
+    $('#sortDropdown .dropdown-trigger button').on('click', function (e) {
         e.stopPropagation();
-        $('#filterDropdown').toggleClass('is-active');
+        $('#sortDropdown').toggleClass('is-active');
+        $('#filterDropdown').removeClass('is-active');
     });
-    $(document).on('click', () => $('#filterDropdown').removeClass('is-active'));
-    $('#filterDropdown .dropdown-menu').on('click', (e) => e.stopPropagation());
+
+    $(document).on('click', () => {
+        $('#filterDropdown').removeClass('is-active');
+        $('#sortDropdown').removeClass('is-active');
+    });
+
+    $('.sort-option').on('click', function () {
+        currentSort = $(this).data('sort');
+        localStorage.setItem('myfoil_library_sort', currentSort);
+        $('.sort-option').removeClass('is-active has-text-weight-bold');
+        $(this).addClass('is-active has-text-weight-bold');
+        $('#sortDropdown').removeClass('is-active');
+        applyFilters();
+    });
+
+    // Mark current sort as active on load
+    $(document).ready(() => {
+        $(`.sort-option[data-sort="${currentSort}"]`).addClass('is-active has-text-weight-bold');
+    });
 
     // Modal closers
     $('.modal-background').on('click', () => closeModal('gameDetailsModal'));
@@ -1088,7 +1168,7 @@
                 success: () => {
                     btn.removeClass('is-danger').addClass('is-light')
                         .find('i').removeClass('bi-heart-fill').addClass('bi-heart');
-                    showToast('Removido da Wishlist');
+                    showToast(t('Removed from Wishlist'));
                 }
             });
         } else {
@@ -1100,7 +1180,7 @@
                 success: () => {
                     btn.removeClass('is-light').addClass('is-danger is-light')
                         .find('i').removeClass('bi-heart').addClass('bi-heart-fill');
-                    showToast('Adicionado à Wishlist', 'success');
+                    showToast(t('Added to Wishlist'), 'success');
                 }
             });
         }
