@@ -464,9 +464,16 @@ def stats_page():
 @main_bp.route('/settings')
 @access_required('admin')
 def settings_page():
-    with open(os.path.join(TITLEDB_DIR, 'languages.json')) as f:
-        languages = json.load(f)
-        languages = dict(sorted(languages.items()))
+    languages = {}
+    try:
+        languages_path = os.path.join(TITLEDB_DIR, 'languages.json')
+        if os.path.exists(languages_path):
+            with open(languages_path) as f:
+                languages = json.load(f)
+                languages = dict(sorted(languages.items()))
+    except Exception as e:
+        logger.warning(f"Could not load languages.json: {e}")
+
     return render_template(
         'settings.html',
         title='Settings',
@@ -1215,7 +1222,7 @@ def get_stats_overview():
     
     # 4. Identification Stats
     total_files = db.session.query(func.count(Files.id)).scalar() or 0
-    unidentified_files = db.session.query(func.count(Files.id)).filter(Files.title_id == None).scalar() or 0
+    unidentified_files = db.session.query(func.count(Files.id)).filter(Files.identified == False).scalar() or 0
     identified_files = total_files - unidentified_files
     id_rate = round((identified_files / total_files * 100), 1) if total_files > 0 else 0
 
