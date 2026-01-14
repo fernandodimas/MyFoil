@@ -251,10 +251,29 @@
                 $('#updateSource').text('N/A');
             });
 
-            // WebSocket Global Listener
+            // WebSocket Global Listener with robust initialization
             if (typeof io !== 'undefined') {
-                const socket = io();
-                socket.on('connect', () => console.log('WebSocket: Connected'));
+                const socket = io({
+                    transports: ['websocket', 'polling'],
+                    upgrade: true,
+                    reconnection: true,
+                    reconnectionAttempts: 5,
+                    reconnectionDelay: 1000
+                });
+
+                socket.on('connect', () => {
+                    console.log('WebSocket: Connected');
+                });
+
+                socket.on('connect_error', (error) => {
+                    console.warn('WebSocket: Connection error', error);
+                    // Fallback to polling if websocket fails
+                    if (socket.io.opts.transports.includes('websocket')) {
+                        console.log('WebSocket: Attempting fallback to polling');
+                        socket.io.opts.transports = ['polling', 'websocket'];
+                    }
+                });
+
                 socket.on('library_updated', (data) => {
                     console.log('WebSocket: Library update received', data);
                     if (typeof refreshLibrary === 'function') {

@@ -303,8 +303,13 @@ def create_app():
     # Initialize Metrics
     init_metrics(app)
 
-    # Initialize SocketIO
-    socketio.init_app(app, cors_allowed_origins="*")
+    # Initialize SocketIO with explicit async mode
+    socketio.init_app(app, 
+        cors_allowed_origins="*", 
+        async_mode='eventlet',
+        engineio_logger=False, 
+        logger=False
+    )
 
     # Global initialization (run even if imported)
     with app.app_context():
