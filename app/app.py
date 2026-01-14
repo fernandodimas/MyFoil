@@ -416,30 +416,6 @@ def access_shop():
                            total_files=Files.query.count(),
                            games=None)
 
-@main_bp.route('/stats')
-@access_required('shop')
-def stats_page():
-    total_files = Files.query.count()
-    total_games = Apps.query.filter_by(app_type=APP_TYPE_BASE, owned=True).count()
-    total_dlcs = Apps.query.filter_by(app_type=APP_TYPE_DLC, owned=True).count()
-    total_updates = Apps.query.filter_by(app_type=APP_TYPE_UPD, owned=True).count()
-    missing_games = Apps.query.filter_by(app_type=APP_TYPE_BASE, owned=False).count()
-    missing_updates = Apps.query.filter_by(app_type=APP_TYPE_UPD, owned=False).count()
-    missing_dlcs = Apps.query.filter_by(app_type=APP_TYPE_DLC, owned=False).count()
-    games_missing_updates = Titles.query.filter_by(up_to_date=False, have_base=True).count()
-    games_missing_dlcs = Titles.query.filter_by(complete=False, have_base=True).count()
-
-    return render_template('stats.html', title='Statistics',
-                           admin_account_created=admin_account_created(),
-                           total_files=total_files,
-                           total_games=total_games,
-                           total_dlcs=total_dlcs,
-                           total_updates=total_updates,
-                           missing_games=missing_games,
-                           missing_updates=missing_updates,
-                           missing_dlcs=missing_dlcs,
-                           games_missing_updates=games_missing_updates,
-                           games_missing_dlcs=games_missing_dlcs)
 
 @access_required('shop')
 def access_shop_auth():

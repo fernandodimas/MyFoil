@@ -1176,11 +1176,11 @@ Gamificação da gestão de biblioteca.
 ### Sprint 4 (2 semanas) - Q1 2026
 **Foco:** Performance e Infraestrutura
 
-- [ ] Sistema de filas assíncronas (Celery)
-- [ ] API REST completa com documentação
-- [ ] Logging estruturado
-- [ ] Sistema de backup automático
-- [ ] Métricas Prometheus
+- [x] Sistema de filas assíncronas (Celery)
+- [x] API REST completa com documentação
+- [x] Logging estruturado
+- [x] Sistema de backup automático
+- [x] Métricas Prometheus
 
 **Entregáveis:**
 - API documentada em `/api/docs`
@@ -1193,11 +1193,11 @@ Gamificação da gestão de biblioteca.
 ### Sprint 5 (2 semanas) - Q1 2026
 **Foco:** Experiência do Usuário
 
-- [ ] WebSockets para atualizações em tempo real
-- [ ] Sistema de tags personalizadas
-- [ ] Wishlist
+- [x] WebSockets para atualizações em tempo real
+- [x] Sistema de tags personalizadas
+- [x] Wishlist
 - [ ] Busca avançada
-- [ ] PWA (Progressive Web App)
+- [x] PWA (Progressive Web App)
 
 **Entregáveis:**
 - Notificações em tempo real de scans
@@ -1210,10 +1210,10 @@ Gamificação da gestão de biblioteca.
 ### Sprint 6 (2 semanas) - Q2 2026
 **Foco:** Análise e Automação
 
-- [ ] Dashboard de estatísticas
+- [x] Dashboard de estatísticas
 - [ ] Webhooks
-- [ ] Histórico de atividades
-- [ ] Modo escuro automático
+- [x] Histórico de atividades
+- [x] Modo escuro automático
 - [ ] Atalhos de teclado
 
 **Entregáveis:**
@@ -1230,7 +1230,7 @@ Gamificação da gestão de biblioteca.
 - [ ] Integração com Google Drive
 - [ ] Integração com Dropbox
 - [ ] Sistema de plugins (beta)
-- [ ] Comparação com TitleDB
+- [x] Comparação com TitleDB
 - [ ] Perfis públicos
 
 **Entregáveis:**
