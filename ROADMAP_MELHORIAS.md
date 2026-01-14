@@ -638,10 +638,39 @@ def add_tag_to_title(title_id):
 - Tags exibidas como badges coloridos nos cards
 
 **Casos de Uso:**
-- "Favoritos", "Jogando Agora", "Completados"
-- "Multiplayer Local", "Online", "Single Player"
-- "Crianças", "Família", "Adulto"
 - Organização por franquia: "Mario", "Zelda", "Pokemon"
+
+#### 4.1.4 Renomeação Automática de Arquivos
+**Prioridade:** 🔵 ALTA  
+**Complexidade:** Média  
+**Impacto:** Alto
+
+**Descrição:**
+Permitir que o usuário defina um padrão de nome (ex: `{Name} [{TitleID}] [v{Version}]`) e o sistema renomeie fisicamente os arquivos no disco para manter a organização.
+
+**Padrões sugeridos:**
+- `{Name} ({Region}) ({Language}) [{TitleID}] [v{Version}]`
+- `{TitleID} - {Name} (v{Version})`
+
+---
+
+#### 4.1.5 Ignorar Atualizações e DLCs
+**Prioridade:** 🟡 MÉDIA  
+**Complexidade:** Baixa  
+**Impacto:** Médio
+
+**Descrição:**
+Permitir que o usuário marque um jogo para "Ignorar Atualizações" ou "Ignorar DLCs", removendo-o da lista de pendências/laranja mesmo que existam versões mais novas no TitleDB.
+
+---
+
+#### 4.1.6 Busca na Base Universal (TitleDB)
+**Prioridade:** 🟡 MÉDIA  
+**Complexidade:** Média  
+**Impacto:** Alto
+
+**Descrição:**
+Expandir a busca para incluir jogos que não estão na biblioteca local, permitindo que o usuário visualize informações, banners e adicione à Wishlist games que ainda não possui.
 
 ---
 

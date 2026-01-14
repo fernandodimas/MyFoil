@@ -668,11 +668,37 @@ def library_paths_api():
         }
     elif request.method == 'GET':
         reload_conf()
+        libs = Libraries.query.all()
+        paths_info = []
+        for l in libs:
+            # Files in this library
+            files_count = Files.query.filter_by(library_id=l.id).count()
+            total_size = db.session.query(func.sum(Files.size)).filter_by(library_id=l.id).scalar() or 0
+            
+            # Identified titles (approximate by distinct apps)
+            # We join to get title_id from Apps linked to files in this library
+            try:
+                titles_query = db.session.query(Apps.title_id).distinct().join(app_files).join(Files).filter(Files.library_id == l.id)
+                titles_count = titles_query.count()
+            except Exception as e:
+                logger.error(f"Error counting titles for path {l.path}: {e}")
+                titles_count = 0
+            
+            paths_info.append({
+                'id': l.id,
+                'path': l.path,
+                'files_count': files_count,
+                'total_size': total_size,
+                'total_size_formatted': format_size_py(total_size),
+                'titles_count': titles_count,
+                'last_scan': l.last_scan.strftime("%Y-%m-%d %H:%M:%S") if l.last_scan else "Nunca"
+            })
+        
         resp = {
             'success': True,
             'errors': [],
-            'paths': app_settings['library']['paths']
-        }    
+            'paths': paths_info
+        }
     elif request.method == 'DELETE':
         data = request.json
         success, errors = remove_library_complete(app, watcher, data['path'])
@@ -1018,6 +1044,17 @@ def app_info_api(id):
     result['updates'] = sorted(updates_list, key=lambda x: x['version'])
     result['dlcs'] = sorted(dlcs_list, key=lambda x: x['name'])
     result['category'] = info.get('category', []) # Genre/Categories
+
+    # Total size for side info
+    total_size = 0
+    for a in all_title_apps:
+        if a['owned']:
+            app_model = db.session.get(Apps, a['id'])
+            for f in app_model.files:
+                total_size += f.size
+    
+    result['size'] = total_size
+    result['size_formatted'] = format_size_py(total_size)
     
     # Calculate status_color consistent with library list
     if result['has_base'] and (not result['has_latest_version'] or not result['has_all_dlcs']):

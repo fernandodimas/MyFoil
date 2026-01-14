@@ -278,6 +278,10 @@
                                         <thead>
                                             <tr>
                                                 <th>{{ t('Storage Path') }}</th>
+                                                <th class="has-text-centered">Jogos</th>
+                                                <th class="has-text-centered">Arquivos</th>
+                                                <th class="has-text-centered">Tamanho</th>
+                                                <th class="has-text-centered">Último Scan</th>
                                                 <th class="has-text-right">{{ t('Actions') }}</th>
                                             </tr>
                                         </thead>
@@ -1024,14 +1028,20 @@
             if (!result.paths?.length) {
                 tbody.append('<tr><td colspan="2" class="has-text-centered py-6 opacity-40 italic">{{ t("No paths configured") }}</td></tr>');
             } else {
-                result.paths.forEach(path => {
+                result.paths.forEach(p => {
                     tbody.append(`
                         <tr>
-                            <td class="font-mono is-size-7">${path}</td>
+                            <td>
+                                <p class="font-mono is-size-7 mb-0">${p.path}</p>
+                            </td>
+                            <td class="has-text-centered"><span class="tag is-light">${p.titles_count}</span></td>
+                            <td class="has-text-centered"><span class="tag is-light">${p.files_count}</span></td>
+                            <td class="has-text-centered"><span class="tag is-primary is-light font-mono">${p.total_size_formatted}</span></td>
+                            <td class="has-text-centered"><span class="is-size-7 opacity-50">${p.last_scan}</span></td>
                             <td class="has-text-right">
                                 <div class="buttons is-right">
-                                    <button class="button is-small is-ghost has-text-info" onclick="scanLibrary('${path}')"><i class="bi bi-arrow-clockwise"></i></button>
-                                    <button class="button is-small is-ghost has-text-danger" onclick="showDeletePathModal('${path}')"><i class="bi bi-trash3"></i></button>
+                                    <button class="button is-small is-ghost has-text-info" onclick="scanLibrary('${p.path}')" title="Escanear esta pasta"><i class="bi bi-arrow-clockwise"></i></button>
+                                    <button class="button is-small is-ghost has-text-danger" onclick="showDeletePathModal('${p.path}')" title="Remover caminho"><i class="bi bi-trash3"></i></button>
                                 </div>
                             </td>
                         </tr>
