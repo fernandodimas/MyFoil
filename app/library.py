@@ -595,12 +595,20 @@ def get_game_info_item(tid, title_data):
     game['base_files'] = []
     base_app_entries = [a for a in all_title_apps if a['app_type'] == APP_TYPE_BASE and a['owned']]
     for b in base_app_entries:
-        if 'files' in b:
-            game['base_files'].extend(b['files'])
+        if 'files_info' in b:
+            game['base_files'].extend([f['path'] for f in b['files_info']])
     
     game['base_files'] = list(set(game['base_files']))
 
-    # Updates details - EXCLUDING v0 (Base) from history
+    # Calculate total size of owned files
+    total_size = 0
+    for a in all_title_apps:
+        if a.get('owned') and 'files_info' in a:
+            for f in a['files_info']:
+                total_size += f.get('size', 0)
+    
+    game['size'] = total_size
+    game['size_formatted'] = format_size_py(total_size)
     update_apps = [a for a in all_title_apps if a['app_type'] == APP_TYPE_UPD]
     version_release_dates = {v['version']: v['release_date'] for v in available_versions}
     
@@ -617,9 +625,6 @@ def get_game_info_item(tid, title_data):
     
     game['updates'] = sorted(version_list, key=lambda x: x['version'])
     
-    # Calculate total size of owned files (if available)
-    game['size'] = 0
-    game['size_formatted'] = None
 
     # DLC details
     dlcs_by_id = {}
@@ -722,7 +727,7 @@ def update_game_in_cache(title_id):
     title_data['apps'] = []
     for a in title.apps:
         a_dict = to_dict(a)
-        a_dict['files'] = [f.filepath for f in a.files]
+        a_dict['files_info'] = [{'path': f.filepath, 'size': f.size} for f in a.files]
         title_data['apps'].append(a_dict)
 
     updated_game = get_game_info_item(title_id, title_data)

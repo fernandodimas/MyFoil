@@ -1092,7 +1092,8 @@
                 } else if (source.remote_date) {
                     remoteDateHtml = `<span class="is-size-7">${new Date(source.remote_date).toLocaleString()}</span>`;
                 } else {
-                    remoteDateHtml = `<span class="is-size-7 has-text-danger italic opacity-50">Não encontrado</span>`;
+                    const errorMsg = source.last_error ? `Erro: ${source.last_error}` : 'Nenhuma data encontrada para os arquivos esperados.';
+                    remoteDateHtml = `<span class="is-size-7 has-text-danger italic opacity-50" title="${errorMsg}" style="cursor: help;">Não encontrado <i class="bi bi-question-circle"></i></span>`;
                 }
 
                 const localDate = source.last_success ? new Date(source.last_success).toLocaleString() : 'Never';

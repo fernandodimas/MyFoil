@@ -258,6 +258,10 @@
         gap: 1.25rem;
     }
 
+    #libraryContainer.is-list-view {
+        display: block;
+    }
+
     @media screen and (min-width: 1600px) {
         .container.is-fluid {
             max-width: 1550px !important;
@@ -403,31 +407,6 @@
         if (currentVal) $('#filterGender').val(currentVal);
     }
 
-    function applyFilters() {
-        currentPage = 1;
-        const query = $('#navbarSearch').val();
-        const genre = $('#filterGender').val();
-        const owned = $('#filterCheckOwned').is(':checked');
-        const missing = $('#filterCheckMissing').is(':checked');
-        const upToDate = $('#filterCheckUpToDate').is(':checked');
-        const pending = $('#filterCheckMissingUpdate').is(':checked');
-
-        // Show loading state if needed
-        $('#libraryContainer').html('<div class="column is-full has-text-centered py-6"><i class="fas fa-spinner fa-pulse fa-3x opacity-20"></i></div>');
-
-        $.getJSON('/api/library/search', {
-            q: query,
-            genre: genre,
-            owned: owned,
-            missing: missing,
-            up_to_date: upToDate,
-            pending: pending
-        }, function (data) {
-            filteredGames = data.results || [];
-            $('#totalItemsCount').text(data.count + ' itens');
-            renderLibrary();
-        });
-    }
 
     // Keyboard Shortcuts
     document.addEventListener('keydown', (e) => {
@@ -471,6 +450,13 @@
         const paged = filteredGames.slice(start, start + pageSize);
 
         $('#noResults').toggleClass('is-hidden', paged.length > 0);
+
+        // Handle list view width
+        if (currentView === 'list') {
+            container.addClass('is-list-view');
+        } else {
+            container.removeClass('is-list-view');
+        }
 
         if (currentView === 'card') renderCardView(paged);
         else if (currentView === 'icon') renderIconView(paged);
@@ -516,6 +502,9 @@
                             <div class="is-flex is-justify-content-between is-align-items-center">
                                 <div class="is-flex is-align-items-center gap-1">
                                     <span class="status-dot ${statusDotClass}"></span>
+                                    <span class="is-size-7 opacity-50 font-mono">${game.size_formatted || '--'}</span>
+                                </div>
+                                <div class="is-flex gap-1">
                                     ${!game.has_latest_version && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1" style="height: 1.1rem; font-size: 0.6rem; font-weight: bold;">UPDATE</span>' : ''}
                                     ${!game.has_all_dlcs && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1" style="height: 1.1rem; font-size: 0.6rem; font-weight: bold;">DLC</span>' : ''}
                                 </div>
@@ -768,8 +757,7 @@
                         </div>
                         <div class="column is-8">
                             <div class="mb-6">
-                                <h2 class="title is-3 mb-1" style="font-weight: 800; letter-spacing: -0.5px;">${game.name}</h2>
-                                <h3 class="is-size-6 heading has-text-weight-bold opacity-50 mb-4">Sobre o Jogo</h3>
+                                <h2 class="title is-3 mb-4" style="font-weight: 800; letter-spacing: -0.5px;">${game.name}</h2>
                                 <div class="content is-size-6 opacity-80" style="line-height: 1.7;">
                                     ${game.description || 'Nenhuma descrição disponível.'}
                                 </div>
@@ -940,7 +928,7 @@
         const btnFn = $('#btnConfirmDelete');
         btnFn.addClass('is-loading');
 
-        $.post(`/ api / files / delete/${fileToDeleteId}`, (res) => {
+        $.post(`/api/files/delete/${fileToDeleteId}`, (res) => {
             $('#confirmDeleteModal').removeClass('is-active');
             btnFn.removeClass('is-loading');
 
@@ -987,6 +975,15 @@
     // Event Listeners
     $('.filterInput').on('change', applyFilters);
     $('#navbarSearch').on('input', applyFilters);
+
+    // Dropdown toggle
+    $('#filterDropdown .dropdown-trigger button').on('click', function (e) {
+        e.stopPropagation();
+        $('#filterDropdown').toggleClass('is-active');
+    });
+    $(document).on('click', () => $('#filterDropdown').removeClass('is-active'));
+    $('#filterDropdown .dropdown-menu').on('click', (e) => e.stopPropagation());
+
     // Modal closers
     $('.modal-background').on('click', () => closeModal('gameDetailsModal'));
 

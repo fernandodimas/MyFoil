@@ -415,7 +415,8 @@ def get_all_titles_with_apps():
         t_dict['apps'] = []
         for a in t.apps:
             a_dict = to_dict(a)
-            a_dict['files'] = [f.filepath for f in a.files]
+            # Include file metadata (path and size)
+            a_dict['files_info'] = [{'path': f.filepath, 'size': f.size} for f in a.files]
             t_dict['apps'].append(a_dict)
         results.append(t_dict)
     return results
