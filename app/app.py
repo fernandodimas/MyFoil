@@ -1280,6 +1280,10 @@ def get_stats_overview():
     coverage_pct = round((total_owned / titles_db_count * 100), 2) if titles_db_count > 0 else 0
     keys_valid = app_settings.get('titles', {}).get('valid_keys', False)
 
+    # TitleDB Info
+    active_src = titledb.get_active_source_info()
+    source_name = active_src.get('name', 'Nenhuma') if active_src else 'Nenhuma'
+
     return jsonify({
         'libraries': libraries_list,
         'library': {
@@ -1296,7 +1300,8 @@ def get_stats_overview():
         },
         'titledb': {
             'total_available': titles_db_count,
-            'coverage_pct': coverage_pct
+            'coverage_pct': coverage_pct,
+            'source_name': source_name
         },
         'identification': {
             'total_files': total_files,

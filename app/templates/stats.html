@@ -113,7 +113,8 @@
                         <div class="column">
                             <p class="heading is-size-7 opacity-50 mb-1">Cobertura TitleDB</p>
                             <p class="title is-4 m-0" id="stat-coverage-pct">-- %</p>
-                            <p class="is-size-7">Domínio do catálogo mundial</p>
+                            <p class="is-size-7">Fonte: <b id="stat-source-name">--</b></p>
+                            <p class="is-size-7">Catálogo: <b id="stat-total-available">--</b> jogos</p>
                         </div>
                         <div class="column is-narrow has-text-centered">
                             <span class="icon is-large has-text-warning">
@@ -209,6 +210,8 @@
             $('#stat-up-to-date-pct').text(data.library.completion_rate + '%');
             $('#stat-up-to-date-count').text(data.library.up_to_date + ' atualizados');
             $('#stat-coverage-pct').text(data.titledb.coverage_pct + '%');
+            $('#stat-source-name').text(data.titledb.source_name);
+            $('#stat-total-available').text(data.titledb.total_available);
 
             // Identification Stats
             $('#stat-id-rate').text(data.identification.identified_pct + '%');
