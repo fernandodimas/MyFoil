@@ -1416,6 +1416,16 @@ def delete_webhook_api(id):
         return jsonify({'success': True})
     return jsonify({'success': False, 'error': 'Webhook not found'}), 404
 
+@main_bp.route('/api/titledb/search')
+@access_required('shop')
+def search_titledb_api():
+    query = request.args.get('q', '').lower()
+    if not query or len(query) < 2:
+        return jsonify([])
+        
+    results = titles.search_titledb_by_name(query)
+    return jsonify(results[:20]) # Limit to 20 results
+
 @main_bp.route('/api/games/<tid>/custom', methods=['GET'])
 @access_required('shop')
 def get_game_custom_info(tid):
@@ -1719,6 +1729,50 @@ def delete_wishlist_api(title_id):
         db.session.commit()
         log_activity('wishlist_removed', title_id=title_id.upper(), user_id=current_user.id)
     return jsonify({'success': True})
+
+@main_bp.route('/wishlist')
+@login_required
+def wishlist_page():
+    return render_template('wishlist.html', title='Wishlist')
+
+@main_bp.route('/api/wishlist/export', methods=['GET'])
+@access_required('shop')
+def export_wishlist_api():
+    format_type = request.args.get('format', 'json').lower()
+    items = Wishlist.query.filter_by(user_id=current_user.id).all()
+    
+    # Enrich data
+    data = []
+    for i in items:
+        tInfo = titles.get_game_info(i.title_id)
+        data.append({
+            'title_id': i.title_id,
+            'name': tInfo.get('name', 'Unknown'),
+            'priority': i.priority,
+            'added_date': i.added_date.isoformat(),
+            'notes': i.notes or ''
+        })
+
+    if format_type == 'json':
+        return jsonify(data)
+    elif format_type == 'csv':
+        import io
+        import csv
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['TitleID', 'Name', 'Priority', 'Added Date', 'Notes'])
+        for row in data:
+            writer.writerow([row['title_id'], row['name'], row['priority'], row['added_date'], row['notes']])
+        return Response(output.getvalue(), mimetype="text/csv", headers={"Content-disposition": "attachment; filename=myfoil_wishlist.csv"})
+    elif format_type == 'html':
+         # Simple HTML dump
+        html = '<html><head><title>MyFoil Wishlist</title></head><body><h1>My Wishlist</h1><table border="1"><thead><tr><th>Name</th><th>ID</th><th>Priority</th></tr></thead><tbody>'
+        for row in data:
+            html += f'<tr><td>{row["name"]}</td><td>{row["title_id"]}</td><td>{row["priority"]}</td></tr>'
+        html += '</tbody></table></body></html>'
+        return Response(html, mimetype="text/html")
+    
+    return jsonify({'error': 'Unsupported format'}), 400
 
 @main_bp.route('/api/activity', methods=['GET'])
 @access_required('admin')

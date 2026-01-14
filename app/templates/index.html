@@ -422,6 +422,24 @@
             <button class="delete" aria-label="close" onclick="closeModal('editMetadataModal')"></button>
         </header>
         <section class="modal-card-body">
+            <!-- Search TitleDB Section -->
+            <div class="box has-background-light-soft mb-4">
+                <label class="label is-small">Buscar Metadados na Base Geral (TitleDB)</label>
+                <div class="field has-addons">
+                    <div class="control is-expanded">
+                        <input class="input is-small" type="text" id="searchTitleDBInput"
+                            placeholder="Digite o nome do jogo (ex: Mario)">
+                    </div>
+                    <div class="control">
+                        <button class="button is-small is-info" onclick="searchTitleDB()">
+                            <span class="icon is-small"><i class="bi bi-search"></i></span>
+                            <span>Buscar</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="titleDBSearchResults" class="mt-2" style="max-height: 150px; overflow-y: auto;"></div>
+            </div>
+
             <input type="hidden" id="editMetaId">
             <div class="field">
                 <label class="label">Nome</label>
@@ -1356,6 +1374,66 @@
                 loadGameTagsAndWishlist(titleId);
             }
         });
+    }
+
+    function searchTitleDB() {
+        const query = $('#searchTitleDBInput').val();
+        if (!query || query.length < 2) {
+            showToast('Digite pelo menos 2 caracteres', 'warning');
+            return;
+        }
+
+        const resultsContainer = $('#titleDBSearchResults');
+        resultsContainer.html('<p class="has-text-grey is-size-7 p-2">Buscando...</p>');
+
+        $.getJSON(`/api/titledb/search?q=${encodeURIComponent(query)}`, (results) => {
+            if (!results || results.length === 0) {
+                resultsContainer.html('<p class="has-text-grey is-size-7 p-2">Nenhum resultado encontrado.</p>');
+                return;
+            }
+
+            let html = '<div class="list is-hoverable">';
+            results.forEach(item => {
+                // Escape simple quotes for the onclick handler
+                const safeItem = JSON.stringify(item).replace(/"/g, '&quot;');
+                html += `
+                    <a class="list-item" onclick="useMetadata(${safeItem})">
+                        <div class="media is-align-items-center">
+                            <div class="media-left">
+                                <figure class="image is-32x32">
+                                    <img src="${item.iconUrl || '/static/img/no-icon.png'}" class="is-rounded">
+                                </figure>
+                            </div>
+                            <div class="media-content">
+                                <p class="is-size-7 has-text-weight-bold">${item.name}</p>
+                                <p class="is-size-7 is-family-monospace opacity-50">${item.id} (${item.region})</p>
+                            </div>
+                            <div class="media-right">
+                                <span class="icon is-small has-text-info"><i class="bi bi-arrow-right-circle"></i></span>
+                            </div>
+                        </div>
+                    </a>
+                `;
+            });
+            html += '</div>';
+            resultsContainer.html(html);
+        }).fail(() => {
+            resultsContainer.html('<p class="has-text-danger is-size-7 p-2">Erro ao buscar.</p>');
+        });
+    }
+
+    function useMetadata(item) {
+        // Confirmation is optional but good UX
+        // Set fields
+        if (item.name) $('#editMetaName').val(item.name);
+        if (item.publisher) $('#editMetaPublisher').val(item.publisher);
+        if (item.description) $('#editMetaDescription').val(item.description);
+        if (item.iconUrl) $('#editMetaIcon').val(item.iconUrl);
+        if (item.bannerUrl) $('#editMetaBanner').val(item.bannerUrl);
+
+        showToast(`Metadados de "${item.name}" aplicados! Salve para confirmar.`, 'success');
+        $('#titleDBSearchResults').html(''); // Clear results
+        $('#searchTitleDBInput').val('');
     }
 </script>
 

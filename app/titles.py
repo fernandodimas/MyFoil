@@ -761,3 +761,29 @@ def save_custom_title_info(title_id, data):
             _titles_db[title_id] = data
             
     return True, None
+
+def search_titledb_by_name(query):
+    """Search for games in the loaded TitleDB by name."""
+    global _titles_db
+    if not _titles_db:
+        return []
+        
+    results = []
+    query = query.lower()
+    
+    # Simple iteration - could be optimized with an index if needed but for <20k items it's fine
+    for tid, data in _titles_db.items():
+        name = data.get('name', '')
+        if name and query in name.lower():
+            results.append({
+                'id': tid,
+                'name': name,
+                'region': data.get('region', '--'),
+                'iconUrl': data.get('iconUrl'),
+                'bannerUrl': data.get('bannerUrl'),
+                'publisher': data.get('publisher'),
+                'description': data.get('description')
+            })
+            if len(results) >= 50: break
+            
+    return results

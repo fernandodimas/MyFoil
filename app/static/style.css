@@ -102,7 +102,9 @@ body {
 /* Menu active item customization */
 .navbar-item.is-active,
 .menu-list a.is-active,
-.is-active-menu {
+.is-active-menu,
+a.navbar-item:focus,
+a.navbar-item:focus-within {
     background-color: #7C3AD5 !important;
     color: white !important;
 }
@@ -110,7 +112,8 @@ body {
 /* Hover effect to match theme */
 .navbar-item:hover,
 .menu-list a:hover {
-    color: #7C3AD5;
+    color: #7C3AD5 !important;
+    background-color: transparent;
 }
 
 

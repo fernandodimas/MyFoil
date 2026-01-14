@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}MyFoil - Wishlist{% endblock %}
+
+{% block content %}
+<div class="container is-fluid">
+    <div class="level mb-4">
+        <div class="level-left">
+            <div>
+                <h1 class="title is-3">Lista de Desejos</h1>
+                <p class="subtitle is-6 has-text-grey">Gerencie os jogos que você pretende jogar</p>
+            </div>
+        </div>
+        <div class="level-right">
+            <div class="buttons">
+                <div class="dropdown is-hoverable is-right">
+                    <div class="dropdown-trigger">
+                        <button class="button is-white shadow-sm" aria-haspopup="true"
+                            aria-controls="dropdown-menu-export">
+                            <span class="icon is-small has-text-primary"><i class="bi bi-download"></i></span>
+                            <span>Exportar</span>
+                            <span class="icon is-small"><i class="bi bi-chevron-down"></i></span>
+                        </button>
+                    </div>
+                    <div class="dropdown-menu" id="dropdown-menu-export" role="menu">
+                        <div class="dropdown-content">
+                            <a href="/api/wishlist/export?format=json" target="_blank" class="dropdown-item">
+                                <span class="icon mr-2"><i class="bi bi-filetype-json"></i></span> JSON
+                            </a>
+                            <a href="/api/wishlist/export?format=csv" target="_blank" class="dropdown-item">
+                                <span class="icon mr-2"><i class="bi bi-filetype-csv"></i></span> CSV
+                            </a>
+                            <a href="/api/wishlist/export?format=html" target="_blank" class="dropdown-item">
+                                <span class="icon mr-2"><i class="bi bi-filetype-html"></i></span> HTML
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="box is-paddingless shadow-sm overflow-hidden border-none" style="border-radius: 12px;">
+        <div class="table-container">
+            <table class="table is-fullwidth is-hoverable is-striped mb-0" id="wishlistTable">
+                <thead>
+                    <tr class="has-background-light-soft">
+                        <th width="80" class="has-text-centered">Capa</th>
+                        <th>Título</th>
+                        <th>Prioridade</th>
+                        <th>Adicionado em</th>
+                        <th>Status</th>
+                        <th class="has-text-right">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="wishlistBody">
+                    <tr>
+                        <td colspan="6" class="has-text-centered p-6">
+                            <span class="loader is-loading is-inline-block" style="width: 2rem; height: 2rem;"></span>
+                            <p class="mt-2 has-text-grey">Carregando wishlist...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    {% raw %}
+    document.addEventListener('DOMContentLoaded', () => {
+        loadWishlist();
+    });
+
+    function getPriorityLabel(level) {
+        switch (parseInt(level)) {
+            case 3: return '<span class="tag is-danger is-light">Alta</span>';
+            case 2: return '<span class="tag is-warning is-light">Média</span>';
+            case 1: return '<span class="tag is-info is-light">Baixa</span>';
+            default: return '<span class="tag is-light">Normal</span>';
+        }
+    }
+
+    async function loadWishlist() {
+        try {
+            const res = await fetch('/api/wishlist');
+            const items = await res.json();
+
+            const tbody = document.getElementById('wishlistBody');
+
+            if (items.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="has-text-centered p-6">
+                            <div class="content">
+                                <p class="is-size-3 mb-2">🤷‍♂️</p>
+                                <p class="has-text-grey">Sua lista de desejos está vazia.</p>
+                                <a href="/" class="button is-primary is-small mt-3">Explorar Biblioteca</a>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // Fetch game details for each item to show names/images
+            // We can optimize this by batching or doing it server-side properly later.
+            // For now, let's fetch individual meta
+
+            tbody.innerHTML = '';
+
+            for (const item of items) {
+                // Fetch basic info from our library/titledb endpoint logic 
+                // Using the public endpoint logic or a customized one
+                // Since there is no bulk lookup public API, we might rely on the client knowing or fetching one by one
+
+                let gameName = item.title_id;
+                let iconUrl = '/static/img/no-icon.png';
+                let statusHtml = '<span class="tag is-light">Desconhecido</span>';
+
+                try {
+                    // We try to get info. If backend supports generic lookup for non-owned games, this works.
+                    // Assuming existing '/api/get_game/<tid>' or similar works even if not owned?
+                    // Let's rely on TitleDB lookup
+                    const gRes = await fetch(`/api/app_info/${item.title_id}`);
+                    if (gRes.ok) {
+                        const gData = await gRes.json();
+                        gameName = gData.name || item.title_id;
+                        iconUrl = gData.iconUrl || iconUrl;
+
+                        // Check if released
+                        if (gData.releaseDate && gData.releaseDate > new Date().toISOString().replace(/-/g, '')) {
+                            statusHtml = '<span class="tag is-info is-light">Em Breve</span>';
+                        } else {
+                            statusHtml = '<span class="tag is-success is-light">Lançado</span>';
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch game details", e);
+                }
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="has-text-centered p-2">
+                        <figure class="image is-48x48 is-inline-block">
+                            <img src="${iconUrl}" class="is-rounded" style="object-fit: cover; width: 100%; height: 100%;">
+                        </figure>
+                    </td>
+                    <td class="is-vcentered">
+                        <p class="has-text-weight-bold">${gameName}</p>
+                        <p class="is-size-7 font-mono opacity-50">${item.title_id}</p>
+                    </td>
+                    <td class="is-vcentered">${getPriorityLabel(item.priority)}</td>
+                    <td class="is-vcentered is-size-7">${new Date(item.added_date).toLocaleDateString()}</td>
+                    <td class="is-vcentered">${statusHtml}</td>
+                    <td class="is-vcentered has-text-right">
+                        <button class="button is-small is-danger is-light" onclick="removeFromWishlist('${item.title_id}')" title="Remover">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            }
+        } catch (e) {
+            console.error(e);
+            document.getElementById('wishlistBody').innerHTML = `<tr><td colspan="6" class="has-text-centered has-text-danger">Erro ao carregar wishlist</td></tr>`;
+        }
+    }
+
+    async function removeFromWishlist(tid) {
+        if (!confirm('Remover este item da wishlist?')) return;
+
+        try {
+            const res = await fetch(`/api/wishlist/${tid}`, { method: 'DELETE' });
+            if (res.ok) {
+                loadWishlist(); // Reload
+                // Also update global event/toast if needed
+            }
+        } catch (e) {
+            alert('Erro ao remover');
+        }
+    }
+    {% endraw %}
+</script>
+{% endblock %}

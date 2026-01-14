@@ -22,6 +22,10 @@
                     <i class="bi bi-bar-chart mr-2"></i> Estatísticas
                 </a>
 
+                <a class="navbar-item {% if title=='Wishlist' %}is-active{% endif %}" href="/wishlist">
+                    <i class="bi bi-heart mr-2"></i> Wishlist
+                </a>
+
                 {% if current_user.is_admin or admin_account_created == false %}
                 <a class="navbar-item {% if title=='Settings' %}is-active{% endif %}" href="/settings">
                     <i class="bi bi-sliders mr-2"></i> Configurações
