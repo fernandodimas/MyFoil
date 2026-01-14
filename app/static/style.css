@@ -227,3 +227,60 @@ p.game-description {
 .opacity-70 { opacity: 0.7; }
 .opacity-80 { opacity: 0.8; }
 .opacity-90 { opacity: 0.9; }
+
+/* Theme-aware badges */
+.badge-custom {
+    height: 1.1rem !important;
+    font-size: 0.6rem !important;
+    font-weight: 800 !important;
+    padding: 0 0.4rem !important;
+    text-transform: uppercase;
+    border-radius: 4px !important;
+}
+
+.badge-update {
+    background-color: rgba(255, 193, 7, 0.15) !important;
+    color: #92400e !important;
+    border: 1px solid rgba(255, 193, 7, 0.3) !important;
+}
+
+.badge-redundant {
+    background-color: rgba(244, 63, 94, 0.15) !important;
+    color: #be123c !important;
+    border: 1px solid rgba(244, 63, 94, 0.3) !important;
+}
+
+[data-theme="dark"] .badge-update {
+    background-color: rgba(255, 193, 7, 0.05) !important;
+    color: #fcd34d !important;
+    border: 1px solid rgba(255, 193, 7, 0.2) !important;
+}
+
+[data-theme="dark"] .badge-redundant {
+    background-color: rgba(244, 63, 94, 0.05) !important;
+    color: #fb7185 !important;
+    border: 1px solid rgba(244, 63, 94, 0.2) !important;
+}
+
+/* Mobile Padding Optimization */
+@media screen and (max-width: 768px) {
+    .section {
+        padding: 1.5rem 0.5rem !important;
+    }
+    .container {
+        padding-left: 0.25rem !important;
+        padding-right: 0.25rem !important;
+    }
+    .card-content {
+        padding: 1rem 0.75rem !important;
+    }
+    .box {
+        padding: 1rem 0.75rem !important;
+    }
+}
+
+@media screen and (min-width: 769px) {
+    .is-flex-grow-1-desktop {
+        flex-grow: 1 !important;
+    }
+}
