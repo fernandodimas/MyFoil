@@ -576,7 +576,7 @@
                     <div class="card game-card is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')" title="${game.name}">
                         <div class="card-image">
                             <figure class="image is-square bg-light relative">
-                                <img src="${game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" class="p-0" loading="lazy">
+                                <img src="${game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" class="p-0" loading="lazy" style="object-fit: cover; width: 100%; height: 100%;">
                                 <div class="status-indicator position-absolute" style="bottom: 5px; right: 5px;">
                                     <span class="status-dot ${statusDotClass}"></span>
                                 </div>

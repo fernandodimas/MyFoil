@@ -565,6 +565,10 @@ def get_game_info(title_id):
                         logger.debug(f"Inherited visuals from base game {bid} for {search_id}")
                         break
             
+            # Fallback: Use Banner as Icon if Icon is still missing
+            if (not res['iconUrl'] or res['iconUrl'] == '') and res['bannerUrl']:
+                res['iconUrl'] = res['bannerUrl']
+            
             return res
         
         # If not found, try to find parent BASE game if this is a DLC/UPD
