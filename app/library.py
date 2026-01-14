@@ -491,7 +491,7 @@ def get_library_status(title_id):
 
 def compute_apps_hash():
     """
-    Computes a hash of all Apps table content to detect changes in library state.
+    Computes a hash of all Apps table content and custom metadata to detect changes.
     """
     hash_md5 = hashlib.md5()
     apps = get_all_apps()
@@ -503,17 +503,22 @@ def compute_apps_hash():
         hash_md5.update((app['app_type'] or '').encode())
         hash_md5.update(str(app['owned'] or False).encode())
         hash_md5.update((app['title_id'] or '').encode())
-        # Include file metadata in hash to detect additions/deletions
         if 'files_info' in app:
             for f in sorted(app['files_info'], key=lambda x: x['path']):
                 hash_md5.update(f['path'].encode())
                 hash_md5.update(str(f.get('size', 0)).encode())
         
-    # Include tags in hash (from Titles)
+    # Include tags in hash
     titles_with_tags = db.session.query(Titles.title_id, Tag.name).join(Titles.tags).all()
     for tid, tname in sorted(titles_with_tags):
         hash_md5.update(tid.encode())
         hash_md5.update(tname.encode())
+    
+    # CRITICAL: Include custom.json modification time in hash
+    custom_path = os.path.join(TITLEDB_DIR, 'custom.json')
+    if os.path.exists(custom_path):
+        mtime = os.path.getmtime(custom_path)
+        hash_md5.update(str(mtime).encode())
         
     return hash_md5.hexdigest()
 
@@ -553,6 +558,14 @@ def invalidate_library_cache():
     global _LIBRARY_CACHE
     with _CACHE_LOCK:
         _LIBRARY_CACHE = None
+        # Also remove disk cache so it's forced to re-generate
+        cache_path = Path(LIBRARY_CACHE_FILE)
+        if cache_path.exists():
+            try:
+                cache_path.unlink()
+                logger.info("Library disk cache invalidated (deleted).")
+            except Exception as e:
+                logger.error(f"Failed to delete library cache file: {e}")
 
 def get_game_info_item(tid, title_data):
     """Generate a single game item for the library list"""
@@ -710,11 +723,15 @@ def generate_library(force=False):
             if _LIBRARY_CACHE:
                 return _LIBRARY_CACHE
             
-            # Try loading from disk
-            saved_library = load_library_from_disk()
-            if saved_library and 'library' in saved_library:
-                _LIBRARY_CACHE = saved_library['library']
-                return _LIBRARY_CACHE
+            # Try loading from disk and VALIDATE hash
+            if is_library_unchanged():
+                saved_library = load_library_from_disk()
+                if saved_library and 'library' in saved_library:
+                    _LIBRARY_CACHE = saved_library['library']
+                    logger.info("Library loaded from disk cache.")
+                    return _LIBRARY_CACHE
+            else:
+                logger.info("Library state changed, rebuilding cache.")
 
     logger.info(f'Generating library (force={force})...')
     titles_lib.load_titledb()
