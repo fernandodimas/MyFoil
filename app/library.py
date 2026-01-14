@@ -123,11 +123,10 @@ def remove_library_complete(app, watcher, path):
             db.session.delete(library)
             db.session.commit()
             
-            logger.info(f"Removed library: {path}")
-            if total_apps_updated > 0:
-                logger.info(f"Updated {total_apps_updated} app entries to remove library file references.")
             if titles_removed > 0:
                 logger.info(f"Removed {titles_removed} titles with no owned apps.")
+        
+            log_activity('library_removed', details={'path': path})
         
         # Remove from settings
         success, errors = delete_library_path_from_settings(path)
@@ -190,6 +189,7 @@ def add_files_to_library(library, files):
                 size = file_info["size"],
             )
             db.session.add(new_file)
+            log_activity('file_added', title_id=file_info.get("titleId"), details={'filename': file_info["filename"], 'size': file_info["size"]})
         except Exception as e:
             logger.error(f"Validation failed for {file}: {str(e)}")
             continue

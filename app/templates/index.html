@@ -669,9 +669,8 @@
                 <div class="modal-banner-container" style="position: relative; height: 240px; overflow: hidden; background: #1a1a1a;">
                     <img src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.6; filter: blur(2px);">
                     <button class="delete is-large" aria-label="close" onclick="closeModal('gameDetailsModal')" style="position: absolute; top: 1.5rem; right: 1.5rem; background-color: rgba(255,255,255,0.2); backdrop-filter: blur(8px); z-index: 20; border: 1px solid rgba(255,255,255,0.1);"></button>
-                    <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 60px 2rem 2rem; background: linear-gradient(transparent, rgba(0,0,0,0.9)); z-index: 10;">
+                    <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 60px 2rem 1.5rem; background: linear-gradient(transparent, rgba(0,0,0,0.9)); z-index: 10;">
                          <div class="is-flex is-align-items-center mt-2 gap-2">
-                            <span class="tag is-primary has-text-weight-bold">v${game.display_version}</span>
                             <span class="tag is-dark opacity-70 font-mono">${game.id}</span>
                          </div>
                     </div>
@@ -701,6 +700,34 @@
                                         ${Array.isArray(game.category) ? game.category.map(c => `<span class="tag is-small is-light">${c}</span>`).join('') : `<span class="tag is-small is-light">${game.category || '--'}</span>`}
                                     </div>
                                 </div>
+                                <hr class="my-4 opacity-5">
+                                <div class="mb-3">
+                                    <p class="is-size-7 heading mb-1 opacity-50">Tags Personalizadas</p>
+                                    <div id="gameModalTags" class="tags mb-2">
+                                        <!-- Tags will be loaded here -->
+                                    </div>
+                                    <div class="field has-addons">
+                                        <div class="control is-expanded">
+                                            <div class="select is-small is-fullwidth">
+                                                <select id="modalAddTagSelect">
+                                                    <option value="">Adicionar Tag...</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="control">
+                                            <button class="button is-small is-primary" onclick="addTagToGame('${game.id}')">
+                                                <i class="bi bi-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr class="my-4 opacity-5">
+                                <div class="wishlist-section">
+                                    <button id="btnWishlist" class="button is-fullwidth is-small is-light" onclick="toggleWishlist('${game.id}')">
+                                        <span class="icon"><i class="bi bi-heart"></i></span>
+                                        <span>Wishlist</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div class="column is-8">
@@ -724,6 +751,7 @@
                 </div>
             `;
             $('#modalContent').html(content);
+            loadGameTagsAndWishlist(game.id);
             openModal('gameDetailsModal');
         });
     }
@@ -975,6 +1003,101 @@
         // Populated globally outside raw block
         setView(currentView);
     });
+
+    function loadGameTagsAndWishlist(titleId) {
+        titleId = titleId.toUpperCase();
+
+        // Load all available tags as options in the modal dropdown
+        $.getJSON('/api/tags', (tags) => {
+            const select = $('#modalAddTagSelect');
+            select.find('option:not(:first)').remove();
+            tags.forEach(t => {
+                select.append(`<option value="${t.id}">${t.name}</option>`);
+            });
+        });
+
+        // Load active tags for this specific game
+        $.getJSON(`/api/titles/${titleId}/tags`, (tags) => {
+            const container = $('#gameModalTags').empty();
+            tags.forEach(t => {
+                container.append(`
+                    <span class="tag" style="background-color: ${t.color}; color: #fff;">
+                        ${t.name}
+                        <button class="delete is-small" onclick="removeTagFromGame('${titleId}', ${t.id})"></button>
+                    </span>
+                `);
+            });
+        });
+
+        // Load personal wishlist status
+        $.getJSON('/api/wishlist', (wishlist) => {
+            const inWishlist = wishlist.find(i => i.title_id === titleId);
+            const btn = $('#btnWishlist');
+            if (inWishlist) {
+                btn.removeClass('is-light').addClass('is-danger is-light')
+                    .find('i').removeClass('bi-heart').addClass('bi-heart-fill');
+            } else {
+                btn.removeClass('is-danger').addClass('is-light')
+                    .find('i').removeClass('bi-heart-fill').addClass('bi-heart');
+            }
+        });
+    }
+
+    function toggleWishlist(titleId) {
+        const btn = $('#btnWishlist');
+        const isCurrentlyActive = btn.hasClass('is-danger');
+
+        if (isCurrentlyActive) {
+            $.ajax({
+                url: `/api/wishlist/${titleId}`,
+                type: 'DELETE',
+                success: () => {
+                    btn.removeClass('is-danger').addClass('is-light')
+                        .find('i').removeClass('bi-heart-fill').addClass('bi-heart');
+                    showToast('Removido da Wishlist');
+                }
+            });
+        } else {
+            $.ajax({
+                url: '/api/wishlist',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ title_id: titleId }),
+                success: () => {
+                    btn.removeClass('is-light').addClass('is-danger is-light')
+                        .find('i').removeClass('bi-heart').addClass('bi-heart-fill');
+                    showToast('Adicionado à Wishlist', 'success');
+                }
+            });
+        }
+    }
+
+    function addTagToGame(titleId) {
+        const tagId = $('#modalAddTagSelect').val();
+        if (!tagId) return;
+
+        $.ajax({
+            url: `/api/titles/${titleId}/tags`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ tag_id: tagId }),
+            success: () => {
+                loadGameTagsAndWishlist(titleId);
+            }
+        });
+    }
+
+    function removeTagFromGame(titleId, tagId) {
+        $.ajax({
+            url: `/api/titles/${titleId}/tags`,
+            type: 'DELETE',
+            contentType: 'application/json',
+            data: JSON.stringify({ tag_id: tagId }),
+            success: () => {
+                loadGameTagsAndWishlist(titleId);
+            }
+        });
+    }
 </script>
 
 {% endblock %}

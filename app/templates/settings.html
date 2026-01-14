@@ -23,6 +23,8 @@
                         <li><a data-target="Shop"><i class="bi bi-cart-fill mr-2"></i> Loja</a></li>
                         <li><a data-target="Errors"><i class="bi bi-exclamation-octagon-fill mr-2"></i>
                                 Erros/Identificação</a></li>
+                        <li><a data-target="Tags"><i class="bi bi-tags-fill mr-2"></i> Tags</a></li>
+                        <li><a data-target="Activity"><i class="bi bi-clock-history mr-2"></i> Atividade</a></li>
                     </ul>
                 </aside>
             </div>
@@ -480,6 +482,81 @@
                             </div>
                         </div>
                     </section>
+
+                    <!-- Tags Section -->
+                    <section id="section-Tags" class="settings-section is-hidden">
+                        <div class="card box shadow-sm">
+                            <header class="card-header border-none shadow-none">
+                                <p class="card-header-title has-text-primary">
+                                    <i class="bi bi-tags-fill mr-2"></i> Gerenciar Tags
+                                </p>
+                            </header>
+                            <div class="card-content pt-0">
+                                <div class="notification is-light p-5 mb-5">
+                                    <div class="columns is-vcentered">
+                                        <div class="column is-4">
+                                            <input class="input" type="text" id="tagNameInput"
+                                                placeholder="Nome da Tag">
+                                        </div>
+                                        <div class="column is-3">
+                                            <input class="input" type="color" id="tagColorInput" value="#3273dc"
+                                                style="height: 40px; padding: 2px;">
+                                        </div>
+                                        <div class="column is-3">
+                                            <div class="select is-fullwidth">
+                                                <select id="tagIconInput">
+                                                    <option value="bi-tag">Etiqueta</option>
+                                                    <option value="bi-star">Estrela</option>
+                                                    <option value="bi-heart">Coração</option>
+                                                    <option value="bi-fire">Fogo</option>
+                                                    <option value="bi-controller">Controle</option>
+                                                    <option value="bi-trophy">Troféu</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="column is-2">
+                                            <button class="button is-primary is-fullwidth"
+                                                onclick="createTag()">Criar</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="table-container">
+                                    <table class="table is-fullwidth" id="tagsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Tag</th>
+                                                <th>Visualização</th>
+                                                <th class="has-text-right">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Activity Section -->
+                    <section id="section-Activity" class="settings-section is-hidden">
+                        <div class="card box shadow-sm">
+                            <header class="card-header border-none shadow-none">
+                                <p class="card-header-title has-text-primary">
+                                    <i class="bi bi-clock-history mr-2"></i> Histórico de Atividade
+                                </p>
+                                <div class="card-header-icon pt-4 pr-5">
+                                    <button class="button is-small is-ghost" onclick="fillActivityLogs()">
+                                        <i class="bi bi-arrow-clockwise mr-1"></i> Atualizar
+                                    </button>
+                                </div>
+                            </header>
+                            <div class="card-content pt-0">
+                                <div id="activityLogsList" class="activity-timeline">
+                                    <!-- Log items injected via JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
             </div>
         </div>
@@ -599,6 +676,51 @@
     .is-loading.is-ghost::after {
         border-color: transparent transparent #570df8 #570df8 !important;
     }
+
+    /* Activity Timeline Styles */
+    .activity-timeline {
+        padding-top: 10px;
+        position: relative;
+    }
+
+    .activity-item {
+        position: relative;
+        padding-left: 3rem;
+        padding-bottom: 2rem;
+        border-left: 2px solid rgba(87, 13, 248, 0.1);
+        margin-left: 1rem;
+    }
+
+    .activity-item:last-child {
+        border-left: 2px solid transparent;
+    }
+
+    .activity-dot {
+        position: absolute;
+        left: -11px;
+        top: 0;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #fff;
+        border: 4px solid #570df8;
+        z-index: 2;
+    }
+
+    .activity-content {
+        background: rgba(0, 0, 0, 0.02);
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid rgba(0, 0, 0, 0.03);
+    }
+
+    .activity-meta {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: rgba(0, 0, 0, 0.4);
+        margin-bottom: 0.25rem;
+        display: block;
+    }
 </style>
 
 <script>
@@ -610,6 +732,105 @@
     const openModal = (id) => $(`#${id}`).addClass('is-active');
     const closeModal = (id) => $(`#${id}`).removeClass('is-active');
 
+    function createTag() {
+        const name = $('#tagNameInput').val();
+        const color = $('#tagColorInput').val();
+        const icon = $('#tagIconInput').val();
+        if (!name) return showToast('Nome da tag é obrigatório', 'error');
+
+        $.ajax({
+            url: '/api/tags',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ name, color, icon }),
+            success: (res) => {
+                showToast('Tag criada com sucesso');
+                $('#tagNameInput').val('');
+                fillTagsTable();
+            },
+            error: (err) => showToast('Erro ao criar tag: ' + (err.responseJSON?.error || 'Erro desconhecido'), 'error')
+        });
+    }
+
+    function fillTagsTable() {
+        $.getJSON('/api/tags', (tags) => {
+            const tbody = $('#tagsTable tbody').empty();
+            tags.forEach(t => {
+                tbody.append(`
+                    <tr>
+                        <td><strong>${t.name}</strong></td>
+                        <td>
+                            <span class="tag" style="background-color: ${t.color}; color: #fff;">
+                                <i class="${t.icon.startsWith('bi-') ? 'bi ' + t.icon : 'fas ' + t.icon} mr-1"></i> ${t.name}
+                            </span>
+                        </td>
+                        <td class="has-text-right">
+                            <button class="button is-small is-ghost has-text-danger" onclick="deleteTag(${t.id})">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `);
+            });
+        });
+    }
+
+    function deleteTag(id) {
+        if (!confirm('Excluir esta tag?')) return;
+        $.ajax({
+            url: `/api/tags/${id}`,
+            type: 'DELETE',
+            success: () => {
+                showToast('Tag excluída');
+                fillTagsTable();
+            }
+        });
+    }
+
+    function fillActivityLogs() {
+        $.getJSON('/api/activity', (logs) => {
+            const list = $('#activityLogsList').empty();
+            if (!logs.length) {
+                list.append('<p class="has-text-centered py-6 opacity-40 italic">Nenhuma atividade registrada.</p>');
+                return;
+            }
+            logs.forEach(log => {
+                const date = new Date(log.timestamp).toLocaleString();
+                let iconClass = 'bi-info-circle';
+                let color = '#570df8';
+
+                if (log.action.includes('error') || log.action.includes('failed')) {
+                    iconClass = 'bi-exclamation-circle-fill';
+                    color = '#f14668';
+                } else if (log.action.includes('file_added')) {
+                    iconClass = 'bi-file-earmark-plus';
+                    color = '#48c78e';
+                } else if (log.action.includes('scan')) {
+                    iconClass = 'bi-search';
+                } else if (log.action.includes('backup')) {
+                    iconClass = 'bi-safe';
+                }
+
+                list.append(`
+                    <div class="activity-item">
+                        <div class="activity-dot" style="border-color: ${color}"></div>
+                        <div class="activity-content">
+                            <span class="activity-meta">${date}</span>
+                            <p class="has-text-weight-bold mb-1">
+                                <i class="bi ${iconClass} mr-2" style="color: ${color}"></i>
+                                ${log.action.toUpperCase().replace(/_/g, ' ')}
+                            </p>
+                            <div class="is-size-7 opacity-70">
+                                ${log.title_id ? `<span class="tag is-info is-light is-small mr-2">${log.title_id}</span>` : ''}
+                                ${JSON.stringify(log.details).replace(/[{}"]/g, '').replace(/:/g, ': ').replace(/,/g, ' | ')}
+                            </div>
+                        </div>
+                    </div>
+                `);
+            });
+        });
+    }
+
     // Tab Navigation Logic
     $('#settingsNav a').on('click', function () {
         const target = $(this).data('target');
@@ -618,6 +839,10 @@
         $('.settings-section').addClass('is-hidden');
         $(`#section-${target}`).removeClass('is-hidden');
         sessionStorage.setItem('lastSettingsTab', target);
+
+        // Initial load for specific tabs
+        if (target === 'Tags') fillTagsTable();
+        if (target === 'Activity') fillActivityLogs();
     });
 
     // File Input Helper

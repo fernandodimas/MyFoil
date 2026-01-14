@@ -25,6 +25,10 @@
         - 3.3.2 [Rate Limiting](#332-rate-limiting-avançado) ✅
         - 3.3.3 [Validação de Arquivos Aprimorada](#333-validação-de-arquivos-aprimorada) ✅
 4. [Novas Funcionalidades Propostas](#4-novas-funcionalidades-propostas)
+    - 4.1 [Gestão de Biblioteca](#41-gestão-avançada-de-biblioteca)
+        - 4.1.1 [Tags e Categorias](#411-sistema-de-tags-e-categorias-personalizadas) ✅
+        - 4.1.2 [Wishlist](#412-listas-de-desejos-wishlist) ✅
+        - 4.1.3 [Histórico](#413-histórico-de-atividades) ✅
 5. [Roadmap de Implementação](#5-roadmap-de-implementação)
 6. [Métricas e KPIs](#6-métricas-e-kpis)
 
@@ -584,7 +588,7 @@ def validate_file(filepath):
 
 ### 4.1 Gestão Avançada de Biblioteca
 
-#### 4.1.1 Sistema de Tags e Categorias Personalizadas
+#### 4.1.1 Sistema de Tags e Categorias Personalizadas ✅ CONCLUÍDO
 **Prioridade:** 🟡 MÉDIA  
 **Complexidade:** Média  
 **Impacto:** Alto
@@ -638,7 +642,7 @@ def add_tag_to_title(title_id):
 
 ---
 
-#### 4.1.2 Listas de Desejos (Wishlist)
+#### 4.1.2 Listas de Desejos (Wishlist) ✅ CONCLUÍDO
 **Prioridade:** 🟡 MÉDIA  
 **Complexidade:** Baixa  
 **Impacto:** Médio
@@ -686,7 +690,7 @@ def add_to_wishlist():
 
 ---
 
-#### 4.1.3 Histórico de Atividades
+#### 4.1.3 Histórico de Atividades ✅ CONCLUÍDO
 **Prioridade:** 🟢 BAIXA  
 **Complexidade:** Baixa  
 **Impacto:** Baixo

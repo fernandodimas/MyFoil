@@ -144,6 +144,48 @@ class User(UserMixin, db.Model):
         elif access == 'backup':
             return self.has_backup_access()
 
+class Tag(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    color = db.Column(db.String(7))  # Hex color
+    icon = db.Column(db.String(50))  # Bootstrap/FontAwesome icon class
+
+class TitleTag(db.Model):
+    title_id = db.Column(db.String, db.ForeignKey('titles.title_id', ondelete="CASCADE"), primary_key=True)
+    tag_id = db.Column(db.Integer, db.ForeignKey('tag.id', ondelete="CASCADE"), primary_key=True)
+
+class Wishlist(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete="CASCADE"))
+    title_id = db.Column(db.String, index=True)
+    added_date = db.Column(db.DateTime, default=datetime.datetime.now)
+    priority = db.Column(db.Integer, default=0)  # 0-5
+    notes = db.Column(db.Text)
+
+class ActivityLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.now, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete="SET NULL"), nullable=True)
+    action_type = db.Column(db.String(50), index=True)  # 'file_added', 'file_deleted', 'scan_completed', 'titledb_updated'
+    title_id = db.Column(db.String, nullable=True)
+    details = db.Column(db.Text) # Stored as JSON string
+
+def log_activity(action_type, title_id=None, user_id=None, **details):
+    """Utility function to log activity"""
+    import json
+    try:
+        log = ActivityLog(
+            user_id=user_id,
+            action_type=action_type,
+            title_id=title_id,
+            details=json.dumps(details)
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        logger.error(f"Failed to log activity: {e}")
+        db.session.rollback()
+
 def init_db(app):
     with app.app_context():
         # Ensure foreign keys are enforced when the SQLite connection is opened

@@ -76,6 +76,7 @@ def update_titledb_job(force=False):
         return True
     except Exception as e:
         logger.error(f"Error during TitleDB update job: {e}")
+        log_activity('titledb_update_failed', details={'error': str(e)})
         return False
     finally:
         with titledb_update_lock:
@@ -106,8 +107,10 @@ def scan_library_job():
             scan_library()
             post_library_change()
         logger.info("Library scan job completed.")
+        log_activity('library_scan_completed')
     except Exception as e:
         logger.error(f"Error during library scan job: {e}")
+        log_activity('library_scan_failed', details={'error': str(e)})
     finally:
         with scan_lock:
             scan_in_progress = False
@@ -147,12 +150,20 @@ def init_internal(app):
     logger.info('Initializing Scheduler...')
     init_scheduler(app)
     
-    # Schedule periodic tasks (run every 24h, starting now)
+    # Schedule periodic tasks (run every 24h)
+    # Check if we need to run an initial scan (e.g. if any library has no last_scan)
+    run_now = False
+    with app.app_context():
+        libs = get_libraries()
+        if not libs or any(l.last_scan is None for l in libs):
+            run_now = True
+            logger.info("Initial scan required: New or un-scanned libraries detected.")
+    
     app.scheduler.add_job(
         job_id='update_db_and_scan',
         func=update_db_and_scan_job,
         interval=timedelta(hours=24),
-        run_first=True
+        run_first=run_now
     )
     
     # Schedule daily backup at 3 AM
@@ -163,6 +174,8 @@ def init_internal(app):
         run_first=False,
         start_date=datetime.datetime.now().replace(hour=3, minute=0, second=0, microsecond=0)
     )
+
+    log_activity('system_startup', details={'version': BUILD_VERSION})
 
 os.makedirs(CONFIG_DIR, exist_ok=True)
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -1175,6 +1188,132 @@ def restore_backup_api():
         })
     else:
         return jsonify({'success': False, 'error': 'Restore failed'}), 500
+
+# --- New Feature APIs (Tags, Wishlist, Activity) ---
+
+@main_bp.route('/api/tags', methods=['GET', 'POST'])
+@access_required('shop')
+def tags_api():
+    if request.method == 'GET':
+        tags = Tag.query.all()
+        return jsonify([{'id': t.id, 'name': t.name, 'color': t.color, 'icon': t.icon} for t in tags])
+    
+    # POST - Create tag (Admin only)
+    if not current_user.has_access('admin'):
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    data = request.json
+    if not data or 'name' not in data:
+        return jsonify({'error': 'Name is required'}), 400
+        
+    tag = Tag(name=data['name'], color=data.get('color', '#3273dc'), icon=data.get('icon', 'bi-tag'))
+    db.session.add(tag)
+    try:
+        db.session.commit()
+        log_activity('tag_created', details={'name': tag.name}, user_id=current_user.id)
+        return jsonify({'id': tag.id, 'name': tag.name})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+@main_bp.route('/api/tags/<int:tag_id>', methods=['DELETE'])
+@access_required('admin')
+def delete_tag_api(tag_id):
+    tag = db.session.get(Tag, tag_id)
+    if tag:
+        name = tag.name
+        db.session.delete(tag)
+        db.session.commit()
+        log_activity('tag_deleted', details={'name': name}, user_id=current_user.id)
+    return jsonify({'success': True})
+
+@main_bp.route('/api/titles/<title_id>/tags', methods=['GET', 'POST', 'DELETE'])
+@access_required('shop')
+def title_tags_api(title_id):
+    title_id = title_id.upper()
+    if request.method == 'GET':
+        tags = db.session.query(Tag).join(TitleTag).filter(TitleTag.title_id == title_id).all()
+        return jsonify([{'id': t.id, 'name': t.name, 'color': t.color} for t in tags])
+    
+    if request.method == 'POST':
+        tag_id = request.json.get('tag_id')
+        if not tag_id: return jsonify({'error': 'tag_id required'}), 400
+        # Check if exists
+        exists = TitleTag.query.filter_by(title_id=title_id, tag_id=tag_id).first()
+        if not exists:
+            tt = TitleTag(title_id=title_id, tag_id=tag_id)
+            db.session.add(tt)
+            db.session.commit()
+        return jsonify({'success': True})
+
+    if request.method == 'DELETE':
+        tag_id = request.json.get('tag_id')
+        tt = TitleTag.query.filter_by(title_id=title_id, tag_id=tag_id).first()
+        if tt:
+            db.session.delete(tt)
+            db.session.commit()
+        return jsonify({'success': True})
+
+@main_bp.route('/api/wishlist', methods=['GET', 'POST'])
+@access_required('shop')
+def wishlist_api():
+    if request.method == 'GET':
+        items = Wishlist.query.filter_by(user_id=current_user.id).all()
+        return jsonify([{
+            'id': i.id, 
+            'title_id': i.title_id, 
+            'added_date': i.added_date.isoformat(),
+            'priority': i.priority,
+            'notes': i.notes
+        } for i in items])
+    
+    data = request.json
+    if not data or 'title_id' not in data:
+        return jsonify({'error': 'title_id required'}), 400
+    
+    # Check if already in wishlist
+    exists = Wishlist.query.filter_by(user_id=current_user.id, title_id=data['title_id'].upper()).first()
+    if exists:
+        return jsonify({'error': 'Already in wishlist'}), 400
+        
+    item = Wishlist(
+        user_id=current_user.id,
+        title_id=data['title_id'].upper(),
+        priority=data.get('priority', 0),
+        notes=data.get('notes', '')
+    )
+    db.session.add(item)
+    db.session.commit()
+    log_activity('wishlist_added', title_id=item.title_id, user_id=current_user.id)
+    return jsonify({'success': True})
+
+@main_bp.route('/api/wishlist/<title_id>', methods=['DELETE'])
+@access_required('shop')
+def delete_wishlist_api(title_id):
+    item = Wishlist.query.filter_by(user_id=current_user.id, title_id=title_id.upper()).first()
+    if item:
+        db.session.delete(item)
+        db.session.commit()
+        log_activity('wishlist_removed', title_id=title_id.upper(), user_id=current_user.id)
+    return jsonify({'success': True})
+
+@main_bp.route('/api/activity', methods=['GET'])
+@access_required('admin')
+def activity_api():
+    limit = request.args.get('limit', 50, type=int)
+    logs = ActivityLog.query.order_by(ActivityLog.timestamp.desc()).limit(limit).all()
+    
+    import json
+    results = []
+    for l in logs:
+        results.append({
+            'timestamp': l.timestamp.isoformat(),
+            'action': l.action_type,
+            'title_id': l.title_id,
+            'user': l.user_id, # Simplified
+            'details': json.loads(l.details) if l.details else {}
+        })
+    return jsonify(results)
 
 # Create global app instance
 app = create_app()
