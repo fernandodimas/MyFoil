@@ -3,65 +3,69 @@
 {% block title %}MyFoil - Wishlist{% endblock %}
 
 {% block content %}
-<div class="container is-fluid">
-    <div class="level mb-4">
-        <div class="level-left">
-            <div>
-                <h1 class="title is-3">Lista de Desejos</h1>
-                <p class="subtitle is-6 has-text-grey">Gerencie os jogos que você pretende jogar</p>
+<div class="container pb-6 is-max-widescreen">
+    <div class="section pt-5">
+        <div class="level mb-4">
+            <div class="level-left">
+                <div>
+                    <h1 class="title is-3">Lista de Desejos</h1>
+                    <p class="subtitle is-6 has-text-grey">Gerencie os jogos que você pretende jogar</p>
+                </div>
             </div>
-        </div>
-        <div class="level-right">
-            <div class="buttons">
-                <div class="dropdown is-hoverable is-right">
-                    <div class="dropdown-trigger">
-                        <button class="button is-white shadow-sm" aria-haspopup="true"
-                            aria-controls="dropdown-menu-export">
-                            <span class="icon is-small has-text-primary"><i class="bi bi-download"></i></span>
-                            <span>Exportar</span>
-                            <span class="icon is-small"><i class="bi bi-chevron-down"></i></span>
-                        </button>
-                    </div>
-                    <div class="dropdown-menu" id="dropdown-menu-export" role="menu">
-                        <div class="dropdown-content">
-                            <a href="/api/wishlist/export?format=json" target="_blank" class="dropdown-item">
-                                <span class="icon mr-2"><i class="bi bi-filetype-json"></i></span> JSON
-                            </a>
-                            <a href="/api/wishlist/export?format=csv" target="_blank" class="dropdown-item">
-                                <span class="icon mr-2"><i class="bi bi-filetype-csv"></i></span> CSV
-                            </a>
-                            <a href="/api/wishlist/export?format=html" target="_blank" class="dropdown-item">
-                                <span class="icon mr-2"><i class="bi bi-filetype-html"></i></span> HTML
-                            </a>
+            <div class="level-right">
+                <div class="buttons">
+                    <div class="dropdown is-hoverable is-right">
+                        <div class="dropdown-trigger">
+                            <button class="button is-white shadow-sm" aria-haspopup="true"
+                                aria-controls="dropdown-menu-export">
+                                <span class="icon is-small has-text-primary"><i class="bi bi-download"></i></span>
+                                <span>Exportar</span>
+                                <span class="icon is-small"><i class="bi bi-chevron-down"></i></span>
+                            </button>
+                        </div>
+                        <div class="dropdown-menu" id="dropdown-menu-export" role="menu">
+                            <div class="dropdown-content">
+                                <a href="/api/wishlist/export?format=json" target="_blank" class="dropdown-item">
+                                    <span class="icon mr-2"><i class="bi bi-filetype-json"></i></span> JSON
+                                </a>
+                                <a href="/api/wishlist/export?format=csv" target="_blank" class="dropdown-item">
+                                    <span class="icon mr-2"><i class="bi bi-filetype-csv"></i></span> CSV
+                                </a>
+                                <a href="/api/wishlist/export?format=html" target="_blank" class="dropdown-item">
+                                    <span class="icon mr-2"><i class="bi bi-filetype-html"></i></span> HTML
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div class="box is-paddingless shadow-sm overflow-hidden border-none" style="border-radius: 12px;">
-        <div class="table-container">
-            <table class="table is-fullwidth is-hoverable is-striped mb-0" id="wishlistTable">
-                <thead>
-                    <tr class="has-background-light-soft">
-                        <th width="80" class="has-text-centered">Capa</th>
-                        <th>Título</th>
-                        <th>Prioridade</th>
-                        <th>Adicionado em</th>
-                        <th>Status</th>
-                        <th class="has-text-right">Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="wishlistBody">
-                    <tr>
-                        <td colspan="6" class="has-text-centered p-6">
-                            <span class="loader is-loading is-inline-block" style="width: 2rem; height: 2rem;"></span>
-                            <p class="mt-2 has-text-grey">Carregando wishlist...</p>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+        <div class="box is-paddingless shadow-sm overflow-hidden border-none"
+            style="border-radius: 12px; min-height: 400px;">
+            <div class="table-container">
+                <table class="table is-fullwidth is-hoverable is-striped mb-0" id="wishlistTable">
+                    <thead>
+                        <tr class="has-background-light-soft">
+                            <th width="80" class="has-text-centered">Capa</th>
+                            <th>Título</th>
+                            <th>Prioridade</th>
+                            <th>Adicionado em</th>
+                            <th>Status</th>
+                            <th class="has-text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="wishlistBody">
+                        <tr>
+                            <td colspan="6" class="has-text-centered p-6">
+                                <span class="loader is-loading is-inline-block"
+                                    style="width: 2rem; height: 2rem;"></span>
+                                <p class="mt-2 has-text-grey">Carregando wishlist...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

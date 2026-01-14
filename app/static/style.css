@@ -339,3 +339,35 @@ p.game-description {
         flex-grow: 1 !important;
     }
 }
+
+/* Enforce dark badges as requested */
+.tag {
+    background-color: #1e293b !important;
+    color: #ffffff !important;
+}
+
+/* Maintain semantic coloring distinction but ensure they are dark/saturated enough for white text */
+.tag.is-success, .tag.is-success.is-light {
+    background-color: #10b981 !important; /* Emerald 500 */
+    color: #fff !important;
+}
+
+.tag.is-warning, .tag.is-warning.is-light {
+    background-color: #f59e0b !important; /* Amber 500 */
+    color: #fff !important;
+}
+
+.tag.is-danger, .tag.is-danger.is-light {
+    background-color: #ef4444 !important; /* Red 500 */
+    color: #fff !important;
+}
+
+.tag.is-info, .tag.is-info.is-light {
+    background-color: #3b82f6 !important; /* Blue 500 */
+    color: #fff !important;
+}
+
+.tag.is-primary, .tag.is-primary.is-light {
+    background-color: #7c3aed !important; /* Violet 600 - Brand */
+    color: #fff !important;
+}
