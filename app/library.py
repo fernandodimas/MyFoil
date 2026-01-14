@@ -609,7 +609,7 @@ def get_game_info_item(tid, title_data):
     game['updates_count'] = len(owned_updates)
     game['has_redundant_updates'] = game['updates_count'] > 1
 
-    game['owned'] = game['has_base']
+    game['owned'] = len(owned_apps) > 0
     
     # Determine status color for UI and numeric score for sorting
     # Score: 2 = Complete (Green), 1 = Pending (Orange), 0 = No Base (Red/Orange)

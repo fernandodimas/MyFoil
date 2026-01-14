@@ -260,6 +260,52 @@ p.game-description {
     }
 }
 
+/* Tag Styles */
+.tag-update {
+    background-color: rgba(255, 193, 7, 0.15) !important;
+    color: #92400e !important;
+    border: 1px solid rgba(255, 193, 7, 0.3) !important;
+    font-size: 0.6rem !important;
+    height: 1.1rem !important;
+}
+
+.tag-dlc {
+    background-color: rgba(72, 199, 142, 0.15) !important;
+    color: #064e3b !important;
+    border: 1px solid rgba(72, 199, 142, 0.3) !important;
+    font-size: 0.6rem !important;
+    height: 1.1rem !important;
+}
+
+.tag-redundant {
+    background-color: rgba(241, 70, 104, 0.15) !important;
+    color: #7f1d1d !important;
+    border: 1px solid rgba(241, 70, 104, 0.3) !important;
+    font-size: 0.6rem !important;
+    height: 1.1rem !important;
+}
+
+/* Dark Mode Tag Overrides - Darker background as requested */
+[data-theme="dark"] .tag-update {
+    background-color: rgba(255, 193, 7, 0.25) !important;
+    color: #fcd34d !important;
+    border: 1px solid rgba(255, 193, 7, 0.5) !important;
+}
+
+[data-theme="dark"] .tag-dlc {
+    background-color: rgba(72, 199, 142, 0.25) !important;
+    color: #6ee7b7 !important;
+    border: 1px solid rgba(72, 199, 142, 0.5) !important;
+}
+
+[data-theme="dark"] .tag-redundant {
+    background-color: rgba(244, 63, 94, 0.25) !important;
+    color: #fda4af !important;
+    border: 1px solid rgba(244, 63, 94, 0.5) !important;
+}
+
+
+
 
 
 

@@ -1041,16 +1041,19 @@ def app_info_api(id):
                 'filename': f.filename,
                 'filepath': f.filepath,
                 'size': f.size,
-                'size_formatted': format_size_py(f.size)
+                'size_formatted': format_size_py(f.size),
+                'version': app_model.app_version
             })
     
     # Deduplicate files by ID
     seen_ids = set()
     unique_base_files = []
+    seen_file_ids_in_modal = set()
     for f in base_files:
         if f['id'] not in seen_ids:
             unique_base_files.append(f)
             seen_ids.add(f['id'])
+            seen_file_ids_in_modal.add(f['id'])
 
     # Updates and DLCs (for detailed listing)
     available_versions = titles_lib.get_all_existing_versions(tid)
@@ -1080,6 +1083,8 @@ def app_info_api(id):
         if upd['owned']:
             app_model = db.session.get(Apps, upd['id'])
             for f in app_model.files:
+                if f.id in seen_file_ids_in_modal:
+                    continue
                 files.append({'id': f.id, 'filename': f.filename, 'size_formatted': format_size_py(f.size)})
         
         updates_list.append({
@@ -1539,7 +1544,9 @@ def get_stats_overview():
         filtered_games = [g for g in games if any(lib_path in f for f in g.get('files', []))]
 
     # Recalculate based on filtered list
-    total_owned = len([g for g in filtered_games if g.get('has_base')])
+    # Total owned should be all games in our library list, 
+    # as items only appear there if we own at least one component (Base, Update or DLC)
+    total_owned = len(filtered_games)
     up_to_date = len([g for g in filtered_games if g.get('status_color') == 'green' and g.get('has_base')])
     
     # Genre Distribution (from filtered list)
