@@ -286,12 +286,12 @@ def get_all_apps():
     apps_list = [
         {
             "id": app.id,
-            "title_id": app.title.title_id,  # Access the actual title_id from Titles
+            "title_id": app.title.title_id if app.title else 'UNKNOWN',
             "app_id": app.app_id,
             "app_version": app.app_version,
             "app_type": app.app_type,
             "owned": app.owned,
-            "files": [f.filepath for f in app.files] # List of file paths associated with this app
+            "files_info": [{'path': f.filepath, 'size': f.size} for f in app.files]
         }
         for app in Apps.query.options(db.joinedload(Apps.title), db.joinedload(Apps.files)).all()
     ]
@@ -415,7 +415,8 @@ def get_all_titles_with_apps():
         t_dict['apps'] = []
         for a in t.apps:
             a_dict = to_dict(a)
-            # Include file metadata (path and size)
+            # Include both for compatibility
+            a_dict['files'] = [f.filepath for f in a.files]
             a_dict['files_info'] = [{'path': f.filepath, 'size': f.size} for f in a.files]
             t_dict['apps'].append(a_dict)
         results.append(t_dict)
@@ -437,8 +438,15 @@ def add_title_id_in_db(title_id):
         db.session.commit()
 
 def get_all_title_apps(title_id):
-    title = Titles.query.options(joinedload(Titles.apps)).filter_by(title_id=title_id).first()
-    return[to_dict(a)  for a in title.apps]
+    title = Titles.query.options(joinedload(Titles.apps).joinedload(Apps.files)).filter_by(title_id=title_id).first()
+    if not title: return []
+    
+    results = []
+    for a in title.apps:
+        a_dict = to_dict(a)
+        a_dict['files_info'] = [{'path': f.filepath, 'size': f.size} for f in a.files]
+        results.append(a_dict)
+    return results
 
 def get_app_by_id_and_version(app_id, app_version):
     """Get app entry for a specific app_id and version (unique due to constraint)"""

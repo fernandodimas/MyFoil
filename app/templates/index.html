@@ -502,7 +502,7 @@
                             <div class="is-flex is-justify-content-between is-align-items-center">
                                 <div class="is-flex is-align-items-center gap-1">
                                     <span class="status-dot ${statusDotClass}"></span>
-                                    <span class="is-size-7 opacity-50 font-mono">${game.size_formatted || '--'}</span>
+                                    <span class="is-size-7 opacity-70 font-mono" title="Tamanho em disco">${game.size_formatted || '--'}</span>
                                 </div>
                                 <div class="is-flex gap-1">
                                     ${!game.has_latest_version && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1" style="height: 1.1rem; font-size: 0.6rem; font-weight: bold;">UPDATE</span>' : ''}
@@ -592,6 +592,7 @@
                                     <p class="is-size-7 opacity-50 break-word" title="${f.filepath}">${f.filepath}</p>
                                 </div>
                                 <div class="column is-narrow ml-2 is-flex align-items-center">
+                                    <span class="tag is-light font-mono mr-2">${f.size_formatted || '--'}</span>
                                     <a href="/api/get_game/${f.id}" class="button is-primary is-small mr-1" title="Download">
                                         <span class="icon is-small"><i class="bi bi-download"></i></span>
                                     </a>
@@ -627,7 +628,8 @@
                                         <td class="opacity-70">${u.release_date || '--'}</td>
                                         <td class="has-text-centered">
                                             ${u.owned && file ? `
-                                                <div class="field is-grouped is-grouped-centered">
+                                                <div class="field is-grouped is-grouped-centered is-align-items-center">
+                                                    <span class="tag is-light font-mono mr-2 is-hidden-mobile">${file.size_formatted || '--'}</span>
                                                     <p class="control">
                                                         <a href="/api/get_game/${file.id}" class="button is-primary is-small" title="Download">
                                                             <i class="bi bi-download"></i>
@@ -672,7 +674,8 @@
                                         <td class="opacity-50 font-mono">${d.app_id}</td>
                                         <td class="has-text-centered">
                                             ${d.owned && file ? `
-                                                <div class="field is-grouped is-grouped-centered">
+                                                <div class="field is-grouped is-grouped-centered is-align-items-center">
+                                                    <span class="tag is-light font-mono mr-2 is-hidden-mobile">${file.size_formatted || '--'}</span>
                                                     <p class="control">
                                                         <a href="/api/get_game/${file.id}" class="button is-primary is-light is-small" title="Download">
                                                             <i class="bi bi-download"></i>
@@ -718,6 +721,10 @@
                                 <div class="mb-3">
                                     <p class="is-size-7 heading mb-1 opacity-50">Versão</p>
                                     <p class="is-size-6"><span class="tag is-info is-light has-text-weight-bold">v${game.display_version}</span></p>
+                                </div>
+                                <div class="mb-3">
+                                    <p class="is-size-7 heading mb-1 opacity-50">Total em Disco</p>
+                                    <p class="is-size-6 has-text-weight-bold font-mono">${game.size_formatted || '--'}</p>
                                 </div>
                                 <div>
                                     <p class="is-size-7 heading mb-1 opacity-50">Gênero</p>

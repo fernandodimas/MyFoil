@@ -503,6 +503,11 @@ def compute_apps_hash():
         hash_md5.update((app['app_type'] or '').encode())
         hash_md5.update(str(app['owned'] or False).encode())
         hash_md5.update((app['title_id'] or '').encode())
+        # Include file metadata in hash to detect additions/deletions
+        if 'files_info' in app:
+            for f in sorted(app['files_info'], key=lambda x: x['path']):
+                hash_md5.update(f['path'].encode())
+                hash_md5.update(str(f.get('size', 0)).encode())
     return hash_md5.hexdigest()
 
 def is_library_unchanged():

@@ -1045,19 +1045,32 @@ def get_unidentified_files_api():
 @main_bp.route('/api/files/delete/<int:file_id>', methods=['POST'])
 @access_required('admin')
 def delete_file_api(file_id):
-    # Find associated TitleID before deletion for cache update
-    file_obj = db.session.get(Files, file_id)
-    title_ids = []
-    if file_obj and file_obj.apps:
-        title_ids = list(set([a.title.title_id for a in file_obj.apps if a.title]))
-
-    success, error = delete_file_from_db_and_disk(file_id)
-    
-    if success:
-        for tid in title_ids:
-            library_lib.update_game_in_cache(tid)
+    try:
+        # Find associated TitleID before deletion for cache update
+        file_obj = db.session.get(Files, file_id)
+        if not file_obj:
+            return jsonify({'success': False, 'error': 'File not found'}), 404
             
-    return jsonify({'success': success, 'error': error})
+        title_ids = []
+        if file_obj.apps:
+            title_ids = list(set([a.title.title_id for a in file_obj.apps if a.title]))
+
+        success, error = delete_file_from_db_and_disk(file_id)
+        
+        if success:
+            logger.info(f"File {file_id} deleted. Updating cache for titles: {title_ids}")
+            for tid in title_ids:
+                try:
+                    library_lib.update_game_in_cache(tid)
+                except Exception as ex:
+                    logger.error(f"Error updating cache for title {tid}: {ex}")
+        else:
+            logger.warning(f"File deletion failed for {file_id}: {error}")
+                
+        return jsonify({'success': success, 'error': error})
+    except Exception as e:
+        logger.exception(f"Unhandled error in delete_file_api: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 def format_size_py(size):
     if size is None: return "0 B"
