@@ -152,10 +152,26 @@
                         </figure>
                     </td>
                     <td class="is-vcentered">
-                        <p class="has-text-weight-bold">${gameName}</p>
+                        <a onclick="showWishlistModal('${item.title_id}')" class="has-text-weight-bold has-text-primary-dark">${gameName}</a>
                         <p class="is-size-7 font-mono opacity-50">${item.title_id}</p>
                     </td>
-                    <td class="is-vcentered">${getPriorityLabel(item.priority)}</td>
+                    <td class="is-vcentered">
+                        <div class="field has-addons">
+                            <div class="control">
+                                <button class="button is-small is-rounded" onclick="changePriority('${item.title_id}', ${item.priority - 1})" ${item.priority <= 0 ? 'disabled' : ''}>
+                                    <i class="bi bi-chevron-down"></i>
+                                </button>
+                            </div>
+                            <div class="control">
+                                <a class="button is-small is-static px-3">${getPriorityLabel(item.priority)}</a>
+                            </div>
+                            <div class="control">
+                                <button class="button is-small is-rounded" onclick="changePriority('${item.title_id}', ${item.priority + 1})" ${item.priority >= 3 ? 'disabled' : ''}>
+                                    <i class="bi bi-chevron-up"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </td>
                     <td class="is-vcentered is-size-7">${new Date(item.added_date).toLocaleDateString()}</td>
                     <td class="is-vcentered">${statusHtml}</td>
                     <td class="is-vcentered has-text-right">
@@ -185,6 +201,75 @@
             alert('Erro ao remover');
         }
     }
+
+    async function changePriority(tid, newPriority) {
+        if (newPriority < 0 || newPriority > 3) return;
+
+        try {
+            const res = await fetch(`/api/wishlist/${tid}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ priority: newPriority })
+            });
+            if (res.ok) {
+                loadWishlist();
+            } else {
+                alert('Erro ao atualizar prioridade');
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function showWishlistModal(tid) {
+        const modal = document.getElementById('wishlistGameModal');
+        const content = document.getElementById('wishlistModalContent');
+        content.innerHTML = '<div class="p-6 has-text-centered"><span class="loader is-loading is-inline-block" style="width: 2rem; height: 2rem;"></span></div>';
+        modal.classList.add('is-active');
+
+        try {
+            const res = await fetch(`/api/app_info/${tid}`);
+            const data = await res.json();
+
+            content.innerHTML = `
+                <div class="box is-paddingless overflow-hidden" style="border-radius: 8px;">
+                    <div style="height: 150px; background: url('${data.bannerUrl || ''}') center/cover; position: relative;">
+                        <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); padding: 1rem;">
+                            <h2 class="title is-4 has-text-white mb-0">${data.name || tid}</h2>
+                            <p class="is-size-7 font-mono has-text-white opacity-70">${tid}</p>
+                        </div>
+                    </div>
+                    <div class="p-4 is-flex" style="gap: 1rem;">
+                        <figure class="image is-96x96 box p-0 flex-shrink-0" style="margin-top: -3rem; position: relative; z-index: 10;">
+                            <img src="${data.iconUrl || '/static/img/no-icon.png'}" style="height: 100%; object-fit: cover;">
+                        </figure>
+                        <div class="content is-size-7 flex-grow-1">
+                            <p><strong>Publisher:</strong> ${data.publisher || '--'}</p>
+                            <p><strong>Release:</strong> ${data.releaseDate || '--'}</p>
+                            <p class="mt-2" style="max-height: 100px; overflow-y: auto;">
+                                ${data.description || 'Sem descrição.'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } catch (e) {
+            content.innerHTML = '<p class="has-text-danger p-4">Erro ao carregar detalhes.</p>';
+        }
+    }
+
+    function closeWishlistModal() {
+        document.getElementById('wishlistGameModal').classList.remove('is-active');
+    }
     {% endraw %}
 </script>
+
+<!-- Simple Wishlist Detail Modal -->
+<div class="modal" id="wishlistGameModal">
+    <div class="modal-background" onclick="closeWishlistModal()"></div>
+    <div class="modal-content" style="max-width: 600px;">
+        <div id="wishlistModalContent"></div>
+    </div>
+    <button class="modal-close is-large" aria-label="close" onclick="closeWishlistModal()"></button>
+</div>
 {% endblock %}

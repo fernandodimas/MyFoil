@@ -1217,6 +1217,8 @@
                 $('#btnSaveMetadata').removeClass('is-loading');
                 if (res.success) {
                     closeModal('editMetadataModal');
+                    // Clear local cache to ensure new data is fetched
+                    localStorage.removeItem('myfoil_library_cache');
                     showToast('Dados atualizados com sucesso! A página será recarregada.');
                     setTimeout(() => location.reload(), 1500);
                 } else {

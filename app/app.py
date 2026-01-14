@@ -1720,6 +1720,22 @@ def wishlist_api():
     log_activity('wishlist_added', title_id=item.title_id, user_id=current_user.id)
     return jsonify({'success': True})
 
+@main_bp.route('/api/wishlist/<title_id>', methods=['PUT'])
+@access_required('shop')
+def update_wishlist_api(title_id):
+    item = Wishlist.query.filter_by(user_id=current_user.id, title_id=title_id.upper()).first()
+    if not item:
+        return jsonify({'error': 'Item not found'}), 404
+    
+    data = request.json
+    if 'priority' in data:
+        item.priority = int(data['priority'])
+    if 'notes' in data:
+        item.notes = data['notes']
+        
+    db.session.commit()
+    return jsonify({'success': True})
+
 @main_bp.route('/api/wishlist/<title_id>', methods=['DELETE'])
 @access_required('shop')
 def delete_wishlist_api(title_id):

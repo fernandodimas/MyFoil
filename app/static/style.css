@@ -111,7 +111,8 @@ body {
 .menu-list a.is-active,
 .is-active-menu,
 a.navbar-item:focus,
-a.navbar-item:focus-within {
+a.navbar-item:focus-within,
+.navbar-start .navbar-item.is-active {
     background-color: #7C3AD5 !important;
     color: white !important;
 }
