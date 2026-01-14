@@ -1186,12 +1186,13 @@ def get_stats_overview():
     import titles
     import library
     
-    # 1. Load data from disk (cached library)
+    # 1. Load data from disk or generate
     lib_data = library.load_library_from_disk()
     if not lib_data:
-        lib_data = library.generate_library()
-        
-    games = lib_data.get('games', [])
+        games = library.generate_library()
+    else:
+        # load_library_from_disk returns a dict with 'library' key
+        games = lib_data.get('library', []) if isinstance(lib_data, dict) else lib_data
     
     # 2. Basic Library Stats
     total_size = sum(g.get('size', 0) for g in games)
