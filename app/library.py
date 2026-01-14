@@ -578,15 +578,23 @@ def get_game_info_item(tid, title_data):
     game['owned_version'] = max(owned_versions) if owned_versions else 0
     game['display_version'] = str(game['owned_version'])
 
+    def normalize_date(d):
+        if not d: return ""
+        d = str(d).strip()
+        # Handle YYYYMMDD
+        if len(d) == 8 and d.isdigit():
+            return f"{d[:4]}-{d[4:6]}-{d[6:8]}"
+        return d
+
     # Available versions from versions.json
     available_versions = titles_lib.get_all_existing_versions(tid)
     latest_v = max(available_versions, key=lambda x: x['version'], default=None)
     game['latest_version_available'] = latest_v['version'] if latest_v else 0
-    game['latest_release_date'] = latest_v['release_date'] if latest_v else ''
+    game['latest_release_date'] = normalize_date(latest_v['release_date']) if latest_v else ''
     
     # Ensure release_date is consistently available for sorting
-    if 'release_date' not in game or not game['release_date']:
-        game['release_date'] = game.get('releaseDate') or game['latest_release_date'] or '0000-00-00'
+    original_release = normalize_date(game.get('release_date'))
+    game['release_date'] = original_release or game['latest_release_date'] or ''
 
     # Status indicators
     game['has_base'] = any(a['app_type'] == APP_TYPE_BASE and a['owned'] for a in all_title_apps)
@@ -595,6 +603,11 @@ def get_game_info_item(tid, title_data):
     all_possible_dlc_ids = titles_lib.get_all_existing_dlc(tid)
     owned_dlc_ids = list(set([a['app_id'] for a in all_title_apps if a['app_type'] == APP_TYPE_DLC and a['owned']]))
     game['has_all_dlcs'] = all(d in owned_dlc_ids for d in all_possible_dlc_ids) if all_possible_dlc_ids else True
+
+    # Check for redundant updates (more than 1 update file)
+    owned_updates = [a for a in all_title_apps if a['app_type'] == APP_TYPE_UPD and a['owned']]
+    game['updates_count'] = len(owned_updates)
+    game['has_redundant_updates'] = game['updates_count'] > 1
 
     game['owned'] = game['has_base']
     

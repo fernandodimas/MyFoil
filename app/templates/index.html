@@ -9,8 +9,10 @@
 
         <!-- Controls Row -->
         <div class="box p-2 mb-4 shadow-sm border-none bg-glass">
-            <div class="is-flex is-flex-direction-row is-justify-content-between is-align-items-center mb-2 px-1">
-                <div class="is-flex gap-2">
+            <div class="is-flex is-flex-wrap-wrap is-justify-content-between is-align-items-center gap-3 px-1 py-1">
+
+                <!-- Group 1: Filters & Sort -->
+                <div class="is-flex gap-2 is-justify-content-center-mobile is-flex-grow-1-mobile">
                     <!-- Filters Dropdown -->
                     <div class="dropdown" id="filterDropdown">
                         <div class="dropdown-trigger">
@@ -79,25 +81,8 @@
                     </div>
                 </div>
 
-                <div class="is-flex gap-1 is-hidden-mobile">
-                    <span class="is-size-7 opacity-50" id="totalItemsCount">-- itens</span>
-                </div>
-
-                <div class="is-flex gap-2 is-align-items-center">
-                    <div class="buttons has-addons m-0" id="viewToggleButtons">
-                        <button class="button is-small p-2" onclick="setView('card')" id="btnViewCard" title="Grade"><i
-                                class="bi bi-grid-fill"></i></button>
-                        <button class="button is-small p-2" onclick="setView('icon')" id="btnViewIcon" title="Ícones"><i
-                                class="bi bi-image"></i></button>
-                        <button class="button is-small p-2" onclick="setView('list')" id="btnViewList" title="Lista"><i
-                                class="bi bi-list-ul"></i></button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Second row on mobile / Extended row on desktop -->
-            <div class="is-flex is-justify-content-between is-align-items-center px-1">
-                <div class="is-flex gap-1 is-flex-grow-1 mr-2">
+                <!-- Group 2: Quick Status Filters -->
+                <div class="is-flex gap-1 is-justify-content-center-mobile is-flex-grow-1-mobile">
                     <div class="buttons has-addons m-0">
                         <button class="button is-small is-light" id="btnFilterPendingBase" title="Falta Arquivo Base">
                             <span class="icon is-small"><i class="bi bi-disc"></i></span>
@@ -119,13 +104,29 @@
                     </button>
                 </div>
 
-                <div class="is-flex is-align-items-center is-hidden-mobile" style="min-width: 150px;">
-                    <i class="bi bi-zoom-in is-size-7 mr-2 opacity-50"></i>
-                    <input id="gridZoom" class="slider is-small is-primary m-0" type="range" min="180" max="400"
-                        step="10" value="240" oninput="updateGridZoom(this.value)">
+                <!-- Group 3: View Options & Zoom -->
+                <div class="is-flex gap-3 is-align-items-center is-justify-content-center-mobile is-flex-grow-1-mobile">
+                    <div class="is-flex is-align-items-center is-hidden-mobile" style="min-width: 120px;">
+                        <i class="bi bi-zoom-in is-size-7 mr-2 opacity-50"></i>
+                        <input id="gridZoom" class="slider is-small is-primary m-0" type="range" min="180" max="400"
+                            step="10" value="240" oninput="updateGridZoom(this.value)">
+                    </div>
+
+                    <div class="buttons has-addons m-0" id="viewToggleButtons">
+                        <button class="button is-small p-2" onclick="setView('card')" id="btnViewCard" title="Grade"><i
+                                class="bi bi-grid-fill"></i></button>
+                        <button class="button is-small p-2" onclick="setView('icon')" id="btnViewIcon" title="Ícones"><i
+                                class="bi bi-image"></i></button>
+                        <button class="button is-small p-2" onclick="setView('list')" id="btnViewList" title="Lista"><i
+                                class="bi bi-list-ul"></i></button>
+                    </div>
+
+                    <div class="is-hidden-mobile">
+                        <span class="is-size-7 opacity-50" id="totalItemsCount">-- itens</span>
+                    </div>
                 </div>
 
-                <div class="is-hidden-tablet">
+                <div class="is-hidden-tablet is-flex-grow-1 has-text-centered">
                     <span class="is-size-7 opacity-50" id="totalItemsCountMobile">-- itens</span>
                 </div>
             </div>
@@ -321,6 +322,22 @@
         padding-top: 0.5rem !important;
         padding-bottom: 0.5rem !important;
         line-height: 1.25 !important;
+    }
+
+    .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    @media screen and (max-width: 768px) {
+        .is-flex-grow-1-mobile {
+            flex-grow: 1 !important;
+        }
+
+        .is-justify-content-center-mobile {
+            justify-content: center !important;
+        }
     }
 
     .game-card {
@@ -538,9 +555,10 @@
                                     <span class="status-dot ${statusDotClass}"></span>
                                     <span class="is-size-7 opacity-70 font-mono" title="Tamanho em disco">${game.size_formatted || '--'}</span>
                                 </div>
-                                <div class="is-flex gap-1">
-                                    ${!game.has_latest_version && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1" style="height: 1.1rem; font-size: 0.6rem; font-weight: bold;">UPDATE</span>' : ''}
-                                    ${!game.has_all_dlcs && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1" style="height: 1.1rem; font-size: 0.6rem; font-weight: bold;">DLC</span>' : ''}
+                                <div class="is-flex gap-1 is-justify-content-end">
+                                    ${!game.has_latest_version && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1 has-text-weight-bold" style="height: 1.1rem; font-size: 0.6rem; border: 1px solid rgba(255,193,7,0.3)">UPDATE</span>' : ''}
+                                    ${!game.has_all_dlcs && game.has_base ? '<span class="tag is-warning is-light is-small py-0 px-1 has-text-weight-bold" style="height: 1.1rem; font-size: 0.6rem; border: 1px solid rgba(255,193,7,0.3)">DLC</span>' : ''}
+                                    ${game.has_redundant_updates ? '<span class="tag is-danger is-light is-small py-0 px-1 has-text-weight-bold" style="height: 1.1rem; font-size: 0.6rem; border: 1px solid rgba(255,56,96,0.3)" title="Updates redundantes detectados">X-UPD</span>' : ''}
                                 </div>
                             </div>
                         </div>
@@ -599,7 +617,10 @@
             table.find('tbody').append(`
                 <tr onclick="showGameDetails('${game.id || game.title_id}')">
                     <td class="p-1 has-text-centered"><img src="${game.iconUrl || '/static/img/no-icon.png'}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;"></td>
-                    <td class="is-vcentered"><strong class="is-size-7-mobile">${game.name || 'Unknown'}</strong></td>
+                    <td class="is-vcentered">
+                        <strong class="is-size-7-mobile">${game.name || 'Unknown'}</strong>
+                        ${game.has_redundant_updates ? '<span class="tag is-danger is-light is-small ml-2" style="font-size: 0.6rem; font-weight: bold;">X-UPD</span>' : ''}
+                    </td>
                     <td class="font-mono is-size-7 is-vcentered">${game.id || game.title_id || '--'}</td>
                     <td class="is-vcentered has-text-centered"><span class="tag is-light is-small">v${game.display_version || '0'}</span></td>
                     <td class="is-hidden-mobile is-vcentered font-mono is-size-7">${game.size_formatted || '--'}</td>
@@ -657,6 +678,7 @@
 
                 const renderUpdateRow = (u) => {
                     const file = u.files && u.files.length > 0 ? u.files[0] : null;
+                    const isRedundant = u !== latest && game.updates.length > 1; // Check if it's not the latest and there are other updates
                     return `
                         <tr>
                             <td class="has-text-weight-bold">v${u.version}</td>
@@ -665,6 +687,7 @@
                                 ${u.owned && file ? `
                                     <div class="field is-grouped is-grouped-centered is-align-items-center">
                                         <span class="tag is-light font-mono mr-2 is-hidden-mobile">${file.size_formatted || '--'}</span>
+                                        ${isRedundant ? '<span class="tag is-danger is-light is-small mr-1">REDUNDANTE</span>' : ''}
                                         <p class="control">
                                             <a href="/api/get_game/${file.id}" class="button is-primary is-small" title="Download">
                                                 <i class="bi bi-download"></i>
@@ -887,9 +910,12 @@
             if (field === 'name') {
                 comparison = (a.name || '').localeCompare(b.name || '');
             } else if (field === 'release') {
-                const dateA = a.latest_release_date || a.release_date || '0000-00-00';
-                const dateB = b.latest_release_date || b.release_date || '0000-00-00';
+                const dateA = String(a.release_date || a.latest_release_date || '0000-00-00');
+                const dateB = String(b.release_date || b.latest_release_date || '0000-00-00');
                 comparison = dateA.localeCompare(dateB);
+                if (comparison === 0) {
+                    comparison = (a.name || '').localeCompare(b.name || '');
+                }
             } else if (field === 'added') {
                 comparison = (a.added_at || 0) - (b.added_at || 0);
             } else if (field === 'id') {
