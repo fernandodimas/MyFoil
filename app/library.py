@@ -510,7 +510,7 @@ def compute_apps_hash():
                 hash_md5.update(str(f.get('size', 0)).encode())
         
     # Include tags in hash (from Titles)
-    titles_with_tags = db.session.query(Titles.title_id, Tag.name).join(TitleTag).join(Tag).all()
+    titles_with_tags = db.session.query(Titles.title_id, Tag.name).join(Titles.tags).all()
     for tid, tname in sorted(titles_with_tags):
         hash_md5.update(tid.encode())
         hash_md5.update(tname.encode())
