@@ -179,6 +179,8 @@ def init_internal(app):
 
 os.makedirs(CONFIG_DIR, exist_ok=True)
 os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(TITLEDB_DIR, exist_ok=True)
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 ## Global variables
 app_settings = {}

@@ -361,8 +361,10 @@ def load_titledb(force=False):
 
         if not _titles_db:
             logger.error("CRITICAL: Failed to load any TitleDB. Game identification will be limited.")
+            _titles_db = {}
 
-        _versions_db = robust_json_load(os.path.join(TITLEDB_DIR, 'versions.json'))
+        _versions_db = robust_json_load(os.path.join(TITLEDB_DIR, 'versions.json')) or {}
+        _cnmts_db = _cnmts_db or {}
 
         _titles_db_loaded = True
         logger.info("TitleDBs loaded.")
