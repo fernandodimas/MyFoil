@@ -1239,7 +1239,7 @@ def get_stats_overview():
             'total_games': total_games,
             'total_owned': total_owned,
             'total_size': total_size,
-            'total_size_formatted': library.format_bytes(total_size),
+            'total_size_formatted': format_size_py(total_size),
             'up_to_date': up_to_date,
             'pending': pending,
             'completion_rate': round((up_to_date / total_owned * 100), 1) if total_owned > 0 else 0
