@@ -12,6 +12,56 @@ import threading
 _LIBRARY_CACHE = None
 _CACHE_LOCK = threading.Lock()
 
+ALLOWED_EXTENSIONS = {'.nsp', '.nsz', '.xci', '.xcz'}
+MAX_FILE_SIZE = 50 * 1024 * 1024 * 1024  # 50GB
+
+def validate_file(filepath):
+    """
+    Validate file before processing.
+    Checks extension, size, symlinks, and basic header for Switch files.
+    """
+    path = Path(filepath)
+    
+    # 1. Check extension
+    if path.suffix.lower() not in ALLOWED_EXTENSIONS:
+        raise ValueError(f"Extensão não permitida: {path.suffix}")
+    
+    # 2. Check existence and size
+    if not path.exists():
+        raise FileNotFoundError(f"Arquivo não encontrado: {filepath}")
+        
+    size = path.stat().st_size
+    if size == 0:
+        raise ValueError("Arquivo vazio")
+    if size > MAX_FILE_SIZE:
+        raise ValueError(f"Arquivo excede limite de tamanho (50GB)")
+    
+    # 3. Check for malicious symlinks
+    if path.is_symlink():
+        # Ensure it resolves within a allowed path (optional but safer)
+        # We'll just log a warning for now as libraries can be spread out
+        logger.warning(f"Processando symlink: {filepath}")
+
+    # 4. Basic Header validation (Switch specific)
+    try:
+        with open(filepath, 'rb') as f:
+            header = f.read(4)
+            # NSP/NSZ starts with PFS0
+            if path.suffix.lower() in ['.nsp', '.nsz']:
+                if header != b'PFS0':
+                    raise ValueError(f"Cabeçalho NSP inválido: {header}")
+            # XCI/XCZ starts with HEAD at offset 0x100
+            elif path.suffix.lower() in ['.xci', '.xcz']:
+                f.seek(0x100)
+                header_xci = f.read(4)
+                if header_xci != b'HEAD':
+                    raise ValueError(f"Cabeçalho XCI inválido: {header_xci}")
+    except Exception as e:
+        if isinstance(e, ValueError): raise
+        raise ValueError(f"Erro ao ler cabeçalho do arquivo: {str(e)}")
+    
+    return True
+
 def cleanup_metadata_files(path):
     """Recursively delete macOS metadata files (starting with ._)"""
     logger.info(f"Cleaning up macOS metadata files in {path}...")
@@ -121,22 +171,28 @@ def add_files_to_library(library, files):
         file = filepath.replace(library_path, "")
         logger.info(f'Getting file info ({n+1}/{nb_to_identify}): {file}')
 
-        file_info = titles_lib.get_file_info(filepath)
+        try:
+            # Validate file before adding to DB
+            validate_file(filepath)
+            
+            file_info = titles_lib.get_file_info(filepath)
 
-        if file_info is None:
-            logger.error(f'Failed to get info for file: {file} - file will be skipped.')
-            # in the future save identification error to be displayed and inspected in the UI
+            if file_info is None:
+                logger.error(f'Failed to get info for file: {file} - file will be skipped.')
+                continue
+
+            new_file = Files(
+                filepath = filepath,
+                library_id = library_id,
+                folder = file_info["filedir"],
+                filename = file_info["filename"],
+                extension = file_info["extension"],
+                size = file_info["size"],
+            )
+            db.session.add(new_file)
+        except Exception as e:
+            logger.error(f"Validation failed for {file}: {str(e)}")
             continue
-
-        new_file = Files(
-            filepath = filepath,
-            library_id = library_id,
-            folder = file_info["filedir"],
-            filename = file_info["filename"],
-            extension = file_info["extension"],
-            size = file_info["size"],
-        )
-        db.session.add(new_file)
 
         # Commit every 100 files to avoid excessive memory use
         if (n + 1) % 100 == 0:

@@ -254,24 +254,25 @@
             // WebSocket Global Listener with robust initialization
             if (typeof io !== 'undefined') {
                 const socket = io({
-                    transports: ['websocket', 'polling'],
+                    transports: ['polling', 'websocket'], // Try polling first for reliability
                     upgrade: true,
+                    rememberUpgrade: true,
                     reconnection: true,
-                    reconnectionAttempts: 5,
-                    reconnectionDelay: 1000
+                    reconnectionAttempts: 10,
+                    reconnectionDelay: 2000,
+                    timeout: 20000
                 });
 
                 socket.on('connect', () => {
-                    console.log('WebSocket: Connected');
+                    console.log('WebSocket: Connected using ' + socket.io.engine.transport.name);
+                });
+
+                socket.on('upgrade', (transport) => {
+                    console.log('WebSocket: Upgraded to ' + transport.name);
                 });
 
                 socket.on('connect_error', (error) => {
-                    console.warn('WebSocket: Connection error', error);
-                    // Fallback to polling if websocket fails
-                    if (socket.io.opts.transports.includes('websocket')) {
-                        console.log('WebSocket: Attempting fallback to polling');
-                        socket.io.opts.transports = ['polling', 'websocket'];
-                    }
+                    console.warn('WebSocket: Connection error', error.message);
                 });
 
                 socket.on('library_updated', (data) => {
