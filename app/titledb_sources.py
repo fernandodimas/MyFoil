@@ -36,6 +36,7 @@ class TitleDBSource:
             'enabled': self.enabled,
             'priority': self.priority,
             'source_type': self.source_type,
+            'last_success': self.last_success.isoformat() if self.last_success else None,
             'last_error': self.last_error
         }
 
@@ -254,8 +255,24 @@ class TitleDBSourceManager:
         return False
     
     def get_sources_status(self) -> List[Dict]:
-        """Get status of all sources for display"""
-        return [s.to_dict() for s in sorted(self.sources, key=lambda x: x.priority)]
+        """Get status of all sources including remote file dates"""
+        from settings import load_settings
+        import titledb
+        
+        app_settings = load_settings()
+        # Use titles.json as common reference for age, or regional if set
+        ref_file = titledb.get_region_titles_file(app_settings) or "titles.json"
+        
+        status_list = []
+        for s in sorted(self.sources, key=lambda x: x.priority):
+            d = s.to_dict()
+            # Try to fetch remote date (only if enabled to avoid slowing down UI too much)
+            # Actually, let's do it for all to show status
+            remote_date = s.get_last_modified_date(ref_file)
+            d['remote_date'] = remote_date.isoformat() if remote_date else None
+            status_list.append(d)
+            
+        return status_list
 
     def update_priorities(self, priority_map: Dict[str, int]) -> bool:
         """

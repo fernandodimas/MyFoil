@@ -340,7 +340,8 @@
                                         <thead>
                                             <tr>
                                                 <th>{{ t('Source') }}</th>
-                                                <th>{{ t('Type') }}</th>
+                                                <th>{{ t('Last Modified (Remote)') }}</th>
+                                                <th>{{ t('Last Download (Local)') }}</th>
                                                 <th>{{ t('Priority') }}</th>
                                                 <th>{{ t('Status') }}</th>
                                                 <th class="has-text-right">{{ t('Actions') }}</th>
@@ -949,13 +950,32 @@
             }
 
             result.sources.forEach(source => {
+                const remoteDate = source.remote_date ? new Date(source.remote_date).toLocaleString() : '--';
+                const localDate = source.last_success ? new Date(source.last_success).toLocaleString() : 'Never';
+
                 tbody.append(`
                     <tr>
                         <td>
-                            <p class="has-text-weight-bold has-text-primary is-size-6">${source.name}</p>
-                            <p class="is-family-monospace is-size-7 opacity-40" style="word-break: break-all;">${source.base_url}</p>
+                            <div class="is-flex is-align-items-center">
+                                <i class="bi ${source.source_type === 'json' ? 'bi-filetype-json' : 'bi-file-zip'} mr-2 opacity-40"></i>
+                                <div>
+                                    <p class="has-text-weight-bold has-text-primary is-size-6 m-0">${source.name}</p>
+                                    <p class="is-family-monospace is-size-7 opacity-40" style="word-break: break-all;">${source.base_url}</p>
+                                </div>
+                            </div>
                         </td>
-                        <td><span class="tag is-light is-small is-uppercase is-family-monospace">${source.source_type}</span></td>
+                        <td>
+                            <div class="is-flex is-align-items-center">
+                                <i class="bi bi-cloud-check mr-2 has-text-info"></i>
+                                <span class="is-size-7">${remoteDate}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="is-flex is-align-items-center">
+                                <i class="bi bi-download mr-2 opacity-50"></i>
+                                <span class="is-size-7">${localDate}</span>
+                            </div>
+                        </td>
                         <td><input type="number" class="input is-small w-16" value="${source.priority}" style="width: 70px" onchange="updateSourcePriority('${source.name}', this.value)" /></td>
                         <td>
                             <span class="tag ${source.enabled ? 'is-success' : 'is-light'} is-small">
