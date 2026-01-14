@@ -792,6 +792,7 @@
     }
 
     function applyFilters() {
+        const query = ($('#navbarSearch').val() || '').toLowerCase();
         const gender = $('#filterGender').val();
         const tag = $('#filterTag').val();
 
