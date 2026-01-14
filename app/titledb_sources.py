@@ -50,44 +50,58 @@ class TitleDBSource:
         try:
             # Check if it's a raw GitHub URL
             if "raw.githubusercontent.com" in self.base_url:
-                # GitHub raw URLs update immediately, but don't always expose Last-Modified
-                # For more accuracy, one would hit the API, but HEAD is cheap.
-                # Let's try to get info from the repo API if possible.
-                # Convention: https://raw.githubusercontent.com/<user>/<repo>/<branch>
+                # https://raw.githubusercontent.com/<user>/<repo>/<branch>
                 parts = self.base_url.split('/')
                 if len(parts) >= 6:
                     user = parts[3]
                     repo = parts[4]
                     branch = parts[5]
-                    # Use GitHub API to get commit info for the file
-                    api_url = f"https://api.github.com/repos/{user}/{repo}/commits?path={filename}&sha={branch}&per_page=1"
                     
-                    # GitHub API requires a User-Agent
-                    headers = {
-                        'User-Agent': 'MyFoil-App',
-                        'Accept': 'application/vnd.github.v3+json'
-                    }
+                    # Try to get commit info for the file
+                    def _get_github_date(fname, br):
+                        api_url = f"https://api.github.com/repos/{user}/{repo}/commits?path={fname}&sha={br}&per_page=1"
+                        headers = {
+                            'User-Agent': 'MyFoil-App',
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                        resp = requests.get(api_url, headers=headers, timeout=5)
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            if data and isinstance(data, list) and len(data) > 0:
+                                commit_date = data[0]['commit']['committer']['date']
+                                return datetime.fromisoformat(commit_date.replace("Z", "+00:00"))
+                        return None
+
+                    # 1. Try regional file on detected branch
+                    d = _get_github_date(filename, branch)
+                    if d: return d
                     
-                    resp = requests.get(api_url, headers=headers, timeout=5)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        if data and isinstance(data, list) and len(data) > 0:
-                            commit_date = data[0]['commit']['committer']['date']
-                            # Remove 'Z' if present for ISO parsing compatibility
-                            return datetime.fromisoformat(commit_date.replace("Z", "+00:00"))
-                        elif isinstance(data, dict) and data.get('message'):
-                            logger.error(f"GitHub API Error for {self.name}: {data['message']}")
-                    else:
-                        logger.error(f"GitHub API returned {resp.status_code} for {self.name}: {resp.text}")
+                    # 2. Try generic titles.json on detected branch
+                    if filename != "titles.json":
+                        d = _get_github_date("titles.json", branch)
+                        if d: return d
+                    
+                    # 3. If branch was 'main', try 'master' and vice versa
+                    alt_branch = 'master' if branch == 'main' else 'main'
+                    d = _get_github_date(filename, alt_branch)
+                    if d: return d
             
             # Fallback to standard HEAD request
             response = requests.head(url, timeout=5)
             if response.status_code == 200:
                 if 'Last-Modified' in response.headers:
-                    # Parse RFC 2822 date
                     return datetime.strptime(response.headers['Last-Modified'], '%a, %d %b %Y %H:%M:%S %Z')
+            
+            # Final attempt: try generic titles.json if regional failed
+            if filename != "titles.json":
+                url_generic = self.get_file_url("titles.json")
+                response = requests.head(url_generic, timeout=5)
+                if response.status_code == 200 and 'Last-Modified' in response.headers:
+                    return datetime.strptime(response.headers['Last-Modified'], '%a, %d %b %Y %H:%M:%S %Z')
+                    
         except Exception as e:
-            logger.error(f"Error fetching remote date for {self.name} ({url}): {e}")
+            logger.debug(f"Error fetching remote date for {self.name} ({url}): {e}")
+        return None
         
         return None
     
@@ -154,6 +168,28 @@ class TitleDBSourceManager:
                 with open(self.sources_file, 'r') as f:
                     data = json.load(f)
                     self.sources = [TitleDBSource.from_dict(s) for s in data]
+                
+                # Migration: Remove defunct sources and add new defaults
+                config_urls = [s.base_url for s in self.sources]
+                defunct_urls = ["https://raw.githubusercontent.com/Big-On-The-Bottle/titledb/main"]
+                defunct_names = ["bottle/titledb (GitHub)"]
+                
+                # Filter out defunct
+                original_count = len(self.sources)
+                self.sources = [s for s in self.sources if s.base_url not in defunct_urls and s.name not in defunct_names]
+                
+                # Add missing defaults
+                added = False
+                new_config_urls = [s.base_url for s in self.sources]
+                for default_s in self.DEFAULT_SOURCES:
+                    if default_s.base_url not in new_config_urls:
+                        self.sources.append(default_s)
+                        added = True
+                
+                if len(self.sources) != original_count or added:
+                    logger.info("Syncing TitleDB sources (removing defunct or adding newly defaults)...")
+                    self.save_sources()
+                
                 logger.info(f"Loaded {len(self.sources)} TitleDB sources from config")
             except Exception as e:
                 logger.error(f"Error loading TitleDB sources: {e}, using defaults")
