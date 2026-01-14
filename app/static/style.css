@@ -93,10 +93,26 @@ body {
     margin-right: 5px;
 }
 
+
 .card {
     border-radius: 8px !important;
     /* linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 50%), */
 }
+
+/* Menu active item customization */
+.navbar-item.is-active,
+.menu-list a.is-active,
+.is-active-menu {
+    background-color: #7C3AD5 !important;
+    color: white !important;
+}
+
+/* Hover effect to match theme */
+.navbar-item:hover,
+.menu-list a:hover {
+    color: #7C3AD5;
+}
+
 
 .card-img {
     mask-image: linear-gradient(to top, rgba(7, 0, 91, 0.71), #001233ed);

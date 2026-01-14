@@ -14,19 +14,16 @@
 
         <div id="navbarMain" class="navbar-menu">
             <div class="navbar-start">
-                <a class="navbar-item {% if title=='Library' %}is-active has-text-primary has-text-weight-bold{% endif %}"
-                    href="/">
+                <a class="navbar-item {% if title=='Library' %}is-active{% endif %}" href="/">
                     <i class="bi bi-collection-play mr-2"></i> Biblioteca
                 </a>
 
-                <a class="navbar-item {% if title=='Statistics' %}is-active has-text-primary has-text-weight-bold{% endif %}"
-                    href="/stats">
+                <a class="navbar-item {% if title=='Statistics' %}is-active{% endif %}" href="/stats">
                     <i class="bi bi-bar-chart mr-2"></i> Estatísticas
                 </a>
 
                 {% if current_user.is_admin or admin_account_created == false %}
-                <a class="navbar-item {% if title=='Settings' %}is-active has-text-primary has-text-weight-bold{% endif %}"
-                    href="/settings">
+                <a class="navbar-item {% if title=='Settings' %}is-active{% endif %}" href="/settings">
                     <i class="bi bi-sliders mr-2"></i> Configurações
                 </a>
                 {% endif %}

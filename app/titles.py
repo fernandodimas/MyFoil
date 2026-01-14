@@ -523,6 +523,51 @@ def get_game_info(title_id):
             'description': 'Database not loaded. Please update TitleDB in settings.'
         }
 
+def get_custom_title_info(title_id):
+    """Retrieve custom info for a specific TitleID from custom.json"""
+    custom_path = os.path.join(TITLEDB_DIR, 'custom.json')
+    custom_db = robust_json_load(custom_path) or {}
+    return custom_db.get(title_id.upper())
+
+def save_custom_title_info(title_id, data):
+    """
+    Save custom info for a TitleID to custom.json and update in-memory DB.
+    data should contain: name, description, publisher, iconUrl, bannerUrl, ...
+    """
+    global _titles_db
+    title_id = title_id.upper()
+    
+    custom_path = os.path.join(TITLEDB_DIR, 'custom.json')
+    
+    # 1. Load existing custom DB
+    custom_db = robust_json_load(custom_path) or {}
+    
+    # 2. Update entry
+    # Ensure ID is present in data
+    data['id'] = title_id
+    
+    if title_id in custom_db:
+        custom_db[title_id].update(data)
+    else:
+        custom_db[title_id] = data
+        
+    # 3. Write back to disk
+    try:
+        with open(custom_path, 'w', encoding='utf-8') as f:
+            json.dump(custom_db, f, indent=4, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"Failed to save custom.json: {e}")
+        return False, str(e)
+
+    # 4. Update in-memory DB immediately
+    if _titles_db:
+        if title_id in _titles_db:
+            _titles_db[title_id].update(data)
+        else:
+            _titles_db[title_id] = data
+            
+    return True, None
+
     try:
         info = None
         search_id = str(title_id).upper()

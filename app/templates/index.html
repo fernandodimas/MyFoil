@@ -413,6 +413,55 @@
     }
 </style>
 
+<!-- Edit Metadata Modal -->
+<div class="modal" id="editMetadataModal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">Editar Dados do Jogo</p>
+            <button class="delete" aria-label="close" onclick="closeModal('editMetadataModal')"></button>
+        </header>
+        <section class="modal-card-body">
+            <input type="hidden" id="editMetaId">
+            <div class="field">
+                <label class="label">Nome</label>
+                <div class="control">
+                    <input class="input" type="text" id="editMetaName">
+                </div>
+            </div>
+            <div class="field">
+                <label class="label">Publisher</label>
+                <div class="control">
+                    <input class="input" type="text" id="editMetaPublisher">
+                </div>
+            </div>
+            <div class="field">
+                <label class="label">Descrição</label>
+                <div class="control">
+                    <textarea class="textarea" id="editMetaDescription"></textarea>
+                </div>
+            </div>
+            <div class="field">
+                <label class="label">URL do Ícone</label>
+                <div class="control">
+                    <input class="input" type="text" id="editMetaIcon">
+                </div>
+            </div>
+            <div class="field">
+                <label class="label">URL do Banner</label>
+                <div class="control">
+                    <input class="input" type="text" id="editMetaBanner">
+                </div>
+            </div>
+        </section>
+        <footer class="modal-card-foot is-justify-content-flex-end">
+            <button class="button" onclick="closeModal('editMetadataModal')">Cancelar</button>
+            <button class="button is-primary" id="btnSaveMetadata" onclick="saveGameMetadata()">Salvar
+                Alterações</button>
+        </footer>
+    </div>
+</div>
+
 <script>
     {% raw %}
 
@@ -843,10 +892,16 @@
                                     </div>
                                 </div>
                                 <hr class="my-4 opacity-5">
-                                <div class="wishlist-section">
+                                <div class="wishlist-section mb-2">
                                     <button id="btnWishlist" class="button is-fullwidth is-small is-light" onclick="toggleWishlist('${game.id}')">
                                         <span class="icon"><i class="bi bi-heart"></i></span>
                                         <span>${t('Wishlist')}</span>
+                                    </button>
+                                </div>
+                                <div class="edit-section">
+                                    <button class="button is-fullwidth is-small is-ghost has-text-grey" onclick="editGameMetadata('${game.id}')">
+                                        <span class="icon"><i class="bi bi-pencil"></i></span>
+                                        <span>Editar Dados</span>
                                     </button>
                                 </div>
                             </div>
@@ -1091,7 +1146,71 @@
     });
 
     // Modal closers
-    $('.modal-background').on('click', () => closeModal('gameDetailsModal'));
+    $('.modal-background').on('click', () => {
+        closeModal('gameDetailsModal');
+        closeModal('editMetadataModal');
+    });
+
+    function editGameMetadata(titleId) {
+        // Fetch current custom data first (or fallback to current displayed data)
+        const game = games.find(g => g.id === titleId);
+        if (!game) return;
+
+        // Reset form
+        $('#editMetaId').val(game.id);
+        $('#editMetaName').val(game.name);
+        $('#editMetaPublisher').val(game.publisher);
+        $('#editMetaDescription').val(game.description);
+        $('#editMetaIcon').val(game.iconUrl);
+        $('#editMetaBanner').val(game.bannerUrl);
+
+        // Try getting fresh custom data to be sure
+        $.get(`/api/games/${titleId}/custom`, function (response) {
+            if (response.success && response.data) {
+                const d = response.data;
+                if (d.name) $('#editMetaName').val(d.name);
+                if (d.publisher) $('#editMetaPublisher').val(d.publisher);
+                if (d.description) $('#editMetaDescription').val(d.description);
+                if (d.iconUrl) $('#editMetaIcon').val(d.iconUrl);
+                if (d.bannerUrl) $('#editMetaBanner').val(d.bannerUrl);
+            }
+            openModal('editMetadataModal');
+        });
+    }
+
+    function saveGameMetadata() {
+        const titleId = $('#editMetaId').val();
+        const data = {
+            name: $('#editMetaName').val(),
+            publisher: $('#editMetaPublisher').val(),
+            description: $('#editMetaDescription').val(),
+            iconUrl: $('#editMetaIcon').val(),
+            bannerUrl: $('#editMetaBanner').val()
+        };
+
+        $('#btnSaveMetadata').addClass('is-loading');
+
+        $.ajax({
+            url: `/api/games/${titleId}/custom`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function (res) {
+                $('#btnSaveMetadata').removeClass('is-loading');
+                if (res.success) {
+                    closeModal('editMetadataModal');
+                    showToast('Dados atualizados com sucesso! A página será recarregada.');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast('Erro ao salvar: ' + res.error, 'error');
+                }
+            },
+            error: function () {
+                $('#btnSaveMetadata').removeClass('is-loading');
+                showToast('Erro de conexão ao salvar.', 'error');
+            }
+        });
+    }
 
 
     {% endraw %}

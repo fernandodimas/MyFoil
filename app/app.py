@@ -1416,6 +1416,25 @@ def delete_webhook_api(id):
         return jsonify({'success': True})
     return jsonify({'success': False, 'error': 'Webhook not found'}), 404
 
+@main_bp.route('/api/games/<tid>/custom', methods=['GET'])
+@access_required('shop')
+def get_game_custom_info(tid):
+    info = titles_lib.get_custom_title_info(tid)
+    return jsonify({'success': True, 'data': info})
+
+@main_bp.route('/api/games/<tid>/custom', methods=['POST'])
+@access_required('shop') # OR admin? shop usually implies user write access in this context
+def update_game_custom_info(tid):
+    data = request.json
+    success, error = titles_lib.save_custom_title_info(tid, data)
+    
+    if success:
+        # Invalidate library cache so the new info appears immediately
+        library.invalidate_library_cache()
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'error': error}), 500
+
 @main_bp.route('/api/status')
 @limiter.exempt
 def process_status_api():

@@ -694,6 +694,23 @@ Expandir a busca para incluir jogos que não estão na biblioteca local, permiti
 
 ---
 
+#### 4.1.9 Identificação Manual de Jogos UI
+**Prioridade:** 🔵 ALTA
+**Complexidade:** Média
+**Impacto:** Alto
+
+**Descrição:**
+Criar uma interface na página de Detalhes do Jogo ou Configurações para permitir a edição manual das informações de um TitleID (Nome, Imagens, Descrição, etc.).
+Atualmente isso é possível editando manualmente o arquivo `app/data/titledb/custom.json`, mas uma UI tornaria o processo acessível a todos os usuários.
+
+**Funcionalidades:**
+- Formulário para override de dados por TitleID.
+- Upload ou URL para Ícone e Banner Customizados.
+- Persistência automática em `custom.json`.
+- Botão "Recarregar TitleDB" para aplicar mudanças imediatamente.
+
+---
+
 #### 4.1.2 Listas de Desejos (Wishlist) ✅ CONCLUÍDO
 **Prioridade:** 🟡 MÉDIA  
 **Complexidade:** Baixa  
@@ -733,8 +750,6 @@ def add_to_wishlist():
     return jsonify(item.to_dict())
 ```
 
-**Features:**
-- Botão "Adicionar à Wishlist" em jogos não possuídos
 - Página dedicada para visualizar wishlist
 - Ordenação por prioridade
 - Notificações quando jogo da wishlist recebe update
