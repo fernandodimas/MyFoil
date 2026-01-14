@@ -611,50 +611,76 @@
             ` : (game.has_base ? '<p class="notification is-warning is-light p-2 is-size-7" style="border: 1px solid rgba(0,0,0,0.1)">Arquivo base não identificado localmente.</p>' : '');
 
             // Updates Section
-            let updatesHtml = game.updates && game.updates.length > 0 ? `
-                <div class="mb-5">
-                    <p class="heading has-text-weight-bold mb-3 has-text-link">Histórico de Atualizações</p>
-                    <div class="table-container">
-                        <table class="table is-narrow is-fullwidth is-size-7">
-                            <thead>
-                                <tr>
-                                    <th>Versão</th>
-                                    <th>Lançamento</th>
-                                    <th class="has-text-centered">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${game.updates.map(u => {
-                const file = u.files && u.files.length > 0 ? u.files[0] : null;
-                return `
-                                    <tr>
-                                        <td class="has-text-weight-bold">v${u.version}</td>
-                                        <td class="opacity-70">${u.release_date || '--'}</td>
-                                        <td class="has-text-centered">
-                                            ${u.owned && file ? `
-                                                <div class="field is-grouped is-grouped-centered is-align-items-center">
-                                                    <span class="tag is-light font-mono mr-2 is-hidden-mobile">${file.size_formatted || '--'}</span>
-                                                    <p class="control">
-                                                        <a href="/api/get_game/${file.id}" class="button is-primary is-small" title="Download">
-                                                            <i class="bi bi-download"></i>
-                                                        </a>
-                                                    </p>
-                                                    <p class="control">
-                                                        <button class="button is-danger is-small is-light" onclick="deleteGameFile(${file.id}, '${game.id}')" title="Excluir">
-                                                            <i class="bi bi-trash"></i>
-                                                        </button>
-                                                    </p>
-                                                </div>
-                                            ` : (u.owned ? '<span class="tag is-warning is-light is-small">Erro</span>' : '<span class="tag is-danger is-light is-small">Falta</span>')}
-                                        </td>
-                                    </tr>
-                                    `;
-            }).join('')}
-                            </tbody>
-                        </table>
+            const sortedUpdates = [...(game.updates || [])].sort((a, b) => b.version - a.version);
+            let updatesHtml = '';
+
+            if (sortedUpdates.length === 0) {
+                updatesHtml = `
+                    <div class="mb-5">
+                        <p class="heading has-text-weight-bold mb-3 has-text-link">Histórico de Atualizações</p>
+                        <p class="is-size-7 opacity-50 italic">Não existem atualizações disponíveis.</p>
                     </div>
-                </div>
-            ` : '';
+                `;
+            } else {
+                const latest = sortedUpdates[0];
+                const others = sortedUpdates.slice(1);
+
+                const renderUpdateRow = (u) => {
+                    const file = u.files && u.files.length > 0 ? u.files[0] : null;
+                    return `
+                        <tr>
+                            <td class="has-text-weight-bold">v${u.version}</td>
+                            <td class="opacity-70">${u.release_date || '--'}</td>
+                            <td class="has-text-centered">
+                                ${u.owned && file ? `
+                                    <div class="field is-grouped is-grouped-centered is-align-items-center">
+                                        <span class="tag is-light font-mono mr-2 is-hidden-mobile">${file.size_formatted || '--'}</span>
+                                        <p class="control">
+                                            <a href="/api/get_game/${file.id}" class="button is-primary is-small" title="Download">
+                                                <i class="bi bi-download"></i>
+                                            </a>
+                                        </p>
+                                        <p class="control">
+                                            <button class="button is-danger is-small is-light" onclick="deleteGameFile(${file.id}, '${game.id}')" title="Excluir">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </p>
+                                    </div>
+                                ` : (u.owned ? '<span class="tag is-warning is-light is-small">Erro</span>' : '<span class="tag is-danger is-light is-small">Falta</span>')}
+                            </td>
+                        </tr>
+                    `;
+                };
+
+                updatesHtml = `
+                    <div class="mb-5">
+                        <div class="is-flex is-justify-content-between is-align-items-center mb-3">
+                            <p class="heading has-text-weight-bold has-text-link mb-0">Histórico de Atualizações</p>
+                            ${others.length > 0 ? `<button class="button is-ghost is-small p-0" onclick="$('#otherUpdates').toggleClass('is-hidden'); $(this).find('i').toggleClass('bi-chevron-down bi-chevron-up')">
+                                <span class="is-size-7 mr-1 text-primary">${others.length} mais</span>
+                                <i class="bi bi-chevron-down text-primary"></i>
+                            </button>` : ''}
+                        </div>
+                        <div class="table-container">
+                            <table class="table is-narrow is-fullwidth is-size-7">
+                                <thead>
+                                    <tr>
+                                        <th>Versão</th>
+                                        <th>Lançamento</th>
+                                        <th class="has-text-centered">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${renderUpdateRow(latest)}
+                                </tbody>
+                                <tbody id="otherUpdates" class="is-hidden">
+                                    ${others.map(u => renderUpdateRow(u)).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
 
             // DLCs Section
             let dlcsHtml = game.dlcs && game.dlcs.length > 0 ? `
