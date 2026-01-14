@@ -1227,8 +1227,8 @@ Gamificação da gestão de biblioteca.
 ### Sprint 7 (3 semanas) - Q2 2026
 **Foco:** Integrações
 
-- [ ] Integração com Google Drive
-- [ ] Integração com Dropbox
+- [x] Integração com Google Drive
+- [x] Integração com Dropbox
 - [x] Sistema de plugins (beta)
 - [x] Comparação com TitleDB
 - [x] Perfis públicos

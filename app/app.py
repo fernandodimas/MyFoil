@@ -41,6 +41,7 @@ import hmac
 import hashlib
 import requests
 from plugin_system import get_plugin_manager
+from cloud_sync import get_cloud_manager
 
 # Optional Celery for async tasks
 try:
@@ -214,6 +215,7 @@ scan_lock = threading.Lock()
 is_titledb_update_running = False
 titledb_update_lock = threading.Lock()
 plugin_manager = None
+cloud_manager = None
 
 # Configure logging
 formatter = ColoredFormatter(
@@ -395,6 +397,10 @@ def create_app():
         global plugin_manager
         plugin_manager = get_plugin_manager(PLUGINS_DIR, app)
         plugin_manager.load_plugins()
+        
+        # Initialize Cloud Manager
+        global cloud_manager
+        cloud_manager = get_cloud_manager(CONFIG_DIR)
         
     if CELERY_ENABLED:
         logger.info("Celery tasks loaded and enabled.")
@@ -1585,6 +1591,68 @@ def plugins_api():
             'description': p.description
         })
     return jsonify(results)
+
+# Cloud API
+@main_bp.route('/api/cloud/auth/<provider>', methods=['GET'])
+@access_required('admin')
+def cloud_auth_api(provider):
+    if not cloud_manager:
+        return jsonify({'error': 'Cloud manager not initialized'}), 500
+    
+    redirect_uri = url_for('main.cloud_callback_api', provider=provider, _external=True)
+    auth_url = cloud_manager.get_auth_url(provider, redirect_uri)
+    
+    if not auth_url:
+        return jsonify({'error': 'Provider not configured or disabled'}), 400
+        
+    return jsonify({'auth_url': auth_url})
+
+@main_bp.route('/api/cloud/callback/<provider>', methods=['GET', 'POST'])
+def cloud_callback_api(provider):
+    # This endpoint receives the code from Google
+    if request.method == 'GET':
+        code = request.args.get('code')
+        error = request.args.get('error')
+        if error:
+            return f"Error: {error}"
+            
+        if code:
+            redirect_uri = url_for('main.cloud_callback_api', provider=provider, _external=True)
+            if cloud_manager.authenticate(provider, code, redirect_uri):
+                return "Authentication successful! You can close this window."
+            else:
+                return "Authentication failed.", 500
+    
+    # POST for manual code entry if needed
+    data = request.json
+    code = data.get('code')
+    redirect_uri = data.get('redirect_uri')
+    
+    if cloud_manager.authenticate(provider, code, redirect_uri):
+        return jsonify({'success': True})
+    return jsonify({'success': False}), 400
+
+@main_bp.route('/api/cloud/status', methods=['GET'])
+@access_required('admin')
+def cloud_status_api():
+    if not cloud_manager:
+        return jsonify({})
+    
+    results = {}
+    for name, provider in cloud_manager.providers.items():
+        results[name] = {
+            'configured': True,
+            'authenticated': (hasattr(provider, 'creds') and provider.creds is not None) or \
+                             (hasattr(provider, 'access_token') and provider.access_token is not None)
+        }
+    return jsonify(results)
+
+@main_bp.route('/api/cloud/files/<provider>', methods=['GET'])
+@access_required('admin')
+def cloud_files_api(provider):
+    folder_id = request.args.get('folder_id')
+    files = cloud_manager.list_files(provider, folder_id)
+    return jsonify({'files': files})
 
 # Create global app instance
 app = create_app()
