@@ -22,18 +22,9 @@
                                 </button>
                             </div>
                             <div class="dropdown-menu" id="dropdown-menu" role="menu">
-                                <div class="dropdown-content p-2" style="min-width: 220px;">
-                                    <label class="checkbox block py-1 px-2 hover-bg-light rounded">
-                                        <input type="checkbox" class="filterInput" id="filterCheckOwned" checked> <span
-                                            class="ml-2">Possuídos (Local)</span>
-                                    </label>
-                                    <label class="checkbox block py-1 px-2 hover-bg-light rounded">
-                                        <input type="checkbox" class="filterInput" id="filterCheckMissing"> <span
-                                            class="ml-2">Faltantes (TitleDB)</span>
-                                    </label>
-                                    <hr class="dropdown-divider">
-                                    <div class="field px-2">
-                                        <label class="label is-size-7 opacity-50">Filtrar por Gênero</label>
+                                <div class="dropdown-content p-4" style="min-width: 260px;">
+                                    <div class="field mb-3">
+                                        <label class="label is-size-7 opacity-70">Filtrar por Gênero</label>
                                         <div class="control">
                                             <div class="select is-small is-fullwidth">
                                                 <select id="filterGender" class="filterInput">
@@ -42,38 +33,21 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <hr class="dropdown-divider">
-                                    <label class="checkbox block py-1 px-2 hover-bg-light rounded">
-                                        <input type="checkbox" class="filterInput" id="filterCheckUpToDate"> <span
-                                            class="ml-2">Apenas Atualizados</span>
-                                    </label>
-                                    <label class="checkbox block py-1 px-2 hover-bg-light rounded">
-                                        <input type="checkbox" class="filterInput" id="filterCheckMissingUpdate"> <span
-                                            class="ml-2">Possui Pendências</span>
-                                    </label>
+                                    <div class="field">
+                                        <label class="label is-size-7 opacity-70">Filtrar por Tag</label>
+                                        <div class="control">
+                                            <div class="select is-small is-fullwidth">
+                                                <select id="filterTag" class="filterInput">
+                                                    <option value="">Todas as Tags</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="level-item mr-2">
-                        <div class="buttons has-addons">
-                            <button class="button is-small is-light" id="btnFilterPendingBase"
-                                title="Falta Arquivo Base">
-                                <span class="icon is-small"><i class="bi bi-disc"></i></span>
-                                <span class="is-hidden-mobile">Base</span>
-                            </button>
-                            <button class="button is-small is-light" id="btnFilterPendingUpd"
-                                title="Pendente Atualização">
-                                <span class="icon is-small"><i class="bi bi-arrow-up-circle"></i></span>
-                                <span class="is-hidden-mobile">Update</span>
-                            </button>
-                            <button class="button is-small is-light" id="btnFilterPendingDlc" title="Pendente DLC">
-                                <span class="icon is-small"><i class="bi bi-plus-circle"></i></span>
-                                <span class="is-hidden-mobile">DLC</span>
-                            </button>
-                        </div>
-                    </div>
 
                     <div class="level-item">
                         <button class="button is-small is-outlined is-danger border-none" onclick="clearFilters()"
@@ -392,19 +366,30 @@
 
     function initGenders(gamesList) {
         const genders = new Set();
-        games.forEach(g => {
+        gamesList.forEach(g => {
             if (g && g.category && Array.isArray(g.category)) {
                 g.category.forEach(c => genders.add(c));
             }
         });
 
-        // Save current selection
         const currentVal = $('#filterGender').val();
-
         const genderSelect = $('#filterGender').empty().append('<option value="">Todos os Gêneros</option>');
         Array.from(genders).sort().forEach(g => genderSelect.append(new Option(g, g)));
-
         if (currentVal) $('#filterGender').val(currentVal);
+    }
+
+    function initTags(gamesList) {
+        const tags = new Set();
+        gamesList.forEach(g => {
+            if (g && g.tags && Array.isArray(g.tags)) {
+                g.tags.forEach(t => tags.add(t));
+            }
+        });
+
+        const currentVal = $('#filterTag').val();
+        const tagSelect = $('#filterTag').empty().append('<option value="">Todas as Tags</option>');
+        Array.from(tags).sort().forEach(t => tagSelect.append(new Option(t, t)));
+        if (currentVal) $('#filterTag').val(currentVal);
     }
 
 
@@ -471,6 +456,7 @@
             games = data || [];
             localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
             initGenders(games);
+            initTags(games);
 
             // If we're on page 1, we can just apply filters to refresh everything
             // but if we're on another page, we might want to stay there
@@ -789,57 +775,18 @@
 
     function applyFilters() {
         const query = ($('#navbarSearch').val() || '').toLowerCase();
-        const showOwned = $('#filterCheckOwned').is(':checked');
-        const showMissing = $('#filterCheckMissing').is(':checked');
-        const showUpToDate = $('#filterCheckUpToDate').is(':checked');
-        const showMissingUpdate = $('#filterCheckMissingUpdate').is(':checked'); // General "Issues" filter from dropdown
-
-        // Specific button filters
-        const showOnlyBase = $('#btnFilterPendingBase').hasClass('is-primary');
-        const showOnlyUpdates = $('#btnFilterPendingUpd').hasClass('is-primary');
-        const showOnlyDlcs = $('#btnFilterPendingDlc').hasClass('is-primary');
-
         const gender = $('#filterGender').val();
-
+        const tag = $('#filterTag').val();
 
         filteredGames = games.filter(g => {
             if (!g) return false;
             const gName = g.name || '';
             const gId = g.id || '';
             const matchesSearch = !query || gName.toLowerCase().includes(query) || gId.toLowerCase().includes(query);
-
-            let matchesSource = true;
-            const isPendingFilterActive = showOnlyBase || showOnlyUpdates || showOnlyDlcs;
-
-            if (!isPendingFilterActive) {
-                if (showOwned && !showMissing) matchesSource = g.has_base;
-                else if (showMissing && !showOwned) matchesSource = !g.has_base;
-            }
-
-            let matchesStatus = true;
-
-            // 1. General Status Filters
-            if (showUpToDate && !showMissingUpdate) {
-                matchesStatus = g.status_color === 'green';
-            } else if (showMissingUpdate && !showUpToDate) {
-                matchesStatus = g.status_color === 'orange';
-            }
-
-            // 2. Specific "Pending" Filters (Additive restriction)
-            if (showOnlyBase) {
-                matchesStatus = matchesStatus && !g.has_base;
-            }
-            if (showOnlyUpdates) {
-                // Must have base AND missing latest version
-                matchesStatus = matchesStatus && (g.has_base && !g.has_latest_version);
-            }
-            if (showOnlyDlcs) {
-                // Must have base AND missing DLCs
-                matchesStatus = matchesStatus && (g.has_base && !g.has_all_dlcs);
-            }
-
             const matchesGender = !gender || (g.category && g.category.includes(gender));
-            return matchesSearch && matchesSource && matchesStatus && matchesGender;
+            const matchesTag = !tag || (g.tags && g.tags.includes(tag));
+
+            return matchesSearch && matchesGender && matchesTag;
         });
 
         $('#totalItemsCount').text(`${filteredGames.length} Jogos`);
@@ -848,45 +795,12 @@
     }
 
     function clearFilters() {
-        // Reset checkboxes
-        $('#filterCheckOwned').prop('checked', true);
-        $('#filterCheckMissing, #filterCheckUpToDate, #filterCheckMissingUpdate').prop('checked', false);
-        $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
-
-        // Reset gender
-        $('#filterGender').val('');
-
-        // Reset search
         $('#navbarSearch').val('');
-
-        // Apply
+        $('#filterGender').val('');
+        $('#filterTag').val('');
         applyFilters();
     }
 
-    $('#btnFilterPendingBase').on('click', function () {
-        $(this).toggleClass('is-primary is-light');
-        if ($(this).hasClass('is-primary')) {
-            $('#btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
-        }
-        applyFilters();
-    });
-
-    $('#btnFilterPendingUpd').on('click', function () {
-        $(this).toggleClass('is-primary is-light');
-        // If enabling this, disable the other to avoid confusion (optional, but requested behavior implied "filters")
-        if ($(this).hasClass('is-primary')) {
-            $('#btnFilterPendingBase, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
-        }
-        applyFilters();
-    });
-
-    $('#btnFilterPendingDlc').on('click', function () {
-        $(this).toggleClass('is-primary is-light');
-        if ($(this).hasClass('is-primary')) {
-            $('#btnFilterPendingBase, #btnFilterPendingUpd').removeClass('is-primary').addClass('is-light');
-        }
-        applyFilters();
-    });
 
 
     function setPageSize(size) {
@@ -1013,6 +927,7 @@
             try {
                 games = JSON.parse(cached);
                 initGenders(games);
+                initTags(games);
                 filteredGames = [...games];
                 applyFilters(); // Render cached data immediately
             } catch (e) {

@@ -508,6 +508,13 @@ def compute_apps_hash():
             for f in sorted(app['files_info'], key=lambda x: x['path']):
                 hash_md5.update(f['path'].encode())
                 hash_md5.update(str(f.get('size', 0)).encode())
+        
+    # Include tags in hash (from Titles)
+    titles_with_tags = db.session.query(Titles.title_id, Tag.name).join(TitleTag).join(Tag).all()
+    for tid, tname in sorted(titles_with_tags):
+        hash_md5.update(tid.encode())
+        hash_md5.update(tname.encode())
+        
     return hash_md5.hexdigest()
 
 def is_library_unchanged():
@@ -596,6 +603,9 @@ def get_game_info_item(tid, title_data):
         game['status_color'] = 'green'   # Complete
 
 
+    # Tags from Title object
+    game['tags'] = title_data.get('tags', [])
+    
     # Files and details
     game['base_files'] = []
     base_app_entries = [a for a in all_title_apps if a['app_type'] == APP_TYPE_BASE and a['owned']]

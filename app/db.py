@@ -406,7 +406,8 @@ def get_all_titles():
 def get_all_titles_with_apps():
     """Get all titles with apps and files pre-loaded to avoid N+1 queries during library generation"""
     titles = Titles.query.options(
-        joinedload(Titles.apps).joinedload(Apps.files)
+        joinedload(Titles.apps).joinedload(Apps.files),
+        joinedload(Titles.tags)
     ).all()
     
     results = []
@@ -419,6 +420,7 @@ def get_all_titles_with_apps():
             a_dict['files'] = [f.filepath for f in a.files]
             a_dict['files_info'] = [{'path': f.filepath, 'size': f.size} for f in a.files]
             t_dict['apps'].append(a_dict)
+        t_dict['tags'] = [tag.name for tag in t.tags]
         results.append(t_dict)
     return results
 
@@ -438,13 +440,16 @@ def add_title_id_in_db(title_id):
         db.session.commit()
 
 def get_all_title_apps(title_id):
-    title = Titles.query.options(joinedload(Titles.apps).joinedload(Apps.files)).filter_by(title_id=title_id).first()
+    title = Titles.query.options(joinedload(Titles.apps).joinedload(Apps.files), joinedload(Titles.tags)).filter_by(title_id=title_id).first()
     if not title: return []
     
     results = []
+    # Add tags to each app dict for convenience if needed, but title info is usually enough
+    tags = [tag.name for tag in title.tags]
     for a in title.apps:
         a_dict = to_dict(a)
-        a_dict['files_info'] = [{'path': f.filepath, 'size': f.size} for f in a.files]
+        a_dict['files_info'] = [{'path': f.filepath, 'size': f.size, 'id': f.id} for f in a.files]
+        a_dict['tags'] = tags
         results.append(a_dict)
     return results
 

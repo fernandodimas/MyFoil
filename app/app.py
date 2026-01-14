@@ -1072,13 +1072,6 @@ def delete_file_api(file_id):
         logger.exception(f"Unhandled error in delete_file_api: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-def format_size_py(size):
-    if size is None: return "0 B"
-    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-        if size < 1024:
-            return f"{size:.2f} {unit}"
-        size /= 1024
-    return f"{size:.2f} TB"
 
 
 @debounce(10)
