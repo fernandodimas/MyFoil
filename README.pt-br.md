@@ -82,6 +82,38 @@ O MyFoil requer que um usuário `admin` seja criado para habilitar a Autenticaç
 ## Administração de Biblioteca
 Na página de `Configurações`, na seção `Biblioteca`, você pode adicionar diretórios contendo seu conteúdo. O MyFoil escaneará o conteúdo e tentará identificar cada arquivo suportado (`nsp`, `nsz`, `xci`, `xcz`).
 
+# Fontes TitleDB
+
+## O que são fontes TitleDB?
+As fontes TitleDB fornecem os metadados sobre jogos, atualizações e DLCs do Switch. O MyFoil usa esses dados para:
+- Identificar seus arquivos de jogos
+- Verificar se você tem as atualizações mais recentes
+- Detectar DLCs ausentes
+- Exibir nomes e artes dos jogos
+
+## Fontes Padrão
+O MyFoil vem com quatro fontes pré-configuradas (por ordem de prioridade):
+
+1. **tinfoil.media** - Prioridade 1 (Ativado)
+   - API oficial do Tinfoil
+   - Confiável e rápido
+   - Acesso direto via JSON
+
+2. **MyFoil (Legacy)** - Prioridade 2 (Ativado)
+   - Fonte original baseada em ZIP (herdada do Ownfoil)
+   - Mantida para máxima compatibilidade
+   - Atualizada via workflows de links nightly
+
+3. **blawar/titledb (GitHub)** - Prioridade 3 (Ativado)
+   - A fonte original e mais abrangente da comunidade
+   - Atualizada frequentemente pela comunidade
+   - Direto do conteúdo bruto do GitHub
+
+4. **julesontheroad/titledb (GitHub)** - Prioridade 4 (Ativado)
+   - Espelho confiável de metadados TitleDB
+   - Ótima opção de fallback
+   - Hospedado no GitHub
+
 ---
 
 # Roadmap de Futuras Implementações

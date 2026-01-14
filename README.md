@@ -145,22 +145,27 @@ TitleDB sources provide the metadata about Switch games, updates, and DLCs. MyFo
 
 ## Default Sources
 
-MyFoil comes with three pre-configured sources (in priority order):
+MyFoil comes with four pre-configured sources (in priority order):
 
-1. **blawar/titledb (GitHub)** - Priority 1 (Enabled)
-   - The original and most comprehensive source
+1. **tinfoil.media** - Priority 1 (Enabled)
+   - Official Tinfoil API
+   - Reliable and fast
+   - Direct JSON access
+
+2. **MyFoil (Legacy)** - Priority 2 (Enabled)
+   - Original MyFoil ZIP-based source (inherited from Ownfoil)
+   - Kept for maximum compatibility
+   - Updated via nightly link workflows
+
+3. **blawar/titledb (GitHub)** - Priority 3 (Enabled)
+   - The original and most comprehensive community source
    - Updated frequently by the community
    - Direct from GitHub's raw content
 
-2. **tinfoil.media** - Priority 2 (Enabled)
-   - Official Tinfoil API
-   - Reliable and fast
+4. **julesontheroad/titledb (GitHub)** - Priority 4 (Enabled)
+   - Reliable mirror of TitleDB metadata
    - Good fallback option
-
-3. **ownfoil/workflow (Legacy)** - Priority 99 (Disabled)
-   - Original MyFoil ZIP-based source (inherited from Ownfoil)
-   - Kept for compatibility
-   - Slower than direct sources
+   - Hosted on GitHub
 
 ## How It Works
 
