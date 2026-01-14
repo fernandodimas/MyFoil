@@ -89,6 +89,8 @@ class Titles(db.Model):
     have_base = db.Column(db.Boolean, default=False)
     up_to_date = db.Column(db.Boolean, default=False)
     complete = db.Column(db.Boolean, default=False)
+    
+    tags = db.relationship('Tag', secondary='title_tag', backref=db.backref('titles', lazy='dynamic'))
 
 # Association table for many-to-many relationship between Apps and Files
 app_files = db.Table('app_files',

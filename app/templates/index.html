@@ -47,6 +47,24 @@
                             </div>
                         </div>
                     </div>
+                    <div class="level-item mr-2">
+                        <div class="buttons has-addons">
+                            <button class="button is-small is-light" id="btnFilterPendingBase"
+                                title="Falta Arquivo Base">
+                                <span class="icon is-small"><i class="bi bi-disc"></i></span>
+                                <span class="is-hidden-mobile">Base</span>
+                            </button>
+                            <button class="button is-small is-light" id="btnFilterPendingUpd"
+                                title="Pendente Atualização">
+                                <span class="icon is-small"><i class="bi bi-arrow-up-circle"></i></span>
+                                <span class="is-hidden-mobile">Update</span>
+                            </button>
+                            <button class="button is-small is-light" id="btnFilterPendingDlc" title="Pendente DLC">
+                                <span class="icon is-small"><i class="bi bi-plus-circle"></i></span>
+                                <span class="is-hidden-mobile">DLC</span>
+                            </button>
+                        </div>
+                    </div>
 
 
                     <div class="level-item">
@@ -774,9 +792,13 @@
     }
 
     function applyFilters() {
-        const query = ($('#navbarSearch').val() || '').toLowerCase();
         const gender = $('#filterGender').val();
         const tag = $('#filterTag').val();
+
+        // Specific button filters
+        const showOnlyBase = $('#btnFilterPendingBase').hasClass('is-primary');
+        const showOnlyUpdates = $('#btnFilterPendingUpd').hasClass('is-primary');
+        const showOnlyDlcs = $('#btnFilterPendingDlc').hasClass('is-primary');
 
         filteredGames = games.filter(g => {
             if (!g) return false;
@@ -786,7 +808,12 @@
             const matchesGender = !gender || (g.category && g.category.includes(gender));
             const matchesTag = !tag || (g.tags && g.tags.includes(tag));
 
-            return matchesSearch && matchesGender && matchesTag;
+            let matchesStatus = true;
+            if (showOnlyBase) matchesStatus = matchesStatus && !g.has_base;
+            if (showOnlyUpdates) matchesStatus = matchesStatus && (g.has_base && !g.has_latest_version);
+            if (showOnlyDlcs) matchesStatus = matchesStatus && (g.has_base && !g.has_all_dlcs);
+
+            return matchesSearch && matchesGender && matchesTag && matchesStatus;
         });
 
         $('#totalItemsCount').text(`${filteredGames.length} Jogos`);
@@ -798,8 +825,33 @@
         $('#navbarSearch').val('');
         $('#filterGender').val('');
         $('#filterTag').val('');
+        $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
         applyFilters();
     }
+
+    $('#btnFilterPendingBase').on('click', function () {
+        $(this).toggleClass('is-primary is-light');
+        if ($(this).hasClass('is-primary')) {
+            $('#btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
+        }
+        applyFilters();
+    });
+
+    $('#btnFilterPendingUpd').on('click', function () {
+        $(this).toggleClass('is-primary is-light');
+        if ($(this).hasClass('is-primary')) {
+            $('#btnFilterPendingBase, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
+        }
+        applyFilters();
+    });
+
+    $('#btnFilterPendingDlc').on('click', function () {
+        $(this).toggleClass('is-primary is-light');
+        if ($(this).hasClass('is-primary')) {
+            $('#btnFilterPendingBase, #btnFilterPendingUpd').removeClass('is-primary').addClass('is-light');
+        }
+        applyFilters();
+    });
 
 
 

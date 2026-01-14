@@ -254,9 +254,8 @@
             // WebSocket Global Listener with robust initialization
             if (typeof io !== 'undefined') {
                 const socket = io({
-                    transports: ['polling', 'websocket'], // Try polling first for maximum compatibility
-                    upgrade: true,
-                    rememberUpgrade: true,
+                    transports: ['polling'], // Use only polling to avoid WebSocket upgrade errors in Nginx proxies
+                    upgrade: false,
                     reconnection: true,
                     reconnectionAttempts: 10,
                     reconnectionDelay: 2000,
