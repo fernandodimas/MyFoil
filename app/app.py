@@ -647,6 +647,91 @@ def get_languages_api():
     except:
         return jsonify({'languages': []})
 
+@main_bp.route('/api/settings/renaming', methods=['GET', 'POST'])
+@access_required('admin')
+def renaming_settings_api():
+    if request.method == 'POST':
+        data = request.json
+        settings = load_settings()
+        if 'renaming' not in settings:
+            settings['renaming'] = {}
+        
+        settings['renaming']['enabled'] = data.get('enabled', False)
+        settings['renaming']['pattern_base'] = data.get('pattern_base', '{Name} [{TitleID}] [v{Version}]')
+        settings['renaming']['pattern_upd'] = data.get('pattern_upd', '{Name} [UPD] [{TitleID}] [v{Version}]')
+        settings['renaming']['pattern_dlc'] = data.get('pattern_dlc', '{Name} [DLC] [{TitleID}] [v{Version}]')
+        
+        with open(CONFIG_FILE, 'w') as yaml_file:
+            yaml.dump(settings, yaml_file)
+        reload_conf()
+        
+        return jsonify({'success': True})
+    
+    settings = load_settings()
+    renaming = settings.get('renaming', DEFAULT_SETTINGS['renaming'])
+    return jsonify({'success': True, 'settings': renaming})
+
+@main_bp.post('/api/renaming/preview')
+@access_required('admin')
+def preview_renaming_api():
+    data = request.json
+    patterns = {
+        'BASE': data.get('pattern_base'),
+        'UPDATE': data.get('pattern_upd'), # APP_TYPE_UPD constant is 'UPDATE'
+        'DLC': data.get('pattern_dlc')
+    }
+    
+    from renamer import get_file_metadata, sanitize_filename
+    
+    # Get a sample file for each type
+    results = []
+    types_to_find = ['BASE', 'UPDATE', 'DLC']
+    
+    for app_type in types_to_find:
+        # Find a file of this type
+        # Join Files -> Apps where app_type matches
+        sample_file = db.session.query(Files).join(Files.apps).filter(Apps.app_type == app_type).first()
+        
+        if sample_file:
+            meta = get_file_metadata(sample_file.id)
+            if meta:
+                pattern = patterns.get(app_type)
+                new_name = pattern
+                for key, value in meta.items():
+                    new_name = new_name.replace(f"{{{key}}}", str(value))
+                new_name = sanitize_filename(new_name) + f".{meta['Ext']}"
+                
+                results.append({
+                    'type': app_type,
+                    'original': sample_file.filename,
+                    'new': new_name
+                })
+    
+    return jsonify({'success': True, 'preview': results})
+
+@main_bp.post('/api/renaming/run')
+@access_required('admin')
+def run_renaming_api():
+    settings = load_settings()
+    renaming_cfg = settings.get('renaming', DEFAULT_SETTINGS['renaming'])
+    
+    patterns = {
+        'BASE': renaming_cfg.get('pattern_base'),
+        'UPDATE': renaming_cfg.get('pattern_upd'),
+        'DLC': renaming_cfg.get('pattern_dlc')
+    }
+    
+    from renamer import start_renaming_job
+    
+    # Run in background to avoid timeout
+    def run_wrapper():
+        with app.app_context():
+            start_renaming_job(patterns)
+            
+    threading.Thread(target=run_wrapper).start()
+    
+    return jsonify({'success': True, 'message': 'Renaming job started in background'})
+
 @main_bp.post('/api/settings/shop')
 def set_shop_settings_api():
     data = request.json

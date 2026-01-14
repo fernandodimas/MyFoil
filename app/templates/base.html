@@ -211,11 +211,13 @@
         // Inject server-side translations
         {% if get_translations %}
         window.translations = {{ get_translations() | tojson }};
+        window.currentLocale = "{{ get_locale() }}";
         {% else %}
         window.translations = {};
+        window.currentLocale = "en";
         {% endif %}
-        
-        window.t = function(key) {
+
+        window.t = function (key) {
             return window.translations[key] || key;
         };
 

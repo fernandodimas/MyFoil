@@ -18,6 +18,7 @@
                         </li>
                         <li><a data-target="Authentication"><i class="bi bi-people-fill mr-2"></i> Autenticação</a></li>
                         <li><a data-target="Library"><i class="bi bi-folder2-open mr-2"></i> Biblioteca</a></li>
+                        <li><a data-target="Renaming"><i class="bi bi-pencil-square mr-2"></i> Renomeação</a></li>
                         <li><a data-target="TitleDB"><i class="bi bi-database-fill mr-2"></i> TitleDB</a>
                         </li>
                         <li><a data-target="Shop"><i class="bi bi-cart-fill mr-2"></i> Loja</a></li>
@@ -308,6 +309,79 @@
                                             <span class="icon"><i class="bi bi-arrow-clockwise"></i></span>
                                             <span>{{ t('Full Scan') }}</span>
                                         </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Renaming Section -->
+                    <section id="section-Renaming" class="settings-section is-hidden">
+                        <div class="card box shadow-sm">
+                            <header class="card-header border-none shadow-none">
+                                <p class="card-header-title has-text-primary">
+                                    <i class="bi bi-pencil-square mr-2"></i> Renomeação Automática
+                                </p>
+                            </header>
+                            <div class="card-content pt-0">
+                                <div class="notification is-light border p-4 mb-5">
+                                    <p class="is-size-7 opacity-70 mb-2">
+                                        Use os seguintes placeholders para definir seus padrões:
+                                    </p>
+                                    <div class="tags">
+                                        <span class="tag is-white font-mono pointer"
+                                            onclick="insertTag('{Name}')">{Name}</span>
+                                        <span class="tag is-white font-mono pointer"
+                                            onclick="insertTag('{TitleID}')">{TitleID}</span>
+                                        <span class="tag is-white font-mono pointer"
+                                            onclick="insertTag('{Version}')">{Version}</span>
+                                        <span class="tag is-white font-mono pointer"
+                                            onclick="insertTag('{Region}')">{Region}</span>
+                                    </div>
+                                </div>
+
+                                <div class="field mb-5">
+                                    <label class="label is-small">Padrão para Jogo Base (NSP/XCI)</label>
+                                    <div class="control">
+                                        <input class="input font-mono is-small" type="text" id="patternBase"
+                                            placeholder="{Name} [{TitleID}] [v{Version}]">
+                                    </div>
+                                </div>
+
+                                <div class="field mb-5">
+                                    <label class="label is-small">Padrão para Update</label>
+                                    <div class="control">
+                                        <input class="input font-mono is-small" type="text" id="patternUpd"
+                                            placeholder="{Name} [UPD] [{TitleID}] [v{Version}]">
+                                    </div>
+                                </div>
+
+                                <div class="field mb-6">
+                                    <label class="label is-small">Padrão para DLC</label>
+                                    <div class="control">
+                                        <input class="input font-mono is-small" type="text" id="patternDlc"
+                                            placeholder="{Name} [DLC] [{TitleID}] [v{Version}]">
+                                    </div>
+                                </div>
+
+                                <div class="buttons">
+                                    <button class="button is-primary" onclick="saveRenamingSettings()">
+                                        <i class="bi bi-save2-fill mr-2"></i> Salvar Padrões
+                                    </button>
+                                    <button class="button is-ghost" onclick="previewRenaming()">
+                                        <i class="bi bi-eye mr-2"></i> Prever
+                                    </button>
+                                    <button class="button is-danger is-light ml-auto" onclick="runRenamingJob()">
+                                        <i class="bi bi-play-circle-fill mr-2"></i> Renomear Tudo Agora
+                                    </button>
+                                </div>
+
+                                <!-- Preview Result -->
+                                <div id="renamingPreview" class="is-hidden mt-5">
+                                    <p class="heading has-text-weight-bold mb-3">Pré-visualização</p>
+                                    <div class="box is-shadowless border bg-light-soft is-size-7 font-mono"
+                                        id="previewContent">
+                                        <!-- content -->
                                     </div>
                                 </div>
                             </div>
@@ -1559,11 +1633,109 @@
         });
     }
 
+    // --- Renaming Functions ---
+
+    function loadRenamingSettings() {
+        $.getJSON('/api/settings/renaming', function (response) {
+            if (response.success && response.settings) {
+                $('#patternBase').val(response.settings.pattern_base);
+                $('#patternUpd').val(response.settings.pattern_upd);
+                $('#patternDlc').val(response.settings.pattern_dlc);
+            }
+        });
+    }
+
+    function saveRenamingSettings() {
+        const data = {
+            pattern_base: $('#patternBase').val(),
+            pattern_upd: $('#patternUpd').val(),
+            pattern_dlc: $('#patternDlc').val(),
+            enabled: true
+        };
+
+        $.ajax({
+            url: '/api/settings/renaming',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function (resp) {
+                if (resp.success) {
+                    showToast('Padrões de renomeação salvos com sucesso!', 'is-success');
+                } else {
+                    showToast('Erro ao salvar padrões.', 'is-danger');
+                }
+            }
+        });
+    }
+
+    function insertTag(tag) {
+        // Find active input
+        const focused = document.activeElement;
+        if (focused && (focused.id.startsWith('pattern'))) {
+            const start = focused.selectionStart;
+            const end = focused.selectionEnd;
+            const val = focused.value;
+            focused.value = val.substring(0, start) + tag + val.substring(end);
+            focused.focus();
+            focused.selectionStart = focused.selectionEnd = start + tag.length;
+        } else {
+            $('#patternBase').val($('#patternBase').val() + tag);
+        }
+    }
+
+    function previewRenaming() {
+        const data = {
+            pattern_base: $('#patternBase').val(),
+            pattern_upd: $('#patternUpd').val(),
+            pattern_dlc: $('#patternDlc').val()
+        };
+
+        $.ajax({
+            url: '/api/renaming/preview',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function (resp) {
+                if (resp.success) {
+                    let html = '';
+                    resp.preview.forEach(p => {
+                        html += `<div class="mb-2">
+                            <span class="tag is-white border mr-2">${p.type}</span>
+                            <span class="has-text-grey-light strikethrough mr-2">${p.original}</span>
+                            <i class="bi bi-arrow-right mr-2 opacity-50"></i>
+                            <span class="has-text-success has-text-weight-bold">${p.new}</span>
+                        </div>`;
+                    });
+                    $('#previewContent').html(html || 'Nenhum arquivo encontrado para pré-visualização.');
+                    $('#renamingPreview').removeClass('is-hidden');
+                }
+            }
+        });
+    }
+
+    function runRenamingJob() {
+        if (!confirm('Isso irá renomear fisicamente os arquivos no seu disco. Tem certeza?')) return;
+
+        // First save settings to ensure we use what's on screen
+        saveRenamingSettings();
+
+        $.post('/api/renaming/run', function (resp) {
+            if (resp.success) {
+                showToast('Job de renomeação iniciado em segundo plano.', 'is-info');
+            }
+        });
+    }
+
     // Initialization
     $(document).ready(async () => {
         // Load UI state
         const lastTab = sessionStorage.getItem('lastSettingsTab') || 'General';
         $(`#settingsNav a[data-target="${lastTab}"]`).click();
+
+        // Load renaming settings when that tab is clicked
+        $('a[data-target="Renaming"]').click(function () {
+            loadRenamingSettings();
+        });
 
         fillUserTable();
         fillLibraryTable();

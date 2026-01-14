@@ -582,7 +582,11 @@ def get_game_info_item(tid, title_data):
     available_versions = titles_lib.get_all_existing_versions(tid)
     latest_v = max(available_versions, key=lambda x: x['version'], default=None)
     game['latest_version_available'] = latest_v['version'] if latest_v else 0
-    game['latest_release_date'] = latest_v['release_date'] if latest_v else (game.get('release_date') or game.get('releaseDate') or '')
+    game['latest_release_date'] = latest_v['release_date'] if latest_v else ''
+    
+    # Ensure release_date is consistently available for sorting
+    if 'release_date' not in game or not game['release_date']:
+        game['release_date'] = game.get('releaseDate') or game['latest_release_date'] or '0000-00-00'
 
     # Status indicators
     game['has_base'] = any(a['app_type'] == APP_TYPE_BASE and a['owned'] for a in all_title_apps)

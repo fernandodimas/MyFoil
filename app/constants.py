@@ -38,6 +38,12 @@ DEFAULT_SETTINGS = {
         "valid_keys": False,
         "dbi_versions": False,
     },
+    "renaming": {
+        "enabled": False,
+        "pattern_base": "{Name} [{TitleID}] [v{Version}]",
+        "pattern_upd": "{Name} [UPD] [{TitleID}] [v{Version}]",
+        "pattern_dlc": "{Name} [DLC] [{TitleID}] [v{Version}]",
+    },
     "shop": {
         "motd": "Welcome to your own shop!",
         "public": False,
