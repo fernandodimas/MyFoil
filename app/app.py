@@ -1440,7 +1440,7 @@ def update_game_custom_info(tid):
     
     if success:
         # Invalidate library cache so the new info appears immediately
-        library.invalidate_library_cache()
+        invalidate_library_cache()
         return jsonify({'success': True})
     else:
         return jsonify({'success': False, 'error': error}), 500
