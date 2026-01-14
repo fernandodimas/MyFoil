@@ -1278,6 +1278,7 @@ def delete_webhook_api(id):
     return jsonify({'success': False, 'error': 'Webhook not found'}), 404
 
 @main_bp.route('/api/status')
+@limiter.exempt
 def process_status_api():
     return jsonify({
         'scanning': scan_in_progress,

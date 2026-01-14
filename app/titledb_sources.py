@@ -44,9 +44,11 @@ class TitleDBSource:
             'is_fetching': self.is_fetching
         }
 
-    def get_last_modified_date(self, filename: str) -> Optional[datetime]:
-        """Get the last modified date of the specific file from the source"""
-        url = self.get_file_url(filename)
+    def get_last_modified_date(self, filenames: List[str]) -> Optional[datetime]:
+        """Get the last modified date of any of the regional files from the source"""
+        if not isinstance(filenames, list):
+            filenames = [filenames]
+            
         try:
             # Check if it's a raw GitHub URL
             if "raw.githubusercontent.com" in self.base_url:
@@ -55,7 +57,7 @@ class TitleDBSource:
                 if len(parts) >= 6:
                     user = parts[3]
                     repo = parts[4]
-                    branch = parts[5]
+                    branch = parts[5].rstrip('/')
                     
                     # Try to get commit info for the file
                     def _get_github_date(fname, br):
@@ -64,45 +66,53 @@ class TitleDBSource:
                             'User-Agent': 'MyFoil-App',
                             'Accept': 'application/vnd.github.v3+json'
                         }
-                        resp = requests.get(api_url, headers=headers, timeout=5)
-                        if resp.status_code == 200:
-                            data = resp.json()
-                            if data and isinstance(data, list) and len(data) > 0:
-                                commit_date = data[0]['commit']['committer']['date']
-                                return datetime.fromisoformat(commit_date.replace("Z", "+00:00"))
+                        try:
+                            resp = requests.get(api_url, headers=headers, timeout=5)
+                            if resp.status_code == 200:
+                                data = resp.json()
+                                if data and isinstance(data, list) and len(data) > 0:
+                                    commit_date = data[0]['commit']['committer']['date']
+                                    return datetime.fromisoformat(commit_date.replace("Z", "+00:00"))
+                            elif resp.status_code == 403:
+                                logger.warning(f"GitHub API rate limited for {self.name}")
+                        except Exception as e:
+                            logger.debug(f"GitHub API error for {fname} on {br}: {e}")
                         return None
 
-                    # 1. Try regional file on detected branch
-                    d = _get_github_date(filename, branch)
-                    if d: return d
+                    # Try each filename on the branch
+                    for fname in filenames:
+                        d = _get_github_date(fname, branch)
+                        if d: return d
                     
-                    # 2. Try generic titles.json on detected branch
-                    if filename != "titles.json":
+                    # Try generic titles.json
+                    if "titles.json" not in filenames:
                         d = _get_github_date("titles.json", branch)
                         if d: return d
                     
-                    # 3. If branch was 'main', try 'master' and vice versa
+                    # Fallback branch check
                     alt_branch = 'master' if branch == 'main' else 'main'
-                    d = _get_github_date(filename, alt_branch)
-                    if d: return d
+                    for fname in filenames:
+                        d = _get_github_date(fname, alt_branch)
+                        if d: return d
             
-            # Fallback to standard HEAD request
-            response = requests.head(url, timeout=5)
-            if response.status_code == 200:
-                if 'Last-Modified' in response.headers:
-                    return datetime.strptime(response.headers['Last-Modified'], '%a, %d %b %Y %H:%M:%S %Z')
+            # Fallback to standard HEAD request for each filename
+            for fname in filenames:
+                url = self.get_file_url(fname)
+                response = requests.head(url, timeout=5)
+                if response.status_code == 200:
+                    if 'Last-Modified' in response.headers:
+                        return datetime.strptime(response.headers['Last-Modified'], '%a, %d %b %Y %H:%M:%S %Z')
             
-            # Final attempt: try generic titles.json if regional failed
-            if filename != "titles.json":
+            # Final attempt: try generic titles.json
+            if "titles.json" not in filenames:
                 url_generic = self.get_file_url("titles.json")
                 response = requests.head(url_generic, timeout=5)
                 if response.status_code == 200 and 'Last-Modified' in response.headers:
                     return datetime.strptime(response.headers['Last-Modified'], '%a, %d %b %Y %H:%M:%S %Z')
                     
         except Exception as e:
-            logger.debug(f"Error fetching remote date for {self.name} ({url}): {e}")
-        return None
-        
+            logger.debug(f"Error fetching remote date for {self.name}: {e}")
+            
         return None
     
     @classmethod
@@ -324,7 +334,11 @@ class TitleDBSourceManager:
         
         logger.info("Starting background TitleDB remote date refresh...")
         app_settings = load_settings()
-        ref_file = titledb.get_region_titles_file(app_settings) or "titles.json"
+        region = app_settings['titles'].get('region', 'US')
+        language = app_settings['titles'].get('language', 'en')
+        possible_files = titledb.get_region_titles_filenames(region, language)
+        
+        logger.info(f"Targeting files: {possible_files} for region {region}/{language}")
         
         for source in self.sources:
             if not source.enabled:
@@ -332,9 +346,13 @@ class TitleDBSourceManager:
                 
             source.is_fetching = True
             try:
-                new_date = source.get_last_modified_date(ref_file)
+                logger.info(f"Checking remote date for source: {source.name}...")
+                new_date = source.get_last_modified_date(possible_files)
                 if new_date:
                     source.remote_date = new_date
+                    logger.info(f"Source {source.name} remote date updated to {new_date}")
+                else:
+                    logger.warning(f"Could not find remote date for source: {source.name}")
             finally:
                 source.is_fetching = False
         

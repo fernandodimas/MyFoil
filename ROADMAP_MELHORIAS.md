@@ -1234,9 +1234,39 @@ Gamificação da gestão de biblioteca.
 - [x] Perfis públicos
 
 **Entregáveis:**
-- Sincronização com cloud storage
-- API de plugins documentada
-- 2-3 plugins oficiais de exemplo
+- [x] Sincronização com cloud storage
+- [x] API de plugins documentada
+- [x] 2-3 plugins oficiais de exemplo
+
+---
+
+### Sprint 8 (2 semanas) - Q3 2026
+**Foco:** Refinamento de Performance
+
+- [ ] Otimização de queries SQL e índices (v1.5)
+- [ ] Implementação de cache de segundo nível (Redis opcional)
+- [ ] Otimização do File Watcher para grandes volumes
+- [ ] Compressão Gzip/Brotli nas respostas da API
+
+**Entregáveis:**
+- Redução de consumo de CPU durante scans
+- Tempo de carregamento da Dashboard < 100ms
+- Suporte estável para bibliotecas de 5.000+ arquivos
+
+---
+
+### Sprint 9 (2 semanas) - Q3 2026
+**Foco:** Segurança e Estabilidade
+
+- [ ] Auditoria de dependências e atualização geral
+- [ ] Implementação de CSRF Protection reforçado
+- [ ] Rate limiting granular por endpoint de API
+- [ ] Sistema de alertas para falhas de scan ou TitleDB (Email/Discord)
+
+**Entregáveis:**
+- Código auditado contra vulnerabilidades comuns
+- Limites de uso para proteção contra DoS local
+- Notificações proativas de saúde do sistema
 
 ---
 
