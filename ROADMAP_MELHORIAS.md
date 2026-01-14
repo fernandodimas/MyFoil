@@ -1,8 +1,8 @@
 # 🚀 MyFoil - Análise, Melhorias e Roadmap de Funcionalidades
 
-**Data da Análise:** 2026-01-13  
-**Versão Atual:** BUILD_VERSION '20260112_1621'  
-**Autor:** Análise Técnica Completa
+**Data da Análise:** 2026-01-14
+**Versão Atual:** BUILD_VERSION '20260114_1156'
+**Autor:** Análise Técnica MyFoil (Pair Programming AI)
 
 ---
 
@@ -12,26 +12,14 @@
 2. [Análise da Arquitetura Atual](#2-análise-da-arquitetura-atual)
 3. [Melhorias Técnicas Recomendadas](#3-melhorias-técnicas-recomendadas)
     - 3.1 [Backend e Performance](#31-backend-e-performance)
-        - 3.1.1 [Filas Assíncronas](#311-sistema-de-filas-assíncronas) ✅
-        - 3.1.2 [API REST](#312-api-rest-completa-e-documentada) ✅
-        - 3.1.3 [Logging Estruturado](#313-sistema-de-logging-estruturado) ✅
-        - 3.1.4 [Métricas e Monitoramento](#314-sistema-de-métricas-e-monitoramento) ✅
     - 3.2 [Frontend e UX](#32-frontend-e-ux)
-        - 3.2.1 [WebSockets](#321-websockets-para-atualizações-em-tempo-real) ✅
-        - 3.2.2 [Progressive Web App (PWA)](#322-progressive-web-app-pwa) ✅
-        - 3.2.3 [Modo Escuro](#323-modo-escuro-automático) ✅
     - 3.3 [Segurança e Confiabilidade](#33-segurança-e-confiabilidade)
-        - 3.3.1 [Backup Automático](#331-sistema-de-backup-automático) ✅
-        - 3.3.2 [Rate Limiting](#332-rate-limiting-avançado) ✅
-        - 3.3.3 [Validação de Arquivos Aprimorada](#333-validação-de-arquivos-aprimorada) ✅
+    - 3.4 [Refatoração e Limpeza](#34-refatoração-e-limpeza-de-código)
 4. [Novas Funcionalidades Propostas](#4-novas-funcionalidades-propostas)
     - 4.1 [Gestão de Biblioteca](#41-gestão-avançada-de-biblioteca)
-        - 4.1.1 [Tags e Categorias](#411-sistema-de-tags-e-categorias-personalizadas) ✅
-        - 4.1.2 [Wishlist](#412-listas-de-desejos-wishlist) ✅
-        - 4.1.3 [Histórico](#413-histórico-de-atividades) ✅
+    - 4.2 [Melhorias de UI/UX (Mobile)](#42-melhorias-de-uiux-foco-mobile)
     - 4.3 [Análise e Estatísticas](#43-análise-e-estatísticas)
-        - 4.3.1 [Dashboard de Estatísticas](#431-dashboard-de-estatísticas) ✅
-        - 4.3.2 [Comparação com TitleDB](#432-comparação-com-titledb) ✅
+    - 4.4 [Internacionalização (i18n)](#44-internacionalização-i18n)
 5. [Roadmap de Implementação](#5-roadmap-de-implementação)
 6. [Métricas e KPIs](#6-métricas-e-kpis)
 
@@ -587,6 +575,22 @@ def validate_file(filepath):
 
 ---
 
+#### 3.4 Refatoração e Limpeza de Código
+**Prioridade:** 🟡 MÉDIA  
+**Complexidade:** Média  
+**Impacto:** Médio (Manutenibilidade)
+
+**Descrição:**
+Realizar uma varredura completa no projeto para remover arquivos legados do Ownfoil que não são mais utilizados, limpar imports não utilizados e remover funções/scripts duplicados.
+
+**Itens específicos:**
+- [ ] Remover templates HTML antigos ou de backup.
+- [ ] Limpar arquivos estáticos (JS/CSS) não referenciados.
+- [ ] Consolidar funções de utilidade entre `utils.py` e outros módulos.
+- [ ] Padronizar o estilo de código (PEP 8).
+
+---
+
 ## 4. Novas Funcionalidades Propostas
 
 ### 4.1 Gestão Avançada de Biblioteca
@@ -635,12 +639,8 @@ def add_tag_to_title(title_id):
 - Gerenciador de tags na página de configurações
 - Adicionar/remover tags no modal de detalhes do jogo
 - Filtrar biblioteca por tags
-- Tags exibidas como badges coloridos nos cards
 
-**Casos de Uso:**
-- Organização por franquia: "Mario", "Zelda", "Pokemon"
-
-#### 4.1.4 Renomeação Automática de Arquivos
+#### 4.1.4 Renomeação Automática de Arquivos ✅
 **Prioridade:** 🔵 ALTA  
 **Complexidade:** Média  
 **Impacto:** Alto
@@ -1371,6 +1371,6 @@ Gamificação da gestão de biblioteca.
 ---
 
 **Documento criado em:** 2026-01-13  
-**Última atualização:** 2026-01-13  
-**Versão:** 1.0  
+**Última atualização:** 2026-01-14  
+**Versão:** 1.1  
 **Autor:** Análise Técnica MyFoil

@@ -2,13 +2,23 @@
 
 # MyFoil
 
-**MyFoil** is an enhanced fork of [Ownfoil](https://github.com/a1ex4/ownfoil) - a Nintendo Switch library manager that turns your library into a fully customizable and self-hosted Tinfoil Shop. 
+**MyFoil** is an enhanced fork of [Ownfoil](https://github.com/a1ex4/ownfoil) - a Nintendo Switch library manager that turns your library into a fully customizable and self-hosted Tinfoil Shop.
+
+---
+
+### ⚠️ Disclaimers
+
+1.  **Proof of Concept**: This project is a proof of concept and is intended for educational purposes only. It **does not encourage or promote piracy** or the infringement of copyrights belonging to any individual or company. Users are responsible for using the software in compliance with their local laws.
+2.  **AI Assisted**: All enhancements and features added to this fork were implemented with the assistance of **Artificial Intelligence**.
 
 ## ✨ Enhanced Features (vs Ownfoil)
 
  - **🔄 Multiple TitleDB Sources**: Support for blawar/titledb, tinfoil.media, and custom sources
  - **⚡ Faster Updates**: Direct JSON downloads instead of ZIP extraction
  - **🎯 Smart Fallback**: Automatic failover between multiple sources
+ - **🏷️ Tagging System**: Create custom tags to organize your library beyond genres
+ - **📑 Activities Log**: Track every change and scan in your library
+ - **🌐 Multi-language Support**: Fully translatable interface (EN, PT-BR, ES)
  - **⚙️ Configurable Sources**: Manage TitleDB sources via web interface
  - **📊 Better Caching**: Intelligent cache with configurable TTL
 
@@ -232,23 +242,14 @@ To host your own TitleDB mirror:
 - Host your own mirror closer to your server
 
 # Roadmap
-Planned feature, in no particular order.
- - Library browser:
-    - [ ] Add "details" view for every content, to display versions etc
- - Library management:
-    - [ ] Rename and organize library after content identification
-    - [ ] Delete older updates
-    - [ ] Automatic nsp/xci -> nsz conversion
- - Shop customization:
-    - [ ] Encrypt shop
- - Support emulator Roms
-    - [ ] Scrape box arts
-    - [ ] Automatically create NSP forwarders
- - Saves manager:
-    - [ ] Automatically discover Swicth device based on Tinfoil connection
-    - [ ] Only backup and serve saves based on the user/Switch
- - External services:
-    - [ ] Integrate torrent indexer Jackett to download updates automatically
+Planned features and improvements:
+ - **Automatic Renaming**: Rename physical files based on configurable patterns (e.g., `{Name} [{TitleID}]`).
+ - **Wishlist Filtering**: View and manage your desired items directly in the library.
+ - **Universal Search**: Search the entire TitleDB catalog even for items you don't own.
+ - **Mobile Optimization**: Responsive layout improvements for small screens.
+ - **System-wide Internationalization**: Full translation support for all UI and backend messages.
+ - **Project Cleanup**: Removal of unused legacy code and files from the original project.
+ - **Automatic Conversion**: NSP/XCI to NSZ conversion tools.
 
 # Similar Projects
 If you want to create your personal NSP Shop then check out these other similar projects:
