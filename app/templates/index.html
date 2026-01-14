@@ -726,7 +726,7 @@
                         </div>
                     `).join('')}
                 </div>
-            ` : (game.has_base ? `<p class="notification is-warning is-light p-2 is-size-7" style="border: 1px solid rgba(0,0,0,0.1)">${t('Missing Base File')}</p>` : '');
+            ` : (!game.has_base ? `<p class="notification is-warning is-light p-2 is-size-7" style="border: 1px solid rgba(0,0,0,0.1)">${t('Missing Base File')}</p>` : '');
 
             // Updates Section
             const sortedUpdates = [...(game.updates || [])].sort((a, b) => b.version - a.version);

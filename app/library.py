@@ -424,12 +424,14 @@ def update_titles():
         # Use child apps collection instead of a new query
         title_apps = [to_dict(app) for app in title.apps]
 
-        # check have_base - look for owned base apps
-        owned_base_apps = [app for app in title_apps if app.get('app_type') == APP_TYPE_BASE and app.get('owned')]
+        # Maximum owned version (including base and update) - ONLY count apps with actual files
+        owned_apps_with_files = [a for a in title_apps if a.get('owned') and len(a.get('files_info', [])) > 0]
+        
+        # check have_base - look for owned base apps with actual files
+        owned_base_apps = [app for app in owned_apps_with_files if app.get('app_type') == APP_TYPE_BASE]
         have_base = len(owned_base_apps) > 0
 
-        # Maximum owned version (including base and update)
-        owned_versions = [int(a['app_version']) for a in title_apps if a.get('owned')]
+        owned_versions = [int(a['app_version']) for a in owned_apps_with_files]
         max_owned_version = max(owned_versions) if owned_versions else -1
 
         # Available updates from titledb via versions.json
@@ -609,8 +611,15 @@ def get_game_info_item(tid, title_data):
     original_release = normalize_date(game.get('release_date'))
     game['release_date'] = original_release or game['latest_release_date'] or ''
 
-    # Status indicators
-    game['has_base'] = any(a['app_type'] == APP_TYPE_BASE and a['owned'] for a in all_title_apps)
+    # Status indicators - only consider as owned if files are actually present
+    game['has_base'] = any(a['app_type'] == APP_TYPE_BASE and a['owned'] and len(a.get('files_info', [])) > 0 for a in all_title_apps)
+    
+    # Calculate owned version correctly (only apps with files)
+    owned_apps_with_files = [a for a in all_title_apps if a['owned'] and len(a.get('files_info', [])) > 0]
+    owned_versions = [int(a['app_version']) for a in owned_apps_with_files]
+    game['owned_version'] = max(owned_versions) if owned_versions else 0
+    game['display_version'] = str(game['owned_version'])
+    
     game['has_latest_version'] = game['owned_version'] >= game['latest_version_available']
     
     all_possible_dlc_ids = titles_lib.get_all_existing_dlc(tid)
