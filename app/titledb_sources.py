@@ -23,6 +23,8 @@ class TitleDBSource:
         self.source_type = source_type # 'json' or 'zip_legacy'
         self.last_success = None
         self.last_error = None
+        self.remote_date = None
+        self.is_fetching = False
         
     def get_file_url(self, filename: str) -> str:
         """Get the full URL for a specific file"""
@@ -37,7 +39,9 @@ class TitleDBSource:
             'priority': self.priority,
             'source_type': self.source_type,
             'last_success': self.last_success.isoformat() if self.last_success else None,
-            'last_error': self.last_error
+            'last_error': self.last_error,
+            'remote_date': self.remote_date.isoformat() if self.remote_date else None,
+            'is_fetching': self.is_fetching
         }
 
     def get_last_modified_date(self, filename: str) -> Optional[datetime]:
@@ -73,7 +77,7 @@ class TitleDBSource:
                     # Parse RFC 2822 date
                     return datetime.strptime(response.headers['Last-Modified'], '%a, %d %b %Y %H:%M:%S %Z')
         except Exception as e:
-            logger.debug(f"Failed to get remote date for {url}: {e}")
+            logger.error(f"Error fetching remote date for {self.name} ({url}): {e}")
         
         return None
     
@@ -89,6 +93,8 @@ class TitleDBSource:
         )
         if data.get('last_success'):
             source.last_success = datetime.fromisoformat(data['last_success'])
+        if data.get('remote_date'):
+            source.remote_date = datetime.fromisoformat(data['remote_date'])
         source.last_error = data.get('last_error')
         return source
 
@@ -255,24 +261,39 @@ class TitleDBSourceManager:
         return False
     
     def get_sources_status(self) -> List[Dict]:
-        """Get status of all sources including remote file dates"""
+        """Get status of all sources using cached dates"""
+        return [s.to_dict() for s in sorted(self.sources, key=lambda x: x.priority)]
+
+    def refresh_remote_dates(self):
+        """Asynchronously refresh remote dates for all enabled sources"""
+        import threading
+        thread = threading.Thread(target=self._refresh_remote_dates_worker)
+        thread.daemon = True
+        thread.start()
+
+    def _refresh_remote_dates_worker(self):
+        """Worker thread for remote date refreshing"""
         from settings import load_settings
         import titledb
         
+        logger.info("Starting background TitleDB remote date refresh...")
         app_settings = load_settings()
-        # Use titles.json as common reference for age, or regional if set
         ref_file = titledb.get_region_titles_file(app_settings) or "titles.json"
         
-        status_list = []
-        for s in sorted(self.sources, key=lambda x: x.priority):
-            d = s.to_dict()
-            # Try to fetch remote date (only if enabled to avoid slowing down UI too much)
-            # Actually, let's do it for all to show status
-            remote_date = s.get_last_modified_date(ref_file)
-            d['remote_date'] = remote_date.isoformat() if remote_date else None
-            status_list.append(d)
-            
-        return status_list
+        for source in self.sources:
+            if not source.enabled:
+                continue
+                
+            source.is_fetching = True
+            try:
+                new_date = source.get_last_modified_date(ref_file)
+                if new_date:
+                    source.remote_date = new_date
+            finally:
+                source.is_fetching = False
+        
+        self.save_sources()
+        logger.info("Finished background TitleDB remote date refresh.")
 
     def update_priorities(self, priority_map: Dict[str, int]) -> bool:
         """

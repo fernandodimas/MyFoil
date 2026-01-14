@@ -427,3 +427,9 @@ def update_titledb_priorities(priority_map: Dict[str, int]) -> bool:
     """Batch update priorities"""
     source_manager = get_source_manager()
     return source_manager.update_priorities(priority_map)
+
+
+def refresh_titledb_remote_dates():
+    """Trigger background refresh of remote dates for all sources"""
+    source_manager = get_source_manager()
+    source_manager.refresh_remote_dates()

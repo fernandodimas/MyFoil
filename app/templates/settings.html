@@ -299,6 +299,10 @@
                                         onclick="forceTitleDBUpdate()">
                                         <i class="bi bi-cloud-download mr-1"></i> {{ t('Force Update') }}
                                     </button>
+                                    <button class="button is-small is-ghost" onclick="refreshTitleDBDates()"
+                                        title="Atualizar datas remotas">
+                                        <i class="bi bi-calendar-event mr-1"></i>
+                                    </button>
                                 </div>
                             </header>
                             <div class="card-content pt-0">
@@ -950,7 +954,15 @@
             }
 
             result.sources.forEach(source => {
-                const remoteDate = source.remote_date ? new Date(source.remote_date).toLocaleString() : '--';
+                let remoteDateHtml = '';
+                if (source.is_fetching) {
+                    remoteDateHtml = `<span class="is-size-7 italic opacity-50"><i class="bi bi-arrow-repeat spin mr-1"></i> Carregando...</span>`;
+                } else if (source.remote_date) {
+                    remoteDateHtml = `<span class="is-size-7">${new Date(source.remote_date).toLocaleString()}</span>`;
+                } else {
+                    remoteDateHtml = `<span class="is-size-7 has-text-danger italic opacity-50">Não encontrado</span>`;
+                }
+
                 const localDate = source.last_success ? new Date(source.last_success).toLocaleString() : 'Never';
 
                 tbody.append(`
@@ -967,7 +979,7 @@
                         <td>
                             <div class="is-flex is-align-items-center">
                                 <i class="bi bi-cloud-check mr-2 has-text-info"></i>
-                                <span class="is-size-7">${remoteDate}</span>
+                                ${remoteDateHtml}
                             </div>
                         </td>
                         <td>
@@ -1119,6 +1131,19 @@
                 $('.scanBtn').removeClass('is-loading');
                 if (result.success) showToast('Scan triggered!');
             }
+        });
+    }
+
+    function refreshTitleDBDates() {
+        $.post('/api/settings/titledb/sources/refresh-dates', () => {
+            showToast('Buscando datas remotas em segundo plano...');
+            // Polling for updates for a few seconds
+            let checks = 0;
+            const interval = setInterval(() => {
+                fillTitleDBSourcesTable();
+                checks++;
+                if (checks > 10) clearInterval(interval);
+            }, 2000);
         });
     }
 

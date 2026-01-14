@@ -125,6 +125,7 @@ def update_db_and_scan_job():
     logger.info("Running update job (TitleDB update and library scan)...")
     update_titledb_job()
     scan_library_job()
+    titledb.refresh_titledb_remote_dates()
     logger.info("Update job completed.")
 
 def create_automatic_backup():
@@ -745,18 +746,24 @@ def titledb_sources_api():
 
 @main_bp.post('/api/settings/titledb/sources/reorder')
 @access_required('admin')
-def reorder_titledb_sources_api():
-    """
-    Expects JSON: { "source_name_1": 0, "source_name_2": 1, ... }
-    """
+def titledb_sources_reorder_api():
+    """Update TitleDB source priorities"""
     data = request.json
     if not data:
         return jsonify({'success': False, 'errors': ['No data provided']})
     
     success = titledb.update_titledb_priorities(data)
     return jsonify({
-        'success': success
+        'success': success,
+        'errors': [] if success else ['Failed to update priorities']
     })
+
+@main_bp.post('/api/settings/titledb/sources/refresh-dates')
+@access_required('admin')
+def refresh_titledb_sources_dates_api():
+    """Trigger background refresh of remote dates"""
+    titledb.refresh_titledb_remote_dates()
+    return jsonify({'success': True})
 
 @main_bp.post('/api/settings/titledb/update')
 @access_required('admin')
