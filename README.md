@@ -6,6 +6,12 @@
 
 ---
 
+[🇺🇸 English](README.md) | [🇧🇷 Português](README.pt-br.md) | [🇪🇸 Español](README.es.md)
+
+---
+
+---
+
 ### ⚠️ Disclaimers
 
 1.  **Proof of Concept**: This project is a proof of concept and is intended for educational purposes only. It **does not encourage or promote piracy** or the infringement of copyrights belonging to any individual or company. Users are responsible for using the software in compliance with their local laws.
@@ -39,7 +45,6 @@
 - [Usage](#usage)
 - [TitleDB Sources](#titledb-sources)
 - [Migration from Ownfoil](#migration-from-ownfoil)
-- [Roadmap](#roadmap)
 
 # Installation
 
@@ -241,24 +246,3 @@ To host your own TitleDB mirror:
 - Adjust priorities (lower number = higher priority)
 - Host your own mirror closer to your server
 
-# Roadmap
-Planned features and improvements:
- - **Automatic Renaming**: Rename physical files based on configurable patterns (e.g., `{Name} [{TitleID}]`).
- - **Wishlist Filtering**: View and manage your desired items directly in the library.
- - **Universal Search**: Search the entire TitleDB catalog even for items you don't own.
- - **Mobile Optimization**: Responsive layout improvements for small screens.
- - **System-wide Internationalization**: Full translation support for all UI and backend messages.
- - **Project Cleanup**: Removal of unused legacy code and files from the original project.
- - **Automatic Conversion**: NSP/XCI to NSZ conversion tools.
-
-# Similar Projects
-If you want to create your personal NSP Shop then check out these other similar projects:
-- [eXhumer/pyTinGen](https://github.com/eXhumer/pyTinGen)
-- [JackInTheShop/FT-SCEP](https://github.com/JackInTheShop/FT-SCEP)
-- [gianemi2/tinson-node](https://github.com/gianemi2/tinson-node)
-- [BigBrainAFK/tinfoil_gdrive_generator](https://github.com/BigBrainAFK/tinfoil_gdrive_generator)
-- [ibnux/php-tinfoil-server](https://github.com/ibnux/php-tinfoil-server)
-- [ramdock/nut-server](https://github.com/ramdock/nut-server)
-- [Myster-Tee/TinfoilWebServer](https://github.com/Myster-Tee/TinfoilWebServer)
-- [DevYukine/rustfoil](https://github.com/DevYukine/rustfoil)
-- [Orygin/gofoil](https://github.com/Orygin/gofoil)

@@ -4,6 +4,12 @@
 
 ---
 
+[🇺🇸 English](README.md) | [🇧🇷 Português](README.pt-br.md) | [🇪🇸 Español](README.es.md)
+
+---
+
+---
+
 ### ⚠️ Avisos Importantes (Disclaimers)
 
 1.  **Prueba de Concepto**: Este proyecto es una prueba de concepto y está destinado únicamente a fines educativos. **No alienta ni promueve la piratería** ni la infracción de los derechos de autor de ninguna persona o empresa. Los usuarios son responsables de utilizar el software de conformidad con las leyes locales.
@@ -39,7 +45,6 @@
 - [Uso](#uso)
 - [Fuentes TitleDB](#fuentes-titledb)
 - [Migración desde Ownfoil](#migración-desde-ownfoil)
-- [Hoja de Ruta (Roadmap)](#roadmap)
 
 # Instalación
 
