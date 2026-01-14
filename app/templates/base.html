@@ -254,7 +254,7 @@
             // WebSocket Global Listener with robust initialization
             if (typeof io !== 'undefined') {
                 const socket = io({
-                    transports: ['polling', 'websocket'], // Try polling first for reliability
+                    transports: ['polling', 'websocket'], // Try polling first for maximum compatibility
                     upgrade: true,
                     rememberUpgrade: true,
                     reconnection: true,

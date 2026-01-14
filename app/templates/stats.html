@@ -17,20 +17,35 @@
                                 global.</p>
                         </div>
                     </div>
+                    <div class="level-right">
+                        <div class="field">
+                            <label class="label is-small opacity-50">Filtrar por Biblioteca</label>
+                            <div class="control has-icons-left">
+                                <span class="select is-rounded is-small">
+                                    <select id="libraryFilter" onchange="loadStats()">
+                                        <option value="">Todas as Bibliotecas</option>
+                                    </select>
+                                </span>
+                                <span class="icon is-small is-left">
+                                    <i class="bi bi-folder2-open"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Quick Cards -->
+            <!-- Quick Cards Row 1 -->
             <div class="column is-3">
                 <div class="card box shadow-sm border-none p-5 h-100">
-                    <p class="heading is-size-7 opacity-50 mb-2">Total na Biblioteca</p>
+                    <p class="heading is-size-7 opacity-50 mb-2">Total de Títulos</p>
                     <div class="is-flex is-align-items-center">
                         <span class="icon is-large has-text-primary mr-3">
                             <i class="bi bi-collection-play is-size-3"></i>
                         </span>
                         <div>
                             <p class="title is-3 m-0" id="stat-total-games">--</p>
-                            <p class="is-size-7">Jogos Identificados</p>
+                            <p class="is-size-7" id="stat-owned-count">-- Possuídos</p>
                         </div>
                     </div>
                 </div>
@@ -45,7 +60,7 @@
                         </span>
                         <div>
                             <p class="title is-4 m-0" id="stat-total-size">--</p>
-                            <p class="is-size-7">Tamanho Total</p>
+                            <p class="is-size-7 opacity-70">Soma Total de Arquivos</p>
                         </div>
                     </div>
                 </div>
@@ -53,74 +68,94 @@
 
             <div class="column is-3">
                 <div class="card box shadow-sm border-none p-5 h-100">
-                    <p class="heading is-size-7 opacity-50 mb-2">Status da Coleção</p>
+                    <p class="heading is-size-7 opacity-50 mb-2">Updates na Coleção</p>
                     <div class="is-flex is-align-items-center">
-                        <span class="icon is-large has-text-success mr-3">
-                            <i class="bi bi-check-circle-fill is-size-3"></i>
+                        <span class="icon is-large has-text-link mr-3">
+                            <i class="bi bi-arrow-up-circle is-size-3"></i>
                         </span>
                         <div>
+                            <p class="title is-4 m-0" id="stat-total-updates">--</p>
+                            <p class="is-size-7">Arquivos de Update</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column is-3">
+                <div class="card box shadow-sm border-none p-5 h-100">
+                    <p class="heading is-size-7 opacity-50 mb-2">DLCs na Coleção</p>
+                    <div class="is-flex is-align-items-center">
+                        <span class="icon is-large has-text-danger-dark mr-3">
+                            <i class="bi bi-plus-circle is-size-3"></i>
+                        </span>
+                        <div>
+                            <p class="title is-4 m-0" id="stat-total-dlcs">--</p>
+                            <p class="is-size-7">Arquivos de Conteúdo Extra</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Cards Row 2 -->
+            <div class="column is-6">
+                <div class="card box shadow-sm border-none p-5 h-100 is-light">
+                    <div class="columns is-mobile is-vcentered">
+                        <div class="column">
+                            <p class="heading is-size-7 opacity-50 mb-1">Status da Coleção</p>
                             <p class="title is-4 m-0" id="stat-up-to-date-pct">-- %</p>
                             <p class="is-size-7" id="stat-up-to-date-count">-- atualizados</p>
                         </div>
+                        <div class="column is-narrow has-text-centered border-left px-5">
+                            <span class="icon is-large has-text-success">
+                                <i class="bi bi-check-circle-fill is-size-3"></i>
+                            </span>
+                        </div>
+                        <div class="column">
+                            <p class="heading is-size-7 opacity-50 mb-1">Cobertura TitleDB</p>
+                            <p class="title is-4 m-0" id="stat-coverage-pct">-- %</p>
+                            <p class="is-size-7">Domínio do catálogo mundial</p>
+                        </div>
+                        <div class="column is-narrow has-text-centered">
+                            <span class="icon is-large has-text-warning">
+                                <i class="bi bi-globe2 is-size-3"></i>
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="column is-3">
-                <div class="card box shadow-sm border-none p-5 h-100">
-                    <p class="heading is-size-7 opacity-50 mb-2">Cobertura TitleDB</p>
-                    <div class="is-flex is-align-items-center">
-                        <span class="icon is-large has-text-warning mr-3">
-                            <i class="bi bi-globe2 is-size-3"></i>
-                        </span>
-                        <div>
-                            <p class="title is-4 m-0" id="stat-coverage-pct">-- %</p>
-                            <p class="is-size-7">Do catálogo mundial</p>
+            <div class="column is-6">
+                <div class="card box shadow-sm h-100 p-5">
+                    <div class="columns is-mobile is-vcentered">
+                        <div class="column">
+                            <p class="heading is-size-7 opacity-50 mb-1">Saúde dos Arquivos</p>
+                            <p class="title is-4 m-0" id="stat-id-rate">--%</p>
+                            <p class="is-size-7">Arquivos Identificados</p>
+                        </div>
+                        <div class="column is-narrow has-text-centered">
+                            <span class="icon is-large has-text-info">
+                                <i class="bi bi-fingerprint is-size-3"></i>
+                            </span>
+                        </div>
+                        <div class="column has-text-right">
+                            <p class="is-size-7">Total: <b id="stat-total-files">--</b></p>
+                            <p class="is-size-7 has-text-danger">Não Ident.: <b id="stat-unidentified-files">--</b></p>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Charts Row -->
-            <div class="column is-8">
-                <div class="card box shadow-sm h-100">
+            <div class="column is-12">
+                <div class="card box shadow-sm">
                     <header class="card-header border-none shadow-none">
                         <p class="card-header-title">
                             <i class="bi bi-pie-chart-fill mr-2 has-text-primary"></i> Distribuição por Gênero
                         </p>
                     </header>
-                    <div class="card-content">
-                        <div style="max-height: 400px; position: relative;">
+                    <div class="card-content pt-0">
+                        <div style="height: 300px; position: relative;">
                             <canvas id="genreChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="column is-4">
-                <div class="card box shadow-sm h-100">
-                    <header class="card-header border-none shadow-none">
-                        <p class="card-header-title">
-                            <i class="bi bi-fingerprint mr-2 has-text-info"></i> Saúde dos Arquivos
-                        </p>
-                    </header>
-                    <div class="card-content">
-                        <div class="has-text-centered mb-5">
-                            <p class="is-size-1 has-text-weight-bold" id="stat-id-rate">--%</p>
-                            <p class="is-size-7 opacity-60">Arquivos Identificados com Sucesso</p>
-                        </div>
-                        <div class="notification is-light py-3 px-4 mb-0">
-                            <div class="level is-mobile mb-2">
-                                <div class="level-left"><span class="is-size-7">Total de Arquivos</span></div>
-                                <div class="level-right"><span class="is-size-7 has-text-weight-bold"
-                                        id="stat-total-files">--</span></div>
-                            </div>
-                            <div class="level is-mobile">
-                                <div class="level-left"><span class="is-size-7 has-text-danger">Não Identificados</span>
-                                </div>
-                                <div class="level-right"><span class="is-size-7 has-text-danger has-text-weight-bold"
-                                        id="stat-unidentified-files">--</span></div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -150,14 +185,27 @@
 
 <script>
     $(document).ready(() => {
-        loadStats();
+        loadStats(true); // Initial load with library list population
     });
 
-    function loadStats() {
-        $.getJSON('/api/stats/overview', (data) => {
+    let genreChart = null;
+
+    function loadStats(initFilter = false) {
+        const libId = $('#libraryFilter').val();
+        const url = `/api/stats/overview${libId ? '?library_id=' + libId : ''}`;
+
+        $.getJSON(url, (data) => {
+            if (initFilter) {
+                populateLibraryFilter(data.libraries);
+            }
+
             // Fill quick cards
-            $('#stat-total-games').text(data.library.total_owned);
+            $('#stat-total-games').text(data.library.total_titles);
+            $('#stat-owned-count').text(data.library.total_owned + ' Possuídos');
             $('#stat-total-size').text(data.library.total_size_formatted);
+            $('#stat-total-updates').text(data.library.total_updates);
+            $('#stat-total-dlcs').text(data.library.total_dlcs);
+
             $('#stat-up-to-date-pct').text(data.library.completion_rate + '%');
             $('#stat-up-to-date-count').text(data.library.up_to_date + ' atualizados');
             $('#stat-coverage-pct').text(data.titledb.coverage_pct + '%');
@@ -175,12 +223,23 @@
         });
     }
 
+    function populateLibraryFilter(libs) {
+        const select = $('#libraryFilter');
+        libs.forEach(lib => {
+            select.append(`<option value="${lib.id}">${lib.path}</option>`);
+        });
+    }
+
     function renderGenreChart(genreData) {
+        if (genreChart) {
+            genreChart.destroy();
+        }
+
         const ctx = document.getElementById('genreChart').getContext('2d');
         const labels = Object.keys(genreData);
         const values = Object.values(genreData);
 
-        new Chart(ctx, {
+        genreChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: labels,

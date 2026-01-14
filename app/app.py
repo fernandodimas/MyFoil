@@ -1,3 +1,7 @@
+import warnings
+# Suppress Eventlet and Flask-Limiter warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="eventlet")
+warnings.filterwarnings("ignore", category=UserWarning, module="flask_limiter")
 import eventlet
 eventlet.monkey_patch()
 from flask import Flask, render_template, request, redirect, url_for, jsonify, send_from_directory, Response
@@ -1195,64 +1199,92 @@ def restore_backup_api():
 @main_bp.route('/api/stats/overview')
 @access_required('shop')
 def get_stats_overview():
-    """Estatísticas gerais da biblioteca e comparação com TitleDB"""
+    """Estatísticas detalhadas da biblioteca com filtros"""
     import titles
     import library
+    from sqlalchemy import func
     
-    # 1. Load data from disk or generate
+    library_id = request.args.get('library_id', type=int)
+    
+    # 1. Fetch library list for filter dropdown
+    libs = Libraries.query.all()
+    libraries_list = [{'id': l.id, 'path': l.path} for l in libs]
+
+    # 2. Base Query for Apps/Files
+    # If filtered, we only count apps that have files in that specific library
+    if library_id:
+        file_query = Files.query.filter_by(library_id=library_id)
+        # Unique TitleIDs in this library
+        apps_query = Apps.query.join(Apps.files).filter(Files.library_id == library_id)
+    else:
+        file_query = Files.query
+        apps_query = Apps.query
+
+    # 3. File Stats (Disk Usage)
+    total_files = file_query.count()
+    total_size = db.session.query(func.sum(Files.size)).filter(Files.id.in_(file_query.with_entities(Files.id))).scalar() or 0
+    unidentified_files = file_query.filter(Files.identified == False).count()
+    identified_files = total_files - unidentified_files
+    id_rate = round((identified_files / total_files * 100), 1) if total_files > 0 else 0
+
+    # 4. Collection Breakdown (Owned Apps)
+    # Filter only owned ones for the counts
+    owned_apps_query = apps_query.filter(Apps.owned == True)
+    
+    total_owned_bases = owned_apps_query.filter(Apps.app_type == APP_TYPE_BASE).count()
+    total_owned_updates = owned_apps_query.filter(Apps.app_type == APP_TYPE_UPD).count()
+    total_owned_dlcs = owned_apps_query.filter(Apps.app_type == APP_TYPE_DLC).count()
+    total_owned_distinct_titles = owned_apps_query.with_entities(Apps.title_id).distinct().count()
+
+    # 5. Up-to-date Logic (Requires Title level check)
+    # This is more complex to filter strictly by library if a title bridges libraries,
+    # but we'll use the TitleDB coverage logic globally for now.
+    all_titles_count = Titles.query.count() # Total in database
+    titles_db_count = titles.get_titles_count()
+    
+    # Status breakdown (Global titles)
+    # Note: We still use the library cache for genre and status for now if no filter
+    # If filtered, we'll need to recalculate from DB or use a simplified logic
     lib_data = library.load_library_from_disk()
     if not lib_data:
         games = library.generate_library()
     else:
-        # load_library_from_disk returns a dict with 'library' key
         games = lib_data.get('library', []) if isinstance(lib_data, dict) else lib_data
+
+    # Filter games list if library_id provided (Heuristic)
+    filtered_games = games
+    if library_id:
+        # A bit expensive, but accurate to the library
+        lib_path = Libraries.query.get(library_id).path
+        filtered_games = [g for g in games if any(lib_path in f for f in g.get('files', []))]
+
+    # Recalculate based on filtered list
+    total_owned = len([g for g in filtered_games if g.get('has_base')])
+    up_to_date = len([g for g in filtered_games if g.get('status_color') == 'green' and g.get('has_base')])
     
-    # 2. Basic Library Stats
-    total_size = sum(g.get('size', 0) for g in games)
-    total_games = len(games)
-    
-    # Owned breakdown
-    owned_games = [g for g in games if g.get('has_base')]
-    total_owned = len(owned_games)
-    
-    # Status breakdown
-    up_to_date = len([g for g in owned_games if g.get('status_color') == 'green'])
-    pending = total_owned - up_to_date
-    
-    # Genre Distribution
+    # Genre Distribution (from filtered list)
     genre_dist = {}
-    for g in games:
+    for g in filtered_games:
         cats = g.get('category', [])
         if not cats: cats = ['Unknown']
         for c in cats:
             genre_dist[c] = genre_dist.get(c, 0) + 1
             
-    # Top 10 Genres
-    sorted_genres = sorted(genre_dist.items(), key=lambda x: x[1], reverse=True)[:10]
-    
-    # 3. TitleDB Comparison (4.3.2)
-    titles_db_count = titles.get_titles_count()
     coverage_pct = round((total_owned / titles_db_count * 100), 2) if titles_db_count > 0 else 0
-    
-    # 4. Identification Stats
-    total_files = db.session.query(func.count(Files.id)).scalar() or 0
-    unidentified_files = db.session.query(func.count(Files.id)).filter(Files.identified == False).scalar() or 0
-    identified_files = total_files - unidentified_files
-    id_rate = round((identified_files / total_files * 100), 1) if total_files > 0 else 0
-
-    # 5. Recent Additions
-    # Sort files by ID descending (usually newer) or use creation time if available
-    # For now, just take last 5 games from list as simple "recent"
-    recent_games = games[:8] # Assuming library is sorted by date or name
+    keys_valid = app_settings.get('titles', {}).get('valid_keys', False)
 
     return jsonify({
+        'libraries': libraries_list,
         'library': {
-            'total_games': total_games,
+            'total_titles': len(filtered_games),
             'total_owned': total_owned,
+            'total_bases': total_owned_bases,
+            'total_updates': total_owned_updates,
+            'total_dlcs': total_owned_dlcs,
             'total_size': total_size,
             'total_size_formatted': format_size_py(total_size),
             'up_to_date': up_to_date,
-            'pending': pending,
+            'pending': total_owned - up_to_date,
             'completion_rate': round((up_to_date / total_owned * 100), 1) if total_owned > 0 else 0
         },
         'titledb': {
@@ -1262,10 +1294,11 @@ def get_stats_overview():
         'identification': {
             'total_files': total_files,
             'identified_pct': id_rate,
-            'unidentified_count': unidentified_files
+            'unidentified_count': unidentified_files,
+            'keys_valid': keys_valid
         },
-        'genres': dict(sorted_genres),
-        'recent': recent_games
+        'genres': genre_dist,
+        'recent': filtered_games[:8]
     })
 
 # --- New Feature APIs (Tags, Wishlist, Activity) ---
