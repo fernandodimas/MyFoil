@@ -295,6 +295,9 @@ def load_titledb(force=False):
         for f in possible_files:
             if f not in load_order:
                 load_order.append(f)
+        
+        # Always load custom.json last to allow manual overrides
+        load_order.append("custom.json")
 
         for filename in load_order:
             filepath = os.path.join(TITLEDB_DIR, filename)
