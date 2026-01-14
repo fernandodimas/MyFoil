@@ -1,3 +1,5 @@
+import eventlet
+eventlet.monkey_patch()
 from flask import Flask, render_template, request, redirect, url_for, jsonify, send_from_directory, Response
 from flask_login import LoginManager
 from flask_socketio import SocketIO, emit
@@ -152,12 +154,21 @@ def init_internal(app):
     
     # Schedule periodic tasks (run every 24h)
     # Check if we need to run an initial scan (e.g. if any library has no last_scan)
+    # OR if TitleDB critical files are missing
     run_now = False
     with app.app_context():
         libs = get_libraries()
-        if not libs or any(l.last_scan is None for l in libs):
+        
+        # Check for missing TitleDB files
+        critical_files = ['cnmts.json', 'versions.json']
+        titledb_missing = any(not os.path.exists(os.path.join(TITLEDB_DIR, f)) for f in critical_files)
+        
+        if not libs or any(l.last_scan is None for l in libs) or titledb_missing:
             run_now = True
-            logger.info("Initial scan required: New or un-scanned libraries detected.")
+            if titledb_missing:
+                logger.info("Initial scan required: TitleDB critical files are missing.")
+            else:
+                logger.info("Initial scan required: New or un-scanned libraries detected.")
     
     app.scheduler.add_job(
         job_id='update_db_and_scan',
