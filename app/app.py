@@ -40,6 +40,7 @@ from backup import BackupManager
 import hmac
 import hashlib
 import requests
+from plugin_system import get_plugin_manager
 
 # Optional Celery for async tasks
 try:
@@ -212,6 +213,7 @@ scan_lock = threading.Lock()
 # Global flag for titledb update status
 is_titledb_update_running = False
 titledb_update_lock = threading.Lock()
+plugin_manager = None
 
 # Configure logging
 formatter = ColoredFormatter(
@@ -388,6 +390,11 @@ def create_app():
         init_db(app)
         init_users(app)
         init_internal(app)
+        
+        # Initialize Plugins
+        global plugin_manager
+        plugin_manager = get_plugin_manager(PLUGINS_DIR, app)
+        plugin_manager.load_plugins()
         
     if CELERY_ENABLED:
         logger.info("Celery tasks loaded and enabled.")
@@ -1073,6 +1080,10 @@ def post_library_change():
         # Notify clients about the change
         socketio.emit('library_updated', {'timestamp': datetime.datetime.now().isoformat()}, namespace='/')
         trigger_webhook('library_updated', {'timestamp': datetime.datetime.now().isoformat()})
+        
+        # Plugin Hook
+        if plugin_manager:
+            plugin_manager.trigger_event('library_updated', {'timestamp': datetime.datetime.now().isoformat()})
 
 @main_bp.post('/api/library/scan')
 @access_required('admin')
@@ -1557,6 +1568,21 @@ def activity_api():
             'title_id': l.title_id,
             'user': l.user_id, # Simplified
             'details': json.loads(l.details) if l.details else {}
+        })
+    return jsonify(results)
+
+@main_bp.route('/api/plugins', methods=['GET'])
+@access_required('admin')
+def plugins_api():
+    if not plugin_manager:
+        return jsonify([])
+    
+    results = []
+    for p in plugin_manager.plugins:
+        results.append({
+            'name': p.name,
+            'version': p.version,
+            'description': p.description
         })
     return jsonify(results)
 

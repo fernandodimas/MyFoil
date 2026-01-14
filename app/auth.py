@@ -33,6 +33,12 @@ def access_required(access: str):
 
             if not current_user.is_authenticated:
                 # return unauthorized_json()
+                # Check for public profile setting
+                if access == 'shop':
+                    from settings import load_settings
+                    settings = load_settings()
+                    if settings.get('shop/public_profile', False):
+                        return f(*args, **kwargs)
                 return login_manager.unauthorized()
 
             if not current_user.has_access(access):

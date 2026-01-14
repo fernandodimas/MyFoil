@@ -1229,9 +1229,9 @@ Gamificação da gestão de biblioteca.
 
 - [ ] Integração com Google Drive
 - [ ] Integração com Dropbox
-- [ ] Sistema de plugins (beta)
+- [x] Sistema de plugins (beta)
 - [x] Comparação com TitleDB
-- [ ] Perfis públicos
+- [x] Perfis públicos
 
 **Entregáveis:**
 - Sincronização com cloud storage

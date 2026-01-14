@@ -11,6 +11,7 @@ LIBRARY_CACHE_FILE = os.path.join(CACHE_DIR, 'library.json')
 ALEMBIC_DIR = os.path.join(APP_DIR, 'migrations')
 ALEMBIC_CONF = os.path.join(ALEMBIC_DIR, 'alembic.ini')
 TITLEDB_DIR = os.path.join(DATA_DIR, 'titledb')
+PLUGINS_DIR = os.path.join(APP_DIR, 'plugins')
 
 # Legacy constants kept for reference
 # TITLEDB_URL = 'https://github.com/blawar/titledb.git'
@@ -40,6 +41,7 @@ DEFAULT_SETTINGS = {
     "shop": {
         "motd": "Welcome to your own shop!",
         "public": False,
+        "public_profile": False,
         "encrypt": True,
         "clientCertPub": "-----BEGIN PUBLIC KEY-----",
         "clientCertKey": "-----BEGIN PRIVATE KEY-----",

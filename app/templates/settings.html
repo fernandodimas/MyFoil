@@ -26,6 +26,8 @@
                         <li><a data-target="Tags"><i class="bi bi-tags-fill mr-2"></i> Tags</a></li>
                         <li><a data-target="Activity"><i class="bi bi-clock-history mr-2"></i> Atividade</a></li>
                         <li><a data-target="Webhooks"><i class="bi bi-webhook mr-2"></i> Webhooks</a></li>
+                        <li><a data-target="Cloud"><i class="bi bi-cloud-fill mr-2"></i> Cloud Storage</a></li>
+                        <li><a data-target="Plugins"><i class="bi bi-patch-check mr-2"></i> Plugins</a></li>
                     </ul>
                 </aside>
             </div>
@@ -439,6 +441,11 @@
                                             }}
                                         </label>
                                     </div>
+                                    <div class="control">
+                                        <label class="checkbox has-text-weight-bold">
+                                            <input type="checkbox" id="publicProfileCheck"> Perfil Público (Web)
+                                        </label>
+                                    </div>
                                 </div>
 
                                 <div class="field mb-6">
@@ -613,6 +620,64 @@
                                     </div>
                                     <button class="button is-primary is-small" onclick="addWebhook()">Adicionar
                                         Webhook</button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Plugins Section -->
+                    <section id="section-Plugins" class="settings-section is-hidden">
+                        <div class="card box shadow-sm">
+                            <header class="card-header border-none shadow-none">
+                                <p class="card-header-title has-text-primary">
+                                    <i class="bi bi-patch-check mr-2"></i> Plugins Instalados
+                                </p>
+                            </header>
+                            <div class="card-content pt-0">
+                                <p class="is-size-7 opacity-60 mb-5">
+                                    Plugins permitem estender a funcionalidade do MyFoil com recursos personalizados.
+                                </p>
+                                <div id="pluginsList">
+                                    <!-- Plugins injected by JS -->
+                                </div>
+                                <div class="notification is-info is-light is-size-7 mt-5">
+                                    <i class="bi bi-info-circle mr-2"></i> Para instalar novos plugins, adicione-os na
+                                    pasta <code>app/plugins/</code>.
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Cloud Section -->
+                    <section id="section-Cloud" class="settings-section is-hidden">
+                        <div class="card box shadow-sm">
+                            <header class="card-header border-none shadow-none">
+                                <p class="card-header-title has-text-primary">
+                                    <i class="bi bi-cloud-fill mr-2"></i> Integração Cloud
+                                </p>
+                            </header>
+                            <div class="card-content pt-0">
+                                <div class="columns">
+                                    <div class="column is-6">
+                                        <div class="box border is-shadowless">
+                                            <p class="has-text-weight-bold mb-3"><i class="bi bi-google mr-2"></i>
+                                                Google Drive</p>
+                                            <p class="is-size-7 opacity-60 mb-4">Sincronize sua biblioteca diretamente
+                                                com uma pasta do Google Drive.</p>
+                                            <button class="button is-small is-primary is-light is-fullwidth"
+                                                disabled>Conectar (Em breve)</button>
+                                        </div>
+                                    </div>
+                                    <div class="column is-6">
+                                        <div class="box border is-shadowless">
+                                            <p class="has-text-weight-bold mb-3"><i class="bi bi-dropbox mr-2"></i>
+                                                Dropbox</p>
+                                            <p class="is-size-7 opacity-60 mb-4">Mantenha seu acervo seguro e acessível
+                                                via Dropbox.</p>
+                                            <button class="button is-small is-primary is-light is-fullwidth"
+                                                disabled>Conectar (Em breve)</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1305,6 +1370,7 @@
         const data = {
             host: getInputVal('shopHostInput'),
             public: getCheckboxStatus('publicShopCheck'),
+            public_profile: getCheckboxStatus('publicProfileCheck'),
             encrypt: getCheckboxStatus('encryptShopCheck'),
             motd: getInputVal('motdTextArea')
         };
@@ -1320,6 +1386,31 @@
     function changeLanguage(lang) {
         document.cookie = "language=" + lang + ";path=/;max-age=31536000";
         window.location.reload();
+    }
+
+    function fillPluginsList() {
+        $.getJSON('/api/plugins', (plugins) => {
+            const container = $('#pluginsList').empty();
+            if (plugins.length === 0) {
+                container.append('<p class="is-size-7 opacity-50 has-text-centered py-4">Nenhum plugin carregado.</p>');
+                return;
+            }
+            plugins.forEach(p => {
+                container.append(`
+                    <div class="box is-shadowless border p-4 mb-3">
+                        <div class="columns is-vcentered">
+                            <div class="column">
+                                <p class="is-size-6 has-text-weight-bold has-text-primary mb-1">${p.name} <span class="tag is-light is-rounded ml-2">v${p.version}</span></p>
+                                <p class="is-size-7 opacity-70">${p.description}</p>
+                            </div>
+                            <div class="column is-narrow">
+                                <span class="tag is-success is-light">Ativo</span>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            });
+        });
     }
 
     function fillWebhooksList() {
@@ -1397,6 +1488,7 @@
         fillTitleDBSourcesTable();
         fillErrorsTable();
         fillWebhooksList();
+        fillPluginsList();
 
         try {
             const [regionsData, languagesData, settingsData] = await Promise.all([
@@ -1421,6 +1513,7 @@
             // Shop
             $('#shopHostInput').val(settingsData['shop/host']);
             $('#publicShopCheck').prop('checked', settingsData['shop/public']);
+            $('#publicProfileCheck').prop('checked', settingsData['shop/public_profile']);
             $('#encryptShopCheck').prop('checked', settingsData['shop/encrypt']);
             $('#motdTextArea').val(settingsData['shop/motd']);
 
