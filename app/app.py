@@ -25,7 +25,7 @@ from library import *
 import titledb
 import os
 from i18n import I18n
-from sqlalchemy import event
+from sqlalchemy import event, func
 from sqlalchemy.engine import Engine
 from rest_api import init_rest_api
 import structlog
@@ -479,6 +479,11 @@ def index():
 @main_bp.route('/api/docs')
 def api_docs_redirect():
     return redirect('/api/docs/')
+
+@main_bp.route('/stats')
+@access_required('shop')
+def stats_page():
+    return render_template('stats.html', title='Statistics')
 
 @main_bp.route('/settings')
 @access_required('admin')
@@ -1188,6 +1193,83 @@ def restore_backup_api():
         })
     else:
         return jsonify({'success': False, 'error': 'Restore failed'}), 500
+
+# --- Stats Dashboard APIs (4.3.x) ---
+
+@main_bp.route('/api/stats/overview')
+@access_required('shop')
+def get_stats_overview():
+    """Estatísticas gerais da biblioteca e comparação com TitleDB"""
+    import titles
+    import library
+    
+    # 1. Load data from disk (cached library)
+    lib_data = library.load_library_from_disk()
+    if not lib_data:
+        lib_data = library.generate_library()
+        
+    games = lib_data.get('games', [])
+    
+    # 2. Basic Library Stats
+    total_size = sum(g.get('size', 0) for g in games)
+    total_games = len(games)
+    
+    # Owned breakdown
+    owned_games = [g for g in games if g.get('has_base')]
+    total_owned = len(owned_games)
+    
+    # Status breakdown
+    up_to_date = len([g for g in owned_games if g.get('status_color') == 'green'])
+    pending = total_owned - up_to_date
+    
+    # Genre Distribution
+    genre_dist = {}
+    for g in games:
+        cats = g.get('category', [])
+        if not cats: cats = ['Unknown']
+        for c in cats:
+            genre_dist[c] = genre_dist.get(c, 0) + 1
+            
+    # Top 10 Genres
+    sorted_genres = sorted(genre_dist.items(), key=lambda x: x[1], reverse=True)[:10]
+    
+    # 3. TitleDB Comparison (4.3.2)
+    titles_db_count = titles.get_titles_count()
+    coverage_pct = round((total_owned / titles_db_count * 100), 2) if titles_db_count > 0 else 0
+    
+    # 4. Identification Stats
+    total_files = db.session.query(func.count(Files.id)).scalar() or 0
+    unidentified_files = db.session.query(func.count(Files.id)).filter(Files.title_id == None).scalar() or 0
+    identified_files = total_files - unidentified_files
+    id_rate = round((identified_files / total_files * 100), 1) if total_files > 0 else 0
+
+    # 5. Recent Additions
+    # Sort files by ID descending (usually newer) or use creation time if available
+    # For now, just take last 5 games from list as simple "recent"
+    recent_games = games[:8] # Assuming library is sorted by date or name
+
+    return jsonify({
+        'library': {
+            'total_games': total_games,
+            'total_owned': total_owned,
+            'total_size': total_size,
+            'total_size_formatted': library.format_bytes(total_size),
+            'up_to_date': up_to_date,
+            'pending': pending,
+            'completion_rate': round((up_to_date / total_owned * 100), 1) if total_owned > 0 else 0
+        },
+        'titledb': {
+            'total_available': titles_db_count,
+            'coverage_pct': coverage_pct
+        },
+        'identification': {
+            'total_files': total_files,
+            'identified_pct': id_rate,
+            'unidentified_count': unidentified_files
+        },
+        'genres': dict(sorted_genres),
+        'recent': recent_games
+    })
 
 # --- New Feature APIs (Tags, Wishlist, Activity) ---
 

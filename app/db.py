@@ -202,6 +202,8 @@ def init_db(app):
                 command.stamp(get_alembic_cfg(), "head")
                 logger.info("Database created and stamped to the latest migration version.")
             else:
+                # Ensure new tables are created even if DB exists
+                db.create_all()
                 logger.info('Checking database migration...')
                 if is_migration_needed():
                     create_db_backup()

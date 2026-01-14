@@ -5,111 +5,245 @@
 
 <section class="section">
     <div class="container is-fluid px-5">
-        <div class="is-flex is-align-items-center mb-6">
-            <h1 class="title is-3 mb-0 mr-4">Estatísticas da Biblioteca</h1>
-            <span class="tag is-primary is-medium has-text-weight-bold">{{ total_files }} arquivos no total</span>
-        </div>
-
         <div class="columns is-multiline">
-            <!-- Row 1: General Counts -->
-            <div class="column is-4">
-                <div class="card shadow-sm border-none h-100">
-                    <div class="card-content">
-                        <p class="heading has-text-success has-text-weight-bold mb-4">Acervo Local (Owned)</p>
-                        <div class="is-flex is-justify-content-between is-align-items-center mb-4">
-                            <div>
-                                <p class="title is-2 mb-0">{{ total_games + total_updates + total_dlcs }}</p>
-                                <p class="is-size-7 opacity-60">Total de itens identificados</p>
-                            </div>
-                            <span class="icon is-large has-text-success opacity-20"><i class="bi bi-check-circle-fill is-size-1"></i></span>
+            <!-- Header Stats -->
+            <div class="column is-12">
+                <div class="level">
+                    <div class="level-left">
+                        <div>
+                            <h1 class="title is-2 mb-2" style="font-weight: 800; letter-spacing: -1px;">📊 Dashboard de
+                                Estatísticas</h1>
+                            <p class="subtitle is-6 opacity-60">Visão geral da sua coleção e comparação com o catálogo
+                                global.</p>
                         </div>
-                        <hr class="my-4">
-                        <div class="columns is-mobile has-text-centered">
-                            <div class="column">
-                                <p class="has-text-weight-bold">{{ total_games }}</p>
-                                <p class="is-size-7 opacity-50">Jogos</p>
-                            </div>
-                            <div class="column">
-                                <p class="has-text-weight-bold">{{ total_updates }}</p>
-                                <p class="is-size-7 opacity-50">Updates</p>
-                            </div>
-                            <div class="column">
-                                <p class="has-text-weight-bold">{{ total_dlcs }}</p>
-                                <p class="is-size-7 opacity-50">DLCs</p>
-                            </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Cards -->
+            <div class="column is-3">
+                <div class="card box shadow-sm border-none p-5 h-100">
+                    <p class="heading is-size-7 opacity-50 mb-2">Total na Biblioteca</p>
+                    <div class="is-flex is-align-items-center">
+                        <span class="icon is-large has-text-primary mr-3">
+                            <i class="bi bi-collection-play is-size-3"></i>
+                        </span>
+                        <div>
+                            <p class="title is-3 m-0" id="stat-total-games">--</p>
+                            <p class="is-size-7">Jogos Identificados</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column is-3">
+                <div class="card box shadow-sm border-none p-5 h-100">
+                    <p class="heading is-size-7 opacity-50 mb-2">Espaço em Disco</p>
+                    <div class="is-flex is-align-items-center">
+                        <span class="icon is-large has-text-info mr-3">
+                            <i class="bi bi-hdd-network is-size-3"></i>
+                        </span>
+                        <div>
+                            <p class="title is-4 m-0" id="stat-total-size">--</p>
+                            <p class="is-size-7">Tamanho Total</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column is-3">
+                <div class="card box shadow-sm border-none p-5 h-100">
+                    <p class="heading is-size-7 opacity-50 mb-2">Status da Coleção</p>
+                    <div class="is-flex is-align-items-center">
+                        <span class="icon is-large has-text-success mr-3">
+                            <i class="bi bi-check-circle-fill is-size-3"></i>
+                        </span>
+                        <div>
+                            <p class="title is-4 m-0" id="stat-up-to-date-pct">-- %</p>
+                            <p class="is-size-7" id="stat-up-to-date-count">-- atualizados</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="column is-3">
+                <div class="card box shadow-sm border-none p-5 h-100">
+                    <p class="heading is-size-7 opacity-50 mb-2">Cobertura TitleDB</p>
+                    <div class="is-flex is-align-items-center">
+                        <span class="icon is-large has-text-warning mr-3">
+                            <i class="bi bi-globe2 is-size-3"></i>
+                        </span>
+                        <div>
+                            <p class="title is-4 m-0" id="stat-coverage-pct">-- %</p>
+                            <p class="is-size-7">Do catálogo mundial</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="column is-8">
+                <div class="card box shadow-sm h-100">
+                    <header class="card-header border-none shadow-none">
+                        <p class="card-header-title">
+                            <i class="bi bi-pie-chart-fill mr-2 has-text-primary"></i> Distribuição por Gênero
+                        </p>
+                    </header>
+                    <div class="card-content">
+                        <div style="max-height: 400px; position: relative;">
+                            <canvas id="genreChart"></canvas>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="column is-4">
-                <div class="card shadow-sm border-none h-100">
+                <div class="card box shadow-sm h-100">
+                    <header class="card-header border-none shadow-none">
+                        <p class="card-header-title">
+                            <i class="bi bi-fingerprint mr-2 has-text-info"></i> Saúde dos Arquivos
+                        </p>
+                    </header>
                     <div class="card-content">
-                        <p class="heading has-text-warning has-text-weight-bold mb-4">Resumo de Pendências</p>
-                        <div class="is-flex is-justify-content-between is-align-items-center mb-4">
-                            <div>
-                                <p class="title is-2 mb-0">{{ games_missing_updates + games_missing_dlcs }}</p>
-                                <p class="is-size-7 opacity-60">Jogos precisando de atenção</p>
-                            </div>
-                            <span class="icon is-large has-text-warning opacity-20"><i class="bi bi-clock-history is-size-1"></i></span>
+                        <div class="has-text-centered mb-5">
+                            <p class="is-size-1 has-text-weight-bold" id="stat-id-rate">--%</p>
+                            <p class="is-size-7 opacity-60">Arquivos Identificados com Sucesso</p>
                         </div>
-                        <hr class="my-4">
-                        <div class="columns is-mobile has-text-centered">
-                            <div class="column">
-                                <p class="has-text-weight-bold">{{ games_missing_updates }}</p>
-                                <p class="is-size-7 opacity-50">Pend. Update</p>
+                        <div class="notification is-light py-3 px-4 mb-0">
+                            <div class="level is-mobile mb-2">
+                                <div class="level-left"><span class="is-size-7">Total de Arquivos</span></div>
+                                <div class="level-right"><span class="is-size-7 has-text-weight-bold"
+                                        id="stat-total-files">--</span></div>
                             </div>
-                            <div class="column">
-                                <p class="has-text-weight-bold">{{ games_missing_dlcs }}</p>
-                                <p class="is-size-7 opacity-50">Pend. DLCs</p>
+                            <div class="level is-mobile">
+                                <div class="level-left"><span class="is-size-7 has-text-danger">Não Identificados</span>
+                                </div>
+                                <div class="level-right"><span class="is-size-7 has-text-danger has-text-weight-bold"
+                                        id="stat-unidentified-files">--</span></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="column is-4">
-                <div class="card shadow-sm border-none h-100">
-                    <div class="card-content">
-                        <p class="heading has-text-danger has-text-weight-bold mb-4">Conteúdo Desejado (Missing)</p>
-                        <div class="is-flex is-justify-content-between is-align-items-center mb-4">
-                            <div>
-                                <p class="title is-2 mb-0">{{ missing_games + missing_dlcs }}</p>
-                                <p class="is-size-7 opacity-60">Itens em falta no disco</p>
-                            </div>
-                            <span class="icon is-large has-text-danger opacity-20"><i class="bi bi-exclamation-triangle-fill is-size-1"></i></span>
-                        </div>
-                        <hr class="my-4">
-                        <div class="columns is-mobile has-text-centered">
-                            <div class="column">
-                                <p class="has-text-weight-bold">{{ missing_games }}</p>
-                                <p class="is-size-7 opacity-50">Jogos Base</p>
-                            </div>
-                            <div class="column">
-                                <p class="has-text-weight-bold">{{ missing_dlcs }}</p>
-                                <p class="is-size-7 opacity-50">DLCs</p>
-                            </div>
+            <!-- Recent Additions -->
+            <div class="column is-12">
+                <div class="card box shadow-sm">
+                    <header class="card-header border-none shadow-none">
+                        <p class="card-header-title">
+                            <i class="bi bi-clock-history mr-2 has-text-primary"></i> Adicionados Recentemente
+                        </p>
+                    </header>
+                    <div class="card-content pt-0">
+                        <div id="recentGamesList" class="columns is-multiline">
+                            <!-- Injected by JS -->
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="mt-6">
-            <a href="/" class="button is-light">
-                <span class="icon"><i class="bi bi-arrow-left"></i></span>
-                <span>Voltar para Biblioteca</span>
-            </a>
         </div>
     </div>
 </section>
 
-<style>
-    .h-100 { height: 100%; }
-    .border-none { border: none !important; }
-    .opacity-20 { opacity: 0.2; }
-    .opacity-50 { opacity: 0.5; }
-    .opacity-60 { opacity: 0.6; }
-</style>
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<script>
+    $(document).ready(() => {
+        loadStats();
+    });
+
+    function loadStats() {
+        $.getJSON('/api/stats/overview', (data) => {
+            // Fill quick cards
+            $('#stat-total-games').text(data.library.total_owned);
+            $('#stat-total-size').text(data.library.total_size_formatted);
+            $('#stat-up-to-date-pct').text(data.library.completion_rate + '%');
+            $('#stat-up-to-date-count').text(data.library.up_to_date + ' atualizados');
+            $('#stat-coverage-pct').text(data.titledb.coverage_pct + '%');
+
+            // Identification Stats
+            $('#stat-id-rate').text(data.identification.identified_pct + '%');
+            $('#stat-total-files').text(data.identification.total_files);
+            $('#stat-unidentified-files').text(data.identification.unidentified_count);
+
+            // Render Genre Chart
+            renderGenreChart(data.genres);
+
+            // Render Recent Games
+            renderRecentGames(data.recent);
+        });
+    }
+
+    function renderGenreChart(genreData) {
+        const ctx = document.getElementById('genreChart').getContext('2d');
+        const labels = Object.keys(genreData);
+        const values = Object.values(genreData);
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Jogos por Gênero',
+                    data: values,
+                    backgroundColor: 'rgba(124, 58, 237, 0.7)',
+                    borderColor: '#7c3aed',
+                    borderWidth: 1,
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function renderRecentGames(games) {
+        const container = $('#recentGamesList').empty();
+        if (!games.length) {
+            container.append('<div class="column is-12 has-text-centered py-6 opacity-40">Nenhum jogo encontrado.</div>');
+            return;
+        }
+
+        games.forEach(game => {
+            container.append(`
+                <div class="column is-3-tablet is-2-desktop">
+                    <div class="card box p-0 shadow-sm border-none overflow-hidden h-100" style="transition: transform 0.2s;">
+                        <figure class="image is-square">
+                            <img src="${game.iconUrl || '/static/img/no-icon.png'}" style="object-fit: cover;">
+                        </figure>
+                        <div class="p-3">
+                            <p class="is-size-7 has-text-weight-bold line-clamp-2" title="${game.name}">${game.name}</p>
+                            <p class="is-size-7 opacity-50">${game.id}</p>
+                        </div>
+                    </div>
+                </div>
+            `);
+        });
+    }
+</script>
+
+<style>
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .hover-scale:hover {
+        transform: scale(1.02);
+    }
+</style>
 {% endblock %}
