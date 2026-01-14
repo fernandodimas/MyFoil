@@ -134,8 +134,8 @@ class TitleDBSourceManager:
             source_type='json'
         ),
         TitleDBSource(
-            name="bottle/titledb (GitHub)",
-            base_url="https://raw.githubusercontent.com/Big-On-The-Bottle/titledb/main",
+            name="julesontheroad/titledb (GitHub)",
+            base_url="https://raw.githubusercontent.com/julesontheroad/titledb/master",
             priority=4,
             source_type='json'
         )
