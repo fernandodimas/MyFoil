@@ -60,15 +60,25 @@ class TitleDBSource:
                     repo = parts[4]
                     branch = parts[5]
                     # Use GitHub API to get commit info for the file
-                    # Endpoint: https://api.github.com/repos/<user>/<repo>/commits?path=<path>&sha=<branch>&per_page=1
                     api_url = f"https://api.github.com/repos/{user}/{repo}/commits?path={filename}&sha={branch}&per_page=1"
-                    resp = requests.get(api_url, timeout=5)
+                    
+                    # GitHub API requires a User-Agent
+                    headers = {
+                        'User-Agent': 'MyFoil-App',
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                    
+                    resp = requests.get(api_url, headers=headers, timeout=5)
                     if resp.status_code == 200:
                         data = resp.json()
                         if data and isinstance(data, list) and len(data) > 0:
                             commit_date = data[0]['commit']['committer']['date']
-                            # Remove 'Z' if present for ISO parsing compatibility (Python < 3.11 needs handling)
+                            # Remove 'Z' if present for ISO parsing compatibility
                             return datetime.fromisoformat(commit_date.replace("Z", "+00:00"))
+                        elif isinstance(data, dict) and data.get('message'):
+                            logger.error(f"GitHub API Error for {self.name}: {data['message']}")
+                    else:
+                        logger.error(f"GitHub API returned {resp.status_code} for {self.name}: {resp.text}")
             
             # Fallback to standard HEAD request
             response = requests.head(url, timeout=5)

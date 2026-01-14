@@ -25,6 +25,7 @@
                                 Erros/Identificação</a></li>
                         <li><a data-target="Tags"><i class="bi bi-tags-fill mr-2"></i> Tags</a></li>
                         <li><a data-target="Activity"><i class="bi bi-clock-history mr-2"></i> Atividade</a></li>
+                        <li><a data-target="Webhooks"><i class="bi bi-webhook mr-2"></i> Webhooks</a></li>
                     </ul>
                 </aside>
             </div>
@@ -558,6 +559,60 @@
                             <div class="card-content pt-0">
                                 <div id="activityLogsList" class="activity-timeline">
                                     <!-- Log items injected via JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Webhooks Section -->
+                    <section id="section-Webhooks" class="settings-section is-hidden">
+                        <div class="card box shadow-sm">
+                            <header class="card-header border-none shadow-none">
+                                <p class="card-header-title has-text-primary">
+                                    <i class="bi bi-webhook mr-2"></i> Webhooks de Integração
+                                </p>
+                            </header>
+                            <div class="card-content pt-0">
+                                <p class="is-size-7 opacity-60 mb-5">
+                                    Notifique serviços externos (Discord, Slack, Home Assistant) sobre eventos na sua
+                                    biblioteca.
+                                </p>
+
+                                <div id="webhooksList" class="mb-5">
+                                    <!-- Webhooks will be listed here -->
+                                </div>
+
+                                <div class="notification is-light p-5 border">
+                                    <p class="heading has-text-weight-bold mb-4">Adicionar Novo Webhook</p>
+                                    <div class="columns is-multiline">
+                                        <div class="column is-12">
+                                            <div class="field">
+                                                <label class="label is-size-7">URL do Endpoint</label>
+                                                <input class="input is-small" type="url" id="webhookUrl"
+                                                    placeholder="https://discord.com/api/webhooks/...">
+                                            </div>
+                                        </div>
+                                        <div class="column is-6">
+                                            <div class="field">
+                                                <label class="label is-size-7">Segredo (Opcional)</label>
+                                                <input class="input is-small" type="text" id="webhookSecret"
+                                                    placeholder="Para assinatura HMAC-SHA256">
+                                            </div>
+                                        </div>
+                                        <div class="column is-6">
+                                            <div class="field">
+                                                <label class="label is-size-7">Eventos</label>
+                                                <div class="control">
+                                                    <label class="checkbox is-size-7">
+                                                        <input type="checkbox" id="eventLibraryUpdated" checked>
+                                                        Alteração na Biblioteca
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button class="button is-primary is-small" onclick="addWebhook()">Adicionar
+                                        Webhook</button>
                                 </div>
                             </div>
                         </div>
@@ -1267,6 +1322,70 @@
         window.location.reload();
     }
 
+    function fillWebhooksList() {
+        $.getJSON('/api/settings/webhooks', (webhooks) => {
+            const container = $('#webhooksList').empty();
+            if (webhooks.length === 0) {
+                container.append('<p class="is-size-7 opacity-50 has-text-centered py-4">Nenhum webhook configurado.</p>');
+                return;
+            }
+            webhooks.forEach(w => {
+                container.append(`
+                    <div class="box is-shadowless border p-3 mb-2 bg-light-soft">
+                        <div class="columns is-vcentered is-mobile">
+                            <div class="column">
+                                <p class="is-size-7 has-text-weight-bold truncate">${w.url}</p>
+                                <p class="is-size-7 opacity-50">Eventos: ${w.events.join(', ')}</p>
+                            </div>
+                            <div class="column is-narrow">
+                                <button class="button is-danger is-small is-light" onclick="deleteWebhook(${w.id})">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            });
+        });
+    }
+
+    function addWebhook() {
+        const url = $('#webhookUrl').val();
+        const secret = $('#webhookSecret').val();
+        const events = [];
+        if ($('#eventLibraryUpdated').is(':checked')) events.push('library_updated');
+
+        if (!url) {
+            showToast('URL é obrigatória', 'error');
+            return;
+        }
+
+        $.ajax({
+            url: "/api/settings/webhooks",
+            type: 'POST',
+            data: JSON.stringify({ url, secret, events }),
+            contentType: "application/json",
+            success: () => {
+                showToast('Webhook adicionado!', 'success');
+                $('#webhookUrl').val('');
+                $('#webhookSecret').val('');
+                fillWebhooksList();
+            }
+        });
+    }
+
+    function deleteWebhook(id) {
+        if (!confirm('Deseja realmente excluir este webhook?')) return;
+        $.ajax({
+            url: `/api/settings/webhooks/${id}`,
+            type: 'DELETE',
+            success: () => {
+                showToast('Webhook removido');
+                fillWebhooksList();
+            }
+        });
+    }
+
     // Initialization
     $(document).ready(async () => {
         // Load UI state
@@ -1277,6 +1396,7 @@
         fillLibraryTable();
         fillTitleDBSourcesTable();
         fillErrorsTable();
+        fillWebhooksList();
 
         try {
             const [regionsData, languagesData, settingsData] = await Promise.all([

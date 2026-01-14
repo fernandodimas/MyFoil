@@ -37,6 +37,9 @@ from rest_api import init_rest_api
 import structlog
 from metrics import init_metrics, ACTIVE_SCANS, IDENTIFICATION_DURATION
 from backup import BackupManager
+import hmac
+import hashlib
+import requests
 
 # Optional Celery for async tasks
 try:
@@ -251,6 +254,41 @@ logging.getLogger('werkzeug').addFilter(FilterRemoveDateFromWerkzeugLogs())
 
 # Suppress specific Alembic INFO logs
 logging.getLogger('alembic.runtime.migration').setLevel(logging.WARNING)
+
+def trigger_webhook(event_type, data):
+    """Trigger configured webhooks for events"""
+    with app.app_context():
+        try:
+            webhooks = Webhook.query.filter_by(active=True).all()
+            for webhook in webhooks:
+                # Check if this webhook is interested in this event
+                import json
+                events = json.loads(webhook.events) if webhook.events else []
+                if event_type not in events:
+                    continue
+                
+                payload = {
+                    'event': event_type,
+                    'timestamp': datetime.datetime.now().isoformat(),
+                    'data': data
+                }
+                
+                headers = {'Content-Type': 'application/json'}
+                if webhook.secret:
+                    signature = hmac.new(
+                        webhook.secret.encode(),
+                        json.dumps(payload).encode(),
+                        hashlib.sha256
+                    ).hexdigest()
+                    headers['X-MyFoil-Signature'] = signature
+                
+                try:
+                    requests.post(webhook.url, json=payload, headers=headers, timeout=5)
+                    logger.debug(f"Webhook {webhook.url} triggered for {event_type}")
+                except Exception as e:
+                    logger.warning(f"Failed to trigger webhook {webhook.url}: {e}")
+        except Exception as e:
+            logger.error(f"Error in trigger_webhook: {e}")
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -1034,6 +1072,7 @@ def post_library_change():
         
         # Notify clients about the change
         socketio.emit('library_updated', {'timestamp': datetime.datetime.now().isoformat()}, namespace='/')
+        trigger_webhook('library_updated', {'timestamp': datetime.datetime.now().isoformat()})
 
 @main_bp.post('/api/library/scan')
 @access_required('admin')
@@ -1138,6 +1177,88 @@ def library_api():
     if full_cache and 'hash' in full_cache:
         resp.set_etag(full_cache['hash'])
     return resp
+
+@main_bp.route('/api/library/search')
+@access_required('shop')
+def search_library_api():
+    query = request.args.get('q', '').lower()
+    genre = request.args.get('genre')
+    owned_only = request.args.get('owned') == 'true'
+    missing_only = request.args.get('missing') == 'true'
+    up_to_date = request.args.get('up_to_date') == 'true'
+    pending = request.args.get('pending') == 'true'
+    
+    lib_data = generate_library()
+    
+    results = []
+    for game in lib_data:
+        # Text search
+        if query:
+            name = (game.get('name') or '').lower()
+            publisher = (game.get('publisher') or '').lower()
+            tid = (game.get('id') or '').lower()
+            if query not in name and query not in publisher and query not in tid:
+                continue
+        
+        # Genre filter
+        if genre and genre != 'Todos os Gêneros':
+            categories = game.get('category') or []
+            if genre not in categories:
+                continue
+        
+        # Ownership filters
+        is_owned = game.get('have_base', False)
+        if owned_only and not is_owned:
+            continue
+        if missing_only and is_owned:
+            continue
+            
+        # Status filters
+        is_up_to_date = game.get('up_to_date', False)
+        if up_to_date and not is_up_to_date:
+            continue
+        
+        has_pending = not is_up_to_date and is_owned
+        if pending and not has_pending:
+            continue
+            
+        results.append(game)
+    
+    return jsonify({
+        'count': len(results),
+        'results': results[:100] # Limit to 100 for performance
+    })
+
+@main_bp.route('/api/settings/webhooks')
+@access_required('admin')
+def get_webhooks_api():
+    webhooks = Webhook.query.all()
+    return jsonify([w.to_dict() for w in webhooks])
+
+@main_bp.post('/api/settings/webhooks')
+@access_required('admin')
+def add_webhook_api():
+    data = request.json
+    import json
+    webhook = Webhook(
+        url=data['url'],
+        events=json.dumps(data.get('events', ['library_updated'])),
+        secret=data.get('secret'),
+        active=data.get('active', True)
+    )
+    db.session.add(webhook)
+    db.session.commit()
+    return jsonify({'success': True, 'webhook': webhook.to_dict()})
+
+@main_bp.delete('/api/settings/webhooks/<int:id>')
+@access_required('admin')
+def delete_webhook_api(id):
+    webhook = db.session.get(Webhook, id)
+    if webhook:
+        db.session.delete(webhook)
+        db.session.commit()
+        return jsonify({'success': True})
+    return jsonify({'success': False, 'error': 'Webhook not found'}), 404
 
 @main_bp.route('/api/status')
 def process_status_api():

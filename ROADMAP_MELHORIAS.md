@@ -1190,13 +1190,13 @@ Gamificação da gestão de biblioteca.
 
 ---
 
-### Sprint 5 (2 semanas) - Q1 2026
+### Sprint 5 (2 semanas) - Q1 2026 ✅ CONCLUÍDO
 **Foco:** Experiência do Usuário
 
 - [x] WebSockets para atualizações em tempo real
 - [x] Sistema de tags personalizadas
 - [x] Wishlist
-- [ ] Busca avançada
+- [x] Busca avançada
 - [x] PWA (Progressive Web App)
 
 **Entregáveis:**
@@ -1207,14 +1207,14 @@ Gamificação da gestão de biblioteca.
 
 ---
 
-### Sprint 6 (2 semanas) - Q2 2026
+### Sprint 6 (2 semanas) - Q2 2026 ✅ CONCLUÍDO
 **Foco:** Análise e Automação
 
 - [x] Dashboard de estatísticas
-- [ ] Webhooks
+- [x] Webhooks
 - [x] Histórico de atividades
 - [x] Modo escuro automático
-- [ ] Atalhos de teclado
+- [x] Atalhos de teclado
 
 **Entregáveis:**
 - Dashboard com gráficos

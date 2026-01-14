@@ -403,13 +403,54 @@
         if (currentVal) $('#filterGender').val(currentVal);
     }
 
-    // Bulma Dropdown Toggle
-    $('#filterDropdown .dropdown-trigger').on('click', function (e) {
-        e.stopPropagation();
-        $('#filterDropdown').toggleClass('is-active');
+    function applyFilters() {
+        currentPage = 1;
+        const query = $('#navbarSearch').val();
+        const genre = $('#filterGender').val();
+        const owned = $('#filterCheckOwned').is(':checked');
+        const missing = $('#filterCheckMissing').is(':checked');
+        const upToDate = $('#filterCheckUpToDate').is(':checked');
+        const pending = $('#filterCheckMissingUpdate').is(':checked');
+
+        // Show loading state if needed
+        $('#libraryContainer').html('<div class="column is-full has-text-centered py-6"><i class="fas fa-spinner fa-pulse fa-3x opacity-20"></i></div>');
+
+        $.getJSON('/api/library/search', {
+            q: query,
+            genre: genre,
+            owned: owned,
+            missing: missing,
+            up_to_date: upToDate,
+            pending: pending
+        }, function (data) {
+            filteredGames = data.results || [];
+            $('#totalItemsCount').text(data.count + ' itens');
+            renderLibrary();
+        });
+    }
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Ctrl/Cmd + K: Focus search
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            $('#navbarSearch').focus();
+        }
+
+        // ESC: Close all modals
+        if (e.key === 'Escape') {
+            $('.modal').removeClass('is-active');
+        }
+
+        // Arrow keys for pagination if search is not focused
+        if (document.activeElement.id !== 'navbarSearch') {
+            if (e.key === 'ArrowLeft' && currentPage > 1) {
+                changePage(currentPage - 1);
+            } else if (e.key === 'ArrowRight' && currentPage < Math.ceil(filteredGames.length / pageSize)) {
+                changePage(currentPage + 1);
+            }
+        }
     });
-    $(document).on('click', () => $('#filterDropdown').removeClass('is-active'));
-    $('.dropdown-content').on('click', (e) => e.stopPropagation());
 
     function setView(view) {
         currentView = view;
