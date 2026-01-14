@@ -102,11 +102,9 @@
                     </button>
                 </div>
 
-                <!-- Spacer on Desktop -->
-                <div class="is-flex-grow-1-desktop is-hidden-mobile"></div>
-
-                <!-- Right Group: Secondary Controls -->
-                <div class="is-flex gap-3 is-align-items-center is-justify-content-center-mobile is-flex-grow-1-mobile">
+                <!-- Right Group: Secondary Controls (Pushed to the right on desktop) -->
+                <div class="is-flex gap-3 is-align-items-center is-justify-content-center-mobile is-flex-grow-1-mobile"
+                    style="margin-left: auto;">
                     <div class="is-hidden-mobile">
                         <span class="is-size-7 opacity-50 font-mono" id="totalItemsCount">-- itens</span>
                     </div>
@@ -557,9 +555,9 @@
                                     <span class="is-size-7 opacity-70 font-mono" title="Tamanho em disco">${game.size_formatted || '--'}</span>
                                 </div>
                                 <div class="is-flex gap-1 is-justify-content-end">
-                                    ${!game.has_latest_version && game.has_base ? '<span class="badge-custom badge-update">UPDATE</span>' : ''}
-                                    ${!game.has_all_dlcs && game.has_base ? '<span class="badge-custom badge-update">DLC</span>' : ''}
-                                    ${game.has_redundant_updates ? '<span class="badge-custom badge-redundant" title="Updates redundantes detectados">X-UPD</span>' : ''}
+                                    ${!game.has_latest_version && game.has_base ? '<span class="tag is-warning is-light is-small has-text-weight-bold" style="font-size: 0.6rem; height: 1.1rem; border: 1px solid rgba(255,193,7,0.3)">UPDATE</span>' : ''}
+                                    ${!game.has_all_dlcs && game.has_base ? '<span class="tag is-warning is-light is-small has-text-weight-bold" style="font-size: 0.6rem; height: 1.1rem; border: 1px solid rgba(255,193,7,0.3)">DLC</span>' : ''}
+                                    ${game.has_redundant_updates ? '<span class="tag is-danger is-light is-small has-text-weight-bold" style="font-size: 0.6rem; height: 1.1rem; border: 1px solid rgba(255,56,96,0.3)" title="Updates redundantes detectados">X-UPD</span>' : ''}
                                 </div>
                             </div>
                         </div>
@@ -620,7 +618,7 @@
                     <td class="p-1 has-text-centered"><img src="${game.iconUrl || '/static/img/no-icon.png'}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;"></td>
                     <td class="is-vcentered">
                         <strong class="is-size-7-mobile">${game.name || 'Unknown'}</strong>
-                        ${game.has_redundant_updates ? '<span class="badge-custom badge-redundant ml-2">X-UPD</span>' : ''}
+                        ${game.has_redundant_updates ? '<span class="tag is-danger is-light is-small ml-2 has-text-weight-bold" style="font-size: 0.6rem;">X-UPD</span>' : ''}
                     </td>
                     <td class="font-mono is-size-7 is-vcentered">${game.id || game.title_id || '--'}</td>
                     <td class="is-vcentered has-text-centered"><span class="tag is-light is-small">v${game.display_version || '0'}</span></td>
@@ -688,7 +686,7 @@
                                 ${u.owned && file ? `
                                     <div class="field is-grouped is-grouped-centered is-align-items-center">
                                         <span class="tag is-light font-mono mr-2 is-hidden-mobile">${file.size_formatted || '--'}</span>
-                                        ${isRedundant ? '<span class="badge-custom badge-redundant mr-1">REDUNDANTE</span>' : ''}
+                                        ${isRedundant ? '<span class="tag is-danger is-light is-small mr-1 has-text-weight-bold" style="font-size: 0.6rem;">REDUNDANTE</span>' : ''}
                                         <p class="control">
                                             <a href="/api/get_game/${file.id}" class="button is-primary is-small" title="Download">
                                                 <i class="bi bi-download"></i>
