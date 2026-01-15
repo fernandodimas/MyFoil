@@ -1222,12 +1222,20 @@ def get_unidentified_files_api():
     identified_files = Files.query.filter_by(identified=True).all()
     for f in identified_files:
         if not f.apps:
+            results.append({
+                'id': f.id,
+                'filename': f.filename,
+                'filepath': f.filepath,
+                'size': f.size,
+                'size_formatted': format_size_py(f.size),
+                'error': 'Identificado, mas sem associação com jogo (Erro interno)'
+            })
             continue
             
         # Pega o primeiro app associado (normalmente arquivos NSP/XCI pertencem a 1 app)
         try:
             tid = f.apps[0].title.title_id
-            tinfo = titles.get_title_info(tid)
+            tinfo = titles.get_game_info(tid)
             name = tinfo.get('name', '')
             
             # Se for desconhecido (começa com Unknown ou vazio)

@@ -54,11 +54,13 @@
                     <!-- Alerts -->
                     <div id="globalAlerts" class="mb-5">
                         {% if admin_account_created == false %}
-                        <div class="notification is-danger is-light shadow-sm py-4">
+                        <div class="notification is-ghost border p-4 mb-4"
+                            style="border-left: 5px solid var(--color-danger) !important;">
                             <div class="is-flex is-align-items-center gap-3">
-                                <i class="bi bi-exclamation-triangle-fill is-size-4"></i>
+                                <i class="bi bi-exclamation-triangle-fill is-size-4 has-text-danger"></i>
                                 <div>
-                                    <strong class="is-block uppercase is-size-7 tracking-widest">Conta Admin
+                                    <strong class="is-block uppercase is-size-7 tracking-widest has-text-danger">Conta
+                                        Admin
                                         Ausente!</strong>
                                     <span class="is-size-7">Autenticação desativada. Qualquer um pode acessar e alterar
                                         configurações.</span>
@@ -68,11 +70,13 @@
                         {% endif %}
 
                         {% if valid_keys == false %}
-                        <div id="keysAlert" class="notification is-warning is-light shadow-sm py-4">
+                        <div id="keysAlert" class="notification is-ghost border p-4 mb-4"
+                            style="border-left: 5px solid var(--color-warning) !important;">
                             <div class="is-flex is-align-items-center gap-3">
-                                <i class="bi bi-key-fill is-size-4"></i>
+                                <i class="bi bi-key-fill is-size-4 has-text-warning"></i>
                                 <div>
-                                    <strong class="is-block uppercase is-size-7 tracking-widest">Chaves do console
+                                    <strong class="is-block uppercase is-size-7 tracking-widest has-text-warning">Chaves
+                                        do console
                                         ausentes!</strong>
                                     <span class="is-size-7">
                                         Necessário para decriptar conteúdo Nintendo.
@@ -138,7 +142,8 @@
                                 <div class="block">
                                     <h3 class="title is-6 mb-4"><i class="bi bi-key-fill has-text-primary mr-2"></i>
                                         Chaves do Console</h3>
-                                    <div class="notification is-primary is-light p-5">
+                                    <div class="notification is-ghost border p-5"
+                                        style="border-left: 5px solid var(--color-primary) !important;">
                                         <div class="columns is-vcentered">
                                             <div class="column">
                                                 <div class="file has-name is-fullwidth">
@@ -204,7 +209,8 @@
                                     <h3 class="title is-6 mb-4"><i
                                             class="bi bi-person-plus-fill has-text-primary mr-2"></i> {{ t('Add New
                                         User') }}</h3>
-                                    <div class="notification is-light p-5">
+                                    <div class="notification is-ghost border p-5"
+                                        style="border-left: 5px solid var(--color-primary) !important;">
                                         <div class="columns">
                                             <div class="column">
                                                 <div class="field">
@@ -324,7 +330,8 @@
                                     informações detalhadas sobre cada arquivo.</p>
 
                                 <!-- Filters -->
-                                <div class="box has-background-light-soft p-3 mb-4">
+                                <div class="box is-shadowless border p-3 mb-4"
+                                    style="border-left: 4px solid var(--color-primary) !important;">
                                     <div class="columns is-mobile">
                                         <div class="column">
                                             <div class="field">
@@ -407,7 +414,8 @@
                                 </p>
                             </header>
                             <div class="card-content pt-0">
-                                <div class="notification is-light border p-4 mb-5">
+                                <div class="notification is-ghost border p-4 mb-5"
+                                    style="border-left: 5px solid var(--color-info) !important;">
                                     <p class="is-size-7 opacity-70 mb-2">
                                         Use os seguintes placeholders para definir seus padrões:
                                     </p>
@@ -462,8 +470,8 @@
                                 <!-- Preview Result -->
                                 <div id="renamingPreview" class="is-hidden mt-5">
                                     <p class="heading has-text-weight-bold mb-3">Pré-visualização</p>
-                                    <div class="box is-shadowless border bg-light-soft is-size-7 font-mono"
-                                        id="previewContent">
+                                    <div class="box is-shadowless border is-size-7 font-mono" id="previewContent"
+                                        style="border-left: 4px solid var(--color-primary) !important;">
                                         <!-- content -->
                                     </div>
                                 </div>
@@ -547,7 +555,8 @@
                                         <i class="bi bi-plus-lg mr-2"></i> {{ t('Add Custom Source') }}
                                     </button>
 
-                                    <div id="addSourceForm" class="is-hidden mt-4 notification is-light p-5">
+                                    <div id="addSourceForm" class="is-hidden mt-4 notification is-ghost border p-5"
+                                        style="border-left: 5px solid var(--color-success) !important;">
                                         <div class="columns is-multiline">
                                             <div class="column is-6">
                                                 <div class="field">
@@ -662,7 +671,9 @@
                                     conseguiu identificar automaticamente. Você pode verificar o motivo do erro ou
                                     excluir o arquivo se for lixo.</p>
                                 <div class="table-container">
-                                    <div id="bulkActionsBar" class="notification is-light py-2 px-3 mb-3 is-hidden">
+                                    <div id="bulkActionsBar"
+                                        class="notification is-ghost border py-2 px-3 mb-3 is-hidden"
+                                        style="border-left: 5px solid var(--color-primary) !important;">
                                         <div class="is-flex is-justify-content-between is-align-items-center">
                                             <span class="is-size-7 has-text-weight-bold" id="selectedCountText">0 itens
                                                 selecionados</span>
@@ -700,7 +711,8 @@
                                 </p>
                             </header>
                             <div class="card-content pt-0">
-                                <div class="notification is-light p-5 mb-5">
+                                <div class="notification is-ghost border p-5 mb-5"
+                                    style="border-left: 5px solid var(--color-primary) !important;">
                                     <div class="columns is-vcentered">
                                         <div class="column is-4">
                                             <input class="input" type="text" id="tagNameInput"
@@ -784,7 +796,8 @@
                                     <!-- Webhooks will be listed here -->
                                 </div>
 
-                                <div class="notification is-light p-5 border">
+                                <div class="notification is-ghost border p-5 border"
+                                    style="border-left: 5px solid var(--color-primary) !important;">
                                     <p class="heading has-text-weight-bold mb-4">Adicionar Novo Webhook</p>
                                     <div class="columns is-multiline">
                                         <div class="column is-12">
@@ -832,7 +845,8 @@
                             <div class="card-content pt-0">
 
                                 <!-- Keyboard Shortcuts -->
-                                <div class="box has-background-light-soft p-4 mb-4">
+                                <div class="box is-shadowless border p-4 mb-4"
+                                    style="border-left: 4px solid var(--color-info) !important;">
                                     <p class="heading has-text-weight-bold mb-3"><i class="bi bi-keyboard mr-2"></i>
                                         Atalhos de Teclado</p>
                                     <div class="columns is-multiline">
@@ -892,7 +906,8 @@
                                 </div>
 
                                 <!-- Quick Start Guide -->
-                                <div class="box has-background-light-soft p-4 mb-4">
+                                <div class="box is-shadowless border p-4 mb-4"
+                                    style="border-left: 4px solid var(--color-success) !important;">
                                     <p class="heading has-text-weight-bold mb-3"><i class="bi bi-book mr-2"></i> Guia
                                         Rápido</p>
                                     <div class="content is-size-7">
@@ -918,7 +933,8 @@
                                 </div>
 
                                 <!-- FAQ -->
-                                <div class="box has-background-light-soft p-4 mb-4">
+                                <div class="box is-shadowless border p-4 mb-4"
+                                    style="border-left: 4px solid var(--color-warning) !important;">
                                     <p class="heading has-text-weight-bold mb-3"><i
                                             class="bi bi-patch-question mr-2"></i> Perguntas
                                         Frequentes</p>
@@ -961,7 +977,8 @@
                                 </div>
 
                                 <!-- Links -->
-                                <div class="box has-background-light-soft p-4">
+                                <div class="box is-shadowless border p-4"
+                                    style="border-left: 4px solid var(--color-primary) !important;">
                                     <p class="heading has-text-weight-bold mb-3"><i class="bi bi-link-45deg mr-2"></i>
                                         Links Úteis</p>
                                     <div class="buttons">
@@ -997,7 +1014,8 @@
                                 <div id="pluginsList">
                                     <!-- Plugins injected by JS -->
                                 </div>
-                                <div class="notification is-info is-light is-size-7 mt-5">
+                                <div class="notification is-ghost border is-size-7 mt-5"
+                                    style="border-left: 5px solid var(--color-info) !important;">
                                     <i class="bi bi-info-circle mr-2"></i> Para instalar novos plugins, adicione-os na
                                     pasta <code>app/plugins/</code>.
                                 </div>
@@ -1016,7 +1034,8 @@
                             <div class="card-content pt-0">
                                 <div class="columns">
                                     <div class="column is-6">
-                                        <div class="box border is-shadowless" id="cloud-gdrive">
+                                        <div class="box border is-shadowless" id="cloud-gdrive"
+                                            style="border-left: 4px solid var(--color-primary) !important;">
                                             <p class="has-text-weight-bold mb-3"><i class="bi bi-google mr-2"></i>
                                                 Google Drive</p>
                                             <p class="is-size-7 opacity-60 mb-4">Sincronize sua biblioteca diretamente
@@ -1032,7 +1051,8 @@
                                         </div>
                                     </div>
                                     <div class="column is-6">
-                                        <div class="box border is-shadowless" id="cloud-dropbox">
+                                        <div class="box border is-shadowless" id="cloud-dropbox"
+                                            style="border-left: 4px solid var(--color-info) !important;">
                                             <p class="has-text-weight-bold mb-3"><i class="bi bi-dropbox mr-2"></i>
                                                 Dropbox</p>
                                             <p class="is-size-7 opacity-60 mb-4">Mantenha seu acervo seguro e acessível
@@ -1095,6 +1115,34 @@
 </div>
 
 <style>
+    :root {
+        --color-primary: #7c3aed;
+        --color-success: #10b981;
+        --color-danger: #ef4444;
+        --color-warning: #f59e0b;
+        --color-info: #3b82f6;
+    }
+
+    .has-text-primary {
+        color: var(--color-primary) !important;
+    }
+
+    .has-text-success {
+        color: var(--color-success) !important;
+    }
+
+    .has-text-danger {
+        color: var(--color-danger) !important;
+    }
+
+    .has-text-warning {
+        color: var(--color-warning) !important;
+    }
+
+    .has-text-info {
+        color: var(--color-info) !important;
+    }
+
     .menu-list a {
         transition: all 0.2s ease;
         border-radius: 8px;
@@ -1105,15 +1153,15 @@
 
     .menu-list a:hover {
         background-color: rgba(124, 58, 237, 0.05);
-        color: var(--bulma-primary);
+        color: var(--color-primary);
         transform: translateX(5px);
     }
 
     .menu-list a.is-active {
         background: linear-gradient(90deg, rgba(124, 58, 237, 0.15) 0%, rgba(124, 58, 237, 0.05) 100%);
-        color: var(--bulma-primary);
+        color: var(--color-primary);
         font-weight: 700;
-        border-left: 4px solid var(--bulma-primary);
+        border-left: 4px solid var(--color-primary);
         box-shadow: 0 4px 12px rgba(124, 58, 237, 0.1);
     }
 
@@ -1124,14 +1172,23 @@
 
     .settings-container {
         animation: fadeIn 0.4s ease-out forwards;
-        background-color: var(--bulma-card-background);
+        background-color: transparent !important;
+        /* Remove fundo diferente */
         border-radius: 16px;
-        border: 1px solid var(--bulma-border);
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        border: none !important;
+        /* Remove borda excessiva */
+        box-shadow: none !important;
+        /* Remove sombra excessiva */
     }
 
-    [data-theme="dark"] .settings-container {
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    .card.box {
+        background-color: var(--bulma-card-background) !important;
+        border: 1px solid var(--bulma-border) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+    }
+
+    [data-theme="dark"] .card.box {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
     }
 
     .animate-fade-in {
@@ -2141,7 +2198,7 @@
                 const statusText = w.active ? 'Ativo' : 'Inativo';
 
                 container.append(`
-                    <div class="box is-shadowless border p-3 mb-2 bg-light-soft">
+                    <div class="box is-shadowless border p-3 mb-2" style="border-left: 4px solid var(--color-info) !important;">
                         <div class="columns is-vcentered is-mobile">
                             <div class="column">
                                 <div class="is-flex is-align-items-center mb-1">
