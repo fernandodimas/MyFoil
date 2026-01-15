@@ -263,26 +263,7 @@
                                 </p>
                             </header>
                             <div class="card-content pt-0">
-                                <div class="columns is-multiline mb-4" id="libraryStatsContainer">
-                                    <div class="column is-4-desktop is-12-mobile">
-                                        <div class="box is-shadowless border bg-light-soft p-3" style="height: 100%;">
-                                            <p class="heading opacity-50 mb-1">Total de Jogos</p>
-                                            <p class="title is-4 has-text-primary" id="statGamesCount">--</p>
-                                        </div>
-                                    </div>
-                                    <div class="column is-4-desktop is-12-mobile">
-                                        <div class="box is-shadowless border bg-light-soft p-3" style="height: 100%;">
-                                            <p class="heading opacity-50 mb-1">Total de Arquivos</p>
-                                            <p class="title is-4 has-text-primary" id="statFilesCount">--</p>
-                                        </div>
-                                    </div>
-                                    <div class="column is-4-desktop is-12-mobile">
-                                        <div class="box is-shadowless border bg-light-soft p-3" style="height: 100%;">
-                                            <p class="heading opacity-50 mb-1">Total em Disco</p>
-                                            <p class="title is-4 has-text-primary" id="statLibrarySize">--</p>
-                                        </div>
-                                    </div>
-                                </div>
+                                <!-- Estatísticas removidas conforme solicitação -->
                                 <div class="table-container mb-5">
                                     <table class="table is-fullwidth" id="pathsTable">
                                         <thead>
@@ -1450,9 +1431,7 @@
 
     function fillLibraryStats() {
         $.getJSON('/api/stats', (data) => {
-            $('#statGamesCount').text(data.library?.total_titles || 0);
-            $('#statFilesCount').text(data.identification?.total_files || 0);
-            $('#statLibrarySize').text(data.library?.total_size_formatted || '0 B');
+            // Stats removed from UI
         });
     }
 

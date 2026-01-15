@@ -49,14 +49,15 @@
         <div class="box is-paddingless shadow-sm overflow-hidden border-none"
             style="border-radius: 12px; min-height: 400px;">
             <div class="table-container">
-                <table class="table is-fullwidth is-hoverable is-striped mb-0" id="wishlistTable">
+                <table class="table is-fullwidth is-hoverable game-list-table mb-0" id="wishlistTable">
                     <thead>
-                        <tr class="has-background-light-soft">
-                            <th width="80" class="has-text-centered">Capa</th>
+                        <tr class="has-background-light-soft" style="border-bottom: 2px solid var(--bulma-primary)">
+                            <th width="80" class="has-text-centered p-1">Capa</th>
                             <th>Título</th>
-                            <th>Prioridade</th>
-                            <th>Adicionado em</th>
-                            <th>Status</th>
+                            <th width="140">Prioridade</th>
+                            <th width="140">Adicionado em</th>
+                            <th width="140" class="has-text-centered">Na Biblioteca</th>
+                            <th width="140">Status</th>
                             <th class="has-text-right">Ações</th>
                         </tr>
                     </thead>
@@ -126,50 +127,48 @@
             const tbody = document.getElementById('wishlistBody');
 
             if (items.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="has-text-centered p-6">
-                            <div class="content">
-                                <p class="is-size-3 mb-2">🤷‍♂️</p>
-                                <p class="has-text-grey">Sua lista de desejos está vazia.</p>
-                                <a href="/" class="button is-primary is-small mt-3">Explorar Biblioteca</a>
-                            </div>
-                        </td>
-                    </tr>
-                `;
+                tbody.innerHTML = `<tr><td colspan="7" class="has-text-centered p-6 opacity-50 italic">${t("Sua wishlist está vazia")}</td></tr>`;
                 return;
             }
-
-            // Fetch game details for each item to show names/images
-            // We can optimize this by batching or doing it server-side properly later.
-            // For now, let's fetch individual meta
 
             tbody.innerHTML = '';
 
             for (const item of items) {
-                // Fetch basic info from our library/titledb endpoint logic 
-                // Using the public endpoint logic or a customized one
-                // Since there is no bulk lookup public API, we might rely on the client knowing or fetching one by one
-
-                let gameName = item.title_id;
-                let iconUrl = '/static/img/no-icon.png';
-                let statusHtml = '<span class="tag is-light">Desconhecido</span>';
+                let statusHtml = t('Desconhecido');
+                let statusClass = 'has-text-grey';
+                let ownedHtml = '--';
+                let ownedClass = 'opacity-50';
+                let owned = false;
 
                 try {
-                    // We try to get info. If backend supports generic lookup for non-owned games, this works.
-                    // Assuming existing '/api/get_game/<tid>' or similar works even if not owned?
-                    // Let's rely on TitleDB lookup
                     const gRes = await fetch(`/api/app_info/${item.title_id}`);
                     if (gRes.ok) {
                         const gData = await gRes.json();
                         gameName = gData.name || item.title_id;
                         iconUrl = gData.iconUrl || iconUrl;
+                        owned = gData.owned || false;
 
-                        // Check if released
-                        if (gData.releaseDate && gData.releaseDate > new Date().toISOString().replace(/-/g, '')) {
-                            statusHtml = '<span class="tag is-info is-light">Em Breve</span>';
+                        // Check if already in library
+                        if (owned) {
+                            ownedHtml = 'SIM';
+                            ownedClass = 'has-text-success';
                         } else {
-                            statusHtml = '<span class="tag is-success is-light">Lançado</span>';
+                            ownedHtml = 'NÃO';
+                            ownedClass = 'has-text-warning'; // Sincronizado com o status "Missing" da biblioteca
+                        }
+
+                        // Check if released - Correcting logic for YYYYMMDD comparison
+                        // We assume release_date is YYYYMMDD or YYYY-MM-DD
+                        const rawDate = gData.release_date || '';
+                        const releaseDateStr = rawDate.replace(/-/g, '');
+                        const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+
+                        if (releaseDateStr && releaseDateStr > todayStr) {
+                            statusHtml = t('Em Breve');
+                            statusClass = 'has-text-info';
+                        } else if (releaseDateStr) {
+                            statusHtml = t('Lançado');
+                            statusClass = 'has-text-success';
                         }
                     }
                 } catch (e) {
@@ -177,75 +176,58 @@
                 }
 
                 const row = document.createElement('tr');
-
-                // Check if game is owned (in library)
-                let ownedBadge = '';
-                let inLibrary = false;
-
-                try {
-                    const gRes = await fetch(`/api/app_info/${item.title_id}`);
-                    if (gRes.ok) {
-                        const gData = await gRes.json();
-                        gameName = gData.name || item.title_id;
-                        iconUrl = gData.iconUrl || iconUrl;
-                        inLibrary = gData.owned || false;
-
-                        // Check if already in library
-                        if (inLibrary) {
-                            ownedBadge = '<span class="tag is-success mr-2"><i class="bi bi-check-circle-fill mr-1"></i> Possuo</span>';
-                        }
-
-                        // Check if released
-                        if (gData.releaseDate && gData.releaseDate > new Date().toISOString().replace(/-/g, '')) {
-                            statusHtml = '<span class="tag is-info is-light">Em Breve</span>';
-                        } else {
-                            statusHtml = '<span class="tag is-success is-light">Lançado</span>';
-                        }
-                    }
-                } catch (e) {
-                    console.error("Failed to fetch game details", e);
-                }
-
                 row.innerHTML = `
-                    <td class="has-text-centered p-2">
-                        <figure class="image is-48x48 is-inline-block">
-                            <img src="${iconUrl}" class="is-rounded" style="object-fit: cover; width: 100%; height: 100%;">
-                        </figure>
+                    <td class="p-1 has-text-centered is-vcentered">
+                        <img src="${iconUrl}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;">
                     </td>
                     <td class="is-vcentered">
-                        <a onclick="showGameDetails('${item.title_id}')" class="has-text-weight-bold has-text-primary-dark">${gameName}</a>
+                        <strong class="is-size-7-mobile is-clickable" onclick="showGameDetails('${item.title_id}')">${gameName}</strong>
                         <p class="is-size-7 font-mono opacity-50">${item.title_id}</p>
                     </td>
                     <td class="is-vcentered">
                         <div class="field has-addons">
                             <div class="control">
-                                <button class="button is-small is-rounded" onclick="changePriority('${item.title_id}', ${item.priority - 1})" ${item.priority <= 0 ? 'disabled' : ''}>
+                                <button class="button is-small is-rounded is-light py-0 px-2" onclick="changePriority('${item.title_id}', ${item.priority - 1})" ${item.priority <= 0 ? 'disabled' : ''}>
                                     <i class="bi bi-chevron-down"></i>
                                 </button>
                             </div>
                             <div class="control">
-                                <a class="button is-small is-static px-3">${getPriorityLabel(item.priority)}</a>
+                                <span class="button is-small is-static px-3 is-size-7">${getPriorityLabel(item.priority)}</span>
                             </div>
                             <div class="control">
-                                <button class="button is-small is-rounded" onclick="changePriority('${item.title_id}', ${item.priority + 1})" ${item.priority >= 3 ? 'disabled' : ''}>
+                                <button class="button is-small is-rounded is-light py-0 px-2" onclick="changePriority('${item.title_id}', ${item.priority + 1})" ${item.priority >= 3 ? 'disabled' : ''}>
                                     <i class="bi bi-chevron-up"></i>
                                 </button>
                             </div>
                         </div>
                     </td>
-                    <td class="is-vcentered is-size-7">${new Date(item.added_date).toLocaleDateString()}</td>
-                    <td class="is-vcentered">${ownedBadge}${statusHtml}</td>
+                    <td class="is-vcentered font-mono is-size-7 opacity-70">
+                        ${new Date(item.added_date).toLocaleDateString()}
+                    </td>
+                    <td class="is-vcentered has-text-centered ${ownedClass} has-text-weight-bold is-size-7">
+                        ${ownedHtml}
+                    </td>
+                    <td class="is-vcentered ${statusClass} has-text-weight-bold is-size-7">
+                        ${statusHtml}
+                    </td>
                     <td class="is-vcentered has-text-right">
-                        <button class="button is-small is-danger is-light" onclick="removeFromWishlist('${item.title_id}')" title="Remover">
-                            <i class="bi bi-trash"></i>
-                        </button>
+                        <div class="buttons is-justify-content-flex-end">
+                            ${owned ? `
+                                <button class="button is-small is-ghost has-text-grey mr-1" onclick="editGameMetadata('${item.title_id}')" title="Editar Dados">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            ` : ''}
+                            <button class="button is-small is-ghost has-text-danger" onclick="removeFromWishlist('${item.title_id}')" title="Remover">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(row);
             }
         } catch (e) {
             console.error(e);
-            document.getElementById('wishlistBody').innerHTML = `<tr><td colspan="6" class="has-text-centered has-text-danger">Erro ao carregar wishlist</td></tr>`;
+            document.getElementById('wishlistBody').innerHTML = `<tr><td colspan="7" class="has-text-centered has-text-danger p-6">Erro ao carregar wishlist</td></tr>`;
         }
     }
 
