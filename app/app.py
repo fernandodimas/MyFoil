@@ -396,7 +396,8 @@ def create_app():
         # Initialize Plugins
         global plugin_manager
         plugin_manager = get_plugin_manager(PLUGINS_DIR, app)
-        plugin_manager.load_plugins()
+        disabled_plugins = app_settings.get('plugins', {}).get('disabled', [])
+        plugin_manager.load_plugins(disabled_plugins)
         
         # Initialize Cloud Manager
         global cloud_manager
@@ -1846,18 +1847,37 @@ def activity_api():
 
 @main_bp.route('/api/plugins', methods=['GET'])
 @access_required('admin')
+@main_bp.route('/api/plugins', methods=['GET'])
+@access_required('admin')
 def plugins_api():
     if not plugin_manager:
         return jsonify([])
     
-    results = []
-    for p in plugin_manager.plugins:
-        results.append({
-            'name': p.name,
-            'version': p.version,
-            'description': p.description
-        })
-    return jsonify(results)
+    # Return all discovered plugins with their enabled status
+    return jsonify(plugin_manager.discovered_plugins)
+
+@main_bp.route('/api/plugins/toggle', methods=['POST'])
+@access_required('admin')
+def toggle_plugin_api():
+    data = request.json
+    plugin_id = data.get('id')
+    enabled = data.get('enabled', True)
+    
+    if not plugin_id:
+        return jsonify({'error': 'Plugin ID required'}), 400
+        
+    # 1. Update settings file
+    import settings
+    settings.toggle_plugin_settings(plugin_id, enabled)
+    
+    # 2. Reload plugins in the manager to reflect changes
+    # Note: This won't "unload" already loaded classes from memory, but will 
+    # stop them from being active if reload logic is implemented correctly.
+    # For now, it updates the discovered_plugins list and future events will skip it.
+    disabled_plugins = settings.load_settings(force=True).get('plugins', {}).get('disabled', [])
+    plugin_manager.load_plugins(disabled_plugins)
+    
+    return jsonify({'success': True})
 
 # Cloud API
 @main_bp.route('/api/cloud/auth/<provider>', methods=['GET'])

@@ -31,13 +31,20 @@ class PluginManager:
         self.plugins_dir = plugins_dir
         self.app = app
         self.plugins: List[MyFoilPlugin] = []
+        self.discovered_plugins: List[Dict[str, Any]] = [] # For UI/Management
         
         if not os.path.exists(self.plugins_dir):
             os.makedirs(self.plugins_dir)
 
-    def load_plugins(self):
-        """Load all plugins from the plugins directory"""
+    def load_plugins(self, disabled_ids: List[str] = None):
+        """Load all plugins from the plugins directory, respecting disabled list"""
         self.plugins = []
+        self.discovered_plugins = []
+        disabled_ids = disabled_ids or []
+        
+        if not os.path.exists(self.plugins_dir):
+            return
+
         for item in os.listdir(self.plugins_dir):
             item_path = os.path.join(self.plugins_dir, item)
             if os.path.isdir(item_path):
@@ -50,13 +57,33 @@ class PluginManager:
                         spec.loader.exec_module(module)
                         
                         # Find classes that inherit from MyFoilPlugin
+                        found_in_module = False
                         for attr_name in dir(module):
                             attr = getattr(module, attr_name)
                             if isinstance(attr, type) and issubclass(attr, MyFoilPlugin) and attr != MyFoilPlugin:
                                 plugin_instance = attr(self.app)
-                                plugin_instance.on_load()
-                                self.plugins.append(plugin_instance)
-                                logger.info(f"Loaded plugin: {plugin_instance.name} v{plugin_instance.version}")
+                                plugin_instance.id = item # Directory name as ID
+                                
+                                is_enabled = item not in disabled_ids
+                                
+                                # Add to discovered list for UI
+                                self.discovered_plugins.append({
+                                    'id': item,
+                                    'name': plugin_instance.name,
+                                    'version': plugin_instance.version,
+                                    'description': plugin_instance.description,
+                                    'enabled': is_enabled
+                                })
+
+                                if is_enabled:
+                                    plugin_instance.on_load()
+                                    self.plugins.append(plugin_instance)
+                                    logger.info(f"Loaded plugin: {plugin_instance.name} v{plugin_instance.version}")
+                                else:
+                                    logger.info(f"Plugin {item} is disabled, skipping load.")
+                                
+                                found_in_module = True
+                                break # Only one plugin class per main.py supported for now
                     except Exception as e:
                         logger.error(f"Failed to load plugin {item}: {e}")
 

@@ -26,9 +26,15 @@
                                 Erros/Identificação</a></li>
                         <li><a data-target="Tags"><i class="bi bi-tags-fill mr-2"></i> Tags</a></li>
                         <li><a data-target="Activity"><i class="bi bi-clock-history mr-2"></i> Atividade</a></li>
-                        <li><a data-target="Webhooks"><i class="bi bi-webhook mr-2"></i> Webhooks</a></li>
-                        <li><a data-target="Cloud"><i class="bi bi-cloud-fill mr-2"></i> Cloud Storage</a></li>
-                        <li><a data-target="Plugins"><i class="bi bi-patch-check mr-2"></i> Plugins</a></li>
+                        <li><a data-target="Webhooks"><i class="bi bi-webhook mr-2"></i> Webhooks <span
+                                    class="tag is-warning is-light is-size-9 ml-1"
+                                    style="font-size: 0.6rem;">BETA</span></a></li>
+                        <li><a data-target="Cloud"><i class="bi bi-cloud-fill mr-2"></i> Cloud Storage <span
+                                    class="tag is-warning is-light is-size-9 ml-1"
+                                    style="font-size: 0.6rem;">BETA</span></a></li>
+                        <li><a data-target="Plugins"><i class="bi bi-patch-check mr-2"></i> Plugins <span
+                                    class="tag is-warning is-light is-size-9 ml-1"
+                                    style="font-size: 0.6rem;">BETA</span></a></li>
                     </ul>
                 </aside>
             </div>
@@ -1665,24 +1671,51 @@
         $.getJSON('/api/plugins', (plugins) => {
             const container = $('#pluginsList').empty();
             if (plugins.length === 0) {
-                container.append('<p class="is-size-7 opacity-50 has-text-centered py-4">Nenhum plugin carregado.</p>');
+                container.append('<p class="is-size-7 opacity-50 has-text-centered py-4">Nenhum plugin encontrado.</p>');
                 return;
             }
             plugins.forEach(p => {
+                const isEnabled = p.enabled !== false;
                 container.append(`
-                    <div class="box is-shadowless border p-4 mb-3">
+                    <div class="box is-shadowless border p-4 mb-3" style="border: 1px solid rgba(0,0,0,0.05);">
                         <div class="columns is-vcentered">
                             <div class="column">
-                                <p class="is-size-6 has-text-weight-bold has-text-primary mb-1">${p.name} <span class="tag is-light is-rounded ml-2">v${p.version}</span></p>
+                                <p class="is-size-6 has-text-weight-bold ${isEnabled ? 'has-text-primary' : 'opacity-40'} mb-1">
+                                    ${p.name} 
+                                    <span class="tag is-light is-rounded ml-2">v${p.version}</span>
+                                </p>
                                 <p class="is-size-7 opacity-70">${p.description}</p>
                             </div>
                             <div class="column is-narrow">
-                                <span class="tag is-success is-light">Ativo</span>
+                                <div class="field">
+                                    <input id="plugin_${p.id}" type="checkbox" name="plugin_${p.id}" class="switch is-rounded is-primary is-small" ${isEnabled ? 'checked' : ''} onchange="togglePlugin('${p.id}', this.checked)">
+                                    <label for="plugin_${p.id}" class="is-size-7 has-text-weight-semibold">${isEnabled ? 'Ativo' : 'Desativado'}</label>
+                                </div>
                             </div>
                         </div>
                     </div>
                 `);
             });
+        });
+    }
+
+    function togglePlugin(pluginId, enabled) {
+        $.ajax({
+            url: '/api/plugins/toggle',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ id: pluginId, enabled: enabled }),
+            success: (res) => {
+                if (res.success) {
+                    showToast(`Plugin ${enabled ? 'ativado' : 'desativado'} com sucesso!`);
+                    fillPluginsList();
+                } else {
+                    showToast('Erro ao alterar status: ' + res.error, 'error');
+                }
+            },
+            error: () => {
+                showToast('Erro de comunicação com o servidor.', 'error');
+            }
         });
     }
 

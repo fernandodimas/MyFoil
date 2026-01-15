@@ -379,3 +379,37 @@ p.game-description {
     background-color: #7c3aed !important; /* Violet 600 - Brand */
     color: #fff !important;
 }
+
+/* Switch Toggle CSS */
+.switch {
+    appearance: none;
+    width: 32px;
+    height: 18px;
+    background: #cbd5e1;
+    border-radius: 20px;
+    position: relative;
+    cursor: pointer;
+    outline: none;
+    transition: background 0.2s;
+}
+.switch:checked {
+    background: #7c3aed;
+}
+.switch::before {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: white;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: left 0.2s;
+}
+.switch:checked::before {
+    left: 16px;
+}
+[data-theme="dark"] .switch {
+    background: #475569;
+}
+.is-size-9 { font-size: 0.65rem !important; }
