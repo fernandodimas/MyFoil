@@ -1269,23 +1269,140 @@
                 tbody.append('<tr><td colspan="3" class="has-text-centered py-6 opacity-40 italic">Nenhum erro de identificação encontrado.</td></tr>');
             } else {
                 result.forEach(file => {
+                    // Check if it's a recognition error (contains TitleID in parenthesis)
+                    const isRecognitionError = file.error && file.error.includes('Banco de Dados');
+                    const tidMatch = isRecognitionError ? file.error.match(/\((0100[0-9A-F]+)\)/) : null;
+                    const tid = tidMatch ? tidMatch[1] : null;
+
                     tbody.append(`
                         <tr>
                             <td>
                                 <p class="has-text-weight-bold is-size-7 break-word">${file.filename}</p>
                                 <p class="is-family-monospace is-size-7 opacity-40 break-word">${file.filepath}</p>
                             </td>
-                            <td><span class="is-size-7 has-text-danger">${file.error || 'Erro desconhecido'}</span></td>
+                            <td>
+                                <span class="is-size-7 ${isRecognitionError ? 'has-text-warning' : 'has-text-danger'}">
+                                    <i class="bi ${isRecognitionError ? 'bi-question-circle' : 'bi-exclamation-triangle'} mr-1"></i>
+                                    ${file.error || 'Erro desconhecido'}
+                                </span>
+                            </td>
                             <td class="has-text-right">
-                                <button class="button is-small is-ghost has-text-danger" onclick="deleteErrorFile(${file.id})">
-                                    <i class="bi bi-trash3"></i>
-                                </button>
+                                <div class="buttons is-right">
+                                    ${tid ? `
+                                        <button class="button is-small is-info is-light" onclick="openEditModalFromError('${tid}')" title="Identificar Manualmente">
+                                            <i class="bi bi-pencil-square mr-1"></i> Reconhecer
+                                        </button>
+                                    ` : ''}
+                                    <button class="button is-small is-ghost has-text-danger" onclick="deleteErrorFile(${file.id})" title="Excluir Arquivo">
+                                        <i class="bi bi-trash3"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     `);
                 });
             }
         });
+    }
+
+    function openEditModalFromError(titleId) {
+        if (!titleId) return;
+        $('#editMetaId').val(titleId);
+        $('#editMetaName').val('Unknown (' + titleId + ')');
+        $('#editMetaPublisher, #editMetaDescription, #editMetaIcon, #editMetaBanner').val('');
+        $('#titleDBSearchResults').empty();
+        $('#searchTitleDBInput').val('');
+
+        // Try to fetch current data if exists
+        $.get(`/api/games/${titleId}/custom`, function (d) {
+            if (d && !d.error) {
+                if (d.name) $('#editMetaName').val(d.name);
+                if (d.publisher) $('#editMetaPublisher').val(d.publisher);
+                if (d.description) $('#editMetaDescription').val(d.description);
+                if (d.iconUrl) $('#editMetaIcon').val(d.iconUrl);
+                if (d.bannerUrl) $('#editMetaBanner').val(d.bannerUrl);
+            }
+        });
+
+        openModal('editMetadataModal');
+    }
+
+    function saveGameMetadata() {
+        const titleId = $('#editMetaId').val();
+        const data = {
+            name: $('#editMetaName').val(),
+            publisher: $('#editMetaPublisher').val(),
+            description: $('#editMetaDescription').val(),
+            iconUrl: $('#editMetaIcon').val(),
+            bannerUrl: $('#editMetaBanner').val()
+        };
+
+        $('#btnSaveMetadata').addClass('is-loading');
+
+        $.ajax({
+            url: `/api/games/${titleId}/custom`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function (res) {
+                $('#btnSaveMetadata').removeClass('is-loading');
+                if (res.success) {
+                    closeModal('editMetadataModal');
+                    showToast('Dados atualizados com sucesso! A lista será atualizada.');
+                    fillErrorsTable();
+                } else {
+                    showToast('Erro ao salvar: ' + res.error, 'error');
+                }
+            },
+            error: function () {
+                $('#btnSaveMetadata').removeClass('is-loading');
+                showToast('Erro de conexão ao salvar.', 'error');
+            }
+        });
+    }
+
+    function searchTitleDB() {
+        const query = $('#searchTitleDBInput').val();
+        if (!query || query.length < 2) return;
+
+        $('#titleDBSearchResults').html('<p class="is-size-7 p-4 has-text-centered"><i class="fas fa-spinner fa-pulse mr-2"></i>Buscando...</p>');
+
+        $.getJSON(`/api/titles/search?q=${encodeURIComponent(query)}`, function (results) {
+            const container = $('#titleDBSearchResults').empty();
+            if (!results.length) {
+                container.append('<p class="is-size-7 p-4 has-text-centered opacity-50">Nenhum título encontrado.</p>');
+                return;
+            }
+            results.forEach(res => {
+                const icon = res.iconUrl || '/static/img/no-icon.png';
+                container.append(`
+                    <div class="box is-shadowless border p-2 mb-1 is-clickable hover-bg-light" onclick="selectTitleDBResult('${res.id}')">
+                        <div class="is-flex is-align-items-center gap-3">
+                            <img src="${icon}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;">
+                            <div style="flex: 1; min-width: 0;">
+                                <p class="has-text-weight-bold is-size-7 truncate">${res.name}</p>
+                                <p class="is-size-7 opacity-50 font-mono">${res.id} • ${res.region}</p>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                window.searchCache = window.searchCache || {};
+                window.searchCache[res.id] = res;
+            });
+        });
+    }
+
+    function selectTitleDBResult(id) {
+        const res = window.searchCache[id];
+        if (!res) return;
+
+        $('#editMetaName').val(res.name);
+        $('#editMetaPublisher').val(res.publisher || '');
+        $('#editMetaDescription').val(res.description || '');
+        $('#editMetaIcon').val(res.iconUrl || '');
+        $('#editMetaBanner').val(res.bannerUrl || '');
+
+        showToast('Dados do TitleDB aplicados!', 'success');
     }
 
     function deleteErrorFile(id) {
@@ -1787,4 +1904,86 @@
         closeModal($(this).parent().attr('id'));
     });
 </script>
+
+<!-- Edit Metadata Modal -->
+<div class="modal" id="editMetadataModal">
+    <div class="modal-background"></div>
+    <div class="modal-card">
+        <header class="modal-card-head">
+            <p class="modal-card-title">Identificar Jogo Manualmente</p>
+            <button class="delete" aria-label="close" onclick="closeModal('editMetadataModal')"></button>
+        </header>
+        <section class="modal-card-body">
+            <div class="box has-background-light-soft mb-4">
+                <label class="label is-small">Buscar no TitleDB Local</label>
+                <div class="field has-addons">
+                    <div class="control is-expanded">
+                        <input class="input is-small" type="text" id="searchTitleDBInput"
+                            placeholder="Digite o nome do jogo para preencher automaticamente">
+                    </div>
+                    <div class="control">
+                        <button class="button is-small is-info" onclick="searchTitleDB()">
+                            <span class="icon is-small"><i class="bi bi-search"></i></span>
+                        </button>
+                    </div>
+                </div>
+                <div id="titleDBSearchResults" class="mt-2" style="max-height: 150px; overflow-y: auto;"></div>
+            </div>
+
+            <input type="hidden" id="editMetaId">
+            <div class="field">
+                <label class="label is-small">Nome do Jogo</label>
+                <div class="control">
+                    <input class="input" type="text" id="editMetaName" placeholder="Ex: Xenoblade Chronicles 3">
+                </div>
+            </div>
+            <div class="field">
+                <label class="label is-small">Publisher</label>
+                <div class="control">
+                    <input class="input" type="text" id="editMetaPublisher">
+                </div>
+            </div>
+            <div class="field">
+                <label class="label is-small">Descrição</label>
+                <div class="control">
+                    <textarea class="textarea is-small" id="editMetaDescription" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="columns">
+                <div class="column">
+                    <div class="field">
+                        <label class="label is-small">URL do Ícone</label>
+                        <div class="control">
+                            <input class="input is-small" type="text" id="editMetaIcon">
+                        </div>
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="field">
+                        <label class="label is-small">URL do Banner</label>
+                        <div class="control">
+                            <input class="input is-small" type="text" id="editMetaBanner">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <footer class="modal-card-foot is-justify-content-flex-end">
+            <button class="button" onclick="closeModal('editMetadataModal')">Cancelar</button>
+            <button class="button is-primary" id="btnSaveMetadata" onclick="saveGameMetadata()">Salvar Dados</button>
+        </footer>
+    </div>
+</div>
+
+<style>
+    .hover-bg-light:hover {
+        background-color: rgba(0, 0, 0, 0.03);
+    }
+
+    .truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>
 {% endblock %}

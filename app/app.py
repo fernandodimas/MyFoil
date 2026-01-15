@@ -1165,15 +1165,45 @@ def app_info_api(id):
 @main_bp.route('/api/files/unidentified')
 @access_required('admin')
 def get_unidentified_files_api():
+    import titles
+    # 1. Arquivos sem TitleID (Falha técnica de identificação)
     files = get_all_unidentified_files()
-    return jsonify([{
+    results = [{
         'id': f.id,
         'filename': f.filename,
         'filepath': f.filepath,
         'size': f.size,
         'size_formatted': format_size_py(f.size),
-        'error': f.identification_error
-    } for f in files])
+        'error': f.identification_error or 'Arquivo não identificado (ID ausente)'
+    } for f in files]
+    
+    # 2. Arquivos com TitleID mas sem reconhecimento de nome (Unknown)
+    # Buscamos por arquivos que pertencem a jogos "Unknown" no TitleDB
+    identified_files = Files.query.filter_by(identified=True).all()
+    for f in identified_files:
+        if not f.apps:
+            continue
+            
+        # Pega o primeiro app associado (normalmente arquivos NSP/XCI pertencem a 1 app)
+        try:
+            tid = f.apps[0].title.title_id
+            tinfo = titles.get_title_info(tid)
+            name = tinfo.get('name', '')
+            
+            # Se for desconhecido (começa com Unknown ou vazio)
+            if not name or name.startswith('Unknown'):
+                results.append({
+                    'id': f.id,
+                    'filename': f.filename,
+                    'filepath': f.filepath,
+                    'size': f.size,
+                    'size_formatted': format_size_py(f.size),
+                    'error': f'Título não reconhecido no Banco de Dados ({tid})'
+                })
+        except (IndexError, AttributeError):
+            continue
+            
+    return jsonify(results)
 
 @main_bp.route('/api/files/delete/<int:file_id>', methods=['POST'])
 @access_required('admin')

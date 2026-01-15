@@ -307,6 +307,7 @@ def load_titledb(force=False):
                 if loaded:
                     count = len(loaded) if isinstance(loaded, (dict, list)) else 0
                     if count > 0:
+                        is_custom = filename == "custom.json"
                         # Convert list to dict if necessary for merging
                         current_batch = {}
                         if isinstance(loaded, list):
@@ -322,45 +323,26 @@ def load_titledb(force=False):
                         else:
                             for tid, data in current_batch.items():
                                 if tid in _titles_db:
-                                    # Override specific fields but keep the rest
-                                    for field in ['name', 'description', 'bannerUrl', 'iconUrl', 'publisher', 'releaseDate', 'size', 'category']:
-                                        if data.get(field):
-                                            _titles_db[tid][field] = data[field]
+                                    if is_custom:
+                                        # For custom.json, merge EVERYTHING to ensure manual overrides persist
+                                        _titles_db[tid].update(data)
+                                    else:
+                                        # Override specific fields but keep the rest
+                                        for field in ['name', 'description', 'bannerUrl', 'iconUrl', 'publisher', 'releaseDate', 'size', 'category', 'genre', 'release_date']:
+                                            if data.get(field):
+                                                _titles_db[tid][field] = data[field]
                                 else:
                                     _titles_db[tid] = data
                         
                         _loaded_titles_file.append(filename)
-                        logger.info(f"SUCCESS: Merged {count} items from {filename}")
+                        logger.info(f"SUCCESS: Merged {count} items from {filename} {'(AS OVERRIDE)' if is_custom else ''}")
                 else:
                     logger.warning(f"Could not parse {filename}, skipping...")
         
         if _titles_db:
-            # INDEXING: Ensure TitleDB is indexed by TitleID for O(1) lookups
-            indexed_db = {}
-            logger.info(f"Indexing TitleDB by TitleID...")
-            
-            items = []
-            if isinstance(_titles_db, dict):
-                items = _titles_db.values()
-                # Also include keys if they look like TitleIDs (Fallback)
-                for k, v in _titles_db.items():
-                    if len(k) == 16 and isinstance(v, dict):
-                        tid = k.upper()
-                        if tid not in indexed_db or not indexed_db[tid].get('name'):
-                            indexed_db[tid] = v
-            elif isinstance(_titles_db, list):
-                items = _titles_db
-            
-            for item in items:
-                if isinstance(item, dict):
-                    tid = str(item.get('id', '')).upper()
-                    if len(tid) == 16:
-                        # Only overwrite if we have a name (don't let empty entries from titles.json overwrite good ones)
-                        if tid not in indexed_db or (item.get('name') and not indexed_db[tid].get('name')):
-                            indexed_db[tid] = item
-            
-            _titles_db = indexed_db
-            logger.info(f"TitleDB indexed. Total unique TitleIDs: {len(_titles_db)}")
+            # Our _titles_db is already keyed by TitleID (upper) due to the merge logic above.
+            # We just need to ensure everything is indexed correctly.
+            logger.info(f"TitleDB loaded and indexed: {len(_titles_db)} unique titles.")
 
         if not _titles_db:
             logger.error("CRITICAL: Failed to load any TitleDB. Game identification will be limited.")
@@ -771,6 +753,12 @@ def save_custom_title_info(title_id, data):
     custom_db = robust_json_load(custom_path) or {}
     
     # 2. Update entry
+    # Map fields for compatibility with TitleDB format
+    if 'genre' in data:
+        data['category'] = data.pop('genre')
+    if 'release_date' in data:
+        data['releaseDate'] = data.pop('release_date')
+        
     # Ensure ID is present in data
     data['id'] = title_id
     
@@ -779,16 +767,17 @@ def save_custom_title_info(title_id, data):
     else:
         custom_db[title_id] = data
         
-    # 3. Write back to disk
+    # 3. Write back to disk using safe atomic write
     try:
-        with open(custom_path, 'w', encoding='utf-8') as f:
-            json.dump(custom_db, f, indent=4, ensure_ascii=False)
+        safe_write_json(custom_path, custom_db, indent=4)
     except Exception as e:
         logger.error(f"Failed to save custom.json: {e}")
         return False, str(e)
 
     # 4. Update in-memory DB immediately
     if _titles_db:
+        # Normalize TID for in-memory update
+        title_id = title_id.upper()
         if title_id in _titles_db and isinstance(_titles_db[title_id], dict):
             _titles_db[title_id].update(data)
         else:
