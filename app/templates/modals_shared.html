@@ -139,6 +139,13 @@
         $.getJSON(`/api/app_info/${id}`, (game) => {
             $('#modalTitle').text(game.name);
 
+            // Set navigation context for keyboard shortcuts
+            if (typeof games !== 'undefined' && games.length) {
+                window.setModalNavigationContext(id, games);
+            } else if (typeof filteredGames !== 'undefined' && filteredGames.length) {
+                window.setModalNavigationContext(id, filteredGames);
+            }
+
             // Base Files Section
             let filesHtml = game.files && game.files.length > 0 ? `
                 <div class="mb-5">
@@ -666,4 +673,68 @@
         if (item.category || item.genre) $('#editMetaGenre').val(Array.isArray(item.category) ? item.category.join(', ') : (item.category || item.genre || ''));
         if (item.releaseDate || item.release_date) $('#editMetaRelease').val(item.releaseDate || item.release_date);
     }
+
+    // Keyboard Navigation for Game Details Modal
+    let currentGameId = null;
+    let availableGames = [];
+
+    // Set current game and available games list for navigation
+    window.setModalNavigationContext = function (gameId, gamesList) {
+        currentGameId = gameId;
+        availableGames = gamesList || [];
+    };
+
+    // Navigate to next/previous game
+    function navigateGameModal(direction) {
+        if (!currentGameId || !availableGames.length) return;
+
+        const currentIndex = availableGames.findIndex(g => g.id === currentGameId);
+        if (currentIndex === -1) return;
+
+        let newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
+
+        if (newIndex < 0) newIndex = availableGames.length - 1;
+        if (newIndex >= availableGames.length) newIndex = 0;
+
+        const newGame = availableGames[newIndex];
+        if (newGame) {
+            showGameDetails(newGame.id);
+        }
+    }
+
+    // Global keyboard event handler
+    $(document).on('keydown', function (e) {
+        // Only handle if game details modal is open
+        if (!$('#gameDetailsModal').hasClass('is-active')) return;
+
+        // Prevent if user is typing in an input/textarea
+        if ($(e.target).is('input, textarea')) return;
+
+        switch (e.key) {
+            case 'ArrowLeft':
+                e.preventDefault();
+                navigateGameModal('prev');
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                navigateGameModal('next');
+                break;
+            case 'e':
+            case 'E':
+                e.preventDefault();
+                if (currentGameId) editGameMetadata(currentGameId);
+                break;
+            case 'f':
+            case 'F':
+                e.preventDefault();
+                if (currentGameId) toggleWishlist(currentGameId);
+                break;
+            case 'd':
+            case 'D':
+                e.preventDefault();
+                // TODO: Implement download file functionality
+                console.log('Download shortcut pressed for game:', currentGameId);
+                break;
+        }
+    });
 </script>
