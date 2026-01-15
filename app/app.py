@@ -1244,6 +1244,42 @@ def get_unidentified_files_api():
             
     return jsonify(results)
 
+@main_bp.route('/api/files/all')
+@access_required('admin')
+def get_all_files_api():
+    """Get all files in the library with detailed information"""
+    files = Files.query.all()
+    results = []
+    
+    for f in files:
+        file_info = {
+            'id': f.id,
+            'filename': f.filename,
+            'filepath': f.filepath,
+            'size': f.size,
+            'size_formatted': format_size_py(f.size),
+            'extension': os.path.splitext(f.filename)[1].lower(),
+            'identified': f.identified,
+            'identification_error': f.identification_error,
+            'library_id': f.library_id,
+            'created_at': f.created_at.isoformat() if f.created_at else None
+        }
+        
+        # Add title info if identified
+        if f.identified and f.apps:
+            try:
+                app = f.apps[0]
+                file_info['title_id'] = app.title.title_id if app.title else None
+                file_info['title_name'] = app.title.name if app.title else 'Unknown'
+                file_info['app_type'] = app.app_type
+            except:
+                file_info['title_name'] = 'Unknown'
+        
+        results.append(file_info)
+    
+    return jsonify(results)
+
+
 @main_bp.route('/api/files/delete/<int:file_id>', methods=['POST'])
 @access_required('admin')
 def delete_file_api(file_id):
