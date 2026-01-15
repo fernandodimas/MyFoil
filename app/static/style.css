@@ -253,6 +253,18 @@ p.game-description {
 .opacity-60 { opacity: 0.6; }
 .opacity-70 { opacity: 0.7; }
 .opacity-80 { opacity: 0.8; }
+/* Full Width Desktop Optimization */
+@media screen and (min-width: 1024px) {
+    .container.is-fluid {
+        max-width: none !important;
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+    }
+}
+
 .opacity-90 { opacity: 0.9; }
 
 /* Mobile Padding Optimization */
