@@ -1,7 +1,8 @@
 # 🚀 MyFoil - Análise, Melhorias e Roadmap de Funcionalidades
 
 **Data da Análise:** 2026-01-15
-**Versão Atual:** BUILD_VERSION '20260115_0845'
+**Data da Última Atualização:** 2026-01-15
+**Versão Atual:** BUILD_VERSION '20260115_1020'
 **Autor:** Análise Técnica MyFoil (Pair Programming AI)
 
 ---
@@ -301,9 +302,31 @@ with identification_duration.time():
 
 ### 3.2 Frontend e UX
 
+#### 3.2.0 Sistema de Temas Claro/Escuro ✅ CONCLUÍDO
+**Prioridade:** 🟠 ALTA
+**Complexidade:** Baixa
+**Impacto:** Alto
+**Data de Conclusão:** 2026-01-15
+
+**Melhorias Implementadas:**
+- Refatoração completa do sistema de variáveis CSS para temas claro e escuro
+- Paleta de cores padronizada e consistente em toda a aplicação
+- Melhor contraste e legibilidade no modo escuro (WCAG AA/AAA)
+- Transições suaves (0.3s) entre temas
+- Remoção de cores hardcoded em favor de variáveis CSS
+- Otimização de cores Bulma para melhor integração
+- Glassmorphism aprimorado com bordas responsivas ao tema
+
+**Entregáveis:**
+- Temas claro e escuro polidos e consistentes
+- Melhor acessibilidade para usuários com sensibilidade visual
+- Experiência visual mais profissional e moderna
+
+---
+
 #### 3.2.1 WebSockets para Atualizações em Tempo Real ✅ CONCLUÍDO
-**Prioridade:** 🟡 MÉDIA  
-**Complexidade:** Média  
+**Prioridade:** 🟡 MÉDIA
+**Complexidade:** Média
 **Impacto:** Alto
 
 **Implementação:**
@@ -1310,6 +1333,57 @@ Gamificação da gestão de biblioteca.
 
 ---
 
+### Sprint 8.5 (1 semana) - Melhorias de UX e Interface
+**Foco:** Ajustes de Usabilidade e Refinamentos Visuais
+
+#### Melhorias de Estatísticas
+- [ ] **Remover pro.keys OK das Estatísticas**: Limpar a visualização removendo a exibição da chave `pro.keys` nas estatísticas, pois não é relevante para o usuário final.
+
+#### Melhorias nas Configurações
+- [ ] **Webhooks sem Ícone**: Remover/ocultar ícones dos webhooks na aba de configurações para simplificar a interface.
+- [ ] **Menu de Ajuda nas Configurações**: Criar um menu de ajuda com:
+  - Documentação de uso do sistema
+  - Lista de atalhos de teclado disponíveis
+  - Tutoriais rápidos
+- [ ] **Visualização de Arquivos da Biblioteca**: Criar uma visualização tabular/lista dos arquivos físicos da biblioteca com:
+  - Nome do arquivo
+  - Caminho completo
+  - Tamanho
+  - Data de modificação
+  - Status de indexação
+
+#### Melhorias no Modal de Detalhes
+- [ ] **Navegação por Teclado**: Permitir trocar de jogo no modal usando as setas do teclado (← → / ↑ ↓).
+- [ ] **Barra de Sobreposta**: Adicionar uma barra de controle/filtros sobrepondo o modal para ações rápidas sem fechar.
+- [ ] **Padrão de Data YYYY-MM-DD**: Padronizar exibição de datas de lançamento de DLCs nas listas e modal (formato YYYY-MM-DD).
+
+#### Melhorias na Biblioteca e Busca
+- [ ] **Identificação Extra "Unknown"**: Adicionar um campo de identificação extra para arquivos com status "unknown" para melhor rastreamento.
+- [ ] **Ordenar por Tamanho**: Adicionar opção de ordenação da biblioteca por tamanho do jogo (crescente/decrescente).
+- [ ] **X da Barra de Controle Condicional**: O botão "X" (limpar filtros) deve aparecer somente quando houver filtros ativos.
+- [ ] **Recarregar Frontend Após Atualização**: Após atualizar a biblioteca (scan), recarregar automaticamente o frontend para refletir mudanças.
+- [ ] **Limpar Busca do Editar Dados**: Ao selecionar um jogo ou fechar a janela de edição de dados, limpar automaticamente o campo de busca.
+
+#### Melhorias Gerais de UI/UX
+- [ ] **Página de Perfil Compartilhável**: Criar uma página pública de perfil para compartilhamento com:
+  - Biblioteca pública (opcional)
+  - Estatísticas
+  - Link de compartilhamento
+  - Opções de privacidade
+- [ ] **Favicon do Projeto**: Criar e implementar o favicon usando o ícone oficial do MyFoil.
+
+---
+
+### Sprint 8.6 (1 semana) - Otimizações Visuais
+**Foco:** Refinamentos Temáticos e UX
+
+- [ ] **Ajustes de Cores do Tema**: Refinar paletas de cores para melhor contraste em modo claro/escuro (✅ CONCLUÍDO)
+- [ ] **Transições Suaves**: Adicionar transições suaves (0.3s) entre temas e estados de componentes
+- [ ] **Glassmorphism Aprimorado**: Melhorar efeitos de vidro fosco em cards e modais
+- [ ] **Responsividade Mobile**: Otimizar layout para telas pequenas (< 768px)
+
+---
+
 ### Sprint 9 (2 semanas) - Q3 2026
 **Foco:** Refinamento de Performance
 
@@ -1340,7 +1414,55 @@ Gamificação da gestão de biblioteca.
 
 ---
 
-## 6. Métricas e KPIs
+## 6. Changelog Recente
+
+### v1.2.0 - 2026-01-15 ✅
+**Sprint 8.5 Planejado:** Melhorias de UX e Interface
+
+**Melhorias Planejadas:**
+- [ ] Sistema de navegação por teclado no modal de detalhes (← → ↑ ↓)
+- [ ] Menu de ajuda com documentação e atalhos de teclado
+- [ ] Visualização de arquivos físicos da biblioteca nas configurações
+- [ ] Página de perfil compartilhável
+- [ ] Favicon oficial do MyFoil
+
+**Refinamentos Planejados:**
+- [ ] Remover pro.keys OK das estatísticas
+- [ ] Webhooks sem ícone nas configurações (limpeza visual)
+- [ ] Identificação extra "unknown" para arquivos não catalogados
+- [ ] Recarregar frontend automaticamente após atualização da biblioteca
+- [ ] Limpar busca ao fechar janela de edição
+- [ ] Barra de controle sobrepondo modal
+- [ ] Padrão de data YYYY-MM-DD para lançamentos DLC
+- [ ] Ordenação por tamanho do jogo
+- [ ] Botão X de filtros condicional
+
+---
+
+### v1.1.0 - 2026-01-15 ✅
+**Sprint 8.0 Concluído:** Overhaul de Sistema de Temas
+
+**Melhorias Implementadas:**
+- ✅ Refatoração completa de variáveis CSS para temas claro/escuro
+- ✅ Paleta de cores padronizada e consistente
+- ✅ Melhor contraste e legibilidade no modo escuro
+- ✅ Transições suaves (0.3s) entre temas
+- ✅ Remoção de cores hardcoded
+- ✅ Otimização de integração Bulma CSS
+- ✅ Glassmorphism aprimorado
+
+**Arquivos Modificados:**
+- `app/static/style.css` - Refatoração completa do CSS
+- `app/templates/base.html` - Variáveis Bulma otimizadas
+- `app/templates/index.html` - Cores adaptativas
+- `app/templates/login.html` - Tema adaptativo
+- `app/templates/modals_shared.html` - Modal com tema responsivo
+- `app/templates/nav.html` - Navbar com tema adaptativo
+- `app/templates/settings.html` - Cores de configurações padronizadas
+
+---
+
+## 7. Métricas e KPIs
 
 ### 6.1 Métricas Técnicas
 
@@ -1411,7 +1533,7 @@ Gamificação da gestão de biblioteca.
 
 ---
 
-**Documento criado em:** 2026-01-13  
-**Última atualização:** 2026-01-14  
-**Versão:** 1.1  
+**Documento criado em:** 2026-01-13
+**Última atualização:** 2026-01-15
+**Versão:** 1.2
 **Autor:** Análise Técnica MyFoil
