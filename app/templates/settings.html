@@ -1743,8 +1743,9 @@
 
     function fillWebhooksList() {
         $.getJSON('/api/settings/webhooks', (webhooks) => {
+            console.log('Webhooks received:', webhooks);
             const container = $('#webhooksList').empty();
-            if (webhooks.length === 0) {
+            if (!webhooks || webhooks.length === 0) {
                 container.append('<p class="is-size-7 opacity-50 has-text-centered py-4">Nenhum webhook configurado.</p>');
                 return;
             }
@@ -1772,6 +1773,9 @@
                     </div>
                 `);
             });
+        }).fail((xhr, status, error) => {
+            console.error('Error loading webhooks:', error);
+            $('#webhooksList').html('<p class="is-size-7 has-text-danger has-text-centered py-4">Erro ao carregar webhooks. Verifique o console.</p>');
         });
     }
 
