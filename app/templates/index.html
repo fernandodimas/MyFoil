@@ -469,7 +469,8 @@
     function refreshLibrary() {
         console.log("Refreshing library data...");
         $.getJSON('/api/library', function (data) {
-            games = data || [];
+            // API now returns {items: [...], pagination: {...}}
+            games = (data && data.items) ? data.items : (Array.isArray(data) ? data : []);
             localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
             initGenders(games);
             initTags(games);
@@ -793,13 +794,18 @@
         const cached = localStorage.getItem('myfoil_library_cache');
         if (cached) {
             try {
-                games = JSON.parse(cached);
-                initGenders(games);
-                initTags(games);
-                filteredGames = [...games];
-                applyFilters(); // Render cached data immediately
+                const parsedCache = JSON.parse(cached);
+                // Ensure it's an array (old cache format or new format)
+                games = Array.isArray(parsedCache) ? parsedCache : [];
+                if (games.length > 0) {
+                    initGenders(games);
+                    initTags(games);
+                    filteredGames = [...games];
+                    applyFilters(); // Render cached data immediately
+                }
             } catch (e) {
                 console.error("Cache parse error", e);
+                localStorage.removeItem('myfoil_library_cache'); // Clear corrupted cache
             }
         } else {
             const loadingHtml = `
