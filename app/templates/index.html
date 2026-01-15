@@ -7,7 +7,7 @@
 
 
     <!-- Controls Row -->
-    <div class="box p-2 mb-4 shadow-sm border-none bg-glass" style="position: relative; z-index: 30;">
+    <div class="box p-2 mb-4 shadow-sm border-none bg-glass" style="position: relative; z-index: 100;">
         <div class="is-flex is-flex-wrap-wrap is-align-items-center gap-2 px-1 py-1">
 
             <!-- Left Group: Primary Filters -->
@@ -22,7 +22,7 @@
                                     style="font-size: 0.5rem"></i></span>
                         </button>
                     </div>
-                    <div class="dropdown-menu" id="dropdown-menu" role="menu">
+                    <div class="dropdown-menu" id="dropdown-menu" role="menu" style="z-index: 200;">
                         <div class="dropdown-content p-4" style="min-width: 260px;">
                             <div class="field mb-3">
                                 <label class="label is-size-7 opacity-70">Gênero</label>
@@ -56,7 +56,7 @@
                             <span class="is-hidden-mobile ml-1">Ordenar</span>
                         </button>
                     </div>
-                    <div class="dropdown-menu" id="sort-menu" role="menu">
+                    <div class="dropdown-menu" id="sort-menu" role="menu" style="z-index: 200;">
                         <div class="dropdown-content p-2" style="min-width: 200px;">
                             <a class="dropdown-item is-size-7 sort-option" data-sort="name-asc">A-Z (Nome)</a>
                             <a class="dropdown-item is-size-7 sort-option" data-sort="name-desc">Z-A (Nome)</a>
@@ -707,8 +707,7 @@
         }
     }
 
-    let fileToDeleteId = null;
-    let fileToDeleteTitleId = null;
+
 
 
 
