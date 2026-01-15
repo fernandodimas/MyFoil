@@ -471,6 +471,24 @@
                     <input class="input" type="text" id="editMetaBanner">
                 </div>
             </div>
+            <div class="columns">
+                <div class="column">
+                    <div class="field">
+                        <label class="label">Gênero</label>
+                        <div class="control">
+                            <input class="input" type="text" id="editMetaGenre" placeholder="Ex: Ação, RPG">
+                        </div>
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="field">
+                        <label class="label">Data de Lançamento</label>
+                        <div class="control">
+                            <input class="input" type="text" id="editMetaRelease" placeholder="Ex: 2023-11-14">
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
         <footer class="modal-card-foot is-justify-content-flex-end">
             <button class="button" onclick="closeModal('editMetadataModal')">Cancelar</button>
@@ -1181,6 +1199,8 @@
         $('#editMetaDescription').val(game.description);
         $('#editMetaIcon').val(game.iconUrl);
         $('#editMetaBanner').val(game.bannerUrl);
+        $('#editMetaGenre').val(Array.isArray(game.category) ? game.category.join(', ') : (game.category || ''));
+        $('#editMetaRelease').val(game.releaseDate || '');
 
         // Try getting fresh custom data to be sure
         $.get(`/api/games/${titleId}/custom`, function (response) {
@@ -1191,6 +1211,8 @@
                 if (d.description) $('#editMetaDescription').val(d.description);
                 if (d.iconUrl) $('#editMetaIcon').val(d.iconUrl);
                 if (d.bannerUrl) $('#editMetaBanner').val(d.bannerUrl);
+                if (d.genre || d.category) $('#editMetaGenre').val(d.genre || d.category);
+                if (d.release_date || d.releaseDate) $('#editMetaRelease').val(d.release_date || d.releaseDate);
             }
             openModal('editMetadataModal');
         });
@@ -1203,7 +1225,9 @@
             publisher: $('#editMetaPublisher').val(),
             description: $('#editMetaDescription').val(),
             iconUrl: $('#editMetaIcon').val(),
-            bannerUrl: $('#editMetaBanner').val()
+            bannerUrl: $('#editMetaBanner').val(),
+            genre: $('#editMetaGenre').val(),
+            release_date: $('#editMetaRelease').val()
         };
 
         $('#btnSaveMetadata').addClass('is-loading');
@@ -1432,6 +1456,8 @@
         if (item.description) $('#editMetaDescription').val(item.description);
         if (item.iconUrl) $('#editMetaIcon').val(item.iconUrl);
         if (item.bannerUrl) $('#editMetaBanner').val(item.bannerUrl);
+        if (item.category || item.genre) $('#editMetaGenre').val(Array.isArray(item.category) ? item.category.join(', ') : (item.category || item.genre || ''));
+        if (item.releaseDate || item.release_date) $('#editMetaRelease').val(item.releaseDate || item.release_date);
 
         showToast(`Metadados de "${item.name}" aplicados! Salve para confirmar.`, 'success');
         $('#titleDBSearchResults').html(''); // Clear results

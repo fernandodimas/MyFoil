@@ -1315,7 +1315,7 @@
         if (!titleId) return;
         $('#editMetaId').val(titleId);
         $('#editMetaName').val('Unknown (' + titleId + ')');
-        $('#editMetaPublisher, #editMetaDescription, #editMetaIcon, #editMetaBanner').val('');
+        $('#editMetaPublisher, #editMetaDescription, #editMetaIcon, #editMetaBanner, #editMetaGenre, #editMetaRelease').val('');
         $('#titleDBSearchResults').empty();
         $('#searchTitleDBInput').val('');
 
@@ -1327,6 +1327,8 @@
                 if (d.description) $('#editMetaDescription').val(d.description);
                 if (d.iconUrl) $('#editMetaIcon').val(d.iconUrl);
                 if (d.bannerUrl) $('#editMetaBanner').val(d.bannerUrl);
+                if (d.genre || d.category) $('#editMetaGenre').val(d.genre || d.category);
+                if (d.release_date || d.releaseDate) $('#editMetaRelease').val(d.release_date || d.releaseDate);
             }
         });
 
@@ -1340,7 +1342,9 @@
             publisher: $('#editMetaPublisher').val(),
             description: $('#editMetaDescription').val(),
             iconUrl: $('#editMetaIcon').val(),
-            bannerUrl: $('#editMetaBanner').val()
+            bannerUrl: $('#editMetaBanner').val(),
+            genre: $('#editMetaGenre').val(),
+            release_date: $('#editMetaRelease').val()
         };
 
         $('#btnSaveMetadata').addClass('is-loading');
@@ -1407,6 +1411,8 @@
         $('#editMetaDescription').val(res.description || '');
         $('#editMetaIcon').val(res.iconUrl || '');
         $('#editMetaBanner').val(res.bannerUrl || '');
+        $('#editMetaGenre').val(Array.isArray(res.category) ? res.category.join(', ') : (res.category || res.genre || ''));
+        $('#editMetaRelease').val(res.releaseDate || res.release_date || '');
 
         showToast('Dados do TitleDB aplicados!', 'success');
     }
@@ -1996,6 +2002,24 @@
                         <label class="label is-small">URL do Banner</label>
                         <div class="control">
                             <input class="input is-small" type="text" id="editMetaBanner">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="columns">
+                <div class="column">
+                    <div class="field">
+                        <label class="label is-small">Gênero</label>
+                        <div class="control">
+                            <input class="input is-small" type="text" id="editMetaGenre" placeholder="Ex: Ação, RPG">
+                        </div>
+                    </div>
+                </div>
+                <div class="column">
+                    <div class="field">
+                        <label class="label is-small">Data de Lançamento</label>
+                        <div class="control">
+                            <input class="input is-small" type="text" id="editMetaRelease" placeholder="Ex: 2023-11-14">
                         </div>
                     </div>
                 </div>
