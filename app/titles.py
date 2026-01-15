@@ -770,17 +770,18 @@ def save_custom_title_info(title_id, data):
     # 3. Write back to disk using safe atomic write
     try:
         safe_write_json(custom_path, custom_db, indent=4)
+        
+        # 4. Update in-memory DB immediately
+        if _titles_db is not None:
+            if title_id in _titles_db:
+                _titles_db[title_id].update(data)
+            else:
+                _titles_db[title_id] = data
+                
     except Exception as e:
         logger.error(f"Failed to save custom.json: {e}")
         return False, str(e)
-
-    # 4. Update in-memory DB immediately
-    if _titles_db:
-        # Normalize TID for in-memory update
-        title_id = title_id.upper()
-        if title_id in _titles_db and isinstance(_titles_db[title_id], dict):
-            _titles_db[title_id].update(data)
-        else:
-            _titles_db[title_id] = data
-            
+        
     return True, None
+    return True, None
+

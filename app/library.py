@@ -608,8 +608,9 @@ def get_game_info_item(tid, title_data):
     game['latest_release_date'] = normalize_date(latest_v['release_date']) if latest_v else ''
     
     # Ensure release_date is consistently available for sorting
-    original_release = normalize_date(game.get('release_date'))
+    original_release = normalize_date(game.get('release_date') or game.get('releaseDate'))
     game['release_date'] = original_release or game['latest_release_date'] or ''
+    game['genre'] = game.get('genre') or game.get('category') or ''
 
     # Status indicators - only consider as owned if files are actually present
     game['has_base'] = any(a['app_type'] == APP_TYPE_BASE and a['owned'] and len(a.get('files_info', [])) > 0 for a in all_title_apps)
