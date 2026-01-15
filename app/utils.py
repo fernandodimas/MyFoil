@@ -162,10 +162,14 @@ def allowed_file(filename):
 def safe_write_json(path, data, **dump_kwargs):
     with _json_write_lock:
         dirpath = os.path.dirname(path) or "."
+        # Default options
+        options = {'ensure_ascii': False, 'indent': 2}
+        options.update(dump_kwargs)
+        
         # Create temporary file in same directory
         with tempfile.NamedTemporaryFile("w", dir=dirpath, delete=False, encoding="utf-8") as tmp:
             tmp_path = tmp.name
-            json.dump(data, tmp, ensure_ascii=False, indent=2, **dump_kwargs)
+            json.dump(data, tmp, **options)
             tmp.flush()
             os.fsync(tmp.fileno())  # flush to disk
         # Atomically replace target file
