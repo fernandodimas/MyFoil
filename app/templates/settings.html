@@ -585,9 +585,23 @@
                                     conseguiu identificar automaticamente. Você pode verificar o motivo do erro ou
                                     excluir o arquivo se for lixo.</p>
                                 <div class="table-container">
+                                    <div id="bulkActionsBar" class="notification is-light py-2 px-3 mb-3 is-hidden">
+                                        <div class="is-flex is-justify-content-between is-align-items-center">
+                                            <span class="is-size-7 has-text-weight-bold" id="selectedCountText">0 itens
+                                                selecionados</span>
+                                            <div class="buttons">
+                                                <button class="button is-small is-danger is-light"
+                                                    onclick="bulkDeleteFiles()">
+                                                    <i class="bi bi-trash3 mr-1"></i> Excluir Selecionados
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <table class="table is-fullwidth is-hoverable" id="errorsTable">
                                         <thead>
                                             <tr>
+                                                <th width="40"><input type="checkbox" id="selectAllErrors"
+                                                        onclick="toggleAllErrors(this)"></th>
                                                 <th>Arquivo</th>
                                                 <th>Erro</th>
                                                 <th class="has-text-right">Ações</th>
@@ -1278,10 +1292,13 @@
     }
 
     function fillErrorsTable() {
+        $('#bulkActionsBar').addClass('is-hidden');
+        $('#selectAllErrors').prop('checked', false);
+
         $.getJSON("/api/files/unidentified", (result) => {
             const tbody = $('#errorsTable tbody').empty();
             if (!result || !result.length) {
-                tbody.append('<tr><td colspan="3" class="has-text-centered py-6 opacity-40 italic">Nenhum erro de identificação encontrado.</td></tr>');
+                tbody.append('<tr><td colspan="4" class="has-text-centered py-6 opacity-40 italic">Nenhum erro de identificação encontrado.</td></tr>');
             } else {
                 result.forEach(file => {
                     // Check if it's a recognition error (contains TitleID in parenthesis)
@@ -1291,6 +1308,7 @@
 
                     tbody.append(`
                         <tr>
+                            <td><input type="checkbox" class="error-checkbox" data-id="${file.id}" onclick="updateBulkBar()"></td>
                             <td>
                                 <p class="has-text-weight-bold is-size-7 break-word">${file.filename}</p>
                                 <p class="is-family-monospace is-size-7 opacity-40 break-word">${file.filepath}</p>
@@ -1357,6 +1375,72 @@
             } else {
                 showToast('Erro ao excluir: ' + res.error, 'error');
             }
+        });
+    }
+
+    // Bulk Actions for Error Files
+    function toggleAllErrors(checkbox) {
+        $('.error-checkbox').prop('checked', checkbox.checked);
+        updateBulkBar();
+    }
+
+    function updateBulkBar() {
+        const selected = $('.error-checkbox:checked').length;
+        $('#selectedCountText').text(`${selected} ${selected === 1 ? 'item selecionado' : 'itens selecionados'}`);
+
+        if (selected > 0) {
+            $('#bulkActionsBar').removeClass('is-hidden');
+        } else {
+            $('#bulkActionsBar').addClass('is-hidden');
+        }
+    }
+
+    function bulkDeleteFiles() {
+        const selectedIds = $('.error-checkbox:checked').map(function () {
+            return $(this).data('id');
+        }).get();
+
+        if (selectedIds.length === 0) {
+            showToast('Nenhum arquivo selecionado', 'error');
+            return;
+        }
+
+        if (!confirm(`Deseja realmente excluir ${selectedIds.length} arquivo(s) do DISCO? Esta ação não pode ser desfeita.`)) {
+            return;
+        }
+
+        let deleted = 0;
+        let errors = 0;
+
+        selectedIds.forEach((id, index) => {
+            $.post(`/api/files/delete/${id}`, (res) => {
+                if (res.success) {
+                    deleted++;
+                } else {
+                    errors++;
+                }
+
+                // Check if all requests completed
+                if (index === selectedIds.length - 1) {
+                    setTimeout(() => {
+                        if (deleted > 0) {
+                            showToast(`${deleted} arquivo(s) excluído(s) com sucesso`);
+                        }
+                        if (errors > 0) {
+                            showToast(`${errors} erro(s) ao excluir`, 'error');
+                        }
+                        fillErrorsTable();
+                    }, 500);
+                }
+            }).fail(() => {
+                errors++;
+                if (index === selectedIds.length - 1) {
+                    setTimeout(() => {
+                        showToast(`${errors} erro(s) ao excluir`, 'error');
+                        fillErrorsTable();
+                    }, 500);
+                }
+            });
         });
     }
 
