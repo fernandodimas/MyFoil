@@ -50,7 +50,7 @@
                     <p class="mt-4 has-text-weight-bold">Carregando configurações...</p>
                 </div>
 
-                <div id="settingsContent" class="is-hidden animate-fade-in">
+                <div id="settingsContent" class="is-hidden animate-fade-in settings-container p-5">
                     <!-- Alerts -->
                     <div id="globalAlerts" class="mb-5">
                         {% if admin_account_created == false %}
@@ -1114,15 +1114,43 @@
 </div>
 
 <style>
-    .menu-list a.is-active {
-        background-color: rgba(124, 58, 237, 0.15);
+    .menu-list a {
+        transition: all 0.2s ease;
+        border-radius: 8px;
+        margin-bottom: 2px;
+        color: var(--bulma-text);
+        padding: 0.75rem 1rem;
+    }
+
+    .menu-list a:hover {
+        background-color: rgba(124, 58, 237, 0.05);
         color: var(--bulma-primary);
-        font-weight: bold;
-        border-left: 3px solid var(--bulma-primary);
+        transform: translateX(5px);
+    }
+
+    .menu-list a.is-active {
+        background: linear-gradient(90deg, rgba(124, 58, 237, 0.15) 0%, rgba(124, 58, 237, 0.05) 100%);
+        color: var(--bulma-primary);
+        font-weight: 700;
+        border-left: 4px solid var(--bulma-primary);
+        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.1);
     }
 
     [data-theme="dark"] .menu-list a.is-active {
-        background-color: rgba(139, 92, 246, 0.2);
+        background: linear-gradient(90deg, rgba(139, 92, 246, 0.2) 0%, rgba(139, 92, 246, 0.05) 100%);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .settings-container {
+        animation: fadeIn 0.4s ease-out forwards;
+        background-color: var(--bulma-card-background);
+        border-radius: 16px;
+        border: 1px solid var(--bulma-border);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    }
+
+    [data-theme="dark"] .settings-container {
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
     }
 
     .animate-fade-in {
@@ -1132,7 +1160,7 @@
     @keyframes fadeIn {
         from {
             opacity: 0;
-            transform: translateY(10px);
+            transform: translateY(15px);
         }
 
         to {
@@ -1143,6 +1171,7 @@
 
     .is-sticky {
         position: sticky;
+        top: 20px;
     }
 
     .mr-1 {
@@ -1298,13 +1327,20 @@
     }
 
     function deleteTag(id) {
-        if (!confirm('Excluir esta tag?')) return;
-        $.ajax({
-            url: `/api/tags/${id}`,
-            type: 'DELETE',
-            success: () => {
-                showToast('Tag excluída');
-                fillTagsTable();
+        confirmAction({
+            title: 'Excluir Tag',
+            message: 'Deseja realmente excluir esta tag? Esta ação removerá a tag de todos os jogos associados.',
+            confirmText: 'Excluir',
+            confirmClass: 'is-danger',
+            onConfirm: () => {
+                $.ajax({
+                    url: `/api/tags/${id}`,
+                    type: 'DELETE',
+                    success: () => {
+                        showToast('Tag excluída');
+                        fillTagsTable();
+                    }
+                });
             }
         });
     }
@@ -1625,13 +1661,20 @@
 
 
     function deleteErrorFile(id) {
-        if (!confirm('Deseja realmente excluir este arquivo do DISCO?')) return;
-        $.post(`/api/files/delete/${id}`, (res) => {
-            if (res.success) {
-                showToast('Arquivo excluído');
-                fillErrorsTable();
-            } else {
-                showToast('Erro ao excluir: ' + res.error, 'error');
+        confirmAction({
+            title: 'Excluir Arquivo',
+            message: 'Deseja realmente excluir este arquivo do DISCO? Esta ação não pode ser desfeita.',
+            confirmText: 'Excluir',
+            confirmClass: 'is-danger',
+            onConfirm: () => {
+                $.post(`/api/files/delete/${id}`, (res) => {
+                    if (res.success) {
+                        showToast('Arquivo excluído');
+                        fillErrorsTable();
+                    } else {
+                        showToast('Erro ao excluir: ' + res.error, 'error');
+                    }
+                });
             }
         });
     }
@@ -1663,42 +1706,46 @@
             return;
         }
 
-        if (!confirm(`Deseja realmente excluir ${selectedIds.length} arquivo(s) do DISCO? Esta ação não pode ser desfeita.`)) {
-            return;
-        }
+        confirmAction({
+            title: 'Excluir Arquivos',
+            message: `Deseja realmente excluir ${selectedIds.length} arquivo(s) do DISCO? Esta ação não pode ser desfeita.`,
+            confirmText: 'Excluir',
+            confirmClass: 'is-danger',
+            onConfirm: () => {
+                let deleted = 0;
+                let errors = 0;
 
-        let deleted = 0;
-        let errors = 0;
-
-        selectedIds.forEach((id, index) => {
-            $.post(`/api/files/delete/${id}`, (res) => {
-                if (res.success) {
-                    deleted++;
-                } else {
-                    errors++;
-                }
-
-                // Check if all requests completed
-                if (index === selectedIds.length - 1) {
-                    setTimeout(() => {
-                        if (deleted > 0) {
-                            showToast(`${deleted} arquivo(s) excluído(s) com sucesso`);
+                selectedIds.forEach((id, index) => {
+                    $.post(`/api/files/delete/${id}`, (res) => {
+                        if (res.success) {
+                            deleted++;
+                        } else {
+                            errors++;
                         }
-                        if (errors > 0) {
-                            showToast(`${errors} erro(s) ao excluir`, 'error');
+
+                        // Check if all requests completed
+                        if (index === selectedIds.length - 1) {
+                            setTimeout(() => {
+                                if (deleted > 0) {
+                                    showToast(`${deleted} arquivo(s) excluído(s) com sucesso`);
+                                }
+                                if (errors > 0) {
+                                    showToast(`${errors} erro(s) ao excluir`, 'error');
+                                }
+                                fillErrorsTable();
+                            }, 500);
                         }
-                        fillErrorsTable();
-                    }, 500);
-                }
-            }).fail(() => {
-                errors++;
-                if (index === selectedIds.length - 1) {
-                    setTimeout(() => {
-                        showToast(`${errors} erro(s) ao excluir`, 'error');
-                        fillErrorsTable();
-                    }, 500);
-                }
-            });
+                    }).fail(() => {
+                        errors++;
+                        if (index === selectedIds.length - 1) {
+                            setTimeout(() => {
+                                showToast(`${errors} erro(s) ao excluir`, 'error');
+                                fillErrorsTable();
+                            }, 500);
+                        }
+                    });
+                });
+            }
         });
     }
 
@@ -1807,10 +1854,22 @@
     }
 
     function deleteSource(name) {
-        if (confirm(`Delete source ${name}?`)) $.ajax({
-            url: "/api/settings/titledb/sources", type: 'DELETE', data: JSON.stringify({ name }), contentType: "application/json", success: () => {
-                showToast('Source deleted');
-                fillTitleDBSourcesTable();
+        confirmAction({
+            title: 'Excluir Fonte',
+            message: `Deseja realmente excluir a fonte "${name}"?`,
+            confirmText: 'Excluir',
+            confirmClass: 'is-danger',
+            onConfirm: () => {
+                $.ajax({
+                    url: "/api/settings/titledb/sources",
+                    type: 'DELETE',
+                    data: JSON.stringify({ name }),
+                    contentType: "application/json",
+                    success: () => {
+                        showToast('Fonte excluída');
+                        fillTitleDBSourcesTable();
+                    }
+                });
             }
         });
     }
@@ -2160,13 +2219,20 @@
     }
 
     function deleteWebhook(id) {
-        if (!confirm('Deseja realmente excluir este webhook?')) return;
-        $.ajax({
-            url: `/api/settings/webhooks/${id}`,
-            type: 'DELETE',
-            success: () => {
-                showToast('Webhook removido');
-                fillWebhooksList();
+        confirmAction({
+            title: 'Excluir Webhook',
+            message: 'Deseja realmente excluir este webhook?',
+            confirmText: 'Excluir',
+            confirmClass: 'is-danger',
+            onConfirm: () => {
+                $.ajax({
+                    url: `/api/settings/webhooks/${id}`,
+                    type: 'DELETE',
+                    success: () => {
+                        showToast('Webhook removido');
+                        fillWebhooksList();
+                    }
+                });
             }
         });
     }
@@ -2251,14 +2317,18 @@
     }
 
     function runRenamingJob() {
-        if (!confirm('Isso irá renomear fisicamente os arquivos no seu disco. Tem certeza?')) return;
-
-        // First save settings to ensure we use what's on screen
-        saveRenamingSettings();
-
-        $.post('/api/renaming/run', function (resp) {
-            if (resp.success) {
-                showToast('Job de renomeação iniciado em segundo plano.', 'is-info');
+        confirmAction({
+            title: 'Renomeação em Massa',
+            message: 'Isso irá renomear fisicamente os arquivos no seu disco. Tem certeza?',
+            confirmText: 'Iniciar Renomeação',
+            confirmClass: 'is-warning',
+            onConfirm: () => {
+                saveRenamingSettings();
+                $.post('/api/renaming/run', function (resp) {
+                    if (resp.success) {
+                        showToast('Job de renomeação iniciado em segundo plano.', 'success');
+                    }
+                });
             }
         });
     }

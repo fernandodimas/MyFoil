@@ -1429,7 +1429,7 @@ def library_api():
     
     # Paginação: obter parâmetros da query string
     page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 100, type=int)
+    per_page = request.args.get('per_page', 1000, type=int) # Increased from 100
     
     # Validar parâmetros
     page = max(1, page)  # Página mínima é 1
@@ -1521,7 +1521,7 @@ def search_library_api():
     
     return jsonify({
         'count': len(results),
-        'results': results[:100] # Limit to 100 for performance
+        'results': results # Removed 100 limit for user request
     })
 
 @main_bp.route('/api/settings/webhooks')

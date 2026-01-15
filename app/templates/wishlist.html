@@ -249,18 +249,24 @@
         }
     }
 
-    async function removeFromWishlist(tid) {
-        if (!confirm('Remover este item da wishlist?')) return;
-
-        try {
-            const res = await fetch(`/api/wishlist/${tid}`, { method: 'DELETE' });
-            if (res.ok) {
-                loadWishlist(); // Reload
-                // Also update global event/toast if needed
+    function removeFromWishlist(tid) {
+        confirmAction({
+            title: 'Remover da Wishlist',
+            message: 'Deseja realmente remover este item da sua lista de desejos?',
+            confirmText: 'Remover',
+            confirmClass: 'is-danger',
+            onConfirm: async () => {
+                try {
+                    const res = await fetch(`/api/wishlist/${tid}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        showToast('Item removido da wishlist', 'success');
+                        loadWishlist();
+                    }
+                } catch (e) {
+                    showToast('Erro ao remover item', 'error');
+                }
             }
-        } catch (e) {
-            alert('Erro ao remover');
-        }
+        });
     }
 
     async function changePriority(tid, newPriority) {
@@ -275,10 +281,11 @@
             if (res.ok) {
                 loadWishlist();
             } else {
-                alert('Erro ao atualizar prioridade');
+                showToast('Erro ao atualizar prioridade', 'error');
             }
         } catch (e) {
             console.error(e);
+            showToast('Erro de conexão', 'error');
         }
     }
 

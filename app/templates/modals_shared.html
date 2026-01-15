@@ -110,21 +110,25 @@
     </div>
 </div>
 
-<!-- Confirmation Modal -->
-<div class="modal" id="confirmDeleteModal" style="z-index: 9999;">
-    <div class="modal-background" onclick="closeModal('confirmDeleteModal')"></div>
-    <div class="modal-card">
-        <header class="modal-card-head">
-            <p class="modal-card-title">Confirmar Exclusão</p>
-            <button class="delete" aria-label="close" onclick="closeModal('confirmDeleteModal')"></button>
+<!-- Confirmation Modal (Generic) -->
+<div class="modal" id="genericConfirmModal" style="z-index: 9999;">
+    <div class="modal-background" onclick="closeModal('genericConfirmModal')"></div>
+    <div class="modal-card" style="max-width: 450px;">
+        <header class="modal-card-head py-3">
+            <p class="modal-card-title is-size-6" id="confirmTitle">Confirmar Ação</p>
+            <button class="delete" aria-label="close" onclick="closeModal('genericConfirmModal')"></button>
         </header>
-        <section class="modal-card-body">
-            <p>Deseja realmente excluir este arquivo? Esta ação não pode ser desfeita.</p>
+        <section class="modal-card-body py-4">
+            <div class="is-flex is-align-items-center mb-0">
+                <span class="icon is-large has-text-warning mr-2">
+                    <i class="bi bi-exclamation-triangle-fill is-size-3"></i>
+                </span>
+                <p id="confirmMessage" class="is-size-6">Deseja realmente prosseguir com esta ação?</p>
+            </div>
         </section>
-        <footer class="modal-card-foot is-justify-content-flex-end">
-            <button class="button" onclick="closeModal('confirmDeleteModal')">Cancelar</button>
-            <button class="button is-danger" id="btnConfirmDelete" onclick="confirmDeleteFile()">Excluir
-                Permanentemente</button>
+        <footer class="modal-card-foot is-justify-content-flex-end py-2">
+            <button class="button is-small is-light" onclick="closeModal('genericConfirmModal')">Cancelar</button>
+            <button class="button is-small is-primary" id="btnConfirmAction">Confirmar</button>
         </footer>
     </div>
 </div>
@@ -132,6 +136,22 @@
 <script>
     const openModal = (id) => $(`#${id}`).addClass('is-active');
     const closeModal = (id) => $(`#${id}`).removeClass('is-active');
+
+    // Generic Confirmation Helper
+    window.confirmAction = function (options) {
+        const { title, message, onConfirm, confirmText, confirmClass } = options;
+        $('#confirmTitle').text(title || 'Confirmar Ação');
+        $('#confirmMessage').text(message || 'Deseja realmente prosseguir?');
+        $('#btnConfirmAction').text(confirmText || 'Confirmar');
+        $('#btnConfirmAction').attr('class', `button is-small ${confirmClass || 'is-primary'}`);
+
+        $('#btnConfirmAction').off('click').on('click', function () {
+            if (onConfirm) onConfirm();
+            closeModal('genericConfirmModal');
+        });
+
+        openModal('genericConfirmModal');
+    };
 
     let fileToDeleteId = null;
     let fileToDeleteTitleId = null;
