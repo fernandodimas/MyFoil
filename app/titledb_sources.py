@@ -352,7 +352,7 @@ class TitleDBSourceManager:
                     source.remote_date = new_date
                     logger.info(f"Source {source.name} remote date updated to {new_date}")
                 else:
-                    logger.warning(f"Could not find remote date for source: {source.name}")
+                    logger.info(f"Could not find remote date for source: {source.name} (This is normal for some sources)")
             finally:
                 source.is_fetching = False
         

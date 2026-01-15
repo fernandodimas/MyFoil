@@ -530,7 +530,8 @@ def get_game_info(title_id):
                 'release_date': info.get('releaseDate') or '',
                 'size': info.get('size') or 0,
                 'publisher': info.get('publisher') or 'Nintendo',
-                'description': info.get('description') or ''
+                'description': info.get('description') or '',
+                'nsuid': info.get('nsuid') or ''
             }
             
             # DLC/Update Icon Fallback: If icon is missing, try to inherit from base game
@@ -581,7 +582,8 @@ def get_game_info(title_id):
                         'release_date': base_info['release_date'],
                         'size': 0,
                         'publisher': base_info['publisher'],
-                        'description': f"Informação estendida do jogo base: {base_info['name']}"
+                        'description': f"Informação estendida do jogo base: {base_info['name']}",
+                        'nsuid': base_info.get('nsuid', '')
                     }
 
         raise Exception(f"ID {search_id} not found in database")
@@ -596,7 +598,8 @@ def get_game_info(title_id):
             'release_date': '',
             'size': 0,
             'publisher': '--',
-            'description': 'ID não encontrado no banco de dados. Por favor, atualize o TitleDB nas configurações.'
+            'description': 'ID não encontrado no banco de dados. Por favor, atualize o TitleDB nas configurações.',
+            'nsuid': ''
         }
 
 def get_update_number(version):
