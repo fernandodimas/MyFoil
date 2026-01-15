@@ -95,20 +95,27 @@
 
             <div class="column is-3">
                 <div class="card box shadow-sm border-none p-5 h-100">
-                    <p class="heading is-size-7 opacity-50 mb-2">Saúde dos Arquivos</p>
+                    <p class="heading is-size-7 opacity-50 mb-2">Saúde da Identificação</p>
                     <div class="is-flex is-align-items-center mb-3">
                         <span class="icon is-large has-text-info mr-3">
                             <i class="bi bi-fingerprint is-size-3"></i>
                         </span>
                         <div>
-                            <p class="title is-3 m-0" id="stat-id-rate">--%</p>
-                            <p class="is-size-7">Identificação</p>
+                            <p class="title is-4 m-0"><span id="stat-id-rate">--</span>% / <span
+                                    id="stat-recognition-pct" class="has-text-primary">--</span>%</p>
+                            <p class="is-size-7">Arquivo / Metadados</p>
                         </div>
                     </div>
                     <div class="pt-3 border-top">
-                        <div class="is-flex is-justify-content-between">
-                            <p class="is-size-7 opacity-70"><i class="bi bi-exclamation-triangle mr-1"></i> <span
-                                    id="stat-unidentified-files" class="has-text-danger">--</span> erros</p>
+                        <div class="is-flex is-justify-content-between is-align-items-center">
+                            <p class="is-size-7 opacity-70" title="Arquivos não identificados">
+                                <i class="bi bi-file-earmark-x mr-1"></i> <span id="stat-unidentified-files"
+                                    class="has-text-danger">--</span>
+                            </p>
+                            <p class="is-size-7 opacity-70" title="Títulos sem nome no Banco de Dados">
+                                <i class="bi bi-question-circle mr-1"></i> <span id="stat-unrecognized-count"
+                                    class="has-text-warning">--</span>
+                            </p>
                             <span id="stat-keys-badge">--</span>
                         </div>
                     </div>
@@ -218,8 +225,10 @@
             $('#stat-total-available').text(data.titledb.total_available.toLocaleString());
 
             // Identification Stats
-            $('#stat-id-rate').text(data.identification.identified_pct + '%');
+            $('#stat-id-rate').text(data.identification.identified_pct);
+            $('#stat-recognition-pct').text(data.identification.recognition_pct);
             $('#stat-unidentified-files').text(data.identification.unidentified_count);
+            $('#stat-unrecognized-count').text(data.identification.unrecognized_count);
 
             // Keys Status
             const keysBadge = $('#stat-keys-badge');

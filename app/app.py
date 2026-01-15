@@ -1577,7 +1577,6 @@ def get_stats_overview():
     # as items only appear there if we own at least one component (Base, Update or DLC)
     total_owned = len(filtered_games)
     up_to_date = len([g for g in filtered_games if g.get('status_color') == 'green' and g.get('has_base')])
-    
     # Genre Distribution (from filtered list)
     genre_dist = {}
     for g in filtered_games:
@@ -1586,6 +1585,11 @@ def get_stats_overview():
         for c in cats:
             genre_dist[c] = genre_dist.get(c, 0) + 1
             
+    # Recognition Logic (Check if the TitleID exists in TitleDB and has a name)
+    # Titles are considered unrecognized if their name starts with "Unknown" or if they are purely generic
+    recognized_games = len([g for g in filtered_games if g.get('name') and not g.get('name', '').startswith('Unknown')])
+    recognition_rate = round((recognized_games / total_owned * 100), 1) if total_owned > 0 else 0
+
     coverage_pct = round((total_owned / titles_db_count * 100), 2) if titles_db_count > 0 else 0
     keys_valid = app_settings.get('titles', {}).get('valid_keys', False)
 
@@ -1615,7 +1619,9 @@ def get_stats_overview():
         'identification': {
             'total_files': total_files,
             'identified_pct': id_rate,
+            'recognition_pct': recognition_rate,
             'unidentified_count': unidentified_files,
+            'unrecognized_count': total_owned - recognized_games,
             'keys_valid': keys_valid
         },
         'genres': genre_dist,
