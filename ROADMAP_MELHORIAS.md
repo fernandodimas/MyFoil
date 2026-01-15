@@ -1,7 +1,7 @@
 # 🚀 MyFoil - Análise, Melhorias e Roadmap de Funcionalidades
 
-**Data da Análise:** 2026-01-14
-**Versão Atual:** BUILD_VERSION '20260114_1300'
+**Data da Análise:** 2026-01-15
+**Versão Atual:** BUILD_VERSION '20260115_0845'
 **Autor:** Análise Técnica MyFoil (Pair Programming AI)
 
 ---
@@ -48,11 +48,11 @@ MyFoil é um gerenciador de biblioteca Nintendo Switch que transforma sua coleç
 
 ### 1.4 Áreas de Melhoria Identificadas
 ⚠️ Falta de testes automatizados  
-⚠️ Ausência de API REST documentada  
-⚠️ Logging inconsistente em alguns módulos  
-⚠️ Falta de métricas e monitoramento  
-⚠️ Ausência de sistema de backup automático  
-⚠️ Interface pode ser mais interativa (WebSockets)  
+✅ Ausência de API REST documentada (Agora em `/api/docs`)  
+✅ Logging inconsistente em alguns módulos (Implementado structlog)  
+✅ Falta de métricas e monitoramento (Implementado Prometheus/Grafana)  
+✅ Ausência de sistema de backup automático (Implementado BackupManager)  
+✅ Interface pode ser mais interativa (WebSockets implementados)  
 
 ---
 
@@ -600,6 +600,8 @@ Realizar uma varredura completa no projeto para remover arquivos legados do Ownf
 **Complexidade:** Média  
 **Impacto:** Alto
 
+**Status:** Implementado com suporte a cores hexadecimais, ícones e filtragem na biblioteca.
+
 **Descrição:**
 Permitir que usuários criem tags personalizadas para organizar jogos além das categorias do TitleDB.
 
@@ -694,20 +696,13 @@ Expandir a busca para incluir jogos que não estão na biblioteca local, permiti
 
 ---
 
-#### 4.1.9 Identificação Manual de Jogos UI
+#### 4.1.9 Identificação Manual de Jogos UI ✅ CONCLUÍDO
 **Prioridade:** 🔵 ALTA
 **Complexidade:** Média
 **Impacto:** Alto
 
-**Descrição:**
-Criar uma interface na página de Detalhes do Jogo ou Configurações para permitir a edição manual das informações de um TitleID (Nome, Imagens, Descrição, etc.).
-Atualmente isso é possível editando manualmente o arquivo `app/data/titledb/custom.json`, mas uma UI tornaria o processo acessível a todos os usuários.
-
-**Funcionalidades:**
-- Formulário para override de dados por TitleID.
-- Upload ou URL para Ícone e Banner Customizados.
-- Persistência automática em `custom.json`.
-- Botão "Recarregar TitleDB" para aplicar mudanças imediatamente.
+**Descrição:** Interface na página de Configurações (Aba Erros/Identificação) para permitir a edição manual das informações de um TitleID.
+**Status:** Implementado botão "Reconhecer" para jogos Unknown e integração com modal de edição de metadados.
 
 ---
 
@@ -921,13 +916,13 @@ trigger_webhook('file_added', {
 
 ---
 
-#### 4.2.3 Plugin System
+#### 4.2.3 Plugin System ✅ CONCLUÍDO (CORE)
 **Prioridade:** 🟢 BAIXA  
 **Complexidade:** Alta  
 **Impacto:** Alto (longo prazo)
 
-**Descrição:**
-Sistema de plugins para permitir extensões da comunidade.
+**Descrição:** Sistema de plugins para permitir extensões da comunidade.
+**Status:** Core implementado com detecção automática, carregamento dinâmico e interface de ativação/desativação.
 
 **Implementação:**
 ```python
@@ -1288,23 +1283,34 @@ Gamificação da gestão de biblioteca.
 
 ---
 
-### Sprint 7 (3 semanas) - Q2 2026
+### Sprint 7 (3 semanas) - Q2 2026 ✅ CONCLUÍDO / EM REFINAMENTO
 **Foco:** Integrações
 
-- [x] Integração com Google Drive
-- [x] Integração com Dropbox
-- [x] Sistema de plugins (beta)
+- [x] Integração com Google Drive (BETA)
+- [x] Integração com Dropbox (BETA)
+- [x] Sistema de plugins (BETA - Core concluído)
 - [x] Comparação com TitleDB
 - [x] Perfis públicos
 
 **Entregáveis:**
-- [x] Sincronização com cloud storage
+- [x] Sincronização com cloud storage (Listagem funcional, Download pendente)
 - [x] API de plugins documentada
-- [x] 2-3 plugins oficiais de exemplo
+- [x] Interface de gerenciamento de plugins (Ativar/Desativar)
 
 ---
 
-### Sprint 8 (2 semanas) - Q3 2026
+### Sprint 8 (Em breve) - Próximos Passos Sugeridos
+**Foco:** Refinamento e Comunidade
+
+- [ ] **Ações em Massa (Errors Tab)**: Selecionar múltiplos arquivos não identificados para excluir ou identificar.
+- [ ] **Verificador de Integridade**: Botão para validar se todos os arquivos no disco estão corretamente indexados.
+- [ ] **Sincronização de Metadados**: Opção para importar/exportar o `custom.json` para facilitar a identificação manual colaborativa.
+- [ ] **Download Automatizado (Cloud)**: Finalizar a lógica de download de arquivos do Google Drive/Dropbox.
+- [ ] **Notificações Mobile (Native)**: Implementar notificações push via FCM para alertas de novos jogos.
+
+---
+
+### Sprint 9 (2 semanas) - Q3 2026
 **Foco:** Refinamento de Performance
 
 - [ ] Otimização de queries SQL e índices (v1.5)
@@ -1319,7 +1325,7 @@ Gamificação da gestão de biblioteca.
 
 ---
 
-### Sprint 9 (2 semanas) - Q3 2026
+### Sprint 10 (2 semanas) - Q3 2026
 **Foco:** Segurança e Estabilidade
 
 - [ ] Auditoria de dependências e atualização geral
