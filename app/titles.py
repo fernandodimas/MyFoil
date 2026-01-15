@@ -379,6 +379,13 @@ def load_titledb(force=False):
         _titles_db_loaded = True
         _titledb_cache_timestamp = current_time  # Atualizar timestamp do cache
         logger.info(f"TitleDBs loaded. Cache TTL: {_titledb_cache_ttl}s")
+        
+        # Sync metadata to database if loaded
+        if _titles_db:
+            try:
+                sync_titles_to_db()
+            except Exception as e:
+                logger.error(f"Failed to sync TitleDB to database: {e}")
 
 @debounce(30)
 def unload_titledb():
@@ -516,7 +523,33 @@ def identify_file(filepath):
 
 
 def get_game_info(title_id):
+    from db import db, Titles
     global _titles_db
+    
+    search_id = str(title_id).upper()
+    
+    # 1. Try to get from database first (including custom edits)
+    try:
+        db_title = Titles.query.filter_by(title_id=search_id).first()
+        if db_title and (db_title.name or db_title.is_custom):
+            # If we have basic info or it's custom, return it
+            return {
+                'name': db_title.name or 'Unknown Title',
+                'bannerUrl': db_title.banner_url or '',
+                'iconUrl': db_title.icon_url or '',
+                'id': db_title.title_id,
+                'category': db_title.category.split(',') if db_title.category else [],
+                'release_date': db_title.release_date or '',
+                'size': db_title.size or 0,
+                'publisher': db_title.publisher or 'Nintendo',
+                'description': db_title.description or '',
+                'nsuid': db_title.nsuid or '',
+                'is_custom': db_title.is_custom
+            }
+    except Exception as e:
+        logger.error(f"Error querying database for game info {search_id}: {e}")
+
+    # 2. Fallback to Memory/JSON TitleDB
     if not _titles_db:
         load_titledb()
     
@@ -527,26 +560,17 @@ def get_game_info(title_id):
             'iconUrl': '',
             'id': title_id,
             'category': [],
-            'releaseDate': '',
+            'release_date': '',
             'size': 0,
             'publisher': '--',
             'description': 'Database not loaded. Please update TitleDB in settings.'
         }
 
-
-
     try:
-        info = None
-        search_id = str(title_id).upper()
-
-        if not _titles_db:
-            logger.warning(f"TitleDB not loaded for lookup of {search_id}")
-        else:
-            if _titles_db:
-                info = _titles_db.get(search_id)
-                if not info:
-                    # Case-insensitive fallback
-                    info = _titles_db.get(search_id.upper()) or _titles_db.get(search_id.lower())
+        info = _titles_db.get(search_id)
+        if not info:
+            # Case-insensitive fallback
+            info = _titles_db.get(search_id.upper()) or _titles_db.get(search_id.lower())
 
         if info:
             res = {
@@ -768,53 +792,121 @@ def search_titledb_by_name(query):
 
 def save_custom_title_info(title_id, data):
     """
-    Save custom info for a TitleID to custom.json and update in-memory DB.
+    Save custom info for a TitleID to database and custom.json.
     data should contain: name, description, publisher, iconUrl, bannerUrl, ...
     """
+    from db import db, Titles
     global _titles_db
     
     if not title_id or not data:
         return False, "Missing TitleID or Data"
 
     title_id = title_id.upper()
+    
+    # 1. Update Database
+    try:
+        db_title = Titles.query.filter_by(title_id=title_id).first()
+        if not db_title:
+            db_title = Titles(title_id=title_id)
+            db.session.add(db_title)
+        
+        db_title.name = data.get('name', db_title.name)
+        db_title.description = data.get('description', db_title.description)
+        db_title.publisher = data.get('publisher', db_title.publisher)
+        db_title.icon_url = data.get('iconUrl', db_title.icon_url)
+        db_title.banner_url = data.get('bannerUrl', db_title.banner_url)
+        db_title.category = ",".join(data.get('category')) if isinstance(data.get('category'), list) else data.get('category', db_title.category)
+        db_title.release_date = data.get('releaseDate', data.get('release_date', db_title.release_date))
+        db_title.size = data.get('size', db_title.size)
+        db_title.nsuid = data.get('nsuid', db_title.nsuid)
+        db_title.is_custom = True
+        
+        db.session.commit()
+        logger.info(f"Saved custom info to database for {title_id}")
+    except Exception as e:
+        logger.error(f"Error saving custom info to DB for {title_id}: {e}")
+        db.session.rollback()
+
+    # 2. Legacy Support: Update custom.json
     custom_path = os.path.join(TITLEDB_DIR, 'custom.json')
-    
-    # Ensure directory exists
     os.makedirs(os.path.dirname(custom_path), exist_ok=True)
-    
-    # 1. Load existing custom DB
     custom_db = robust_json_load(custom_path) or {}
     
-    # 2. Update entry
     # Map fields for compatibility with TitleDB format
-    if 'genre' in data:
-        data['category'] = data.pop('genre')
-    if 'release_date' in data:
-        data['releaseDate'] = data.pop('release_date')
-        
-    # Ensure ID is present in data
-    data['id'] = title_id
+    save_data = data.copy()
+    if 'genre' in save_data:
+        save_data['category'] = save_data.pop('genre')
+    if 'release_date' in save_data:
+        save_data['releaseDate'] = save_data.pop('release_date')
+    save_data['id'] = title_id
     
     if title_id in custom_db and isinstance(custom_db[title_id], dict):
-        custom_db[title_id].update(data)
+        custom_db[title_id].update(save_data)
     else:
-        custom_db[title_id] = data
+        custom_db[title_id] = save_data
         
-    # 3. Write back to disk using safe atomic write
     try:
         safe_write_json(custom_path, custom_db, indent=4)
         
-        # 4. Update in-memory DB immediately
+        # 3. Update in-memory DB immediately
         if _titles_db is not None:
             if title_id in _titles_db:
-                _titles_db[title_id].update(data)
+                _titles_db[title_id].update(save_data)
             else:
-                _titles_db[title_id] = data
-                
-    except Exception as e:
-        logger.error(f"Failed to save custom.json: {e}")
-        return False, str(e)
+                _titles_db[title_id] = save_data
         
-    return True, None
-    return True, None
+        return True, None
+    except Exception as e:
+        logger.error(f"Error saving custom.json: {e}")
+        return False, str(e)
+
+
+def sync_titles_to_db(force=False):
+    """
+    Sync metadata from _titles_db (loaded from JSON) to Database Titles table.
+    Only updates titles that are NOT marked as 'is_custom'.
+    """
+    from db import db, Titles
+    global _titles_db
+    
+    if not _titles_db:
+        logger.warning("sync_titles_to_db: TitleDB not loaded, skipping sync.")
+        return
+        
+    logger.info("Syncing TitleDB metadata to database...")
+    
+    try:
+        # Get all titles currently in DB to avoid bulk queries in loop
+        # We only sync titles that exist in our database (library/wishlist/identified)
+        # to avoid bloat. If a game is new, it will be added when identified.
+        db_titles = Titles.query.all()
+        db_titles_map = {t.title_id.upper(): t for t in db_titles}
+        
+        updated_count = 0
+        for tid, tdb_info in _titles_db.items():
+            tid = tid.upper()
+            if tid in db_titles_map:
+                title = db_titles_map[tid]
+                
+                # Only update if NOT custom
+                if not title.is_custom:
+                    title.name = tdb_info.get('name', title.name)
+                    title.description = tdb_info.get('description', title.description)
+                    title.publisher = tdb_info.get('publisher', title.publisher)
+                    title.icon_url = tdb_info.get('iconUrl', title.icon_url)
+                    title.banner_url = tdb_info.get('bannerUrl', title.banner_url)
+                    
+                    cat = tdb_info.get('category', [])
+                    title.category = ",".join(cat) if isinstance(cat, list) else cat
+                    
+                    title.release_date = tdb_info.get('releaseDate', title.release_date)
+                    title.size = tdb_info.get('size', title.size)
+                    title.nsuid = tdb_info.get('nsuid', title.nsuid)
+                    updated_count += 1
+            
+        db.session.commit()
+        logger.info(f"Sync complete. Updated {updated_count} titles in database.")
+    except Exception as e:
+        logger.error(f"Error during TitleDB-to-DB sync: {e}")
+        db.session.rollback()
 

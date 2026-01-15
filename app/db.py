@@ -97,6 +97,21 @@ class Titles(db.Model):
     up_to_date = db.Column(db.Boolean, default=False)
     complete = db.Column(db.Boolean, default=False)
     
+    # Metadata fields (Previously stored in JSON cache)
+    name = db.Column(db.String)
+    icon_url = db.Column(db.String)
+    banner_url = db.Column(db.String)
+    category = db.Column(db.String) # Comma separated or JSON string
+    release_date = db.Column(db.String)
+    publisher = db.Column(db.String)
+    description = db.Column(db.Text)
+    size = db.Column(db.BigInteger)
+    nsuid = db.Column(db.String)
+    
+    # Track when it was last updated from TitleDB vs User edit
+    last_updated = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
+    is_custom = db.Column(db.Boolean, default=False) # True if edited by user
+    
     tags = db.relationship('Tag', secondary='title_tag', backref=db.backref('titles', lazy='dynamic'))
 
 # Association table for many-to-many relationship between Apps and Files
@@ -235,6 +250,27 @@ def init_db(app):
             else:
                 # Ensure new tables are created even if DB exists
                 db.create_all()
+                
+                # Proactive column check for new metadata fields (Auto-migration)
+                try:
+                    engine = db.engine
+                    with engine.connect() as conn:
+                        existing_columns = [c['name'] for c in db.inspect(engine).get_columns('titles')]
+                        new_cols = [
+                            ('name', 'TEXT'), ('icon_url', 'TEXT'), ('banner_url', 'TEXT'),
+                            ('category', 'TEXT'), ('release_date', 'TEXT'), ('publisher', 'TEXT'),
+                            ('description', 'TEXT'), ('size', 'INTEGER'), ('nsuid', 'TEXT'),
+                            ('is_custom', 'BOOLEAN DEFAULT 0'),
+                            ('last_updated', 'DATETIME DEFAULT CURRENT_TIMESTAMP')
+                        ]
+                        for col_name, col_type in new_cols:
+                            if col_name not in existing_columns:
+                                logger.info(f"Adding missing column {col_name} to titles table...")
+                                conn.execute(f"ALTER TABLE titles ADD COLUMN {col_name} {col_type}")
+                        conn.commit()
+                except Exception as e:
+                    logger.warning(f"Auto-migration check failed (might be ok if using Alembic): {e}")
+
                 logger.info('Checking database migration...')
                 if is_migration_needed():
                     create_db_backup()
