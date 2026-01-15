@@ -1847,8 +1847,6 @@ def activity_api():
 
 @main_bp.route('/api/plugins', methods=['GET'])
 @access_required('admin')
-@main_bp.route('/api/plugins', methods=['GET'])
-@access_required('admin')
 def plugins_api():
     if not plugin_manager:
         return jsonify([])
