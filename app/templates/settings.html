@@ -18,6 +18,8 @@
                         </li>
                         <li><a data-target="Authentication"><i class="bi bi-people-fill mr-2"></i> Autenticação</a></li>
                         <li><a data-target="Library"><i class="bi bi-folder2-open mr-2"></i> Biblioteca</a></li>
+                        <li><a data-target="FileExplorer"><i class="bi bi-files mr-2"></i> Explorador de Arquivos</a>
+                        </li>
                         <li><a data-target="Renaming"><i class="bi bi-pencil-square mr-2"></i> Renomeação</a></li>
                         <li><a data-target="TitleDB"><i class="bi bi-database-fill mr-2"></i> TitleDB</a>
                         </li>
@@ -1748,16 +1750,23 @@
                 return;
             }
             webhooks.forEach(w => {
+                const statusIcon = w.active ? '<i class="bi bi-check-circle-fill has-text-success mr-2"></i>' : '<i class="bi bi-x-circle-fill has-text-danger mr-2"></i>';
+                const statusText = w.active ? 'Ativo' : 'Inativo';
+
                 container.append(`
                     <div class="box is-shadowless border p-3 mb-2 bg-light-soft">
                         <div class="columns is-vcentered is-mobile">
                             <div class="column">
-                                <p class="is-size-7 has-text-weight-bold truncate">${w.url}</p>
+                                <div class="is-flex is-align-items-center mb-1">
+                                    ${statusIcon}
+                                    <span class="tag is-small ${w.active ? 'is-success' : 'is-light'} is-light">${statusText}</span>
+                                </div>
+                                <p class="is-size-7 has-text-weight-bold truncate" title="${w.url}">${w.url}</p>
                                 <p class="is-size-7 opacity-50">Eventos: ${w.events.join(', ')}</p>
                             </div>
                             <div class="column is-narrow">
-                                <button class="button is-danger is-small is-light" onclick="deleteWebhook(${w.id})">
-                                    <i class="bi bi-trash-fill"></i>
+                                <button class="button is-danger is-small is-light" onclick="deleteWebhook(${w.id})" title="Excluir webhook">
+                                    <i class="bi bi-trash3"></i>
                                 </button>
                             </div>
                         </div>
