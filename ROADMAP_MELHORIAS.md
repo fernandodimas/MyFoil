@@ -1325,7 +1325,7 @@ Gamificação da gestão de biblioteca.
 ### Sprint 8 (Em breve) - Próximos Passos Sugeridos
 **Foco:** Refinamento e Comunidade
 
-- [ ] **Ações em Massa (Errors Tab)**: Selecionar múltiplos arquivos não identificados para excluir ou identificar.
+- [x] **Ações em Massa (Errors Tab)**: Selecionar múltiplos arquivos não identificados para excluir ou identificar. ✅ CONCLUÍDO
 - [ ] **Verificador de Integridade**: Botão para validar se todos os arquivos no disco estão corretamente indexados.
 - [ ] **Sincronização de Metadados**: Opção para importar/exportar o `custom.json` para facilitar a identificação manual colaborativa.
 - [ ] **Download Automatizado (Cloud)**: Finalizar a lógica de download de arquivos do Google Drive/Dropbox.
@@ -1333,21 +1333,29 @@ Gamificação da gestão de biblioteca.
 
 ---
 
-### Sprint 8.5 (1 semana) - Melhorias de UX e Interface
+### Sprint 8.5 (1 semana) - Melhorias de UX e Interface ✅ CONCLUÍDO
 **Foco:** Ajustes de Usabilidade e Refinamentos Visuais
+**Data de Conclusão:** 2026-01-15
+**Build Final:** 20260115_1423
 
-#### Melhorias de Estatísticas
-- [ ] **Remover pro.keys OK das Estatísticas**: Limpar a visualização removendo a exibição da chave `pro.keys` nas estatísticas, pois não é relevante para o usuário final.
+#### Features Implementadas
+- [x] **Explorador de Arquivos da Biblioteca**: Visualização completa com filtros ✅
+- [x] **Navegação por Teclado nos Modals**: Setas, E, F, D para navegação ✅
+- [x] **Favicon Oficial do MyFoil**: Ícones PWA e favicons ✅
+- [x] **Menu de Ajuda nas Configurações**: Documentação, atalhos, FAQ ✅
+- [x] **Correção de Ícones de Webhooks**: Ícones corretos e status visual ✅
 
 #### Melhorias nas Configurações
-- [ ] **Webhooks sem Ícone**: Remover/ocultar ícones dos webhooks na aba de configurações para simplificar a interface.
-- [ ] **Menu de Ajuda nas Configurações**: Criar um menu de ajuda com:
-  - Documentação de uso do sistema
-  - Lista de atalhos de teclado disponíveis
-  - Tutoriais rápidos
-- [ ] **Visualização de Arquivos da Biblioteca**: Criar uma visualização tabular/lista dos arquivos físicos da biblioteca com:
-  - Nome do arquivo
-  - Caminho completo
+- [x] **Menu de Ajuda nas Configurações**: Criado menu completo com:
+  - Documentação de uso do sistema ✅
+  - Lista de atalhos de teclado disponíveis ✅
+  - Tutoriais rápidos (Guia de início) ✅
+  - FAQ com 4 perguntas frequentes ✅
+  - Links para GitHub, Issues, Wiki ✅
+  
+- [x] **Visualização de Arquivos da Biblioteca**: Criado Explorador com:
+  - Nome do arquivo ✅
+  - Caminho completo ✅
   - Tamanho
   - Data de modificação
   - Status de indexação
