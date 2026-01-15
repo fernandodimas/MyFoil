@@ -1275,7 +1275,6 @@
 </style>
 
 <script>
-    {% raw %}
     let allUsernames = [];
 
     // Helper functions
@@ -2288,32 +2287,33 @@
     }
 
     function previewRenaming() {
-        const data = pattern_base: $('#patternBase').val(),
+        const data = {
+            pattern_base: $('#patternBase').val(),
             pattern_upd: $('#patternUpd').val(),
-                pattern_dlc: $('#patternDlc').val()
-    };
+            pattern_dlc: $('#patternDlc').val()
+        };
 
-    $.ajax({
-        url: '/api/renaming/preview',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify(data),
-        success: function (resp) {
-            if (resp.success) {
-                let html = '';
-                resp.preview.forEach(p => {
-                    html += `<div class="mb-2">
-                            <span class="tag is-white border mr-2">${p.type}</span>
-                            <span class="has-text-grey-light strikethrough mr-2">${p.original}</span>
-                            <i class="bi bi-arrow-right mr-2 opacity-50"></i>
-                            <span class="has-text-success has-text-weight-bold">${p.new}</span>
-                        </div>`;
-                });
-                $('#previewContent').html(html || 'Nenhum arquivo encontrado para pré-visualização.');
-                $('#renamingPreview').removeClass('is-hidden');
+        $.ajax({
+            url: '/api/renaming/preview',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(data),
+            success: function (resp) {
+                if (resp.success) {
+                    let html = '';
+                    resp.preview.forEach(p => {
+                        html += `<div class="mb-2">
+                                <span class="tag is-white border mr-2">${p.type}</span>
+                                <span class="has-text-grey-light strikethrough mr-2">${p.original}</span>
+                                <i class="bi bi-arrow-right mr-2 opacity-50"></i>
+                                <span class="has-text-success has-text-weight-bold">${p.new}</span>
+                            </div>`;
+                    });
+                    $('#previewContent').html(html || 'Nenhum arquivo encontrado para pré-visualização.');
+                    $('#renamingPreview').removeClass('is-hidden');
+                }
             }
-        }
-    });
+        });
     }
 
     function runRenamingJob() {
@@ -2394,7 +2394,6 @@
     $('.modal-background').on('click', function () {
         closeModal($(this).parent().attr('id'));
     });
-    {% endraw %}
 </script>
 
 <style>
