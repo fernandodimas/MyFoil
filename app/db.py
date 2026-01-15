@@ -253,23 +253,40 @@ def init_db(app):
                 
                 # Proactive column check for new metadata fields (Auto-migration)
                 try:
+                    from sqlalchemy import text, inspect
                     engine = db.engine
                     with engine.connect() as conn:
-                        existing_columns = [c['name'] for c in db.inspect(engine).get_columns('titles')]
+                        inspector = inspect(engine)
+                        existing_columns = [c['name'] for c in inspector.get_columns('titles')]
                         new_cols = [
-                            ('name', 'TEXT'), ('icon_url', 'TEXT'), ('banner_url', 'TEXT'),
-                            ('category', 'TEXT'), ('release_date', 'TEXT'), ('publisher', 'TEXT'),
-                            ('description', 'TEXT'), ('size', 'INTEGER'), ('nsuid', 'TEXT'),
+                            ('name', 'TEXT'), 
+                            ('icon_url', 'TEXT'), 
+                            ('banner_url', 'TEXT'),
+                            ('category', 'TEXT'), 
+                            ('release_date', 'TEXT'), 
+                            ('publisher', 'TEXT'),
+                            ('description', 'TEXT'), 
+                            ('size', 'INTEGER'), 
+                            ('nsuid', 'TEXT'),
                             ('is_custom', 'BOOLEAN DEFAULT 0'),
                             ('last_updated', 'DATETIME DEFAULT CURRENT_TIMESTAMP')
                         ]
+                        
+                        modified = False
                         for col_name, col_type in new_cols:
                             if col_name not in existing_columns:
                                 logger.info(f"Adding missing column {col_name} to titles table...")
-                                conn.execute(f"ALTER TABLE titles ADD COLUMN {col_name} {col_type}")
-                        conn.commit()
+                                try:
+                                    conn.execute(text(f"ALTER TABLE titles ADD COLUMN {col_name} {col_type}"))
+                                    modified = True
+                                except Exception as e:
+                                    logger.error(f"Failed to add column {col_name}: {e}")
+                        
+                        if modified:
+                            conn.commit()
+                            logger.info("Database schema updated with new metadata columns.")
                 except Exception as e:
-                    logger.warning(f"Auto-migration check failed (might be ok if using Alembic): {e}")
+                    logger.warning(f"Auto-migration check failed: {e}")
 
                 logger.info('Checking database migration...')
                 if is_migration_needed():

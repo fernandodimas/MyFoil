@@ -879,7 +879,14 @@ def sync_titles_to_db(force=False):
         # Get all titles currently in DB to avoid bulk queries in loop
         # We only sync titles that exist in our database (library/wishlist/identified)
         # to avoid bloat. If a game is new, it will be added when identified.
-        db_titles = Titles.query.all()
+        try:
+            db_titles = Titles.query.all()
+        except Exception as e:
+            if 'no such column' in str(e).lower():
+                logger.warning("sync_titles_to_db: Database schema is outdated (missing columns). Skipping sync until next restart.")
+                return
+            raise e
+            
         db_titles_map = {t.title_id.upper(): t for t in db_titles}
         
         updated_count = 0
