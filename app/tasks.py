@@ -40,6 +40,10 @@ def scan_library_async(library_path):
         update_titles()
         generate_library(force=True)
         
+        # Notificar via socketio
+        from library import trigger_library_update_notification
+        trigger_library_update_notification()
+        
         logger.info("background_scan_completed", library_path=library_path)
         return True
 
@@ -58,8 +62,14 @@ def identify_file_async(filepath):
         for lib in libraries:
             identify_library_files(lib.path)
             
+        # Atualizar títulos e gerar biblioteca (equivalente a post_library_change)
         update_titles()
         generate_library(force=True)
+        
+        # Notificar via socketio
+        from library import trigger_library_update_notification
+        trigger_library_update_notification()
+        
         return True
 @celery.task(name='tasks.scan_all_libraries_async')
 def scan_all_libraries_async():
@@ -76,8 +86,13 @@ def scan_all_libraries_async():
             scan_library_path(lib.path)
             identify_library_files(lib.path)
             
+        # Atualizar títulos e gerar biblioteca
         update_titles()
         generate_library(force=True)
+        
+        # Notificar via socketio
+        from library import trigger_library_update_notification
+        trigger_library_update_notification()
         
         logger.info("Background task: Full scan completed.")
         return True

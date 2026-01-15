@@ -406,6 +406,16 @@ def add_missing_apps_to_db():
     db.session.commit()
     logger.info(f'Finished adding missing apps to database. Total apps added: {apps_added}')
 
+def trigger_library_update_notification():
+    """Helper function to trigger library update notifications (used by Celery tasks)"""
+    try:
+        from flask_socketio import SocketIO
+        from app import socketio
+        import datetime
+        socketio.emit('library_updated', {'timestamp': datetime.datetime.now().isoformat()}, namespace='/')
+    except Exception as e:
+        logger.debug(f"Could not emit library_updated event: {e}")
+
 def process_library_identification(app):
     logger.info(f"Starting library identification process for all libraries...")
     try:

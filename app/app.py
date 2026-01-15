@@ -115,8 +115,13 @@ def scan_library_job():
         scan_in_progress = True
     try:
         with ACTIVE_SCANS.track_inprogress():
-            scan_library()
-            post_library_change()
+            # Usar Celery se disponível para scans agendados também
+            if CELERY_ENABLED:
+                scan_all_libraries_async.delay()
+                logger.info("Scheduled library scan queued to Celery.")
+            else:
+                scan_library()
+                post_library_change()
         logger.info("Library scan job completed.")
         log_activity('library_scan_completed')
     except Exception as e:
@@ -339,12 +344,17 @@ def on_library_change(events):
                     for f_path in new_files:
                         identify_file_async.delay(f_path)
                     logger.info(f"Queued async identification for {len(new_files)} files in {library_path}")
+                    # Em modo async, não chamar post_library_change aqui
+                    # As tarefas Celery irão chamar post_library_change quando completarem
+                    return
+                else:
+                    # Em modo síncrono, processar identificação imediatamente
+                    # Mas apenas para arquivos novos, não chamar post_library_change ainda
+                    pass
 
+    # Apenas chamar post_library_change se não estiver usando Celery
+    # ou se não houver arquivos novos para identificar
     if not CELERY_ENABLED:
-        post_library_change()
-    else:
-        # In async mode, we usually let the task trigger the update or use a final cleanup
-        # For now, let's still call post_library_change to update UI state if it's lightweight
         post_library_change()
 
 # Create main blueprint for UI routes
@@ -1381,16 +1391,50 @@ def library_api():
         if request.headers.get('If-None-Match') == etag:
             return '', 304
     
+    # Paginação: obter parâmetros da query string
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 100, type=int)
+    
+    # Validar parâmetros
+    page = max(1, page)  # Página mínima é 1
+    per_page = min(max(1, per_page), 500)  # Entre 1 e 500 itens por página
+    
     # generate_library will use cache if force=False (default)
     lib_data = generate_library()
+    total_items = len(lib_data)
+    
+    # Calcular paginação
+    total_pages = (total_items + per_page - 1) // per_page  # Ceiling division
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    
+    # Aplicar paginação
+    paginated_data = lib_data[start_idx:end_idx]
     
     # We need the hash for the header, so we reload from disk to get the full dict
-    # or we can modify generate_library to return it. 
-    # For now, just reload the small file header.
     full_cache = load_library_from_disk()
-    resp = jsonify(lib_data)
+    
+    # Preparar resposta com metadados de paginação
+    response_data = {
+        'items': paginated_data,
+        'pagination': {
+            'page': page,
+            'per_page': per_page,
+            'total_items': total_items,
+            'total_pages': total_pages,
+            'has_next': page < total_pages,
+            'has_prev': page > 1
+        }
+    }
+    
+    resp = jsonify(response_data)
     if full_cache and 'hash' in full_cache:
         resp.set_etag(full_cache['hash'])
+        # Adicionar headers de paginação
+        resp.headers['X-Total-Count'] = str(total_items)
+        resp.headers['X-Page'] = str(page)
+        resp.headers['X-Per-Page'] = str(per_page)
+        resp.headers['X-Total-Pages'] = str(total_pages)
     return resp
 
 @main_bp.route('/api/library/search')

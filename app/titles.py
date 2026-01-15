@@ -2,6 +2,8 @@ import os
 import sys
 import re
 import json
+import time
+import datetime
 
 import titledb
 from constants import *
@@ -31,6 +33,8 @@ _titles_db = None
 _versions_db = None
 _versions_db = None
 _loaded_titles_file = None  # Track which titles file was loaded
+_titledb_cache_timestamp = None  # Timestamp when TitleDB was last loaded
+_titledb_cache_ttl = 3600  # TTL em segundos (1 hora padrão) - pode ser configurado via settings
 
 def get_titles_count():
     global _titles_db
@@ -260,10 +264,30 @@ def load_titledb(force=False):
     global _versions_txt_db
     global identification_in_progress_count
     global _titles_db_loaded
+    global _titledb_cache_timestamp
+    global _titledb_cache_ttl
 
     identification_in_progress_count += 1
-    if force:
+    
+    # Verificar se o cache expirou (TTL)
+    current_time = time.time()
+    cache_expired = False
+    if _titledb_cache_timestamp is not None:
+        # Obter TTL das configurações se disponível
+        try:
+            app_settings = load_settings()
+            _titledb_cache_ttl = app_settings.get('titledb', {}).get('cache_ttl', 3600)
+        except:
+            pass  # Usar padrão se não conseguir carregar settings
+        
+        elapsed = current_time - _titledb_cache_timestamp
+        if elapsed > _titledb_cache_ttl:
+            cache_expired = True
+            logger.info(f"TitleDB cache expired (TTL: {_titledb_cache_ttl}s, elapsed: {elapsed:.0f}s). Reloading...")
+    
+    if force or cache_expired:
         _titles_db_loaded = False
+        _titledb_cache_timestamp = None
 
     if not _titles_db_loaded:
         logger.info("Loading TitleDBs into memory...")
@@ -352,7 +376,8 @@ def load_titledb(force=False):
         _cnmts_db = _cnmts_db or {}
 
         _titles_db_loaded = True
-        logger.info("TitleDBs loaded.")
+        _titledb_cache_timestamp = current_time  # Atualizar timestamp do cache
+        logger.info(f"TitleDBs loaded. Cache TTL: {_titledb_cache_ttl}s")
 
 @debounce(30)
 def unload_titledb():
@@ -362,6 +387,7 @@ def unload_titledb():
     global _versions_txt_db
     global identification_in_progress_count
     global _titles_db_loaded
+    global _titledb_cache_timestamp
 
     if identification_in_progress_count:
         logger.debug('Identification still in progress, not unloading TitleDB.')
@@ -372,6 +398,7 @@ def unload_titledb():
     _titles_db = None
     _versions_db = None
     _titles_db_loaded = False
+    _titledb_cache_timestamp = None  # Limpar timestamp do cache
     logger.info("TitleDBs unloaded.")
 
 def identify_file_from_filename(filename):
