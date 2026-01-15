@@ -338,7 +338,7 @@
                                                 <label class="label is-small">Buscar</label>
                                                 <div class="control has-icons-left">
                                                     <input class="input is-small" type="text" id="fileSearchInput"
-                                                        placeholder="Nome ou caminho do arquivo...">
+                                                        placeholder="Buscar em todas as pastas...">
                                                     <span class="icon is-small is-left">
                                                         <i class="bi bi-search"></i>
                                                     </span>
@@ -379,6 +379,15 @@
                                 </div>
 
                                 <!-- Files Table -->
+                                <!-- Breadcrumb -->
+                                <nav class="breadcrumb is-small mb-4 has-bullet-separator" aria-label="breadcrumbs">
+                                    <ul id="fileExplorerBreadcrumb">
+                                        <li class="is-active"><a href="javascript:void(0)"
+                                                onclick="setExplorerPath('')"><i class="bi bi-hdd-fill mr-1"></i>
+                                                Root</a></li>
+                                    </ul>
+                                </nav>
+
                                 <div class="table-container">
                                     <table class="table is-fullwidth is-hoverable is-size-7" id="filesExplorerTable">
                                         <thead>
@@ -1189,6 +1198,25 @@
 
     [data-theme="dark"] .card.box {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .is-clickable {
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+    }
+
+    .is-clickable:hover {
+        background-color: rgba(124, 58, 237, 0.05) !important;
+    }
+
+    .breadcrumb li a {
+        color: var(--color-primary);
+        font-weight: 500;
+    }
+
+    .breadcrumb li.is-active a {
+        color: var(--bulma-text);
+        cursor: default;
     }
 
     .animate-fade-in {
@@ -2090,59 +2118,158 @@
 
     // File Explorer Functions
     let allFiles = [];
-    let filteredFiles = [];
+    let explorerLibraries = [];
+    let currentExplorerPath = ''; // '' means root (list libraries)
 
-    function fillFilesExplorer() {
-        $.getJSON('/api/files/all', (files) => {
-            console.log('Files loaded:', files.length);
-            allFiles = files;
-            applyFileFilters();
-        }).fail((xhr, status, error) => {
-            console.error('Error loading files:', error);
-            $('#filesExplorerTable tbody').html('<tr><td colspan="6" class="has-text-centered py-4 has-text-danger">Erro ao carregar arquivos. Verifique o console.</td></tr>');
-        });
+    function setExplorerPath(path) {
+        currentExplorerPath = path;
+        renderFilesExplorer();
+        updateExplorerBreadcrumb();
     }
 
-    function applyFileFilters() {
-        const searchTerm = $('#fileSearchInput').val().toLowerCase();
-        const typeFilter = $('#fileTypeFilter').val();
-        const statusFilter = $('#fileStatusFilter').val();
+    function updateExplorerBreadcrumb() {
+        const breadcrumb = $('#fileExplorerBreadcrumb').empty();
 
-        filteredFiles = allFiles.filter(f => {
-            // Search filter
-            if (searchTerm && !f.filename.toLowerCase().includes(searchTerm) && !f.filepath.toLowerCase().includes(searchTerm)) {
-                return false;
-            }
+        // Root Item
+        const rootLi = $('<li class="' + (currentExplorerPath === '' ? 'is-active' : '') + '"></li>');
+        rootLi.append($('<a href="javascript:void(0)" onclick="setExplorerPath(\'\')"><i class="bi bi-hdd-fill mr-1"></i> Root</a>'));
+        breadcrumb.append(rootLi);
 
-            // Type filter
-            if (typeFilter && f.extension !== typeFilter) {
-                return false;
-            }
+        if (currentExplorerPath) {
+            const parts = currentExplorerPath.split('/').filter(p => p !== '');
+            let accumulatedPath = '';
 
-            // Status filter
-            if (statusFilter === 'identified' && !f.identified) {
-                return false;
-            }
-            if (statusFilter === 'error' && (f.identified || !f.identification_error)) {
-                return false;
-            }
+            parts.forEach((part, index) => {
+                accumulatedPath += '/' + part;
+                const isLast = index === parts.length - 1;
+                const li = $('<li class="' + (isLast ? 'is-active' : '') + '"></li>');
+                li.append($('<a href="javascript:void(0)" onclick="setExplorerPath(\'' + accumulatedPath + '\')">' + part + '</a>'));
+                breadcrumb.append(li);
+            });
+        }
+    }
 
-            return true;
+    function fillFilesExplorer() {
+        // Load libraries first if not loaded
+        $.getJSON('/api/settings/library/paths', (result) => {
+            explorerLibraries = result.paths || [];
+
+            // Then load files
+            $.getJSON('/api/files/all', (files) => {
+                allFiles = files;
+                renderFilesExplorer();
+                updateExplorerBreadcrumb();
+            }).fail((xhr, status, error) => {
+                console.error('Error loading files:', error);
+                $('#filesExplorerTable tbody').html('<tr><td colspan="6" class="has-text-centered py-4 has-text-danger">Erro ao carregar arquivos.</td></tr>');
+            });
         });
-
-        renderFilesExplorer();
     }
 
     function renderFilesExplorer() {
         const tbody = $('#filesExplorerTable tbody').empty();
+        const searchTerm = $('#fileSearchInput').val().toLowerCase();
+        const typeFilter = $('#fileTypeFilter').val();
+        const statusFilter = $('#fileStatusFilter').val();
 
-        if (filteredFiles.length === 0) {
-            tbody.append('<tr><td colspan="6" class="has-text-centered py-4 opacity-50">Nenhum arquivo encontrado.</td></tr>');
-            $('#filesExplorerCount').text('0 arquivos encontrados');
+        // If searching, show flat list
+        if (searchTerm) {
+            $('.breadcrumb').addClass('is-hidden');
+            const filtered = allFiles.filter(f => {
+                if (!f.filename.toLowerCase().includes(searchTerm) && !f.filepath.toLowerCase().includes(searchTerm)) return false;
+                if (typeFilter && f.extension !== typeFilter) return false;
+                if (statusFilter === 'identified' && !f.identified) return false;
+                if (statusFilter === 'error' && (f.identified || !f.identification_error)) return false;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                tbody.append('<tr><td colspan="6" class="has-text-centered py-4 opacity-50">Nenhum arquivo encontrado para a busca.</td></tr>');
+            } else {
+                renderFileList(tbody, filtered, true);
+            }
+            $('#filesExplorerCount').text(`${filtered.length} arquivos encontrados`);
             return;
         }
 
-        filteredFiles.forEach(f => {
+        $('.breadcrumb').removeClass('is-hidden');
+
+        // Hierarchical logic
+        if (currentExplorerPath === '') {
+            // Show libraries as folders
+            explorerLibraries.forEach(lib => {
+                tbody.append(`
+                    <tr class="is-clickable" onclick="setExplorerPath('${lib.path}')">
+                        <td colspan="6">
+                            <i class="bi bi-folder-fill has-text-warning mr-2"></i>
+                            <span class="has-text-weight-bold">${lib.path}</span>
+                            <span class="tag is-light ml-2">${lib.files_count} arquivos</span>
+                        </td>
+                    </tr>
+                `);
+            });
+            $('#filesExplorerCount').text(`${explorerLibraries.length} bibliotecas configuradas`);
+        } else {
+            const items = [];
+            const folders = new Set();
+
+            allFiles.forEach(f => {
+                if (f.filepath.startsWith(currentExplorerPath)) {
+                    let relative = f.filepath.substring(currentExplorerPath.length);
+                    if (relative.startsWith('/')) relative = relative.substring(1);
+
+                    if (!relative) return;
+
+                    const parts = relative.split('/');
+                    if (parts.length > 1) {
+                        folders.add(parts[0]);
+                    } else {
+                        if (typeFilter && f.extension !== typeFilter) return;
+                        if (statusFilter === 'identified' && !f.identified) return;
+                        if (statusFilter === 'error' && (f.identified || !f.identification_error)) return;
+                        items.push(f);
+                    }
+                }
+            });
+
+            // Back folder
+            let finalParent = '';
+            const isLibPath = explorerLibraries.some(lib => lib.path === currentExplorerPath);
+            if (!isLibPath) {
+                const lastSlash = currentExplorerPath.lastIndexOf('/');
+                finalParent = lastSlash > 0 ? currentExplorerPath.substring(0, lastSlash) : '';
+            }
+
+            tbody.append(`
+                <tr class="is-clickable" onclick="setExplorerPath('${finalParent}')">
+                    <td colspan="6">
+                        <i class="bi bi-arrow-up-circle mr-2 opacity-50"></i>
+                        <span class="has-text-weight-bold">..</span>
+                    </td>
+                </tr>
+            `);
+
+            // Render Folders
+            Array.from(folders).sort().forEach(folder => {
+                const fullFolderPath = currentExplorerPath.endsWith('/') ? currentExplorerPath + folder : currentExplorerPath + '/' + folder;
+                tbody.append(`
+                    <tr class="is-clickable" onclick="setExplorerPath('${fullFolderPath}')">
+                        <td colspan="6">
+                            <i class="bi bi-folder-fill has-text-warning mr-2"></i>
+                            <span class="has-text-weight-bold">${folder}</span>
+                        </td>
+                    </tr>
+                `);
+            });
+
+            // Render Files
+            renderFileList(tbody, items, false);
+            $('#filesExplorerCount').text(`${folders.size} pastas, ${items.length} arquivos nesta pasta`);
+        }
+    }
+
+    function renderFileList(tbody, files, showPath) {
+        files.forEach(f => {
             const statusBadge = f.identified
                 ? '<span class="tag is-success is-light is-small"><i class="bi bi-check-circle mr-1"></i> Identificado</span>'
                 : '<span class="tag is-danger is-light is-small"><i class="bi bi-x-circle mr-1"></i> Erro</span>';
@@ -2162,7 +2289,7 @@
                         ${f.title_name ? `<br><span class="is-size-7 opacity-50">${f.title_name}</span>` : ''}
                     </td>
                     <td class="truncate is-family-monospace is-size-7 opacity-70" style="max-width: 400px;" title="${f.filepath}">
-                        ${f.filepath}
+                        ${showPath ? f.filepath : '...'}
                     </td>
                     <td class="has-text-right is-family-monospace">${f.size_formatted}</td>
                     <td>
@@ -2177,13 +2304,11 @@
                 </tr>
             `);
         });
-
-        $('#filesExplorerCount').text(`${filteredFiles.length} arquivo${filteredFiles.length !== 1 ? 's' : ''} encontrado${filteredFiles.length !== 1 ? 's' : ''}`);
     }
 
     // Attach filter events
-    $(document).on('input', '#fileSearchInput', applyFileFilters);
-    $(document).on('change', '#fileTypeFilter, #fileStatusFilter', applyFileFilters);
+    $(document).on('input', '#fileSearchInput', renderFilesExplorer);
+    $(document).on('change', '#fileTypeFilter, #fileStatusFilter', renderFilesExplorer);
 
     function fillWebhooksList() {
         $.getJSON('/api/settings/webhooks', (webhooks) => {
