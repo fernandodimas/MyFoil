@@ -269,7 +269,7 @@ def init_db(app):
                             ('size', 'INTEGER'), 
                             ('nsuid', 'TEXT'),
                             ('is_custom', 'BOOLEAN DEFAULT 0'),
-                            ('last_updated', 'DATETIME DEFAULT CURRENT_TIMESTAMP')
+                            ('last_updated', 'DATETIME') # Removed DEFAULT CURRENT_TIMESTAMP to avoid SQLite error
                         ]
                         
                         modified = False
