@@ -3,7 +3,7 @@
 <!-- Game Details Modal -->
 <div class="modal" id="gameDetailsModal" style="z-index: 1040;">
     <div class="modal-background" onclick="closeModal('gameDetailsModal')"></div>
-    <div class="modal-card" style="max-height: 90vh; overflow: hidden; border-radius: 12px;">
+    <div class="modal-card" style="max-height: 90vh; max-width: 900px; overflow: hidden; border-radius: 12px;">
         <section class="modal-card-body p-0 overflow-y-auto" id="modalContent">
             <!-- Injected via JS -->
         </section>
@@ -553,9 +553,15 @@
     function addTagToGame(titleId) {
         const tagId = $('#modalAddTagSelect').val();
         if (!tagId) return;
-        $.post(`/api/titles/${titleId}/tags`, JSON.stringify({ tag_id: tagId }), (res) => {
-            if (res.success) loadGameTagsAndWishlist(titleId);
-        }, 'json');
+        $.ajax({
+            url: `/api/titles/${titleId}/tags`,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ tag_id: tagId }),
+            success: (res) => {
+                if (res.success) loadGameTagsAndWishlist(titleId);
+            }
+        });
     }
 
     function removeTagFromGame(titleId, tagId) {

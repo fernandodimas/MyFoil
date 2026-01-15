@@ -15,6 +15,10 @@
             </div>
             <div class="level-right">
                 <div class="buttons">
+                    <button class="button is-primary shadow-sm" onclick="openAddToWishlistModal()">
+                        <span class="icon"><i class="bi bi-plus-circle"></i></span>
+                        <span>Adicionar Jogo</span>
+                    </button>
                     <div class="dropdown is-hoverable is-right">
                         <div class="dropdown-trigger">
                             <button class="button is-white shadow-sm" aria-haspopup="true"
@@ -68,6 +72,34 @@
                 </table>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Add to Wishlist Modal -->
+<div class="modal" id="addToWishlistModal">
+    <div class="modal-background" onclick="closeModal('addToWishlistModal')"></div>
+    <div class="modal-card" style="max-width: 600px;">
+        <header class="modal-card-head">
+            <p class="modal-card-title"><i class="bi bi-search mr-2"></i> Buscar Jogo para Adicionar</p>
+            <button class="delete" aria-label="close" onclick="closeModal('addToWishlistModal')"></button>
+        </header>
+        <section class="modal-card-body">
+            <div class="field">
+                <label class="label is-small">Buscar no TitleDB</label>
+                <div class="control has-icons-left">
+                    <input class="input" type="text" id="wishlistSearchInput" placeholder="Digite o nome do jogo..."
+                        onkeyup="searchTitleDBForWishlist()">
+                    <span class="icon is-left">
+                        <i class="bi bi-search"></i>
+                    </span>
+                </div>
+                <p class="help">Digite ao menos 3 caracteres para buscar</p>
+            </div>
+
+            <div id="wishlistSearchResults" class="mt-4" style="max-height: 400px; overflow-y: auto;">
+                <!-- Results will be populated here -->
+            </div>
+        </section>
     </div>
 </div>
 
@@ -219,6 +251,73 @@
         } catch (e) {
             console.error(e);
         }
+    }
+
+    // Add game to wishlist from TitleDB
+    function openAddToWishlistModal() {
+        openModal('addToWishlistModal');
+        $('#wishlistSearchInput').val('').focus();
+        $('#wishlistSearchResults').html('<p class="has-text-centered py-4 opacity-50">Digite para buscar jogos no TitleDB...</p>');
+    }
+
+    let wishlistSearchTimeout;
+    function searchTitleDBForWishlist() {
+        const query = $('#wishlistSearchInput').val();
+
+        if (!query || query.length < 3) {
+            $('#wishlistSearchResults').html('<p class="has-text-centered py-4 opacity-50">Digite ao menos 3 caracteres...</p>');
+            return;
+        }
+
+        clearTimeout(wishlistSearchTimeout);
+        wishlistSearchTimeout = setTimeout(() => {
+            $.getJSON(`/api/titledb/search?q=${encodeURIComponent(query)}`, (results) => {
+                if (!results || results.length === 0) {
+                    $('#wishlistSearchResults').html('<p class="has-text-centered py-4 opacity-50">Nenhum jogo encontrado</p>');
+                    return;
+                }
+
+                let html = '<div class="list">';
+                results.slice(0, 10).forEach(game => {
+                    html += `
+                        <div class="list-item is-clickable" onclick="addGameToWishlistFromTitleDB('${game.id}', '${game.name.replace(/'/g, "\\'")}')">
+                            <div class="media">
+                                ${game.iconUrl ? `<div class="media-left"><figure class="image is-48x48"><img src="${game.iconUrl}" style="border-radius: 8px;"></figure></div>` : ''}
+                                <div class="media-content">
+                                    <p class="is-size-7 has-text-weight-bold">${game.name}</p>
+                                    <p class="is-size-7 opacity-50">${game.id}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                $('#wishlistSearchResults').html(html);
+            }).fail(() => {
+                $('#wishlistSearchResults').html('<p class="has-text-centered py-4 has-text-danger">Erro ao buscar. Verifique o console.</p>');
+            });
+        }, 300);
+    }
+
+    function addGameToWishlistFromTitleDB(titleId, titleName) {
+        $.ajax({
+            url: '/api/wishlist',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ title_id: titleId }),
+            success: (res) => {
+                if (res.success) {
+                    showToast(`"${titleName}" adicionado à wishlist!`, 'success');
+                    closeModal('addToWishlistModal');
+                    loadWishlist();
+                } else {
+                    showToast(res.error || 'Erro ao adicionar', 'error');
+                }
+            },
+            error: () => {
+                showToast('Erro ao adicionar à wishlist', 'error');
+            }
+        });
     }
 
 
