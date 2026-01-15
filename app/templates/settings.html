@@ -995,8 +995,7 @@
     // Helper functions
     const getInputVal = (id) => $(`#${id}`).val();
     const getCheckboxStatus = (id) => $(`#${id}`).is(":checked");
-    const openModal = (id) => $(`#${id}`).addClass('is-active');
-    const closeModal = (id) => $(`#${id}`).removeClass('is-active');
+    // openModal and closeModal are defined in modals_shared.html (included globally)
 
     function createTag() {
         const name = $('#tagNameInput').val();
