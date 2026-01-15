@@ -747,6 +747,11 @@
         $('#sortDropdown').removeClass('is-active');
     });
 
+    // Prevent closing when clicking inside filters or sort menu
+    $('.dropdown-content').on('click', function (e) {
+        e.stopPropagation();
+    });
+
     $('.sort-option').on('click', function () {
         currentSort = $(this).data('sort');
         localStorage.setItem('myfoil_library_sort', currentSort);

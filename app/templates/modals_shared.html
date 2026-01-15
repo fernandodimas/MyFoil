@@ -402,13 +402,32 @@
                         <div class="column is-8">
                             <h3 class="title is-4 mb-2">${dlc.name}</h3>
                             <p class="is-size-7 font-mono opacity-50 mb-4">${dlc.id}</p>
-                            <div class="mb-4">
-                                <p class="is-size-7 heading mb-1 opacity-50">Data de Lançamento</p>
-                                <p class="is-size-6">${dlc.release_date || dlc.releaseDate || '--'}</p>
+                            <div class="columns is-mobile mb-4">
+                                <div class="column">
+                                    <p class="is-size-7 heading mb-1 opacity-50">Data de Lançamento</p>
+                                    <p class="is-size-6">${dlc.release_date || dlc.releaseDate || '--'}</p>
+                                </div>
+                                <div class="column">
+                                    <p class="is-size-7 heading mb-1 opacity-50">Status</p>
+                                    <p class="is-size-6">${dlc.owned ? '<span class="has-text-success"><i class="bi bi-check-circle-fill"></i> Sim</span>' : '<span class="has-text-danger"><i class="bi bi-x-circle-fill"></i> Não</span>'}</p>
+                                </div>
                             </div>
-                            <div class="content is-size-7 opacity-80">
+                            <div class="content is-size-7 opacity-80 mb-4">
                                 ${dlc.description || 'Nenhuma descrição disponível para esta DLC.'}
                             </div>
+                            
+                            ${dlc.files && dlc.files.length > 0 ? `
+                                <div class="box has-background-light-soft p-3">
+                                    <p class="is-size-7 heading mb-2 opacity-50">Arquivos Identificados</p>
+                                    ${dlc.files.map(f => `
+                                        <div class="mb-2 pb-2" style="border-bottom: 1px solid rgba(0,0,0,0.05)">
+                                            <p class="is-size-7 has-text-weight-bold truncate" title="${f.filename}">${f.filename}</p>
+                                            <p class="is-size-7 opacity-50 font-mono truncate" style="font-size: 0.65rem !important;" title="${f.filepath}">${f.filepath}</p>
+                                            <p class="is-size-7 opacity-50">Tamanho: ${f.size_formatted}</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                     <hr class="my-4 opacity-10">
@@ -544,18 +563,24 @@
 
     function editGameMetadata(titleId) {
         $.get(`/api/games/${titleId}/custom`, function (response) {
-            if (response.success && response.data) {
-                const d = response.data;
+            if (response.success) {
+                const d = response.data || {};
+                // Attempt to find game in global 'games' list (from index.html) or just use custom data
                 const game = (typeof games !== 'undefined') ? games.find(g => g.id === titleId) : d;
 
+                if (!game && !d.name) {
+                    showToast('Dados do jogo não encontrados.', 'error');
+                    return;
+                }
+
                 $('#editMetaId').val(titleId);
-                $('#editMetaName').val(d.name || game.name || '');
-                $('#editMetaPublisher').val(d.publisher || game.publisher || '');
-                $('#editMetaDescription').val(d.description || game.description || '');
-                $('#editMetaIcon').val(d.iconUrl || game.iconUrl || '');
-                $('#editMetaBanner').val(d.bannerUrl || game.bannerUrl || '');
-                $('#editMetaGenre').val(d.genre || d.category || '');
-                $('#editMetaRelease').val(d.release_date || d.releaseDate || '');
+                $('#editMetaName').val(d.name || (game ? game.name : ''));
+                $('#editMetaPublisher').val(d.publisher || (game ? game.publisher : ''));
+                $('#editMetaDescription').val(d.description || (game ? game.description : ''));
+                $('#editMetaIcon').val(d.iconUrl || (game ? game.iconUrl : ''));
+                $('#editMetaBanner').val(d.bannerUrl || (game ? game.bannerUrl : ''));
+                $('#editMetaGenre').val(d.genre || (game ? (Array.isArray(game.category) ? game.category.join(', ') : game.category) : ''));
+                $('#editMetaRelease').val(d.release_date || (game ? (game.release_date || game.releaseDate) : ''));
 
                 openModal('editMetadataModal');
             }

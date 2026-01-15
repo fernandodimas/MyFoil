@@ -989,13 +989,20 @@ def app_info_api(id):
             tid = app_obj.title.title_id
             title_obj = app_obj.title
 
+    is_dlc_request = False
     if not title_obj:
         # Maybe it's a DLC app_id, try to find base TitleID
         titles_lib.load_titledb() # Ensure loaded
-        base_tid, _ = titles_lib.identify_appId(tid)
-        if base_tid:
-            tid = base_tid
-            title_obj = Titles.query.filter_by(title_id=tid).first()
+        base_tid, app_type = titles_lib.identify_appId(tid)
+        if base_tid and tid != base_tid:
+             # It's a DLC or Update. 
+             # For the main game modal, we usually want the base_tid.
+             # But let's check if we should stay on this ID
+             if app_type == APP_TYPE_DLC:
+                 is_dlc_request = True
+             else:
+                 tid = base_tid
+                 title_obj = Titles.query.filter_by(title_id=tid).first()
     
     # If still not found, we can't show much, but let's try to show TitleDB info
     # if it's a valid TitleID even if not in our DB
@@ -1012,7 +1019,7 @@ def app_info_api(id):
         }
     
     if not title_obj:
-        # Game/Title not in our database at all
+        # Game/Title not in our database as a main Title, or specifically a DLC request
         result = info.copy()
         result['id'] = tid
         result['app_id'] = tid
@@ -1021,7 +1028,21 @@ def app_info_api(id):
         result['has_latest_version'] = False
         result['has_all_dlcs'] = False
         result['owned'] = False
-        result['files'] = []
+        
+        # Files for this specific DLC if owned
+        dlc_files = []
+        app_obj_dlc = Apps.query.filter_by(app_id=tid, owned=True).first()
+        if app_obj_dlc:
+            result['owned'] = True
+            for f in app_obj_dlc.files:
+                dlc_files.append({
+                    'id': f.id,
+                    'filename': f.filename,
+                    'filepath': f.filepath,
+                    'size_formatted': format_size_py(f.size)
+                })
+        
+        result['files'] = dlc_files
         result['updates'] = []
         result['dlcs'] = []
         result['category'] = info.get('category', [])
@@ -1113,13 +1134,20 @@ def app_info_api(id):
                 if a['owned']:
                     app_model = db.session.get(Apps, a['id'])
                     for f in app_model.files:
-                        files.append({'id': f.id, 'filename': f.filename, 'size_formatted': format_size_py(f.size)})
+                        files.append({
+                            'id': f.id, 
+                            'filename': f.filename, 
+                            'filepath': f.filepath,
+                            'size_formatted': format_size_py(f.size)
+                        })
         
+        dlc_info = titles_lib.get_game_info(dlc_id)
         dlcs_list.append({
             'app_id': dlc_id,
-            'name': titles_lib.get_game_info(dlc_id).get('name', f'DLC {dlc_id}'),
+            'name': dlc_info.get('name', f'DLC {dlc_id}'),
             'owned': owned,
-            'files': files
+            'release_date': dlc_info.get('release_date', ''),
+            'files': files # Includes filename and id, let's ensure filepath is there too if needed
         })
 
     result = info.copy()
