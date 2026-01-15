@@ -173,6 +173,56 @@
             flex: 1;
         }
     </style>
+
+    <script>
+        // Global Utility Functions & Translations (Defined early for internal scripts)
+        {% if get_translations %}
+        window.translations = {{ get_translations() | tojson }};
+        window.currentLocale = "{{ get_locale() }}";
+        {% else %}
+        window.translations = {};
+        window.currentLocale = "en";
+        {% endif %}
+
+        window.t = function (key) {
+            return window.translations[key] || key;
+        };
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const notification = document.createElement('div');
+            const colorClass = type === 'success' ? 'is-success' : 'is-danger';
+
+            notification.className = `notification ${colorClass} is-toast`;
+            notification.innerHTML = `
+                <button class="delete" onclick="this.parentElement.remove()"></button>
+                <div class="is-flex is-align-items-center gap-2">
+                    <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                    <strong>${message}</strong>
+                </div>
+            `;
+
+            container.appendChild(notification);
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.5s';
+                setTimeout(() => notification.remove(), 500);
+            }, 3000);
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Apply theme immediately to avoid flicker
+        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
 </head>
 
 <body>
@@ -208,53 +258,7 @@
     <div id="toastContainer"></div>
 
     <script>
-        // Inject server-side translations
-        {% if get_translations %}
-        window.translations = {{ get_translations() | tojson }};
-        window.currentLocale = "{{ get_locale() }}";
-        {% else %}
-        window.translations = {};
-        window.currentLocale = "en";
-        {% endif %}
-
-        window.t = function (key) {
-            return window.translations[key] || key;
-        };
-
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toastContainer');
-            const notification = document.createElement('div');
-            const colorClass = type === 'success' ? 'is-success' : 'is-danger';
-
-            notification.className = `notification ${colorClass} is-toast`;
-            notification.innerHTML = `
-                <button class="delete" onclick="this.parentElement.remove()"></button>
-                <div class="is-flex is-align-items-center gap-2">
-                    <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-                    <strong>${message}</strong>
-                </div>
-            `;
-
-            container.appendChild(notification);
-            setTimeout(() => {
-                notification.style.opacity = '0';
-                notification.style.transition = 'opacity 0.5s';
-                setTimeout(() => notification.remove(), 500);
-            }, 3000);
-        }
-
-        function toggleTheme() {
-            const html = document.documentElement;
-            const currentTheme = html.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            html.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-        }
-
         document.addEventListener('DOMContentLoaded', function () {
-            const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-            document.documentElement.setAttribute('data-theme', savedTheme);
-
             // Load system information for footer (Global)
             $.getJSON('/api/system/info', function (data) {
                 $('#idSource').text(data.id_source);
@@ -267,24 +271,12 @@
             // WebSocket Global Listener with robust initialization
             if (typeof io !== 'undefined') {
                 const socket = io({
-                    transports: ['polling'], // Use only polling to avoid WebSocket upgrade errors in Nginx proxies
+                    transports: ['polling'],
                     upgrade: false,
                     reconnection: true,
                     reconnectionAttempts: 10,
                     reconnectionDelay: 2000,
                     timeout: 20000
-                });
-
-                socket.on('connect', () => {
-                    console.log('WebSocket: Connected using ' + socket.io.engine.transport.name);
-                });
-
-                socket.on('upgrade', (transport) => {
-                    console.log('WebSocket: Upgraded to ' + transport.name);
-                });
-
-                socket.on('connect_error', (error) => {
-                    console.warn('WebSocket: Connection error', error.message);
                 });
 
                 socket.on('library_updated', (data) => {
@@ -299,9 +291,6 @@
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('/static/sw.js')
                     .then((registration) => {
-                        console.log('Service Worker registered:', registration);
-
-                        // Check for updates
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
                             newWorker.addEventListener('statechange', () => {
@@ -319,8 +308,6 @@
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 deferredPrompt = e;
-                // You can show your custom install button here
-                console.log('PWA install prompt available');
             });
         });
     </script>

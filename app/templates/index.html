@@ -3,186 +3,173 @@
 {% block content %}
 {% include 'nav.html' %}
 
-<section class="section">
-    <div class="container is-fluid px-5">
+<div class="container is-fluid px-5 mt-5 pb-6">
 
 
-        <!-- Controls Row -->
-        <div class="box p-2 mb-4 shadow-sm border-none bg-glass" style="position: relative; z-index: 30;">
-            <div class="is-flex is-flex-wrap-wrap is-align-items-center gap-2 px-1 py-1">
+    <!-- Controls Row -->
+    <div class="box p-2 mb-4 shadow-sm border-none bg-glass" style="position: relative; z-index: 30;">
+        <div class="is-flex is-flex-wrap-wrap is-align-items-center gap-2 px-1 py-1">
 
-                <!-- Left Group: Primary Filters -->
-                <div class="is-flex gap-2 is-justify-content-center-mobile is-flex-grow-1-mobile">
-                    <!-- Filters Dropdown -->
-                    <div class="dropdown" id="filterDropdown">
-                        <div class="dropdown-trigger">
-                            <button class="button is-primary is-small" aria-haspopup="true">
-                                <span class="icon is-small"><i class="bi bi-funnel-fill"></i></span>
-                                <span class="is-hidden-mobile ml-1">Filtros</span>
-                                <span class="icon is-small ml-1 is-hidden-tablet"><i class="bi bi-caret-down-fill"
-                                        style="font-size: 0.5rem"></i></span>
-                            </button>
-                        </div>
-                        <div class="dropdown-menu" id="dropdown-menu" role="menu">
-                            <div class="dropdown-content p-4" style="min-width: 260px;">
-                                <div class="field mb-3">
-                                    <label class="label is-size-7 opacity-70">Gênero</label>
-                                    <div class="control">
-                                        <div class="select is-small is-fullwidth">
-                                            <select id="filterGender" class="filterInput">
-                                                <option value="">Todos os Gêneros</option>
-                                            </select>
-                                        </div>
+            <!-- Left Group: Primary Filters -->
+            <div class="is-flex gap-2 is-justify-content-center-mobile is-flex-grow-1-mobile">
+                <!-- Filters Dropdown -->
+                <div class="dropdown" id="filterDropdown">
+                    <div class="dropdown-trigger">
+                        <button class="button is-primary is-small" aria-haspopup="true">
+                            <span class="icon is-small"><i class="bi bi-funnel-fill"></i></span>
+                            <span class="is-hidden-mobile ml-1">Filtros</span>
+                            <span class="icon is-small ml-1 is-hidden-tablet"><i class="bi bi-caret-down-fill"
+                                    style="font-size: 0.5rem"></i></span>
+                        </button>
+                    </div>
+                    <div class="dropdown-menu" id="dropdown-menu" role="menu">
+                        <div class="dropdown-content p-4" style="min-width: 260px;">
+                            <div class="field mb-3">
+                                <label class="label is-size-7 opacity-70">Gênero</label>
+                                <div class="control">
+                                    <div class="select is-small is-fullwidth">
+                                        <select id="filterGender" class="filterInput">
+                                            <option value="">Todos os Gêneros</option>
+                                        </select>
                                     </div>
                                 </div>
-                                <div class="field">
-                                    <label class="label is-size-7 opacity-70">Tag</label>
-                                    <div class="control">
-                                        <div class="select is-small is-fullwidth">
-                                            <select id="filterTag" class="filterInput">
-                                                <option value="">Todas as Tags</option>
-                                            </select>
-                                        </div>
+                            </div>
+                            <div class="field">
+                                <label class="label is-size-7 opacity-70">Tag</label>
+                                <div class="control">
+                                    <div class="select is-small is-fullwidth">
+                                        <select id="filterTag" class="filterInput">
+                                            <option value="">Todas as Tags</option>
+                                        </select>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Sorting Dropdown -->
-                    <div class="dropdown" id="sortDropdown">
-                        <div class="dropdown-trigger">
-                            <button class="button is-info is-small is-light" aria-haspopup="true">
-                                <span class="icon is-small"><i class="bi bi-sort-down"></i></span>
-                                <span class="is-hidden-mobile ml-1">Ordenar</span>
-                            </button>
-                        </div>
-                        <div class="dropdown-menu" id="sort-menu" role="menu">
-                            <div class="dropdown-content p-2" style="min-width: 200px;">
-                                <a class="dropdown-item is-size-7 sort-option" data-sort="name-asc">A-Z (Nome)</a>
-                                <a class="dropdown-item is-size-7 sort-option" data-sort="name-desc">Z-A (Nome)</a>
-                                <hr class="dropdown-divider">
-                                <a class="dropdown-item is-size-7 sort-option" data-sort="release-desc">Lançamento
-                                    (Novo)</a>
-                                <a class="dropdown-item is-size-7 sort-option" data-sort="release-asc">Lançamento
-                                    (Antigo)</a>
-                                <hr class="dropdown-divider">
-                                <a class="dropdown-item is-size-7 sort-option" data-sort="added-desc">Adicionado
-                                    Recentemente</a>
-                                <a class="dropdown-item is-size-7 sort-option" data-sort="added-asc">Adicionado
-                                    Antigamente</a>
-                                <hr class="dropdown-divider">
-                                <a class="dropdown-item is-size-7 sort-option" data-sort="id-asc">Title ID
-                                    (Crescente)</a>
-                                <a class="dropdown-item is-size-7 sort-option" data-sort="status-desc">Status de
-                                    Atualização</a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Quick Status Filters -->
-                    <div class="buttons has-addons m-0">
-                        <button class="button is-small is-light" id="btnFilterPendingBase" title="Falta Arquivo Base">
-                            <span class="icon is-small"><i class="bi bi-disc"></i></span>
-                            <span class="is-hidden-mobile ml-1">Base</span>
-                        </button>
-                        <button class="button is-small is-light" id="btnFilterPendingUpd" title="Pendente Atualização">
-                            <span class="icon is-small"><i class="bi bi-arrow-up-circle"></i></span>
-                            <span class="is-hidden-mobile ml-1">Update</span>
-                        </button>
-                        <button class="button is-small is-light" id="btnFilterPendingDlc" title="Pendente DLC">
-                            <span class="icon is-small"><i class="bi bi-plus-circle"></i></span>
-                            <span class="is-hidden-mobile ml-1">DLC</span>
+                <!-- Sorting Dropdown -->
+                <div class="dropdown" id="sortDropdown">
+                    <div class="dropdown-trigger">
+                        <button class="button is-info is-small is-light" aria-haspopup="true">
+                            <span class="icon is-small"><i class="bi bi-sort-down"></i></span>
+                            <span class="is-hidden-mobile ml-1">Ordenar</span>
                         </button>
                     </div>
+                    <div class="dropdown-menu" id="sort-menu" role="menu">
+                        <div class="dropdown-content p-2" style="min-width: 200px;">
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="name-asc">A-Z (Nome)</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="name-desc">Z-A (Nome)</a>
+                            <hr class="dropdown-divider">
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-desc">Lançamento
+                                (Novo)</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-asc">Lançamento
+                                (Antigo)</a>
+                            <hr class="dropdown-divider">
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-desc">Adicionado
+                                Recentemente</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-asc">Adicionado
+                                Antigamente</a>
+                            <hr class="dropdown-divider">
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="id-asc">Title ID
+                                (Crescente)</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="status-desc">Status de
+                                Atualização</a>
+                        </div>
+                    </div>
+                </div>
 
-                    <button class="button is-small is-outlined is-danger" onclick="clearFilters()"
-                        title="Limpar Filtros">
-                        <span class="icon is-small"><i class="bi bi-x"></i></span>
+                <!-- Quick Status Filters -->
+                <div class="buttons has-addons m-0">
+                    <button class="button is-small is-light" id="btnFilterPendingBase" title="Falta Arquivo Base">
+                        <span class="icon is-small"><i class="bi bi-disc"></i></span>
+                        <span class="is-hidden-mobile ml-1">Base</span>
+                    </button>
+                    <button class="button is-small is-light" id="btnFilterPendingUpd" title="Pendente Atualização">
+                        <span class="icon is-small"><i class="bi bi-arrow-up-circle"></i></span>
+                        <span class="is-hidden-mobile ml-1">Update</span>
+                    </button>
+                    <button class="button is-small is-light" id="btnFilterPendingDlc" title="Pendente DLC">
+                        <span class="icon is-small"><i class="bi bi-plus-circle"></i></span>
+                        <span class="is-hidden-mobile ml-1">DLC</span>
                     </button>
                 </div>
 
-                <!-- Right Group: Secondary Controls (Pushed to the right on desktop) -->
-                <div class="is-flex gap-2 is-align-items-center is-justify-content-center-mobile is-flex-grow-1-mobile"
-                    style="margin-left: auto;">
-                    <div class="is-hidden-mobile mr-2">
-                        <span class="is-size-7 opacity-50 font-mono" id="totalItemsCount">-- itens</span>
-                    </div>
+                <button class="button is-small is-outlined is-danger" onclick="clearFilters()" title="Limpar Filtros">
+                    <span class="icon is-small"><i class="bi bi-x"></i></span>
+                </button>
+            </div>
 
-                    <div class="is-flex is-align-items-center is-hidden-mobile" style="min-width: 100px;">
-                        <i class="bi bi-zoom-in is-size-7 mr-2 opacity-50"></i>
-                        <input id="gridZoom" class="slider is-small is-primary m-0" type="range" min="180" max="400"
-                            step="10" value="240" oninput="updateGridZoom(this.value)">
-                    </div>
-
-                    <div class="buttons has-addons m-0" id="viewToggleButtons">
-                        <button class="button is-small p-2" onclick="setView('card')" id="btnViewCard" title="Grade"><i
-                                class="bi bi-grid-fill"></i></button>
-                        <button class="button is-small p-2" onclick="setView('icon')" id="btnViewIcon" title="Ícones"><i
-                                class="bi bi-image"></i></button>
-                        <button class="button is-small p-2" onclick="setView('list')" id="btnViewList" title="Lista"><i
-                                class="bi bi-list-ul"></i></button>
-                    </div>
+            <!-- Right Group: Secondary Controls (Pushed to the right on desktop) -->
+            <div class="is-flex gap-2 is-align-items-center is-justify-content-center-mobile is-flex-grow-1-mobile"
+                style="margin-left: auto;">
+                <div class="is-hidden-mobile mr-2">
+                    <span class="is-size-7 opacity-50 font-mono" id="totalItemsCount">-- itens</span>
                 </div>
 
-                <div class="is-hidden-tablet is-flex-grow-1 has-text-centered">
-                    <span class="is-size-7 opacity-50" id="totalItemsCountMobile">-- itens</span>
+                <div class="is-flex is-align-items-center is-hidden-mobile" style="min-width: 100px;">
+                    <i class="bi bi-zoom-in is-size-7 mr-2 opacity-50"></i>
+                    <input id="gridZoom" class="slider is-small is-primary m-0" type="range" min="180" max="400"
+                        step="10" value="240" oninput="updateGridZoom(this.value)">
+                </div>
+
+                <div class="buttons has-addons m-0" id="viewToggleButtons">
+                    <button class="button is-small p-2" onclick="setView('card')" id="btnViewCard" title="Grade"><i
+                            class="bi bi-grid-fill"></i></button>
+                    <button class="button is-small p-2" onclick="setView('icon')" id="btnViewIcon" title="Ícones"><i
+                            class="bi bi-image"></i></button>
+                    <button class="button is-small p-2" onclick="setView('list')" id="btnViewList" title="Lista"><i
+                            class="bi bi-list-ul"></i></button>
                 </div>
             </div>
-        </div>
 
-        <!-- Library Content -->
-        <div id="libraryContainer" class="columns is-multiline is-variable is-3">
-            <!-- Dynamic content injected via JS -->
-        </div>
-
-        <!-- No Results -->
-        <div id="noResults" class="is-hidden has-text-centered py-6">
-            <div class="notification is-light">
-                <i class="bi bi-search is-size-1 opacity-20 block mb-4"></i>
-                <h3 class="title is-4">Nenhum jogo encontrado</h3>
-                <p class="subtitle is-6 opacity-50">Tente ajustar seus filtros ou verifique as configurações.</p>
+            <div class="is-hidden-tablet is-flex-grow-1 has-text-centered">
+                <span class="is-size-7 opacity-50" id="totalItemsCountMobile">-- itens</span>
             </div>
         </div>
-
-        <!-- Pagination -->
-        <nav class="pagination is-centered mt-6" role="navigation" aria-label="pagination">
-            <a class="pagination-previous" id="btnFirst" onclick="goToPage(1)">Primeira</a>
-            <a class="pagination-previous" id="btnPrev" onclick="changePage(-1)">Anterior</a>
-            <a class="pagination-next" id="btnNext" onclick="changePage(1)">Próxima</a>
-            <a class="pagination-next" id="btnLast" onclick="goToPage(-1)">Última</a>
-            <ul class="pagination-list" id="paginationSummary">
-                <!-- Injected via JS -->
-            </ul>
-        </nav>
-
-        <div class="level mt-4 is-mobile">
-            <div class="level-left"></div>
-            <div class="level-right">
-                <div class="level-item">
-                    <span class="is-size-7 mr-2 opacity-50">Itens por página:</span>
-                    <div class="buttons has-addons">
-                        <button class="button is-small p-2 btn-page-size" data-size="24"
-                            onclick="setPageSize(24)">24</button>
-                        <button class="button is-small p-2 btn-page-size" data-size="48"
-                            onclick="setPageSize(48)">48</button>
-                        <button class="button is-small p-2 btn-page-size" data-size="96"
-                            onclick="setPageSize(96)">96</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
-</section>
 
-<!-- Page Content follows -->
+    <!-- Library Content -->
+    <div id="libraryContainer" class="columns is-multiline is-variable is-3">
+        <!-- Dynamic content injected via JS -->
+    </div>
 
+    <!-- No Results -->
+    <div id="noResults" class="is-hidden has-text-centered py-6">
+        <div class="notification is-light">
+            <i class="bi bi-search is-size-1 opacity-20 block mb-4"></i>
+            <h3 class="title is-4">Nenhum jogo encontrado</h3>
+            <p class="subtitle is-6 opacity-50">Tente ajustar seus filtros ou verifique as configurações.</p>
+        </div>
+    </div>
 
+    <!-- Pagination -->
+    <nav class="pagination is-centered mt-6" role="navigation" aria-label="pagination">
+        <a class="pagination-previous" id="btnFirst" onclick="goToPage(1)">Primeira</a>
+        <a class="pagination-previous" id="btnPrev" onclick="changePage(-1)">Anterior</a>
+        <a class="pagination-next" id="btnNext" onclick="changePage(1)">Próxima</a>
+        <a class="pagination-next" id="btnLast" onclick="goToPage(-1)">Última</a>
+        <ul class="pagination-list" id="paginationSummary">
+            <!-- Injected via JS -->
+        </ul>
+    </nav>
 
-
-<button class="button close-modal">Cancelar</button>
-</footer>
+    <div class="level mt-4 is-mobile">
+        <div class="level-left"></div>
+        <div class="level-right">
+            <div class="level-item">
+                <span class="is-size-7 mr-2 opacity-50">Itens por página:</span>
+                <div class="buttons has-addons">
+                    <button class="button is-small p-2 btn-page-size" data-size="24"
+                        onclick="setPageSize(24)">24</button>
+                    <button class="button is-small p-2 btn-page-size" data-size="48"
+                        onclick="setPageSize(48)">48</button>
+                    <button class="button is-small p-2 btn-page-size" data-size="96"
+                        onclick="setPageSize(96)">96</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 </div>
 
@@ -256,19 +243,7 @@
         display: block;
     }
 
-    @media screen and (min-width: 1600px) {
-        .container.is-fluid {
-            max-width: 1550px !important;
-            margin: 0 auto !important;
-        }
-    }
 
-    @media screen and (min-width: 1920px) {
-        .container.is-fluid {
-            max-width: 1850px !important;
-            margin: 0 auto !important;
-        }
-    }
 
     @media screen and (min-width: 769px) {
         .modal-card {
@@ -759,6 +734,13 @@
         e.stopPropagation();
         $('#sortDropdown').toggleClass('is-active');
         $('#filterDropdown').removeClass('is-active');
+    });
+
+    // Filter dropdown toggle
+    $('#filterDropdown .dropdown-trigger button').on('click', function (e) {
+        e.stopPropagation();
+        $('#filterDropdown').toggleClass('is-active');
+        $('#sortDropdown').removeClass('is-active');
     });
 
     $(document).on('click', () => {
