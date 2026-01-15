@@ -9,8 +9,8 @@
                     <div class="card box shadow-2xl p-6">
                         <div class="has-text-centered mb-6">
                             <div class="is-inline-block p-4 mb-4"
-                                style="background: #570df8; border-radius: 1.5rem; box-shadow: 0 10px 20px rgba(87,13,248,0.3)">
-                                <i class="bi bi-box-seam-fill is-size-1 has-text-white"></i>
+                                style="background: var(--bulma-primary); border-radius: 1.5rem; box-shadow: 0 10px 20px rgba(124, 58, 237, 0.4)">
+                                <i class="bi bi-box-seam-fill is-size-1" style="color: white"></i>
                             </div>
                             <h2 class="title is-2 has-text-weight-black tracking-tighter">MyFoil</h2>
                             <p class="subtitle is-6 opacity-50">Entrar</p>
@@ -63,6 +63,10 @@
 <style>
     .shadow-2xl {
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    }
+
+    [data-theme="dark"] .shadow-2xl {
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
     }
 
     .tracking-tighter {

@@ -843,10 +843,14 @@
 
 <style>
     .menu-list a.is-active {
-        background-color: rgba(87, 13, 248, 0.1);
-        color: #570df8;
+        background-color: rgba(124, 58, 237, 0.15);
+        color: var(--bulma-primary);
         font-weight: bold;
-        border-left: 3px solid #570df8;
+        border-left: 3px solid var(--bulma-primary);
+    }
+
+    [data-theme="dark"] .menu-list a.is-active {
+        background-color: rgba(139, 92, 246, 0.2);
     }
 
     .animate-fade-in {
@@ -915,7 +919,7 @@
     }
 
     .is-loading.is-ghost::after {
-        border-color: transparent transparent #570df8 #570df8 !important;
+        border-color: transparent transparent var(--bulma-primary) var(--bulma-primary) !important;
     }
 
     /* Activity Timeline Styles */
@@ -928,8 +932,12 @@
         position: relative;
         padding-left: 3rem;
         padding-bottom: 2rem;
-        border-left: 2px solid rgba(87, 13, 248, 0.1);
+        border-left: 2px solid rgba(124, 58, 237, 0.2);
         margin-left: 1rem;
+    }
+
+    [data-theme="dark"] .activity-item {
+        border-left: 2px solid rgba(139, 92, 246, 0.3);
     }
 
     .activity-item:last-child {
@@ -943,23 +951,24 @@
         width: 20px;
         height: 20px;
         border-radius: 50%;
-        background: #fff;
-        border: 4px solid #570df8;
+        background: var(--bulma-card-background);
+        border: 4px solid var(--bulma-primary);
         z-index: 2;
     }
 
     .activity-content {
-        background: rgba(0, 0, 0, 0.02);
+        background: var(--bulma-background-scheme);
         padding: 1rem;
         border-radius: 8px;
-        border: 1px solid rgba(0, 0, 0, 0.03);
+        border: 1px solid var(--bulma-border);
     }
 
     .activity-meta {
         font-size: 0.75rem;
         font-weight: 700;
-        color: rgba(0, 0, 0, 0.4);
+        color: var(--bulma-text);
         margin-bottom: 0.25rem;
+        opacity: 0.6;
         display: block;
     }
 </style>
@@ -1038,14 +1047,14 @@
             logs.forEach(log => {
                 const date = new Date(log.timestamp).toLocaleString();
                 let iconClass = 'bi-info-circle';
-                let color = '#570df8';
+                let color = '#7c3aed';
 
                 if (log.action.includes('error') || log.action.includes('failed')) {
                     iconClass = 'bi-exclamation-circle-fill';
-                    color = '#f14668';
+                    color = '#ef4444';
                 } else if (log.action.includes('file_added')) {
                     iconClass = 'bi-file-earmark-plus';
-                    color = '#48c78e';
+                    color = '#10b981';
                 } else if (log.action.includes('scan')) {
                     iconClass = 'bi-search';
                 } else if (log.action.includes('backup')) {

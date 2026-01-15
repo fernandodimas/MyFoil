@@ -203,15 +203,18 @@
     }
 
     .border-success-soft {
-        border: 1px solid rgba(72, 199, 142, 0.2);
+        border-color: var(--bulma-success) !important;
+        opacity: 0.3;
     }
 
     .border-warning-soft {
-        border: 1px solid rgba(255, 221, 87, 0.3);
+        border-color: var(--bulma-warning) !important;
+        opacity: 0.3;
     }
 
     .border-danger-soft {
-        border: 1px solid rgba(241, 70, 104, 0.2);
+        border-color: var(--bulma-danger) !important;
+        opacity: 0.3;
     }
 
     .game-card {
@@ -293,14 +296,13 @@
         flex-direction: column;
         height: 100%;
         transition: transform 0.2s, box-shadow 0.2s;
-        border: 1px solid rgba(0, 0, 0, 0.05);
-        background: #fff;
+        border: 1px solid var(--bulma-border);
+        background: var(--bulma-card-background);
     }
 
     .card-image img {
         transition: transform 0.3s;
-        background-color: #f5f5f5;
-        /* Fallback color for missing banners */
+        background-color: var(--bulma-background);
     }
 
     .game-card:hover .card-image img {
@@ -308,7 +310,7 @@
     }
 
     .bg-light-soft {
-        background: #fafafa;
+        background: var(--bulma-background-scheme);
     }
 
     .border-none {
@@ -316,7 +318,7 @@
     }
 
     .hover-bg-light:hover {
-        background: #f5f5f5;
+        background: var(--bulma-background-scheme);
     }
 
     .rounded {
@@ -545,7 +547,7 @@
                 <div class="table-container box is-paddingless shadow-sm overflow-hidden border-none">
                     <table class="table is-fullwidth is-hoverable game-list-table mb-0">
                         <thead>
-                            <tr class="has-background-light-soft" style="border-bottom: 2px solid #7c3aed">
+                            <tr class="has-background-light-soft" style="border-bottom: 2px solid var(--bulma-primary)">
                                 <th width="65" class="has-text-centered p-1">Ícone</th>
                                 <th>Título do Jogo</th>
                                 <th width="140">Title ID</th>

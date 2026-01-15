@@ -29,10 +29,37 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
     <style>
-        /* Dark Mode Support for Bulma */
-        :root[data-theme="dark"] {
-            --bulma-background-scheme: #0f172a;
+        /* Enhanced Dark Mode Support for Bulma with Better Colors */
+        :root {
+            --bulma-background: #f8fafc;
+            --bulma-background-scheme: #f8fafc;
+            --bulma-text-strong: #0f172a;
+            --bulma-text: #64748b;
+            --bulma-card-background: #ffffff;
+            --bulma-card-header-color: #0f172a;
+            --bulma-input-background: #ffffff;
+            --bulma-input-color: #0f172a;
+            --bulma-input-border: #e2e8f0;
+            --bulma-input-placeholder-color: #94a3b8;
+            --bulma-border: #e2e8f0;
+            --bulma-navbar-background-color: #ffffff;
+            --bulma-navbar-item-color: #64748b;
+            --bulma-navbar-item-hover-background-color: #f1f5f9;
+            --bulma-modal-card-head-background-color: #ffffff;
+            --bulma-modal-card-body-background-color: #f8fafc;
+            --bulma-modal-card-foot-background-color: #ffffff;
+            --bulma-link: #7c3aed;
+            --bulma-primary: #7c3aed;
+            --bulma-primary-light: #a78bfa;
+            --bulma-success: #10b981;
+            --bulma-warning: #f59e0b;
+            --bulma-danger: #ef4444;
+            --bulma-info: #3b82f6;
+        }
+
+        [data-theme="dark"] {
             --bulma-background: #0f172a;
+            --bulma-background-scheme: #0f172a;
             --bulma-text-strong: #f8fafc;
             --bulma-text: #cbd5e1;
             --bulma-card-background: #1e293b;
@@ -40,101 +67,146 @@
             --bulma-input-background: #1e293b;
             --bulma-input-color: #f1f5f9;
             --bulma-input-border: #334155;
-            --bulma-input-placeholder-color: rgba(255, 255, 255, 0.4);
+            --bulma-input-placeholder-color: rgba(148, 163, 184, 0.5);
             --bulma-border: #334155;
             --bulma-navbar-background-color: #1e293b;
-            --bulma-navbar-item-color: #f1f5f9;
+            --bulma-navbar-item-color: #cbd5e1;
             --bulma-navbar-item-hover-background-color: #334155;
             --bulma-modal-card-head-background-color: #1e293b;
             --bulma-modal-card-body-background-color: #0f172a;
             --bulma-modal-card-foot-background-color: #1e293b;
             --bulma-link: #a78bfa;
-            --bulma-primary: #7c3aed;
+            --bulma-primary: #8b5cf6;
+            --bulma-primary-light: #a78bfa;
+            --bulma-success: #34d399;
+            --bulma-warning: #fbbf24;
+            --bulma-danger: #f87171;
+            --bulma-info: #60a5fa;
         }
 
-        [data-theme="dark"] body {
+        body {
             background-color: var(--bulma-background);
             color: var(--bulma-text);
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        [data-theme="dark"] .card,
-        [data-theme="dark"] .box,
-        [data-theme="dark"] .navbar,
-        [data-theme="dark"] .modal-card-body,
-        [data-theme="dark"] .modal-card-head,
-        [data-theme="dark"] .modal-card-foot {
+        .card,
+        .box,
+        .navbar,
+        .modal-card-body,
+        .modal-card-head,
+        .modal-card-foot {
             background-color: var(--bulma-card-background) !important;
+            color: var(--bulma-text) !important;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            border-color: var(--bulma-border) !important;
+        }
+
+        .title, strong {
+            color: var(--bulma-text-strong) !important;
+        }
+
+        .subtitle, .help, .label {
             color: var(--bulma-text) !important;
         }
 
-        [data-theme="dark"] .title,
-        [data-theme="dark"] strong {
-            color: #ffffff !important;
+        .tag:not(.is-primary):not(.is-success):not(.is-warning):not(.is-danger):not(.is-info) {
+            background-color: var(--bulma-input-background) !important;
+            color: var(--bulma-text) !important;
         }
 
-        [data-theme="dark"] .subtitle,
-        [data-theme="dark"] .help,
-        [data-theme="dark"] .label {
-            color: #cbd5e1 !important;
+        .button.is-light {
+            background-color: var(--bulma-input-background) !important;
+            color: var(--bulma-text) !important;
+            border-color: var(--bulma-border) !important;
         }
 
-        [data-theme="dark"] .tag:not(.is-primary):not(.is-success):not(.is-warning):not(.is-danger) {
-            background-color: #334155 !important;
-            color: #f1f5f9 !important;
-        }
-
-        [data-theme="dark"] .button.is-light {
-            background-color: #334155 !important;
-            color: #f1f5f9 !important;
-            border-color: #475569 !important;
+        .button.is-primary.is-light {
+            background-color: rgba(124, 58, 237, 0.2) !important;
+            color: var(--bulma-primary-light) !important;
         }
 
         [data-theme="dark"] .button.is-primary.is-light {
-            background-color: rgba(124, 58, 237, 0.2) !important;
-            color: #a78bfa !important;
+            background-color: rgba(139, 92, 246, 0.25) !important;
+            color: var(--bulma-primary-light) !important;
         }
 
-        [data-theme="dark"] .input,
-        [data-theme="dark"] .select select,
-        [data-theme="dark"] .textarea {
+        .input,
+        .select select,
+        .textarea {
             background-color: var(--bulma-input-background) !important;
             color: var(--bulma-input-color) !important;
             border-color: var(--bulma-input-border) !important;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
         }
 
-        [data-theme="dark"] .navbar-item,
-        [data-theme="dark"] .navbar-link {
+        .input:focus,
+        .select select:focus,
+        .textarea:focus {
+            border-color: var(--bulma-primary) !important;
+            box-shadow: 0 0 0 0.125em rgba(124, 58, 237, 0.25) !important;
+        }
+
+        .navbar-item,
+        .navbar-link {
             color: var(--bulma-navbar-item-color) !important;
         }
 
-        [data-theme="dark"] .navbar-item:hover,
-        [data-theme="dark"] .navbar-link:hover {
+        .navbar-item:hover,
+        .navbar-link:hover {
             background-color: var(--bulma-navbar-item-hover-background-color) !important;
+            color: var(--bulma-link) !important;
         }
 
-        [data-theme="dark"] .table {
+        .table {
             background-color: transparent !important;
             color: var(--bulma-text) !important;
         }
 
-        [data-theme="dark"] .table thead th {
+        .table thead th {
             color: var(--bulma-text-strong) !important;
             border-bottom-color: var(--bulma-border);
+            background-color: var(--bulma-background) !important;
         }
 
-        [data-theme="dark"] .table td,
-        [data-theme="dark"] .table th {
+        .table td,
+        .table th {
             border-color: var(--bulma-border) !important;
         }
 
-        /* Custom primary color to match old design */
+        .table tr:hover {
+            background-color: var(--bulma-navbar-item-hover-background-color) !important;
+        }
+
+        /* Custom primary color */
         .is-primary {
-            background-color: #7c3aed !important;
+            background-color: var(--bulma-primary) !important;
             color: #ffffff !important;
         }
 
         .has-text-primary {
-            color: #7c3aed !important;
+            color: var(--bulma-primary) !important;
+        }
+
+        /* Enhanced tag colors with better contrast */
+        .tag.is-success, .tag.is-success.is-light {
+            background-color: var(--bulma-success) !important;
+            color: #ffffff !important;
+        }
+
+        .tag.is-warning, .tag.is-warning.is-light {
+            background-color: var(--bulma-warning) !important;
+            color: #ffffff !important;
+        }
+
+        .tag.is-danger, .tag.is-danger.is-light {
+            background-color: var(--bulma-danger) !important;
+            color: #ffffff !important;
+        }
+
+        .tag.is-info, .tag.is-info.is-light {
+            background-color: var(--bulma-info) !important;
+            color: #ffffff !important;
         }
 
         #toastContainer {
@@ -232,7 +304,7 @@
     </main>
 
     <!-- Footer with System Information -->
-    <footer class="footer has-background-dark has-text-light py-2 mt-auto">
+    <footer class="footer py-2 mt-auto">
         <div class="container is-fluid px-5">
             <div class="columns is-vcentered is-mobile is-multiline">
                 <div class="column is-12-mobile is-4-tablet">

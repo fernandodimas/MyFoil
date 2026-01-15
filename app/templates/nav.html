@@ -128,11 +128,16 @@
 
 <style>
     .navbar.is-fixed-top {
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        border-bottom: 1px solid var(--bulma-border);
+        background-color: var(--bulma-navbar-background-color) !important;
     }
 
     .shadow-sm {
         box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+
+    [data-theme="dark"] .shadow-sm {
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
     }
 
     .tracking-tighter {
@@ -141,5 +146,10 @@
 
     .mr-2 {
         margin-right: 0.5rem;
+    }
+
+    /* Enhanced navbar brand hover */
+    .navbar-brand .navbar-item:hover {
+        background-color: transparent !important;
     }
 </style>
