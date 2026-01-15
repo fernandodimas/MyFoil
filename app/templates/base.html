@@ -266,6 +266,8 @@
         window.translations = {};
         window.currentLocale = "en";
         {% endif %}
+        window.currentUser = "{{ current_user.user if current_user.is_authenticated else '' }}";
+        window.isAdmin = {{ 'true' if current_user.is_authenticated and current_user.admin_access else 'false' }};
 
         window.t = function (key) {
             return window.translations[key] || key;

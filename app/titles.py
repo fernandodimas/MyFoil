@@ -353,8 +353,9 @@ def load_titledb(force=False):
                                     else:
                                         # Override specific fields but keep the rest
                                         for field in ['name', 'description', 'bannerUrl', 'iconUrl', 'publisher', 'releaseDate', 'size', 'category', 'genre', 'release_date']:
-                                            if data.get(field):
-                                                _titles_db[tid][field] = data[field]
+                                            val = data.get(field)
+                                            if val is not None and val != "":
+                                                _titles_db[tid][field] = val
                                 else:
                                     _titles_db[tid] = data
                         
@@ -573,6 +574,8 @@ def get_game_info(title_id):
                     pass
                 
                 for bid in possible_base_ids:
+                    # Avoid infinite recursion
+                    if bid == search_id: continue
                     base_info = get_game_info(bid)
                     if base_info and base_info.get('iconUrl') and not base_info['name'].startswith('Unknown'):
                         res['iconUrl'] = base_info['iconUrl']

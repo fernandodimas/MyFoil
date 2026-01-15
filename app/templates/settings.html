@@ -1275,6 +1275,7 @@
 </style>
 
 <script>
+    {% raw %}
     let allUsernames = [];
 
     // Helper functions
@@ -2219,16 +2220,16 @@
 
     function deleteWebhook(id) {
         confirmAction({
-            title: 'Excluir Webhook',
-            message: 'Deseja realmente excluir este webhook?',
-            confirmText: 'Excluir',
+            title: t('Excluir Webhook'),
+            message: t('Deseja realmente excluir este webhook?'),
+            confirmText: t('Excluir'),
             confirmClass: 'is-danger',
             onConfirm: () => {
                 $.ajax({
                     url: `/api/settings/webhooks/${id}`,
                     type: 'DELETE',
                     success: () => {
-                        showToast('Webhook removido');
+                        showToast(t('Webhook removido'));
                         fillWebhooksList();
                     }
                 });
@@ -2263,9 +2264,9 @@
             data: JSON.stringify(data),
             success: function (resp) {
                 if (resp.success) {
-                    showToast('Padrões de renomeação salvos com sucesso!', 'is-success');
+                    showToast(t('Padrões de renomeação salvos com sucesso!'), 'is-success');
                 } else {
-                    showToast('Erro ao salvar padrões.', 'is-danger');
+                    showToast(t('Erro ao salvar padrões.'), 'is-danger');
                 }
             }
         });
@@ -2394,6 +2395,7 @@
     $('.modal-background').on('click', function () {
         closeModal($(this).parent().attr('id'));
     });
+    {% endraw %}
 </script>
 
 <style>

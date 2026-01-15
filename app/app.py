@@ -1261,18 +1261,27 @@ def get_all_files_api():
             'extension': os.path.splitext(f.filename)[1].lower(),
             'identified': f.identified,
             'identification_error': f.identification_error,
-            'library_id': f.library_id,
-            'created_at': f.created_at.isoformat() if f.created_at else None
+            'library_id': f.library_id
         }
         
         # Add title info if identified
         if f.identified and f.apps:
             try:
-                app = f.apps[0]
-                file_info['title_id'] = app.title.title_id if app.title else None
-                file_info['title_name'] = app.title.name if app.title else 'Unknown'
-                file_info['app_type'] = app.app_type
-            except:
+                if f.apps and len(f.apps) > 0:
+                    app = f.apps[0]
+                    file_info['title_id'] = app.title.title_id if (app and app.title) else None
+                    if app and app.title:
+                        # Try to get name from TitleDB
+                        from titles import get_game_info
+                        tdb_info = get_game_info(app.title.title_id)
+                        file_info['title_name'] = tdb_info.get('name') or 'Unknown'
+                        file_info['app_type'] = app.app_type
+                    else:
+                        file_info['title_name'] = 'Unknown'
+                else:
+                    file_info['title_name'] = 'Unknown'
+            except Exception as e:
+                logger.debug(f"Error resolving title info for file {f.id}: {e}")
                 file_info['title_name'] = 'Unknown'
         
         results.append(file_info)
@@ -1433,7 +1442,7 @@ def library_api():
     
     # Validar parâmetros
     page = max(1, page)  # Página mínima é 1
-    per_page = min(max(1, per_page), 500)  # Entre 1 e 500 itens por página
+    per_page = min(max(1, per_page), 2000)  # Aumentado o limite para 2000
     
     # generate_library will use cache if force=False (default)
     lib_data = generate_library()
