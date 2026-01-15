@@ -1174,6 +1174,7 @@ def app_info_api(id):
     result['has_base'] = title_obj.have_base
     result['has_latest_version'] = title_obj.up_to_date
     result['has_all_dlcs'] = title_obj.complete
+    result['owned'] = len(owned_versions) > 0 or result['has_base']
     
     result['files'] = unique_base_files
     result['updates'] = sorted(updates_list, key=lambda x: x['version'])

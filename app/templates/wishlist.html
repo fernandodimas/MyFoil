@@ -159,7 +159,7 @@
 
                         // Check if released - Correcting logic for YYYYMMDD comparison
                         // We assume release_date is YYYYMMDD or YYYY-MM-DD
-                        const rawDate = gData.release_date || '';
+                        const rawDate = String(gData.release_date || '');
                         const releaseDateStr = rawDate.replace(/-/g, '');
                         const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
 
