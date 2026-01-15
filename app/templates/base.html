@@ -18,6 +18,10 @@
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/icon-192.png') }}">
 
+    <!-- Favicons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='img/favicon-16x16.png') }}">
+
     <!-- Bulma CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.0/css/bulma.min.css">
 
@@ -102,11 +106,14 @@
             border-color: var(--bulma-border) !important;
         }
 
-        .title, strong {
+        .title,
+        strong {
             color: var(--bulma-text-strong) !important;
         }
 
-        .subtitle, .help, .label {
+        .subtitle,
+        .help,
+        .label {
             color: var(--bulma-text) !important;
         }
 
@@ -189,22 +196,26 @@
         }
 
         /* Enhanced tag colors with better contrast */
-        .tag.is-success, .tag.is-success.is-light {
+        .tag.is-success,
+        .tag.is-success.is-light {
             background-color: var(--bulma-success) !important;
             color: #ffffff !important;
         }
 
-        .tag.is-warning, .tag.is-warning.is-light {
+        .tag.is-warning,
+        .tag.is-warning.is-light {
             background-color: var(--bulma-warning) !important;
             color: #ffffff !important;
         }
 
-        .tag.is-danger, .tag.is-danger.is-light {
+        .tag.is-danger,
+        .tag.is-danger.is-light {
             background-color: var(--bulma-danger) !important;
             color: #ffffff !important;
         }
 
-        .tag.is-info, .tag.is-info.is-light {
+        .tag.is-info,
+        .tag.is-info.is-light {
             background-color: var(--bulma-info) !important;
             color: #ffffff !important;
         }
