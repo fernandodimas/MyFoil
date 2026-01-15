@@ -37,6 +37,7 @@
                         <li><a data-target="Plugins"><i class="bi bi-patch-check mr-2"></i> Plugins <span
                                     class="tag is-warning is-light is-size-9 ml-1"
                                     style="font-size: 0.6rem;">BETA</span></a></li>
+                        <li><a data-target="Help"><i class="bi bi-question-circle mr-2"></i> Ajuda</a></li>
                     </ul>
                 </aside>
             </div>
@@ -839,6 +840,148 @@
                     </section>
 
                     <!-- Plugins Section -->
+<!-- Help Section -->
+<section id="section-Help" class="settings-section is-hidden">
+    <div class="card box shadow-sm">
+        <header class="card-header border-none shadow-none">
+            <p class="card-header-title has-text-info">
+                <i class="bi bi-question-circle mr-2"></i> Ajuda e Documentação
+            </p>
+        </header>
+        <div class="card-content pt-0">
+
+            <!-- Keyboard Shortcuts -->
+            <div class="box has-background-light-soft p-4 mb-4">
+                <p class="heading has-text-weight-bold mb-3"><i class="bi bi-keyboard mr-2"></i> Atalhos de Teclado</p>
+                <div class="columns is-multiline">
+                    <div class="column is-6">
+                        <table class="table is-fullwidth is-size-7">
+                            <thead>
+                                <tr>
+                                    <th>Atalho</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><kbd>Ctrl/Cmd + K</kbd></td>
+                                    <td>Focar na busca</td>
+                                </tr>
+                                <tr>
+                                    <td><kbd>ESC</kbd></td>
+                                    <td>Fechar modais</td>
+                                </tr>
+                                <tr>
+                                    <td><kbd>← / →</kbd></td>
+                                    <td>Navegar paginação</td>
+                                </tr>
+                                <tr>
+                                    <td><kbd>E</kbd> (no modal)</td>
+                                    <td>Editar metadados</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="column is-6">
+                        <table class="table is-fullwidth is-size-7">
+                            <thead>
+                                <tr>
+                                    <th>Atalho</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><kbd>F</kbd> (no modal)</td>
+                                    <td>Toggle Wishlist</td>
+                                </tr>
+                                <tr>
+                                    <td><kbd>D</kbd> (no modal)</td>
+                                    <td>Baixar arquivo</td>
+                                </tr>
+                                <tr>
+                                    <td><kbd>Enter</kbd></td>
+                                    <td>Abrir jogo selecionado</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Start Guide -->
+            <div class="box has-background-light-soft p-4 mb-4">
+                <p class="heading has-text-weight-bold mb-3"><i class="bi bi-book mr-2"></i> Guia Rápido</p>
+                <div class="content is-size-7">
+                    <ol>
+                        <li><strong>Configurar Biblioteca:</strong> Vá em "Biblioteca" e adicione o caminho da pasta com
+                            seus jogos NSP/NSZ/XCI.</li>
+                        <li><strong>Atualizar TitleDB:</strong> Clique em "Atualizar Agora" na aba TitleDB para baixar
+                            informações dos jogos.</li>
+                        <li><strong>Escanear:</strong> Após adicionar a pasta, clique em "Escanear Biblioteca" para
+                            identificar seus jogos.</li>
+                        <li><strong>Configurar Loja:</strong> Na aba "Loja", defina o hostname e ative a shop para o
+                            Tinfoil.</li>
+                        <li><strong>Conectar Tinfoil:</strong> No Switch, adicione <code>protocol://HOST:5000</code> nas
+                            File Browsers.</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- FAQ -->
+            <div class="box has-background-light-soft p-4 mb-4">
+                <p class="heading has-text-weight-bold mb-3"><i class="bi bi-patch-question mr-2"></i> Perguntas
+                    Frequentes</p>
+                <div class="content is-size-7">
+                    <details class="mb-3">
+                        <summary class="has-text-weight-bold mb-2" style="cursor: pointer;">Como identificar jogos que
+                            aparecem como "Unknown"?</summary>
+                        <p>Vá em "Erros/Identificação", encontre o jogo e clique em "Reconhecer". Busque o jogo correto
+                            no TitleDB e clique em "Usar Metadados".</p>
+                    </details>
+                    <details class="mb-3">
+                        <summary class="has-text-weight-bold mb-2" style="cursor: pointer;">Por que alguns jogos não
+                            aparecem na loja do Tinfoil?</summary>
+                        <p>Verifique se: (1) O arquivo foi identificado corretamente, (2) Você tem permissão
+                            "shop_access" no seu usuário, (3) A loja está configurada como pública ou você tem login
+                            correto.</p>
+                    </details>
+                    <details class="mb-3">
+                        <summary class="has-text-weight-bold mb-2" style="cursor: pointer;">Como adicionar metadados
+                            customizados?</summary>
+                        <p>Clique no jogo, depois em "Editar Dados". Você pode buscar informações no TitleDB ou
+                            preencher manualmente.</p>
+                    </details>
+                    <details class="mb-3">
+                        <summary class="has-text-weight-bold mb-2" style="cursor: pointer;">Qual a diferença entre as
+                            fontes do TitleDB?</summary>
+                        <p>MyFoil suporta múltiplas fontes com fallback automático. Fontes com maior prioridade são
+                            tentadas primeiro. Recomendamos manter ao menos 2 fontes ativas.</p>
+                    </details>
+                </div>
+            </div>
+
+            <!-- Links -->
+            <div class="box has-background-light-soft p-4">
+                <p class="heading has-text-weight-bold mb-3"><i class="bi bi-link-45deg mr-2"></i> Links Úteis</p>
+                <div class="buttons">
+                    <a href="https://github.com/fernandodimas/MyFoil" target="_blank" class="button is-small is-dark">
+                        <i class="bi bi-github mr-2"></i> GitHub
+                    </a>
+                    <a href="https://github.com/fernandodimas/MyFoil/issues" target="_blank"
+                        class="button is-small is-info">
+                        <i class="bi bi-bug mr-2"></i> Reportar Bug
+                    </a>
+                    <a href="https://github.com/fernandodimas/MyFoil/wiki" target="_blank"
+                        class="button is-small is-link">
+                        <i class="bi bi-book mr-2"></i> Wiki Completa
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
                     <section id="section-Plugins" class="settings-section is-hidden">
                         <div class="card box shadow-sm">
                             <header class="card-header border-none shadow-none">
@@ -1835,73 +1978,73 @@
     }
 
 
-// File Explorer Functions
-let allFiles = [];
-let filteredFiles = [];
+    // File Explorer Functions
+    let allFiles = [];
+    let filteredFiles = [];
 
-function fillFilesExplorer() {
-    $.getJSON('/api/files/all', (files) => {
-        console.log('Files loaded:', files.length);
-        allFiles = files;
-        applyFileFilters();
-    }).fail((xhr, status, error) => {
-        console.error('Error loading files:', error);
-        $('#filesExplorerTable tbody').html('<tr><td colspan="6" class="has-text-centered py-4 has-text-danger">Erro ao carregar arquivos. Verifique o console.</td></tr>');
-    });
-}
-
-function applyFileFilters() {
-    const searchTerm = $('#fileSearchInput').val().toLowerCase();
-    const typeFilter = $('#fileTypeFilter').val();
-    const statusFilter = $('#fileStatusFilter').val();
-
-    filteredFiles = allFiles.filter(f => {
-        // Search filter
-        if (searchTerm && !f.filename.toLowerCase().includes(searchTerm) && !f.filepath.toLowerCase().includes(searchTerm)) {
-            return false;
-        }
-
-        // Type filter
-        if (typeFilter && f.extension !== typeFilter) {
-            return false;
-        }
-
-        // Status filter
-        if (statusFilter === 'identified' && !f.identified) {
-            return false;
-        }
-        if (statusFilter === 'error' && (f.identified || !f.identification_error)) {
-            return false;
-        }
-
-        return true;
-    });
-
-    renderFilesExplorer();
-}
-
-function renderFilesExplorer() {
-    const tbody = $('#filesExplorerTable tbody').empty();
-
-    if (filteredFiles.length === 0) {
-        tbody.append('<tr><td colspan="6" class="has-text-centered py-4 opacity-50">Nenhum arquivo encontrado.</td></tr>');
-        $('#filesExplorerCount').text('0 arquivos encontrados');
-        return;
+    function fillFilesExplorer() {
+        $.getJSON('/api/files/all', (files) => {
+            console.log('Files loaded:', files.length);
+            allFiles = files;
+            applyFileFilters();
+        }).fail((xhr, status, error) => {
+            console.error('Error loading files:', error);
+            $('#filesExplorerTable tbody').html('<tr><td colspan="6" class="has-text-centered py-4 has-text-danger">Erro ao carregar arquivos. Verifique o console.</td></tr>');
+        });
     }
 
-    filteredFiles.forEach(f => {
-        const statusBadge = f.identified
-            ? '<span class="tag is-success is-light is-small"><i class="bi bi-check-circle mr-1"></i> Identificado</span>'
-            : '<span class="tag is-danger is-light is-small"><i class="bi bi-x-circle mr-1"></i> Erro</span>';
+    function applyFileFilters() {
+        const searchTerm = $('#fileSearchInput').val().toLowerCase();
+        const typeFilter = $('#fileTypeFilter').val();
+        const statusFilter = $('#fileStatusFilter').val();
 
-        const typeColor = {
-            '.nsp': 'is-info',
-            '.nsz': 'is-primary',
-            '.xci': 'is-warning',
-            '.xcz': 'is-danger'
-        }[f.extension] || 'is-light';
+        filteredFiles = allFiles.filter(f => {
+            // Search filter
+            if (searchTerm && !f.filename.toLowerCase().includes(searchTerm) && !f.filepath.toLowerCase().includes(searchTerm)) {
+                return false;
+            }
 
-        tbody.append(`
+            // Type filter
+            if (typeFilter && f.extension !== typeFilter) {
+                return false;
+            }
+
+            // Status filter
+            if (statusFilter === 'identified' && !f.identified) {
+                return false;
+            }
+            if (statusFilter === 'error' && (f.identified || !f.identification_error)) {
+                return false;
+            }
+
+            return true;
+        });
+
+        renderFilesExplorer();
+    }
+
+    function renderFilesExplorer() {
+        const tbody = $('#filesExplorerTable tbody').empty();
+
+        if (filteredFiles.length === 0) {
+            tbody.append('<tr><td colspan="6" class="has-text-centered py-4 opacity-50">Nenhum arquivo encontrado.</td></tr>');
+            $('#filesExplorerCount').text('0 arquivos encontrados');
+            return;
+        }
+
+        filteredFiles.forEach(f => {
+            const statusBadge = f.identified
+                ? '<span class="tag is-success is-light is-small"><i class="bi bi-check-circle mr-1"></i> Identificado</span>'
+                : '<span class="tag is-danger is-light is-small"><i class="bi bi-x-circle mr-1"></i> Erro</span>';
+
+            const typeColor = {
+                '.nsp': 'is-info',
+                '.nsz': 'is-primary',
+                '.xci': 'is-warning',
+                '.xcz': 'is-danger'
+            }[f.extension] || 'is-light';
+
+            tbody.append(`
                 <tr>
                     <td class="truncate" style="max-width: 300px;" title="${f.filename}">
                         <i class="bi bi-file-earmark mr-1 opacity-50"></i>
@@ -1923,14 +2066,14 @@ function renderFilesExplorer() {
                     </td>
                 </tr>
             `);
-    });
+        });
 
-    $('#filesExplorerCount').text(`${filteredFiles.length} arquivo${filteredFiles.length !== 1 ? 's' : ''} encontrado${filteredFiles.length !== 1 ? 's' : ''}`);
-}
+        $('#filesExplorerCount').text(`${filteredFiles.length} arquivo${filteredFiles.length !== 1 ? 's' : ''} encontrado${filteredFiles.length !== 1 ? 's' : ''}`);
+    }
 
-// Attach filter events
-$(document).on('input', '#fileSearchInput', applyFileFilters);
-$(document).on('change', '#fileTypeFilter, #fileStatusFilter', applyFileFilters);
+    // Attach filter events
+    $(document).on('input', '#fileSearchInput', applyFileFilters);
+    $(document).on('change', '#fileTypeFilter, #fileStatusFilter', applyFileFilters);
 
     function fillWebhooksList() {
         $.getJSON('/api/settings/webhooks', (webhooks) => {
@@ -2060,30 +2203,30 @@ $(document).on('change', '#fileTypeFilter, #fileStatusFilter', applyFileFilters)
     function previewRenaming() {
         const data = pattern_base: $('#patternBase').val(),
             pattern_upd: $('#patternUpd').val(),
-            pattern_dlc: $('#patternDlc').val()
-        };
+                pattern_dlc: $('#patternDlc').val()
+    };
 
-        $.ajax({
-            url: '/api/renaming/preview',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(data),
-            success: function (resp) {
-                if (resp.success) {
-                    let html = '';
-                    resp.preview.forEach(p => {
-                        html += `<div class="mb-2">
+    $.ajax({
+        url: '/api/renaming/preview',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(data),
+        success: function (resp) {
+            if (resp.success) {
+                let html = '';
+                resp.preview.forEach(p => {
+                    html += `<div class="mb-2">
                             <span class="tag is-white border mr-2">${p.type}</span>
                             <span class="has-text-grey-light strikethrough mr-2">${p.original}</span>
                             <i class="bi bi-arrow-right mr-2 opacity-50"></i>
                             <span class="has-text-success has-text-weight-bold">${p.new}</span>
                         </div>`;
-                    });
-                    $('#previewContent').html(html || 'Nenhum arquivo encontrado para pré-visualização.');
-                    $('#renamingPreview').removeClass('is-hidden');
-                }
+                });
+                $('#previewContent').html(html || 'Nenhum arquivo encontrado para pré-visualização.');
+                $('#renamingPreview').removeClass('is-hidden');
             }
-        });
+        }
+    });
     }
 
     function runRenamingJob() {
