@@ -31,7 +31,7 @@ from library import *
 import titledb
 import os
 from i18n import I18n
-from sqlalchemy import event, func
+from sqlalchemy import event, func, and_, case
 from sqlalchemy.engine import Engine
 from rest_api import init_rest_api
 import structlog
@@ -1572,10 +1572,9 @@ def restore_backup_api():
 @main_bp.route('/api/stats/overview')
 @access_required('shop')
 def get_stats_overview():
-    """Estatísticas detalhadas da biblioteca com filtros"""
+    """Estatísticas detalhadas da biblioteca com filtros - Otimizado"""
     import titles
     import library
-    from sqlalchemy import func
     
     library_id = request.args.get('library_id', type=int)
     
@@ -1583,31 +1582,57 @@ def get_stats_overview():
     libs = Libraries.query.all()
     libraries_list = [{'id': l.id, 'path': l.path} for l in libs]
 
-    # 2. Base Query for Apps/Files
-    # If filtered, we only count apps that have files in that specific library
+    # 2. Otimização: Combinar todas as queries de Files em uma única query com agregações
     if library_id:
-        file_query = Files.query.filter_by(library_id=library_id)
-        # Unique TitleIDs in this library
-        apps_query = Apps.query.join(Apps.files).filter(Files.library_id == library_id)
+        # Query otimizada usando join direto ao invés de subquery
+        file_stats = db.session.query(
+            func.count(Files.id).label('total_files'),
+            func.sum(Files.size).label('total_size'),
+            func.sum(case((Files.identified == False, 1), else_=0)).label('unidentified_files')
+        ).filter(Files.library_id == library_id).first()
+        
+        # Query otimizada para Apps usando join direto (não usado diretamente, mas mantido para compatibilidade)
+        apps_query = Apps.query.join(app_files).join(Files).filter(Files.library_id == library_id)
     else:
-        file_query = Files.query
+        # Query otimizada sem filtro de library
+        file_stats = db.session.query(
+            func.count(Files.id).label('total_files'),
+            func.sum(Files.size).label('total_size'),
+            func.sum(case((Files.identified == False, 1), else_=0)).label('unidentified_files')
+        ).first()
+        
         apps_query = Apps.query
 
-    # 3. File Stats (Disk Usage)
-    total_files = file_query.count()
-    total_size = db.session.query(func.sum(Files.size)).filter(Files.id.in_(file_query.with_entities(Files.id))).scalar() or 0
-    unidentified_files = file_query.filter(Files.identified == False).count()
+    # Extrair resultados da query otimizada
+    total_files = file_stats.total_files or 0
+    total_size = file_stats.total_size or 0
+    unidentified_files = file_stats.unidentified_files or 0
     identified_files = total_files - unidentified_files
     id_rate = round((identified_files / total_files * 100), 1) if total_files > 0 else 0
 
-    # 4. Collection Breakdown (Owned Apps)
-    # Filter only owned ones for the counts
-    owned_apps_query = apps_query.filter(Apps.owned == True)
+    # 4. Collection Breakdown (Owned Apps) - Otimizado com uma única query
+    # Combinar todas as contagens em uma única query usando agregações condicionais
+    if library_id:
+        owned_apps_stats = db.session.query(
+            func.sum(case((Apps.owned == True, 1), else_=0)).label('total_owned'),
+            func.sum(case((and_(Apps.owned == True, Apps.app_type == APP_TYPE_BASE), 1), else_=0)).label('total_bases'),
+            func.sum(case((and_(Apps.owned == True, Apps.app_type == APP_TYPE_UPD), 1), else_=0)).label('total_updates'),
+            func.sum(case((and_(Apps.owned == True, Apps.app_type == APP_TYPE_DLC), 1), else_=0)).label('total_dlcs'),
+            func.count(func.distinct(case((Apps.owned == True, Apps.title_id), else_=None))).label('distinct_titles')
+        ).select_from(Apps).join(app_files).join(Files).filter(Files.library_id == library_id).first()
+    else:
+        owned_apps_stats = db.session.query(
+            func.sum(case((Apps.owned == True, 1), else_=0)).label('total_owned'),
+            func.sum(case((and_(Apps.owned == True, Apps.app_type == APP_TYPE_BASE), 1), else_=0)).label('total_bases'),
+            func.sum(case((and_(Apps.owned == True, Apps.app_type == APP_TYPE_UPD), 1), else_=0)).label('total_updates'),
+            func.sum(case((and_(Apps.owned == True, Apps.app_type == APP_TYPE_DLC), 1), else_=0)).label('total_dlcs'),
+            func.count(func.distinct(case((Apps.owned == True, Apps.title_id), else_=None))).label('distinct_titles')
+        ).select_from(Apps).first()
     
-    total_owned_bases = owned_apps_query.filter(Apps.app_type == APP_TYPE_BASE).count()
-    total_owned_updates = owned_apps_query.filter(Apps.app_type == APP_TYPE_UPD).count()
-    total_owned_dlcs = owned_apps_query.filter(Apps.app_type == APP_TYPE_DLC).count()
-    total_owned_distinct_titles = owned_apps_query.with_entities(Apps.title_id).distinct().count()
+    total_owned_bases = owned_apps_stats.total_bases or 0
+    total_owned_updates = owned_apps_stats.total_updates or 0
+    total_owned_dlcs = owned_apps_stats.total_dlcs or 0
+    total_owned_distinct_titles = owned_apps_stats.distinct_titles or 0
 
     # 5. Up-to-date Logic (Requires Title level check)
     # This is more complex to filter strictly by library if a title bridges libraries,

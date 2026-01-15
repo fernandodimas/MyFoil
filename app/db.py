@@ -82,6 +82,13 @@ class Files(db.Model):
     last_attempt = db.Column(db.DateTime, default=datetime.datetime.now())
 
     library = db.relationship('Libraries', backref=db.backref('files', lazy=True, cascade="all, delete-orphan"))
+    
+    __table_args__ = (
+        # Composite index for library_id + identified queries (used in stats)
+        db.Index('idx_files_library_identified', 'library_id', 'identified'),
+        # Index for filepath lookups (helps with joins and lookups)
+        db.Index('ix_files_filepath', 'filepath'),
+    )
 
 class Titles(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -188,6 +195,11 @@ class ActivityLog(db.Model):
     action_type = db.Column(db.String(50), index=True)  # 'file_added', 'file_deleted', 'scan_completed', 'titledb_updated'
     title_id = db.Column(db.String, nullable=True)
     details = db.Column(db.Text) # Stored as JSON string
+    
+    __table_args__ = (
+        # Composite index for timestamp + action_type queries
+        db.Index('idx_activity_timestamp_action', 'timestamp', 'action_type'),
+    )
 
 def log_activity(action_type, title_id=None, user_id=None, **details):
     """Utility function to log activity"""
@@ -477,7 +489,7 @@ def add_file_to_app(app_id, app_version, file_id):
         if file_obj and file_obj not in app.files:
             app.files.append(file_obj)
             app.owned = True
-            db.session.commit()
+            db.session.flush()  # Otimização: usar flush ao invés de commit imediato
             return True
     return False
 
@@ -501,7 +513,7 @@ def remove_file_from_apps(file_id):
             logger.debug(f"Removed file_id {file_id} from app {app.app_id} v{app.app_version}. Owned: {app.owned}")
         
         if apps_updated > 0:
-            db.session.commit()
+            db.session.flush()  # Otimização: usar flush ao invés de commit imediato
     
     return apps_updated
 
@@ -515,15 +527,22 @@ def has_owned_apps(title_id):
     return owned_apps is not None
 
 def remove_titles_without_owned_apps():
-    """Remove titles that have no owned apps"""
+    """Remove titles that have no owned apps - Otimizado com bulk delete"""
     titles_removed = 0
     titles = get_all_titles()
     
+    # Otimização: Coletar IDs para bulk delete ao invés de deletar um por um
+    titles_to_delete = []
     for title in titles:
         if not has_owned_apps(title.title_id):
             logger.debug(f"Removing title {title.title_id} - no owned apps remaining")
-            db.session.delete(title)
+            titles_to_delete.append(title.id)
             titles_removed += 1
+    
+    # Bulk delete
+    if titles_to_delete:
+        Titles.query.filter(Titles.id.in_(titles_to_delete)).delete(synchronize_session=False)
+        db.session.flush()  # Otimização: usar flush ao invés de commit imediato
     
     return titles_removed
 

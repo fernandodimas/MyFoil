@@ -166,6 +166,8 @@ def add_files_to_library(library, files):
         library_id = get_library_id(library_path)
 
     library_path = get_library_path(library_id)
+    
+    # Otimização: Agrupar operações e usar flush() ao invés de commit imediato
     for n, filepath in enumerate(files):
         file = filepath.replace(library_path, "")
         logger.info(f'Getting file info ({n+1}/{nb_to_identify}): {file}')
@@ -189,16 +191,22 @@ def add_files_to_library(library, files):
                 size = file_info["size"],
             )
             db.session.add(new_file)
+            # Otimização: Usar flush() ao invés de commit imediato para logs
+            db.session.flush()
+            
             log_activity('file_added', title_id=file_info.get("titleId"), details={'filename': file_info["filename"], 'size': file_info["size"]})
         except Exception as e:
             logger.error(f"Validation failed for {file}: {str(e)}")
             continue
 
-        # Commit every 100 files to avoid excessive memory use
+        # Otimização: Commit a cada 100 arquivos para reduzir overhead de transações
+        # Usar flush() a cada 50 para liberar memória sem commit completo
+        if (n + 1) % 50 == 0:
+            db.session.flush()  # Libera memória sem commit completo
         if (n + 1) % 100 == 0:
-            db.session.commit()
+            db.session.commit()  # Commit completo a cada 100 arquivos
 
-    # Final commit
+    # Commit final
     db.session.commit()
 
 def scan_library_path(library_path):
@@ -242,7 +250,7 @@ def identify_library_files(library):
                 # Use helper to ensure ownership is updated
                 remove_file_from_apps(file_id)
                 Files.query.filter_by(id=file_id).delete(synchronize_session=False)
-                db.session.commit()
+                db.session.flush()  # Otimização: usar flush ao invés de commit imediato
                 continue
 
             logger.info(f'Identifying file ({n+1}/{nb_to_identify}): {filename}')
@@ -312,9 +320,12 @@ def identify_library_files(library):
         file.identification_attempts += 1
         file.last_attempt = datetime.datetime.now()
 
-        # Commit every 100 files to avoid excessive memory use
+        # Otimização: Usar flush() a cada 50 arquivos para liberar memória sem commit completo
+        # Commit apenas a cada 100 arquivos para reduzir overhead de transações
+        if (n + 1) % 50 == 0:
+            db.session.flush()  # Libera memória sem commit completo
         if (n + 1) % 100 == 0:
-            db.session.commit()
+            db.session.commit()  # Commit completo a cada 100 arquivos
 
     # Final commit
     db.session.commit()

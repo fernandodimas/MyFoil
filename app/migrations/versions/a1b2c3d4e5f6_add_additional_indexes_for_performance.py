@@ -20,10 +20,13 @@ def upgrade():
     with op.batch_alter_table('files', schema=None) as batch_op:
         # Composite index for library_id + identified queries (used in stats)
         batch_op.create_index('idx_files_library_identified', ['library_id', 'identified'], unique=False)
-        # Index for filepath lookups (if not already exists as unique)
+        # Index for filepath lookups
         # Note: filepath already has unique constraint, but explicit index helps with joins
-        if not _index_exists('files', 'ix_files_filepath'):
+        try:
             batch_op.create_index('ix_files_filepath', ['filepath'], unique=False)
+        except Exception:
+            # Index may already exist, skip if so
+            pass
 
     with op.batch_alter_table('activity_log', schema=None) as batch_op:
         # Composite index for timestamp + action_type queries
@@ -38,19 +41,11 @@ def downgrade():
         batch_op.drop_index('idx_activity_timestamp_action')
 
     with op.batch_alter_table('files', schema=None) as batch_op:
-        if _index_exists('files', 'ix_files_filepath'):
+        try:
             batch_op.drop_index('ix_files_filepath')
+        except Exception:
+            # Index may not exist, skip if so
+            pass
         batch_op.drop_index('idx_files_library_identified')
 
     # ### end Alembic commands ###
-
-
-def _index_exists(table_name, index_name):
-    """Helper to check if index exists (SQLite specific)"""
-    from sqlalchemy import inspect, create_engine
-    from app.db import MYFOIL_DB
-    
-    engine = create_engine(MYFOIL_DB)
-    inspector = inspect(engine)
-    indexes = inspector.get_indexes(table_name)
-    return any(idx['name'] == index_name for idx in indexes)
