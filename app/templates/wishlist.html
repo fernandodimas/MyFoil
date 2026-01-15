@@ -177,6 +177,35 @@
                 }
 
                 const row = document.createElement('tr');
+
+                // Check if game is owned (in library)
+                let ownedBadge = '';
+                let inLibrary = false;
+
+                try {
+                    const gRes = await fetch(`/api/app_info/${item.title_id}`);
+                    if (gRes.ok) {
+                        const gData = await gRes.json();
+                        gameName = gData.name || item.title_id;
+                        iconUrl = gData.iconUrl || iconUrl;
+                        inLibrary = gData.owned || false;
+
+                        // Check if already in library
+                        if (inLibrary) {
+                            ownedBadge = '<span class="tag is-success mr-2"><i class="bi bi-check-circle-fill mr-1"></i> Possuo</span>';
+                        }
+
+                        // Check if released
+                        if (gData.releaseDate && gData.releaseDate > new Date().toISOString().replace(/-/g, '')) {
+                            statusHtml = '<span class="tag is-info is-light">Em Breve</span>';
+                        } else {
+                            statusHtml = '<span class="tag is-success is-light">Lançado</span>';
+                        }
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch game details", e);
+                }
+
                 row.innerHTML = `
                     <td class="has-text-centered p-2">
                         <figure class="image is-48x48 is-inline-block">
@@ -205,7 +234,7 @@
                         </div>
                     </td>
                     <td class="is-vcentered is-size-7">${new Date(item.added_date).toLocaleDateString()}</td>
-                    <td class="is-vcentered">${statusHtml}</td>
+                    <td class="is-vcentered">${ownedBadge}${statusHtml}</td>
                     <td class="is-vcentered has-text-right">
                         <button class="button is-small is-danger is-light" onclick="removeFromWishlist('${item.title_id}')" title="Remover">
                             <i class="bi bi-trash"></i>

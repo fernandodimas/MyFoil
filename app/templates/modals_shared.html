@@ -3,7 +3,8 @@
 <!-- Game Details Modal -->
 <div class="modal" id="gameDetailsModal" style="z-index: 1040;">
     <div class="modal-background" onclick="closeModal('gameDetailsModal')"></div>
-    <div class="modal-card" style="max-height: 90vh; max-width: 900px; overflow: hidden; border-radius: 12px;">
+    <div class="modal-card"
+        style="max-height: 90vh; max-width: 90vw; width: 90vw; overflow: hidden; border-radius: 12px;">
         <section class="modal-card-body p-0 overflow-y-auto" id="modalContent">
             <!-- Injected via JS -->
         </section>
@@ -362,7 +363,9 @@
                                     </button>
                                 </div>
                                 <div class="edit-section">
-                                    <button class="button is-fullwidth is-small is-ghost has-text-grey" onclick="editGameMetadata('${game.id}')">
+                                    <button class="button is-fullwidth is-small is-ghost has-text-grey" 
+                                            onclick="editGameMetadata('${game.id}')" 
+                                            ${!game.owned ? 'disabled title="Jogo não está na biblioteca"' : ''}>
                                         <span class="icon"><i class="bi bi-pencil"></i></span>
                                         <span>Editar Dados</span>
                                     </button>
