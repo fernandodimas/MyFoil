@@ -57,7 +57,7 @@ jobs:
           python -c "import jobs; update_titledb_job = jobs.update_titledb_job; print('jobs.py OK')"
 
       - name: Run pytest
-        run: pytest app/tests/ -v --tb=short
+        run: pytest tests/ -v --tb=short
 
   build:
     runs-on: ubuntu-latest
