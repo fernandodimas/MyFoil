@@ -20,8 +20,7 @@ web_bp = Blueprint('web', __name__)
 def get_build_version():
     """Get build version from file or git"""
     try:
-        # Try to read from BUILD_VERSION file first
-        version_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'BUILD_VERSION')
+        version_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'BUILD_VERSION')
         if os.path.exists(version_file):
             with open(version_file, 'r') as f:
                 version = f.read().strip()
@@ -29,11 +28,10 @@ def get_build_version():
                     return version
     except:
         pass
-    # Fallback to git describe
     try:
         import subprocess
         version = subprocess.check_output(['git', 'describe', '--tags', '--always'], 
-                                          cwd=os.path.dirname(os.path.dirname(__file__)), 
+                                          cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
                                           stderr=subprocess.DEVNULL).decode().strip()
         if version:
             return version
