@@ -10,6 +10,7 @@ import titles
 from utils import format_size_py
 from metrics import generate_latest, CONTENT_TYPE_LATEST
 import datetime
+from app import scan_in_progress, is_titledb_update_running
 
 system_bp = Blueprint('system', __name__, url_prefix='/api')
 
