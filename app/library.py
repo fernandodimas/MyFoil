@@ -219,8 +219,32 @@ def scan_library_path(library_path):
     _, files = titles_lib.getDirsAndFiles(library_path)
 
     filepaths_in_library = get_library_file_paths(library_id)
+    
+    # 1. Add new files
     new_files = [f for f in files if f not in filepaths_in_library]
     add_files_to_library(library_id, new_files)
+    
+    # 2. Remove deleted files
+    # filepaths_in_library contains all files currently in DB for this lib
+    # files contains all files currently on disk
+    deleted_files = [f for f in filepaths_in_library if f not in files]
+    
+    if deleted_files:
+        logger.info(f"Found {len(deleted_files)} deleted files in library {library_path}. Removing from database...")
+        for filepath in deleted_files:
+            try:
+                # Find file object
+                file_obj = Files.query.filter_by(filepath=filepath).first()
+                if file_obj:
+                    # Remove from apps relation first
+                    remove_file_from_apps(file_obj.id)
+                    # Delete file record
+                    db.session.delete(file_obj)
+            except Exception as e:
+                logger.error(f"Error removing deleted file {filepath}: {e}")
+        
+        db.session.commit()
+    
     set_library_scan_time(library_id)
 
 def get_files_to_identify(library_id):

@@ -391,7 +391,10 @@
             // PWA Install Prompt
             let deferredPrompt;
             window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
+                // Prevent the mini-infobar from appearing on mobile if needed, 
+                // but do not preventDefault if you want to silence the console warning 
+                // about not calling prompt() later.
+                // For now, we store the event so it can be triggered later if we add an 'Install App' button.
                 deferredPrompt = e;
             });
         });
