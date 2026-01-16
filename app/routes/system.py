@@ -7,6 +7,7 @@ from db import *
 from settings import load_settings
 from auth import access_required, admin_account_created
 import titles
+import titledb
 import json
 from utils import format_size_py
 from metrics import generate_latest, CONTENT_TYPE_LATEST
@@ -43,7 +44,7 @@ def settings_page():
         languages_from_titledb=languages,
         admin_account_created=admin_account_created(),
         valid_keys=load_settings()['titles']['valid_keys'],
-        active_source=titles.get_active_source_info())
+        active_source=titledb.get_active_source_info())
 
 @system_bp.route('/metrics')
 def metrics():
@@ -58,7 +59,7 @@ def system_info_api():
     settings = load_settings()
 
     # Get detailed source info
-    source_info = titles.get_active_source_info()
+    source_info = titledb.get_active_source_info()
     source_name = source_info.get('name', 'TitleDB') if source_info else 'TitleDB'
 
     titledb_file = titles.get_loaded_titles_file()
