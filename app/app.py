@@ -43,6 +43,7 @@ from routes.library import library_bp
 from routes.settings import settings_bp
 from routes.system import system_bp, system_web_bp
 from routes.web import web_bp
+from routes.wishlist import wishlist_bp
 from middleware.auth import access_required
 
 # Jobs
@@ -341,6 +342,7 @@ def create_app():
     app.register_blueprint(library_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(system_bp)
+    app.register_blueprint(wishlist_bp)
 
     # Initialize REST API
     api_bp = Blueprint('api', __name__, url_prefix='/api')
