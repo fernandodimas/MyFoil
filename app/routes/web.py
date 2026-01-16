@@ -20,6 +20,17 @@ from settings import load_settings
 
 web_bp = Blueprint('web', __name__)
 
+def get_build_version():
+    """Get build version from file or default"""
+    try:
+        version_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'BUILD_VERSION')
+        if os.path.exists(version_file):
+            with open(version_file, 'r') as f:
+                return f.read().strip()
+    except:
+        pass
+    return 'Unknown'
+
 @web_bp.route('/')
 def index():
     """Página inicial / Loja Tinfoil"""
@@ -60,7 +71,7 @@ def api_docs_redirect():
 @login_required
 def wishlist_page():
     """Página da wishlist"""
-    return render_template('wishlist.html', title='Wishlist')
+    return render_template('wishlist.html', title='Wishlist', build_version=get_build_version())
 
 @web_bp.route('/api/get_game/<int:id>')
 @tinfoil_access
@@ -79,7 +90,8 @@ def access_shop():
                           admin_account_created=admin_account_created(),
                           valid_keys=load_settings()['titles']['valid_keys'],
                           total_files=Files.query.count(),
-                          games=None)
+                          games=None,
+                          build_version=get_build_version())
 
 @access_required('shop')
 def access_shop_auth():

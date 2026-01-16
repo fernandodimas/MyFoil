@@ -18,11 +18,22 @@ system_bp = Blueprint('system', __name__, url_prefix='/api')
 # Web routes (não-API)
 system_web_bp = Blueprint('system_web', __name__)
 
+def get_build_version():
+    """Get build version from file or default"""
+    try:
+        version_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'BUILD_VERSION')
+        if os.path.exists(version_file):
+            with open(version_file, 'r') as f:
+                return f.read().strip()
+    except:
+        pass
+    return 'Unknown'
+
 @system_web_bp.route('/stats')
 @access_required('shop')
 def stats_page():
     """Página de estatísticas"""
-    return render_template('stats.html', title='Statistics')
+    return render_template('stats.html', title='Statistics', build_version=get_build_version())
 
 @system_web_bp.route('/settings')
 @access_required('admin')
@@ -44,7 +55,8 @@ def settings_page():
         languages_from_titledb=languages,
         admin_account_created=admin_account_created(),
         valid_keys=load_settings()['titles']['valid_keys'],
-        active_source=titledb.get_active_source_info())
+        active_source=titledb.get_active_source_info(),
+        build_version=get_build_version())
 
 @system_bp.route('/metrics')
 def metrics():
