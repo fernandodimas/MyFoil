@@ -485,7 +485,9 @@ def app_info_api(id):
          result['status_color'] = 'gray'
 
     # owned field for wishlist and other uses
-    result['owned'] = result['has_base']
+    # Check both have_base and if there are actual files
+    has_owned_files = len(unique_base_files) > 0
+    result['owned'] = result['has_base'] or has_owned_files
 
     return jsonify(result)
 
