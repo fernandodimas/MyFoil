@@ -140,32 +140,16 @@
         </div>
     </div>
 
-    <!-- Pagination -->
-    <nav class="pagination is-centered mt-6" role="navigation" aria-label="pagination">
-        <a class="pagination-previous" id="btnFirst" onclick="goToPage(1)">Primeira</a>
-        <a class="pagination-previous" id="btnPrev" onclick="changePage(-1)">Anterior</a>
-        <a class="pagination-next" id="btnNext" onclick="changePage(1)">Próxima</a>
-        <a class="pagination-next" id="btnLast" onclick="goToPage(-1)">Última</a>
-        <ul class="pagination-list" id="paginationSummary">
-            <!-- Injected via JS -->
-        </ul>
-    </nav>
+    <!-- Infinite scroll loading indicator -->
+    <div id="scrollLoading" class="has-text-centered py-4 is-hidden">
+        <span class="loader is-loading is-inline-block" style="width: 24px; height: 24px; border-width: 3px;"></span>
+        <p class="is-size-7 mt-2 opacity-60">Carregando mais jogos...</p>
+    </div>
 
-    <div class="level mt-4 is-mobile">
-        <div class="level-left"></div>
-        <div class="level-right">
-            <div class="level-item">
-                <span class="is-size-7 mr-2 opacity-50">Itens por página:</span>
-                <div class="buttons has-addons">
-                    <button class="button is-small p-2 btn-page-size" data-size="24"
-                        onclick="setPageSize(24)">24</button>
-                    <button class="button is-small p-2 btn-page-size" data-size="48"
-                        onclick="setPageSize(48)">48</button>
-                    <button class="button is-small p-2 btn-page-size" data-size="96"
-                        onclick="setPageSize(96)">96</button>
-                </div>
-            </div>
-        </div>
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" class="has-text-centered py-6 is-hidden">
+        <span class="loader is-loading is-inline-block" style="width: 48px; height: 48px; border-width: 4px;"></span>
+        <p class="is-size-6 mt-4 opacity-60">Carregando Biblioteca...</p>
     </div>
 </div>
 </div>
@@ -478,18 +462,27 @@
     }
 
     function renderLibrary() {
-        const container = $('#libraryContainer').empty();
-        const start = (currentPage - 1) * pageSize;
-        const paged = filteredGames.slice(start, start + pageSize);
-
-        $('#noResults').toggleClass('is-hidden', paged.length > 0);
-
+        const container = $('#libraryContainer');
+        const paged = filteredGames;
+        const totalItems = paged.length;
+        
+        // Clear container and reset scroll
+        container.empty();
+        
+        // Show item count
+        $('#totalItemsCount, #totalItemsCountMobile').text(`${totalItems} Jogos`);
+        
         // Handle list view width
         if (currentView === 'list') {
             container.addClass('is-list-view');
         } else {
             container.removeClass('is-list-view');
         }
+
+        // Use infinite scroll instead of pagination
+        resetInfiniteScroll();
+        setupInfiniteScroll();
+    }
 
         if (currentView === 'card') renderCardView(paged);
         else if (currentView === 'icon') renderIconView(paged);
@@ -500,6 +493,11 @@
 
     function refreshLibrary() {
         console.log("Refreshing library data...");
+        
+        // Show loading indicator
+        $('#loadingIndicator').removeClass('is-hidden');
+        $('#libraryContainer').empty();
+        
         $.getJSON('/api/library', function (data) {
             // API now returns {items: [...], pagination: {...}}
             games = (data && data.items) ? data.items : (Array.isArray(data) ? data : []);
@@ -507,16 +505,20 @@
             initGenders(games);
             initTags(games);
 
-            // If we're on page 1, we can just apply filters to refresh everything
-            // but if we're on another page, we might want to stay there
-            // For simplicity, let's just apply filters which will trigger renderLibrary
+            // Hide loading indicator
+            $('#loadingIndicator').addClass('is-hidden');
+            
+            // Reset and apply filters
             applyFilters();
             showToast(t('Library updated!'), 'success');
+        }).fail(() => {
+            $('#loadingIndicator').addClass('is-hidden');
+            showToast(t('Failed to refresh library'), 'error');
         });
     }
 
     function renderCardView(items) {
-        items.forEach(game => {
+        items.forEach((game, index) => {
             const statusDotClass = game.status_color === 'orange' ? 'bg-orange' : (game.status_color === 'green' ? 'bg-green' : 'bg-gray');
             
             // Check ignore preferences for this game
@@ -548,7 +550,7 @@
             }
             
             const card = $(`
-                <div class="grid-item">
+                <div class="grid-item" data-index="${index}" data-game-id="${game.id}" tabindex="0" role="button" aria-label="${game.name}">
                     <div class="card game-card is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')">
                         <div class="card-image position-relative overflow-hidden">
                             <figure class="image is-16by9">
@@ -580,13 +582,16 @@
             `);
             $('#libraryContainer').append(card);
         });
+        
+        // Add keyboard navigation for cards
+        setupKeyboardNavigation();
     }
 
     function renderIconView(items) {
-        items.forEach(game => {
+        items.forEach((game, index) => {
             const statusDotClass = game.status_color === 'orange' ? 'bg-orange' : (game.status_color === 'green' ? 'bg-green' : 'bg-gray');
             const card = $(`
-                <div class="grid-item">
+                <div class="grid-item" data-index="${index}" data-game-id="${game.id}" tabindex="0" role="button" aria-label="${game.name}">
                     <div class="card game-card is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')" title="${game.name}">
                         <div class="card-image">
                             <figure class="image is-square bg-light relative">
@@ -601,6 +606,9 @@
             `);
             $('#libraryContainer').append(card);
         });
+        
+        // Add keyboard navigation for icons
+        setupKeyboardNavigation();
     }
 
     function renderListView(items) {
@@ -623,12 +631,12 @@
                 </div>
             </div>
         `);
-        items.forEach(game => {
+        items.forEach((game, index) => {
             const statusColor = game.status_color === 'orange' ? 'has-text-warning' : (game.status_color === 'green' ? 'has-text-success' : 'has-text-grey');
             const statusText = game.status_color === 'orange' ? t('Missing') : (game.status_color === 'green' ? t('Owned') : t('Incomplete'));
 
             table.find('tbody').append(`
-                <tr onclick="showGameDetails('${game.id || game.title_id}')">
+                <tr data-index="${index}" data-game-id="${game.id || game.title_id}" tabindex="0" role="button" onclick="showGameDetails('${game.id || game.title_id}')">
                     <td class="p-1 has-text-centered"><img src="${game.iconUrl || '/static/img/no-icon.png'}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;"></td>
                     <td class="is-vcentered">
                         <strong class="is-size-7-mobile">${game.name || 'Unknown'}</strong>
@@ -642,6 +650,9 @@
             `);
         });
         $('#libraryContainer').append(table);
+        
+        // Add keyboard navigation for list
+        setupKeyboardNavigation();
     }
 
 
@@ -735,6 +746,161 @@
         applyFilters();
     }
 
+    // ========== INFINITE SCROLL ==========
+    let scrollOffset = 0;
+    let isLoadingMore = false;
+    let hasMoreItems = true;
+    const SCROLL_BATCH_SIZE = 48;
+
+    function setupInfiniteScroll() {
+        const sentinel = document.getElementById('scrollSentinel');
+        if (!sentinel) return;
+
+        const observer = new IntersectionObserver((entries) => {
+            const entry = entries[0];
+            if (entry.isIntersecting && !isLoadingMore && hasMoreItems && filteredGames.length > scrollOffset) {
+                loadMoreItems();
+            }
+        }, {
+            rootMargin: '200px'
+        });
+
+        observer.observe(sentinel);
+    }
+
+    function loadMoreItems() {
+        if (isLoadingMore) return;
+        isLoadingMore = true;
+
+        const currentBatch = filteredGames.slice(scrollOffset, scrollOffset + SCROLL_BATCH_SIZE);
+        
+        if (currentBatch.length === 0) {
+            hasMoreItems = false;
+            isLoadingMore = false;
+            return;
+        }
+
+        // Render the next batch
+        if (currentView === 'card') {
+            renderCardView(currentBatch);
+        } else if (currentView === 'icon') {
+            renderIconView(currentBatch);
+        } else {
+            renderListView(currentBatch);
+        }
+
+        scrollOffset += currentBatch.length;
+
+        // Check if there are more items
+        hasMoreItems = scrollOffset < filteredGames.length;
+        isLoadingMore = false;
+
+        // Update scroll sentinel visibility
+        const sentinel = document.getElementById('scrollSentinel');
+        if (sentinel) {
+            sentinel.style.display = hasMoreItems ? 'block' : 'none';
+        }
+    }
+
+    function resetInfiniteScroll() {
+        scrollOffset = 0;
+        hasMoreItems = true;
+        isLoadingMore = false;
+        $('#libraryContainer').empty();
+        
+        // Add sentinel element
+        $('#libraryContainer').after('<div id="scrollSentinel" style="height: 20px; width: 100%;"></div>');
+        
+        // Load first batch
+        loadMoreItems();
+    }
+
+    // ========== KEYBOARD NAVIGATION ==========
+    let currentlyFocusedIndex = -1;
+
+    function setupKeyboardNavigation() {
+        const items = document.querySelectorAll('#libraryContainer .grid-item, #libraryContainer tbody tr');
+        items.forEach((item, index) => {
+            item.addEventListener('keydown', (e) => handleKeyboardNavigation(e, index));
+            item.addEventListener('focus', () => {
+                currentlyFocusedIndex = index;
+            });
+        });
+    }
+
+    function handleKeyboardNavigation(e, currentIndex) {
+        const items = document.querySelectorAll('#libraryContainer .grid-item, #libraryContainer tbody tr');
+        const totalItems = items.length;
+
+        // Calculate grid columns for proper navigation
+        const container = document.getElementById('libraryContainer');
+        const gridItems = container.querySelectorAll('.grid-item');
+        
+        // Get computed style to determine columns
+        let columns = 1;
+        if (currentView === 'card' || currentView === 'icon') {
+            const gridElement = container.querySelector('.is-grid');
+            if (gridElement) {
+                const gridStyle = window.getComputedStyle(gridElement);
+                const gridTemplateColumns = gridStyle.gridTemplateColumns;
+                columns = gridTemplateColumns.split(' ').length || 1;
+            }
+        }
+
+        let nextIndex = currentIndex;
+
+        switch(e.key) {
+            case 'ArrowRight':
+                e.preventDefault();
+                nextIndex = Math.min(currentIndex + 1, totalItems - 1);
+                break;
+            case 'ArrowLeft':
+                e.preventDefault();
+                nextIndex = Math.max(currentIndex - 1, 0);
+                break;
+            case 'ArrowDown':
+                e.preventDefault();
+                nextIndex = currentIndex + columns;
+                if (nextIndex >= totalItems) {
+                    nextIndex = totalItems - 1;
+                }
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                nextIndex = currentIndex - columns;
+                if (nextIndex < 0) {
+                    nextIndex = 0;
+                }
+                break;
+            case 'Home':
+                e.preventDefault();
+                nextIndex = 0;
+                break;
+            case 'End':
+                e.preventDefault();
+                nextIndex = totalItems - 1;
+                break;
+            case 'Enter':
+            case ' ':
+                e.preventDefault();
+                const gameId = items[currentIndex].dataset.gameId;
+                if (gameId) {
+                    showGameDetails(gameId);
+                }
+                return;
+            default:
+                return; // Allow other keys to propagate
+        }
+
+        if (nextIndex !== currentIndex && items[nextIndex]) {
+            items[nextIndex].focus();
+            currentlyFocusedIndex = nextIndex;
+            
+            // Scroll item into view if needed
+            items[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
     function toggleSearchClearBtn() {
         const searchValue = $('#navbarSearch').val();
         if (searchValue.length > 0) {
@@ -770,55 +936,6 @@
         applyFilters();
     });
 
-
-
-    function setPageSize(size) {
-        pageSize = size;
-        localStorage.setItem('pageSize', size);
-        currentPage = 1;
-        updatePageSizeButtons();
-        renderLibrary();
-    }
-
-    function updatePageSizeButtons() {
-        $('.btn-page-size').removeClass('is-primary');
-        $(`.btn-page-size[data-size="${pageSize}"]`).addClass('is-primary');
-    }
-
-    function goToPage(page) {
-        const totalPages = Math.ceil(filteredGames.length / pageSize) || 1;
-        if (page === -1) currentPage = totalPages;
-        else currentPage = page;
-        renderLibrary();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function changePage(delta) {
-        const totalPages = Math.ceil(filteredGames.length / pageSize) || 1;
-        const newPage = currentPage + delta;
-        if (newPage >= 1 && newPage <= totalPages) {
-            currentPage = newPage;
-            renderLibrary();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    }
-
-
-
-
-
-    function updatePagination() {
-        const totalPages = Math.ceil(filteredGames.length / pageSize) || 1;
-        $('#btnFirst').toggleClass('is-disabled', currentPage === 1);
-        $('#btnPrev').toggleClass('is-disabled', currentPage === 1);
-        $('#btnNext').toggleClass('is-disabled', currentPage === totalPages);
-        $('#btnLast').toggleClass('is-disabled', currentPage === totalPages);
-
-        $('#paginationSummary').html(`
-            <li><span class="pagination-link is-current bg-primary shadow-sm border-none">Página ${currentPage} de ${totalPages}</span></li>
-            <li class="ml-4 is-size-7 opacity-50 has-text-weight-bold">(${filteredGames.length} itens)</li>
-        `);
-    }
 
     // Event Listeners
     $('.filterInput').on('change', applyFilters);
@@ -899,15 +1016,12 @@
             } catch (e) {
                 console.error("Cache parse error", e);
                 localStorage.removeItem('myfoil_library_cache'); // Clear corrupted cache
+                // Show loading indicator
+                $('#loadingIndicator').removeClass('is-hidden');
             }
         } else {
-            const loadingHtml = `
-            <div class="column is-12 has-text-centered p-6">
-                <span class="loader is-loading is-inline-block" style="width: 3rem; height: 3rem; border-width: 3px;"></span>
-                <p class="mt-4 is-size-6 has-text-weight-bold opacity-60">Carregando Biblioteca...</p>
-            </div>
-            `;
-            $('#libraryContainer').html(loadingHtml);
+            // Show loading indicator
+            $('#loadingIndicator').removeClass('is-hidden');
         }
 
         // Load ignore preferences for the user
