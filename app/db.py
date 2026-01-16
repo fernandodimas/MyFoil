@@ -186,6 +186,25 @@ class Wishlist(db.Model):
     added_date = db.Column(db.DateTime, default=datetime.datetime.now)
     priority = db.Column(db.Integer, default=0)  # 0-5
     notes = db.Column(db.Text)
+    
+    # Preferências de ignored (novas colunas)
+    ignore_dlc = db.Column(db.Boolean, default=False)
+    ignore_update = db.Column(db.Boolean, default=False)
+
+
+class WishlistIgnore(db.Model):
+    """Tabela para armazenar preferências de ignore da wishlist por usuário"""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete="CASCADE"), nullable=True)
+    title_id = db.Column(db.String, index=True, nullable=False)
+    ignore_dlc = db.Column(db.Boolean, default=False)
+    ignore_update = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.now)
+    
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'title_id', name='uix_user_title_ignore'),
+    )
+
 
 class Webhook(db.Model):
     id = db.Column(db.Integer, primary_key=True)

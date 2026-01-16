@@ -2,7 +2,7 @@
 
 **Data de Criação:** 2026-01-16  
 **Última Atualização:** 2026-01-16  
-**Versão do Projeto:** BUILD_VERSION '20260116_1550'  
+**Versão do Projeto:** BUILD_VERSION '20260116_1634'  
 **Autor:** Análise Técnica MyFoil (Pair Programming AI)
 
 ---
@@ -588,9 +588,24 @@ Funcionalidades novas para versões futuras.
 
 ---
 
-### Sprint 7 (1 semana) - Cloud Sync
+### Sprint 7 (1 semana) - Performance e Wishlist
 
-**Foco:** Integração com nuvem
+**Foco:** Otimização de performance e melhorias na wishlist
+
+| Task | Status | Esforço |
+|------|--------|---------|
+| Paginação Otimizada (~2000 jogos) | ⏳ | 8-12h |
+| Coluna "Ignorar DLCs/Updates" na wishlist | ⏳ | 4-6h |
+
+**Entregáveis:**
+- API com query direta no banco (paginação SQL)
+- Wishlist com coluna de checkbox para ignorar DLCs/Updates
+
+---
+
+### Sprint 8 (FUTURO) - Cloud Sync
+
+**Foco:** Integração com nuvem (deixado para sprint futuro)
 
 | Task | Esforço |
 |------|---------|

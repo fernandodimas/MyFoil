@@ -58,12 +58,13 @@
                             <th width="140">Adicionado em</th>
                             <th width="140" class="has-text-centered">Na Biblioteca</th>
                             <th width="140">Status</th>
+                            <th width="100" class="has-text-centered" title="Ignorar DLCs e Updates">Ignorar</th>
                             <th class="has-text-right">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="wishlistBody">
                         <tr>
-                            <td colspan="6" class="has-text-centered p-6">
+                            <td colspan="7" class="has-text-centered p-6">
                                 <span class="loader is-loading is-inline-block"
                                     style="width: 2rem; height: 2rem;"></span>
                                 <p class="mt-2 has-text-grey">Carregando wishlist...</p>
@@ -210,6 +211,21 @@
                     <td class="is-vcentered ${statusClass} has-text-weight-bold is-size-7">
                         ${statusHtml}
                     </td>
+                    <td class="is-vcentered has-text-centered">
+                        <input type="checkbox" 
+                               class="is-small"
+                               title="Ignorar DLCs e Updates"
+                               ${item.ignore_dlc ? 'checked' : ''}
+                               onchange="toggleIgnore('${item.title_id}', 'dlc', this.checked)">
+                        <span class="ml-1 is-size-7" title="Ignorar DLCs">DLC</span>
+                        <br>
+                        <input type="checkbox" 
+                               class="is-small mt-1"
+                               title="Ignorar Updates"
+                               ${item.ignore_update ? 'checked' : ''}
+                               onchange="toggleIgnore('${item.title_id}', 'update', this.checked)">
+                        <span class="ml-1 is-size-7" title="Ignorar Updates">UPD</span>
+                    </td>
                     <td class="is-vcentered has-text-right">
                         <div class="buttons is-justify-content-flex-end">
                             ${owned ? `
@@ -264,6 +280,29 @@
                 loadWishlist();
             } else {
                 showToast('Erro ao atualizar prioridade', 'error');
+            }
+        } catch (e) {
+            console.error(e);
+            showToast('Erro de conexão', 'error');
+        }
+    }
+
+    // Toggle ignore preferences for wishlist item
+    async function toggleIgnore(tid, type, value) {
+        try {
+            const res = await fetch(`/api/wishlist/ignore/${tid}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ignore_dlc: type === 'dlc' ? value : document.querySelector(`input[onchange*="${tid}"][onchange*="dlc"]`)?.checked || false,
+                    ignore_update: type === 'update' ? value : document.querySelector(`input[onchange*="${tid}"][onchange*="update"]`)?.checked || false
+                })
+            });
+            if (res.ok) {
+                const msg = value ? `${type.toUpperCase()} será ignorado` : `${type.toUpperCase()} volverá a aparecer`;
+                showToast(msg, 'success');
+            } else {
+                showToast('Erro ao salvar preferência', 'error');
             }
         } catch (e) {
             console.error(e);
