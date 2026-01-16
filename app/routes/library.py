@@ -286,8 +286,8 @@ def app_info_api(id):
     is_dlc_request = False
     if not title_obj:
         # Maybe it's a DLC app_id, try to find base TitleID
-        titles_lib.load_titledb()  # Ensure loaded
-        base_tid, app_type = titles_lib.identify_appId(tid)
+        titles.load_titledb()  # Ensure loaded
+        base_tid, app_type = titles.identify_appId(tid)
         if base_tid and tid != base_tid:
              # It's a DLC or Update.
              # For the main game modal, we usually want the base_tid.
@@ -302,7 +302,7 @@ def app_info_api(id):
     # if it's a valid TitleID even if not in our DB
 
     # Get basic info from titledb
-    info = titles_lib.get_game_info(tid)
+    info = titles.get_game_info(tid)
     if not info:
         info = {
             'name': f'Unknown ({tid})',
@@ -372,7 +372,7 @@ def app_info_api(id):
             seen_file_ids_in_modal.add(f['id'])
 
     # Updates and DLCs (for detailed listing)
-    available_versions = titles_lib.get_all_existing_versions(tid)
+    available_versions = titles.get_all_existing_versions(tid)
     version_release_dates = {v['version']: v['release_date'] for v in available_versions}
 
     # Ensure v0 has the base game release date in YYYY-MM-DD format
@@ -411,7 +411,7 @@ def app_info_api(id):
         })
 
     # DLCs
-    dlc_ids = titles_lib.get_all_existing_dlc(tid)
+    dlc_ids = titles.get_all_existing_dlc(tid)
     dlcs_list = []
     dlc_apps_grouped = {}
     for a in [a for a in all_title_apps if a['app_type'] == APP_TYPE_DLC]:
@@ -435,7 +435,7 @@ def app_info_api(id):
                             'size_formatted': format_size_py(f.size)
                         })
 
-        dlc_info = titles_lib.get_game_info(dlc_id)
+        dlc_info = titles.get_game_info(dlc_id)
         dlcs_list.append({
             'app_id': dlc_id,
             'name': dlc_info.get('name', f'DLC {dlc_id}'),
