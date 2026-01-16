@@ -165,27 +165,39 @@ def export_wishlist():
 @login_required
 def set_wishlist_ignore(title_id):
     """Define preferências de ignore para um item da wishlist"""
+    import json
     data = request.json or {}
-    ignore_dlc = data.get('ignore_dlc', False)
-    ignore_update = data.get('ignore_update', False)
     
-    # Buscar ou criar registro de ignore
+    item_type = data.get('type')  # 'dlc' or 'update'
+    item_id = data.get('item_id')
+    ignored = data.get('ignored', False)
+    
+    if not item_type or not item_id:
+        return jsonify({'success': False, 'error': 'type and item_id are required'}), 400
+    
     ignore_record = WishlistIgnore.query.filter_by(
         user_id=current_user.id, 
         title_id=title_id
     ).first()
     
-    if ignore_record:
-        ignore_record.ignore_dlc = ignore_dlc
-        ignore_record.ignore_update = ignore_update
-    else:
+    if not ignore_record:
         ignore_record = WishlistIgnore(
             user_id=current_user.id,
             title_id=title_id,
-            ignore_dlc=ignore_dlc,
-            ignore_update=ignore_update
+            ignore_dlcs='{}',
+            ignore_updates='{}'
         )
         db.session.add(ignore_record)
+        db.session.flush()
+    
+    if item_type == 'dlc':
+        dlcs = json.loads(ignore_record.ignore_dlcs) if ignore_record.ignore_dlcs else {}
+        dlcs[item_id] = ignored
+        ignore_record.ignore_dlcs = json.dumps(dlcs)
+    else:
+        updates = json.loads(ignore_record.ignore_updates) if ignore_record.ignore_updates else {}
+        updates[item_id] = ignored
+        ignore_record.ignore_updates = json.dumps(updates)
     
     db.session.commit()
     
@@ -196,36 +208,40 @@ def set_wishlist_ignore(title_id):
 @login_required
 def get_wishlist_ignore(title_id):
     """Obtém preferências de ignore para um item da wishlist"""
+    import json
+    
     ignore_record = WishlistIgnore.query.filter_by(
         user_id=current_user.id, 
         title_id=title_id
     ).first()
     
     if ignore_record:
-        return jsonify({
-            'success': True,
-            'ignore_dlc': ignore_record.ignore_dlc,
-            'ignore_update': ignore_record.ignore_update
-        })
+        dlcs = json.loads(ignore_record.ignore_dlcs) if ignore_record.ignore_dlcs else {}
+        updates = json.loads(ignore_record.ignore_updates) if ignore_record.ignore_updates else {}
     else:
-        return jsonify({
-            'success': True,
-            'ignore_dlc': False,
-            'ignore_update': False
-        })
+        dlcs = {}
+        updates = {}
+    
+    return jsonify({
+        'success': True,
+        'dlcs': dlcs,
+        'updates': updates
+    })
 
 
 @wishlist_bp.route('/wishlist/ignore')
 @login_required
 def get_all_wishlist_ignore():
     """Obtém todas as preferências de ignore do usuário"""
+    import json
+    
     ignore_records = WishlistIgnore.query.filter_by(user_id=current_user.id).all()
     
     result = {}
     for record in ignore_records:
         result[record.title_id] = {
-            'ignore_dlc': record.ignore_dlc,
-            'ignore_update': record.ignore_update
+            'dlcs': json.loads(record.ignore_dlcs) if record.ignore_dlcs else {},
+            'updates': json.loads(record.ignore_updates) if record.ignore_updates else {}
         }
     
     return jsonify(result)

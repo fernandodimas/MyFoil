@@ -112,10 +112,10 @@ def library_scroll_api():
 @library_bp.route('/library/ignore/<title_id>', methods=['GET', 'POST'])
 @access_required('shop')
 def library_ignore_api(title_id):
-    """Get or set ignore preferences for a game"""
+    """Get or set per-item ignore preferences for a game (DLCs and Updates)"""
     from flask_login import current_user
+    import json
     
-    # Try to find existing record
     ignore_record = WishlistIgnore.query.filter_by(
         user_id=current_user.id,
         title_id=title_id
@@ -123,34 +123,47 @@ def library_ignore_api(title_id):
     
     if request.method == 'GET':
         if ignore_record:
-            return jsonify({
-                'success': True,
-                'ignore_dlc': ignore_record.ignore_dlc,
-                'ignore_update': ignore_record.ignore_update
-            })
+            dlcs = json.loads(ignore_record.ignore_dlcs) if ignore_record.ignore_dlcs else {}
+            updates = json.loads(ignore_record.ignore_updates) if ignore_record.ignore_updates else {}
         else:
-            return jsonify({
-                'success': True,
-                'ignore_dlc': False,
-                'ignore_update': False
-            })
+            dlcs = {}
+            updates = {}
+        
+        return jsonify({
+            'success': True,
+            'dlcs': dlcs,
+            'updates': updates
+        })
     
-    # POST - Save preferences
     data = request.json or {}
-    ignore_dlc = data.get('ignore_dlc', False)
-    ignore_update = data.get('ignore_update', False)
+    item_type = data.get('type')  # 'dlc' or 'update'
+    item_id = data.get('item_id')
+    ignored = data.get('ignored', False)
     
-    if ignore_record:
-        ignore_record.ignore_dlc = ignore_dlc
-        ignore_record.ignore_update = ignore_update
-    else:
+    if not item_type or not item_id:
+        return jsonify({'success': False, 'error': 'type and item_id are required'}), 400
+    
+    if item_type not in ('dlc', 'update'):
+        return jsonify({'success': False, 'error': 'type must be "dlc" or "update"'}), 400
+    
+    if not ignore_record:
         ignore_record = WishlistIgnore(
             user_id=current_user.id,
             title_id=title_id,
-            ignore_dlc=ignore_dlc,
-            ignore_update=ignore_update
+            ignore_dlcs='{}',
+            ignore_updates='{}'
         )
         db.session.add(ignore_record)
+        db.session.flush()
+    
+    if item_type == 'dlc':
+        dlcs = json.loads(ignore_record.ignore_dlcs) if ignore_record.ignore_dlcs else {}
+        dlcs[item_id] = ignored
+        ignore_record.ignore_dlcs = json.dumps(dlcs)
+    else:
+        updates = json.loads(ignore_record.ignore_updates) if ignore_record.ignore_updates else {}
+        updates[item_id] = ignored
+        ignore_record.ignore_updates = json.dumps(updates)
     
     db.session.commit()
     

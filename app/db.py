@@ -195,10 +195,10 @@ class Wishlist(db.Model):
 class WishlistIgnore(db.Model):
     """Tabela para armazenar preferências de ignore da wishlist por usuário"""
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete="CASCADE"), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=True)
     title_id = db.Column(db.String, index=True, nullable=False)
-    ignore_dlc = db.Column(db.Boolean, default=False)
-    ignore_update = db.Column(db.Boolean, default=False)
+    ignore_dlcs = db.Column(db.Text, default='{}')  # JSON: {"app_id1": true, "app_id2": false, ...}
+    ignore_updates = db.Column(db.Text, default='{}')  # JSON: {"v1": true, "v2": false, ...}
     created_at = db.Column(db.DateTime, default=datetime.datetime.now)
     
     __table_args__ = (
@@ -338,8 +338,8 @@ def init_db(app):
                                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                                     user_id INTEGER,
                                     title_id VARCHAR NOT NULL,
-                                    ignore_dlc BOOLEAN DEFAULT 0,
-                                    ignore_update BOOLEAN DEFAULT 0,
+                                    ignore_dlcs TEXT DEFAULT '{}',
+                                    ignore_updates TEXT DEFAULT '{}',
                                     created_at DATETIME,
                                     FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE,
                                     UNIQUE (user_id, title_id)
@@ -347,6 +347,25 @@ def init_db(app):
                             '''))
                             conn.commit()
                             logger.info("wishlist_ignore table created.")
+                        else:
+                            existing_cols = [c['name'] for c in inspector.get_columns('wishlist_ignore')]
+                            if 'ignore_dlc' in existing_cols and 'ignore_dlcs' not in existing_cols:
+                                logger.info("Migrating wishlist_ignore columns to new JSON format...")
+                                try:
+                                    conn.execute(text("ALTER TABLE wishlist_ignore RENAME COLUMN ignore_dlc TO ignore_dlcs_old"))
+                                    conn.execute(text("ALTER TABLE wishlist_ignore RENAME COLUMN ignore_update TO ignore_updates_old"))
+                                    conn.execute(text("ALTER TABLE wishlist_ignore ADD COLUMN ignore_dlcs TEXT DEFAULT '{}'"))
+                                    conn.execute(text("ALTER TABLE wishlist_ignore ADD COLUMN ignore_updates TEXT DEFAULT '{}'"))
+                                    conn.commit()
+                                    logger.info("wishlist_ignore columns renamed and new JSON columns added.")
+                                except Exception as e:
+                                    logger.error(f"Failed to migrate wishlist_ignore columns: {e}")
+                            
+                            if 'ignore_dlcs' in existing_cols:
+                                conn.execute(text("UPDATE wishlist_ignore SET ignore_dlcs = '{}' WHERE ignore_dlcs IS NULL OR ignore_dlcs = ''"))
+                                conn.execute(text("UPDATE wishlist_ignore SET ignore_updates = '{}' WHERE ignore_updates IS NULL OR ignore_updates = ''"))
+                                conn.commit()
+                                logger.info("Ensured ignore_dlcs and ignore_updates have default values.")
                             
                 except Exception as e:
                     logger.warning(f"Auto-migration check failed: {e}")

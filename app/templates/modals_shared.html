@@ -211,6 +211,7 @@
                 const renderUpdateRow = (u) => {
                     const file = u.files && u.files.length > 0 ? u.files[0] : null;
                     const isRedundant = u !== latest && game.updates.length > 1;
+                    const ignoreId = `ignore-upd-${u.version}`;
                     return `
                         <tr>
                             <td class="has-text-weight-bold">v${u.version}</td>
@@ -233,6 +234,12 @@
                                     </div>
                                 ` : (u.owned ? '<span class="tag is-warning is-light is-small">Erro</span>' : '<span class="tag is-danger is-light is-small">Falta</span>')}
                             </td>
+                            <td class="has-text-centered">
+                                <input type="checkbox" class="is-small" 
+                                    id="${ignoreId}"
+                                    title="Ignorar esta atualização"
+                                    onchange="toggleItemIgnore('${game.id}', 'update', '${u.version}', this.checked)">
+                            </td>
                         </tr>
                     `;
                 };
@@ -253,6 +260,7 @@
                                         <th>Versão</th>
                                         <th>Lançamento</th>
                                         <th class="has-text-centered">Status</th>
+                                        <th class="has-text-centered" title="Ignorar">Ignorar</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -278,11 +286,13 @@
                                     <th>Nome</th>
                                     <th class="has-text-centered">Lançamento</th>
                                     <th class="has-text-centered">Status</th>
+                                    <th class="has-text-centered" title="Ignorar">Ignorar</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${game.dlcs.map(d => {
                 const file = d.files && d.files.length > 0 ? d.files[0] : null;
+                const ignoreId = `ignore-dlc-${d.app_id}`;
                 return `
                                     <tr>
                                         <td class="has-text-weight-bold" onclick="showDlcDetails('${d.app_id}')" style="cursor: pointer; color: inherit;" title="Ver detalhes desta DLC">${d.name}</td>
@@ -303,6 +313,12 @@
                                                     </p>
                                                 </div>
                                             ` : (d.owned ? '<span class="tag is-warning is-light is-small">Erro</span>' : '<span class="tag is-danger is-light is-small">Falta</span>')}
+                                        </td>
+                                        <td class="has-text-centered">
+                                            <input type="checkbox" class="is-small"
+                                                id="${ignoreId}"
+                                                title="Ignorar esta DLC"
+                                                onchange="toggleItemIgnore('${game.id}', 'dlc', '${d.app_id}', this.checked)">
                                         </td>
                                     </tr>
                                     `;
@@ -374,13 +390,23 @@
                                         </div>
                                     </div>
                                 </div>
-                                <hr class="my-4 opacity-5">
+                                <hr class="my-4 opacity-5"/>
                                 <div class="wishlist-section mb-2">
                                     <button id="btnWishlist" class="button is-fullwidth is-small is-light" onclick="toggleWishlist('${game.id}')">
                                         <span class="icon"><i class="bi bi-heart"></i></span>
                                         <span>${t('Wishlist')}</span>
                                     </button>
                                 </div>
+                                <div class="edit-section">
+                                    <button class="button is-fullwidth is-small is-ghost has-text-grey" 
+                                            onclick="editGameMetadata('${game.id}')"
+                                            ${!game.owned ? 'disabled title="Jogo não está na biblioteca"' : ''}>
+                                        <span class="icon"><i class="bi bi-pencil"></i></span>
+                                        <span>Editar Dados</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                                 <div class="ignore-section mb-2">
                                     <p class="is-size-7 has-text-weight-bold mb-2">Ignorar notificações de:</p>
                                     <div class="field">
@@ -554,46 +580,57 @@
                     </span>
                 `);
             });
-        });
-        $.getJSON('/api/wishlist', (wishlist) => {
-            const inWishlist = wishlist.find(i => i.title_id === titleId);
-            const btn = $('#btnWishlist');
-            if (inWishlist) {
-                btn.removeClass('is-light').addClass('is-danger is-light')
-                    .find('i').removeClass('bi-heart').addClass('bi-heart-fill');
-            } else {
-                btn.removeClass('is-danger').addClass('is-light')
-                    .find('i').removeClass('bi-heart-fill').addClass('bi-heart');
-            }
-        });
-        // Load ignore preferences
-        $.getJSON(`/api/library/ignore/${titleId}`, (data) => {
-            $('#ignoreDlc').prop('checked', data.ignore_dlc || false);
-            $('#ignoreUpdate').prop('checked', data.ignore_update || false);
-        }).fail(() => {
-            $('#ignoreDlc').prop('checked', false);
-            $('#ignoreUpdate').prop('checked', false);
-        });
-    }
+            });
+            $.getJSON('/api/wishlist', (wishlist) => {
+                const inWishlist = wishlist.find(i => i.title_id === titleId);
+                const btn = $('#btnWishlist');
+                if (inWishlist) {
+                    btn.removeClass('is-light').addClass('is-danger is-light')
+                        .find('i').removeClass('bi-heart').addClass('bi-heart-fill');
+                } else {
+                    btn.removeClass('is-danger').addClass('is-light')
+                        .find('i').removeClass('bi-heart-fill').addClass('bi-heart');
+                }
+            });
+            // Load ignore preferences for DLCs and Updates
+            $.getJSON(`/api/library/ignore/${titleId}`, (data) => {
+                if (data.dlcs) {
+                    Object.entries(data.dlcs).forEach(([app_id, ignored]) => {
+                        const cb = document.getElementById(`ignore-dlc-${app_id}`);
+                        if (cb) cb.checked = ignored;
+                    });
+                }
+                if (data.updates) {
+                    Object.entries(data.updates).forEach(([version, ignored]) => {
+                        const cb = document.getElementById(`ignore-upd-${version}`);
+                        if (cb) cb.checked = ignored;
+                    });
+                }
+            }).fail(() => {
+                // Clear all checkboxes on error
+                $('input[id^="ignore-dlc-"], input[id^="ignore-upd-"]').prop('checked', false);
+            });
+        }
 
-    // Toggle ignore preferences for a game
-    function toggleIgnoreGame(titleId, type, value) {
-        $.post(`/api/library/ignore/${titleId}`, {
-            ignore_dlc: $('#ignoreDlc').is(':checked'),
-            ignore_update: $('#ignoreUpdate').is(':checked')
-        }, (res) => {
-            if (res.success) {
-                const msg = value ? `${type.toUpperCase()} será ignorado` : `${type.toUpperCase()} voltará a aparecer`;
-                showToast(msg, 'success');
-            } else {
-                showToast('Erro ao salvar preferência', 'error');
-            }
-        }).fail(() => {
-            showToast('Erro de conexão', 'error');
-        });
-    }
+        // Toggle ignore for a specific DLC or Update
+        function toggleItemIgnore(titleId, type, itemId, value) {
+            $.post(`/api/library/ignore/${titleId}`, {
+                type: type,
+                item_id: itemId,
+                ignored: value
+            }, (res) => {
+                if (res.success) {
+                    const msg = value ? `${type.toUpperCase()} ${itemId} será ignorado` : `${type.toUpperCase()} ${itemId} voltará a aparecer`;
+                    showToast(msg, 'success');
+                } else {
+                    showToast('Erro ao salvar preferência', 'error');
+                }
+            }).fail(() => {
+                showToast('Erro de conexão', 'error');
+            });
+        }
 
-    function toggleWishlist(titleId) {
+        function toggleWishlist(titleId) {
         const btn = $('#btnWishlist');
         const isCurrentlyActive = btn.hasClass('is-danger');
         if (isCurrentlyActive) {
