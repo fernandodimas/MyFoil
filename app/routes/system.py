@@ -12,9 +12,6 @@ import json
 from utils import format_size_py
 from metrics import generate_latest, CONTENT_TYPE_LATEST
 import datetime
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from app import limiter
 
 system_bp = Blueprint('system', __name__, url_prefix='/api')
 
@@ -282,7 +279,13 @@ def process_status_api():
         'updating_titledb': app.is_titledb_update_running
     })
 
-process_status_api = limiter.exempt(process_status_api)
+# Exempt from rate limiting using late import
+def _exempt_status_from_rate_limit():
+    from app import limiter
+    global process_status_api
+    process_status_api = limiter.exempt(process_status_api)
+
+_exempt_status_from_rate_limit()
 
 @system_bp.post('/settings/titledb/update')
 @access_required('admin')
