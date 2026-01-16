@@ -516,3 +516,47 @@ def get_title_tags(title_id):
         'color': t.color,
         'icon': t.icon
     } for t in tags])
+
+@library_bp.route('/tags/<int:tag_id>', methods=['PUT'])
+@access_required('admin')
+def update_tag_api(tag_id):
+    """Atualizar tag"""
+    data = request.json
+    tag = db.session.get(Tag, tag_id)
+    if not tag:
+        return jsonify({'error': 'Tag not found'}), 404
+    
+    if 'name' in data:
+        tag.name = data['name']
+    if 'color' in data:
+        tag.color = data['color']
+    if 'icon' in data:
+        tag.icon = data['icon']
+    
+    try:
+        db.session.commit()
+        return jsonify({'success': True, 'tag': {
+            'id': tag.id,
+            'name': tag.name,
+            'color': tag.color,
+            'icon': tag.icon
+        }})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+@library_bp.route('/tags/<int:tag_id>', methods=['DELETE'])
+@access_required('admin')
+def delete_tag_api(tag_id):
+    """Remover tag"""
+    tag = db.session.get(Tag, tag_id)
+    if not tag:
+        return jsonify({'error': 'Tag not found'}), 404
+    
+    try:
+        db.session.delete(tag)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400

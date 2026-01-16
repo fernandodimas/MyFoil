@@ -371,3 +371,133 @@ def delete_webhook_api(id):
         db.session.commit()
         return jsonify({'success': True})
     return jsonify({'success': False, 'error': 'Webhook not found'}), 404
+
+@settings_bp.route('/settings/webhooks/<int:id>', methods=['PUT'])
+@access_required('admin')
+def update_webhook_api(id):
+    """Atualizar webhook"""
+    data = request.json
+    webhook = db.session.get(Webhook, id)
+    if not webhook:
+        return jsonify({'success': False, 'error': 'Webhook not found'}), 404
+    
+    if 'url' in data:
+        webhook.url = data['url']
+    if 'events' in data:
+        import json
+        webhook.events = json.dumps(data['events'])
+    if 'secret' in data:
+        webhook.secret = data['secret']
+    if 'active' in data:
+        webhook.active = data['active']
+    
+    try:
+        db.session.commit()
+        return jsonify({'success': True, 'webhook': webhook.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+@settings_bp.route('/settings/titledb/sources/reorder', methods=['POST'])
+@access_required('admin')
+def reorder_sources_api():
+    """Reordenar fontes do TitleDB"""
+    data = request.json
+    priorities = data.get('priorities', [])
+    
+    import titledb_sources
+    manager = titledb_sources.TitleDBSourceManager()
+    
+    for item in priorities:
+        name = item.get('name')
+        priority = item.get('priority')
+        if name and priority is not None:
+            manager.update_source(name, priority=priority)
+    
+    return jsonify({'success': True})
+
+@settings_bp.route('/settings/titledb/sources/refresh-dates', methods=['POST'])
+@access_required('admin')
+def refresh_sources_dates_api():
+    """Atualizar datas das fontes do TitleDB"""
+    import titledb_sources
+    manager = titledb_sources.TitleDBSourceManager()
+    success = manager.refresh_all_sources_dates()
+    return jsonify({'success': success})
+
+@settings_bp.route('/users')
+@access_required('admin')
+def get_users_api():
+    """Obter lista de usuários"""
+    users = User.query.all()
+    return jsonify([{
+        'id': u.id,
+        'user': u.user,
+        'admin_access': u.admin_access,
+        'shop_access': u.shop_access,
+        'backup_access': u.backup_access
+    } for u in users])
+
+@settings_bp.route('/user', methods=['POST'])
+@access_required('admin')
+def create_user_api():
+    """Criar novo usuário"""
+    data = request.json
+    username = data.get('user')
+    password = data.get('password')
+    admin_access = data.get('admin_access', False)
+    shop_access = data.get('shop_access', False)
+    backup_access = data.get('backup_access', False)
+    
+    if not username or not password:
+        return jsonify({'success': False, 'error': 'Username and password are required'}), 400
+    
+    from werkzeug.security import generate_password_hash
+    hashed_pw = generate_password_hash(password)
+    
+    user = User(
+        user=username,
+        password=hashed_pw,
+        admin_access=admin_access,
+        shop_access=shop_access,
+        backup_access=backup_access
+    )
+    
+    try:
+        db.session.add(user)
+        db.session.commit()
+        return jsonify({'success': True, 'user': {
+            'id': user.id,
+            'user': user.user,
+            'admin_access': user.admin_access,
+            'shop_access': user.shop_access,
+            'backup_access': user.backup_access
+        }})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@settings_bp.route('/user', methods=['DELETE'])
+@access_required('admin')
+def delete_user_api():
+    """Remover usuário"""
+    data = request.json
+    user_id = data.get('user_id')
+    
+    if not user_id:
+        return jsonify({'success': False, 'error': 'user_id is required'}), 400
+    
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({'success': False, 'error': 'User not found'}), 404
+    
+    if user.id == current_user.id:
+        return jsonify({'success': False, 'error': 'Cannot delete yourself'}), 400
+    
+    try:
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 400
