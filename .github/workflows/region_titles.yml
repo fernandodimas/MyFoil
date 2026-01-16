@@ -4,8 +4,9 @@ name: Build titledb
 
 # Controls when the workflow will run
 on:
-  schedule:
-    - cron: '0 */4 * * *'
+  # Schedule desabilitado temporariamente
+  # schedule:
+  #   - cron: '0 */4 * * *'
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
