@@ -53,7 +53,6 @@ def metrics():
     return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
 
 @system_bp.route('/system/info')
-@access_required('shop')
 def system_info_api():
     """Informações do sistema"""
     from settings import load_settings
