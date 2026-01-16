@@ -51,14 +51,13 @@ jobs:
 
       - name: Verify imports
         run: |
-          cd app && python -c "from titledb import update_titledb_files; print('titledb.py OK')"
-          python -c "from app.titledb import update_titledb_files; print('titledb.py OK')"
-          python -c "from app.library import ALLOWED_EXTENSIONS; print('library.py OK')"
-          python -c "from app.exceptions import MyFoilException; print('exceptions.py OK')"
-          python -c "from app.jobs import update_titledb_job; print('jobs.py OK')"
+          PYTHONPATH=. python -c "from app.titledb import update_titledb_files; print('titledb.py OK')"
+          PYTHONPATH=. python -c "from app.library import ALLOWED_EXTENSIONS; print('library.py OK')"
+          PYTHONPATH=. python -c "from app.exceptions import MyFoilException; print('exceptions.py OK')"
+          PYTHONPATH=. python -c "from app.jobs import update_titledb_job; print('jobs.py OK')"
 
       - name: Run pytest
-        run: pytest app/tests/ -v --tb=short
+        run: PYTHONPATH=. pytest app/tests/ -v --tb=short
 
   build:
     runs-on: ubuntu-latest
