@@ -3,11 +3,10 @@ Web Routes - Rotas principais da aplicação web
 """
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify, send_from_directory
 from flask_login import current_user, login_required
-from auth import access_required
-from middleware.auth import tinfoil_access
+from auth import access_required, tinfoil_access
 import titles
 from db import *
-from settings import load_settings
+from settings import app_settings
 import os
 import json
 import hmac
@@ -23,8 +22,6 @@ web_bp = Blueprint('web', __name__)
 @web_bp.route('/')
 def index():
     """Página inicial / Loja Tinfoil"""
-    app_settings = load_settings()
-    
     @tinfoil_access
     def access_tinfoil_shop():
         shop = {
@@ -77,7 +74,6 @@ def serve_game(id):
 
 def access_shop():
     """Acesso à página da loja"""
-    app_settings = load_settings()
     return render_template('index.html', title='Library',
                           admin_account_created=admin_account_created(),
                           valid_keys=app_settings['titles']['valid_keys'],

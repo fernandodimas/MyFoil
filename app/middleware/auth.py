@@ -4,7 +4,7 @@ Authentication Middleware - Decoradores e funções de autenticação
 from functools import wraps
 from flask import request, jsonify, current_app
 from flask_login import current_user
-from settings import app_settings
+from settings import load_settings
 import logging
 
 logger = logging.getLogger('main')
@@ -28,8 +28,7 @@ def tinfoil_access(f):
     """Decorador para acesso Tinfoil com verificação de host"""
     @wraps(f)
     def _tinfoil_access(*args, **kwargs):
-        from settings import reload_conf
-        reload_conf()
+        app_settings = load_settings()
         hauth_success = None
         auth_success = None
         request.verified_host = None
@@ -77,6 +76,7 @@ def tinfoil_access(f):
                 return tinfoil_error(error)
 
         # Now checking auth if shop is private
+        app_settings = load_settings()
         if not app_settings['shop']['public']:
             # Shop is private
             if auth_success is None:
