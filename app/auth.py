@@ -5,34 +5,12 @@ from functools import wraps
 from db import *
 from flask_login import LoginManager
 from utils import sanitize_sensitive_data
-import os
+from i18n import get_build_version
 
 import logging
 
 # Retrieve main logger
 logger = logging.getLogger('main')
-
-def get_build_version():
-    """Get build version from file or git"""
-    try:
-        version_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'BUILD_VERSION')
-        if os.path.exists(version_file):
-            with open(version_file, 'r') as f:
-                version = f.read().strip()
-                if version:
-                    return version
-    except:
-        pass
-    try:
-        import subprocess
-        version = subprocess.check_output(['git', 'describe', '--tags', '--always'], 
-                                          cwd=os.path.dirname(os.path.dirname(__file__)), 
-                                          stderr=subprocess.DEVNULL).decode().strip()
-        if version:
-            return version
-    except:
-        pass
-    return 'Unknown'
 
 def admin_account_created():
     return len(User.query.filter_by(admin_access=True).all())

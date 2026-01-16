@@ -11,33 +11,12 @@ import titledb
 import json
 from utils import format_size_py
 from metrics import generate_latest, CONTENT_TYPE_LATEST
+from i18n import get_build_version
 
 system_bp = Blueprint('system', __name__, url_prefix='/api')
 
 # Web routes (não-API)
 system_web_bp = Blueprint('system_web', __name__)
-
-def get_build_version():
-    """Get build version from file or git"""
-    try:
-        version_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'BUILD_VERSION')
-        if os.path.exists(version_file):
-            with open(version_file, 'r') as f:
-                version = f.read().strip()
-                if version:
-                    return version
-    except:
-        pass
-    try:
-        import subprocess
-        version = subprocess.check_output(['git', 'describe', '--tags', '--always'], 
-                                          cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                                          stderr=subprocess.DEVNULL).decode().strip()
-        if version:
-            return version
-    except:
-        pass
-    return 'Unknown'
 
 @system_web_bp.route('/stats')
 @access_required('shop')
