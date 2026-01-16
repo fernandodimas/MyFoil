@@ -51,10 +51,10 @@ jobs:
 
       - name: Verify imports
         run: |
-          cd app && python -c "from titledb import update_titledb_files; print('titledb.py OK')"
-          cd app && python -c "from library import ALLOWED_EXTENSIONS; print('library.py OK')"
-          cd app && python -c "from exceptions import MyFoilException; print('exceptions.py OK')"
-          cd app && python -c "import jobs; update_titledb_job = jobs.update_titledb_job; print('jobs.py OK')"
+          cd app && python -c "from titledb import update_titledb_files; print('titledb.py OK')" && \
+          python -c "from library import ALLOWED_EXTENSIONS; print('library.py OK')" && \
+          python -c "from exceptions import MyFoilException; print('exceptions.py OK')" && \
+          python -c "import jobs; update_titledb_job = jobs.update_titledb_job; print('jobs.py OK')"
 
       - name: Run pytest
         run: pytest app/tests/ -v --tb=short
