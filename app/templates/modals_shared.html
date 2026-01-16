@@ -384,7 +384,8 @@
                                 </div>
                                 <div class="edit-section">
                                     <button class="button is-fullwidth is-small is-ghost has-text-grey" 
-                                            onclick="editGameMetadata('${game.id}')">
+                                            onclick="editGameMetadata('${game.id}')"
+                                            ${!game.owned ? 'disabled title="Jogo não está na biblioteca"' : ''}>
                                         <span class="icon"><i class="bi bi-pencil"></i></span>
                                         <span>Editar Dados</span>
                                     </button>

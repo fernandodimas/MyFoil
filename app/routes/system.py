@@ -264,6 +264,49 @@ def delete_file_api(file_id):
         logger.exception(f"Unhandled error in delete_file_api: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@system_bp.post('/cleanup/orphaned')
+@access_required('admin')
+def cleanup_orphaned_apps_api():
+    """Limpar registros órfãos (apps owned sem arquivos)"""
+    try:
+        # Find all Apps records where owned=True but no files
+        orphaned_apps = []
+        all_apps = Apps.query.filter_by(owned=True).all()
+        
+        for app in all_apps:
+            if not app.files or len(app.files) == 0:
+                orphaned_apps.append({
+                    'id': app.id,
+                    'title_id': app.title.title_id if app.title else 'Unknown',
+                    'app_type': app.app_type
+                })
+        
+        deleted_count = 0
+        for orphaned in orphaned_apps:
+            try:
+                app_obj = db.session.get(Apps, orphaned['id'])
+                if app_obj:
+                    db.session.delete(app_obj)
+                    deleted_count += 1
+            except Exception as ex:
+                logger.error(f"Error deleting orphaned app {orphaned['id']}: {ex}")
+        
+        db.session.commit()
+        
+        # Invalidate library cache
+        from library import invalidate_library_cache
+        invalidate_library_cache()
+        
+        return jsonify({
+            'success': True,
+            'deleted_count': deleted_count,
+            'message': f'{deleted_count} registros órfãos removidos'
+        })
+    except Exception as e:
+        db.session.rollback()
+        logger.exception(f"Error cleaning orphaned apps: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @system_bp.route('/titledb/search')
 @access_required('shop')
 def search_titledb_api():
