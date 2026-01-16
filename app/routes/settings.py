@@ -4,8 +4,10 @@ Settings Routes - Endpoints relacionados às configurações do sistema
 from flask import Blueprint, render_template, request, jsonify, redirect, current_app
 from flask_login import current_user
 from db import *
+from sqlalchemy import func
 from settings import reload_conf, load_settings, set_titles_settings, set_shop_settings, DEFAULT_SETTINGS, CONFIG_FILE
 from auth import access_required
+from constants import CONFIG_DIR
 import os
 import json
 import copy
@@ -258,8 +260,10 @@ def titledb_sources_api():
     """Gerenciar fontes do TitleDB"""
     try:
         import titledb_sources
+        from constants import CONFIG_DIR
+        manager = titledb_sources.TitleDBSourceManager(CONFIG_DIR)
         if request.method == 'GET':
-            sources = titledb_sources.TitleDBSourceManager().get_sources_status()
+            sources = manager.get_sources_status()
             return jsonify({
                 'success': True,
                 'sources': sources
@@ -279,7 +283,7 @@ def titledb_sources_api():
                     'errors': ['Name and base_url are required']
                 })
 
-            manager = titledb_sources.TitleDBSourceManager()
+            manager = titledb_sources.TitleDBSourceManager(CONFIG_DIR)
             success = manager.add_source(name, base_url, priority, enabled, source_type)
             return jsonify({
                 'success': success,
@@ -306,7 +310,7 @@ def titledb_sources_api():
             if 'source_type' in data:
                 kwargs['source_type'] = data['source_type']
 
-            manager = titledb_sources.TitleDBSourceManager()
+            manager = titledb_sources.TitleDBSourceManager(CONFIG_DIR)
             success = manager.update_source(name, **kwargs)
             return jsonify({
                 'success': success,
@@ -323,7 +327,7 @@ def titledb_sources_api():
                     'errors': ['Name is required']
                 })
 
-            manager = titledb_sources.TitleDBSourceManager()
+            manager = titledb_sources.TitleDBSourceManager(CONFIG_DIR)
             success = manager.remove_source(name)
             return jsonify({
                 'success': success,
@@ -407,7 +411,7 @@ def reorder_sources_api():
     priorities = data.get('priorities', [])
     
     import titledb_sources
-    manager = titledb_sources.TitleDBSourceManager()
+    manager = titledb_sources.TitleDBSourceManager(CONFIG_DIR)
     
     for item in priorities:
         name = item.get('name')
@@ -422,7 +426,7 @@ def reorder_sources_api():
 def refresh_sources_dates_api():
     """Atualizar datas das fontes do TitleDB"""
     import titledb_sources
-    manager = titledb_sources.TitleDBSourceManager()
+    manager = titledb_sources.TitleDBSourceManager(CONFIG_DIR)
     success = manager.refresh_all_sources_dates()
     return jsonify({'success': success})
 
