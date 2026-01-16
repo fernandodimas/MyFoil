@@ -57,6 +57,7 @@ def metrics():
 def system_info_api():
     """Informações do sistema"""
     from settings import load_settings
+    from i18n import get_build_version
     settings = load_settings()
 
     # Get detailed source info
@@ -75,7 +76,7 @@ def system_info_api():
         id_src = f"{source_name} (Não carregado)"
 
     return jsonify({
-        'build_version': BUILD_VERSION,
+        'build_version': get_build_version(),
         'id_source': id_src,
         'update_source': update_src,
         'titledb_region': settings.get('titles/region', 'US'),
@@ -246,6 +247,9 @@ def delete_file_api(file_id):
 
         if success:
             logger.info(f"File {file_id} deleted. Updating cache for titles: {title_ids}")
+            # Invalidate full library cache to ensure consistency
+            from library import invalidate_library_cache
+            invalidate_library_cache()
             for tid in title_ids:
                 try:
                     from library import update_game_in_cache
