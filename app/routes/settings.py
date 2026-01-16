@@ -15,25 +15,31 @@ settings_bp = Blueprint('settings', __name__, url_prefix='/api')
 @access_required('admin')
 def get_settings_api():
     """Obter configurações atuais"""
-    reload_conf()
-    settings = copy.deepcopy(current_app.app_settings)
+    try:
+        reload_conf()
+        settings = copy.deepcopy(current_app.app_settings)
 
-    # Flatten settings for the JS frontend
-    flattened = {}
-    for section, values in settings.items():
-        if isinstance(values, dict):
-            for key, value in values.items():
-                flattened[f"{section}/{key}"] = value
+        # Flatten settings for the JS frontend
+        flattened = {}
+        for section, values in settings.items():
+            if isinstance(values, dict):
+                for key, value in values.items():
+                    flattened[f"{section}/{key}"] = value
+            else:
+                flattened[section] = values
+
+        # Tinfoil Auth specific handling
+        if settings.get('shop', {}).get('hauth'):
+            flattened['shop/hauth'] = True
         else:
-            flattened[section] = values
+            flattened['shop/hauth'] = False
 
-    # Tinfoil Auth specific handling
-    if settings.get('shop', {}).get('hauth'):
-        flattened['shop/hauth'] = True
-    else:
-        flattened['shop/hauth'] = False
-
-    return jsonify(flattened)
+        return jsonify(flattened)
+    except Exception as e:
+        import logging
+        logger = logging.getLogger('main')
+        logger.error(f"Error in get_settings_api: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @settings_bp.post('/settings/titles')
 @access_required('admin')
