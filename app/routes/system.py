@@ -188,6 +188,44 @@ def get_unidentified_files_api():
 
     return jsonify(results)
 
+@system_bp.route('/files/all')
+@access_required('admin')
+def get_all_files_api():
+    """Obter todos os arquivos"""
+    files = Files.query.order_by(Files.filename).all()
+    results = []
+    for f in files:
+        title_id = None
+        title_name = None
+        if f.apps and len(f.apps) > 0:
+            try:
+                title_id = f.apps[0].title.title_id
+                title_info = titles.get_title_info(title_id)
+                title_name = title_info.get('name', 'Unknown') if title_info else 'Unknown'
+            except (IndexError, AttributeError):
+                pass
+        
+        ext = ''
+        if f.filename:
+            parts = f.filename.rsplit('.', 1)
+            if len(parts) > 1:
+                ext = parts[1].lower()
+        
+        results.append({
+            'id': f.id,
+            'filename': f.filename,
+            'filepath': f.filepath,
+            'size': f.size,
+            'size_formatted': format_size_py(f.size),
+            'extension': ext,
+            'identified': f.identified,
+            'identification_error': f.identification_error,
+            'title_id': title_id,
+            'title_name': title_name
+        })
+    
+    return jsonify(results)
+
 @system_bp.route('/files/delete/<int:file_id>', methods=['POST'])
 @access_required('admin')
 def delete_file_api(file_id):
