@@ -50,16 +50,14 @@ jobs:
           pip install pytest pytest-cov
 
       - name: Verify imports
-        working-directory: ./app
         run: |
-          python -c "from titledb import update_titledb_files; print('titledb.py OK')"
-          python -c "from library import ALLOWED_EXTENSIONS; print('library.py OK')"
-          python -c "from exceptions import MyFoilException; print('exceptions.py OK')"
-          python -c "from jobs import update_titledb_job; print('jobs.py OK')"
+          python -c "from app.titledb import update_titledb_files; print('titledb.py OK')"
+          python -c "from app.library import ALLOWED_EXTENSIONS; print('library.py OK')"
+          python -c "from app.exceptions import MyFoilException; print('exceptions.py OK')"
+          python -c "from app.jobs import update_titledb_job; print('jobs.py OK')"
 
       - name: Run pytest
-        working-directory: ./app
-        run: pytest ../tests/ -v --tb=short
+        run: pytest app/tests/ -v --tb=short
 
   build:
     runs-on: ubuntu-latest
