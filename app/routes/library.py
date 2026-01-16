@@ -72,6 +72,43 @@ def library_api():
         resp.headers['X-Total-Pages'] = str(total_pages)
     return resp
 
+
+@library_bp.route('/library/scroll')
+@access_required('shop')
+def library_scroll_api():
+    """API endpoint para scroll infinito - Retorna batch de jogos"""
+    # Parâmetros de scroll
+    offset = request.args.get('offset', 0, type=int)
+    limit = request.args.get('limit', 50, type=int)  # Batch size menor para scroll
+    
+    # Validar parâmetros
+    offset = max(0, offset)
+    limit = min(max(1, limit), 100)  # Limite de 100 por batch
+    
+    # Usar cache em memória se disponível
+    lib_data = library.generate_library()
+    total_items = len(lib_data)
+    
+    # Aplicar paginação
+    batch_data = lib_data[offset:offset + limit]
+    
+    # Verificar se há mais dados
+    has_more = offset + limit < total_items
+    
+    response_data = {
+        'items': batch_data,
+        'scroll': {
+            'offset': offset,
+            'limit': limit,
+            'total_items': total_items,
+            'has_more': has_more,
+            'next_offset': offset + limit if has_more else None
+        }
+    }
+    
+    return jsonify(response_data)
+
+
 @library_bp.route('/library/search')
 @access_required('shop')
 def search_library_api():
