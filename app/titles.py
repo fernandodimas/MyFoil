@@ -292,6 +292,12 @@ def load_titledb(force=False):
     if not _titles_db_loaded:
         logger.info("Loading TitleDBs into memory...")
         
+        # Ensure TitleDB directory exists
+        try:
+            os.makedirs(TITLEDB_DIR, exist_ok=True)
+        except Exception as e:
+            logger.warning(f"Could not create TitleDB directory: {e}")
+        
         # Diagnostic: List files in TitleDB dir
         try:
             files = os.listdir(TITLEDB_DIR)
@@ -666,7 +672,7 @@ def get_all_existing_versions(titleid):
     global _versions_db
     
     if _versions_db is None:
-        logger.error("versions_db is not loaded. Call load_titledb first.")
+        logger.warning("versions_db is not loaded. Call load_titledb first.")
         return []
 
     titleid = titleid.lower()
@@ -698,7 +704,7 @@ def get_all_existing_versions(titleid):
 def get_all_app_existing_versions(app_id):
     global _cnmts_db
     if _cnmts_db is None:
-        logger.error("cnmts_db is not loaded. Call load_titledb first.")
+        logger.warning("cnmts_db is not loaded. Call load_titledb first.")
         return None
 
     app_id = app_id.lower()
