@@ -30,7 +30,7 @@ def library_api():
 
     # Validar parâmetros
     page = max(1, page)  # Página mínima é 1
-    per_page = min(max(1, per_page), 500)  # Entre 1 e 500 itens por página
+    per_page = max(1, per_page)  # Sem limite máximo
 
     # generate_library will use cache if force=False (default)
     lib_data = library.generate_library()
