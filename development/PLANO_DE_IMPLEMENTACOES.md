@@ -2,7 +2,7 @@
 
 **Data de Criação:** 2026-01-16  
 **Última Atualização:** 2026-01-16  
-**Versão do Projeto:** BUILD_VERSION '20260116_1520'  
+**Versão do Projeto:** BUILD_VERSION '20260116_1550'  
 **Autor:** Análise Técnica MyFoil (Pair Programming AI)
 
 ---
@@ -13,7 +13,7 @@
 |-----------|-------------|-------------|
 | **Segurança** | Secret Key Dinâmico, Rate Limiting, Autenticação | - |
 | **Banco de Dados** | Índices, N+1 queries | - |
-| **UI/UX** | Cards, Modal, Cache, Paginação | Keyboard nav, Data pattern, Ordenação por tamanho |
+| **UI/UX** | Cards, Modal, Cache, Paginação, Keyboard nav, Data pattern, Ordenação por tamanho | - |
 | **TitleDB** | Múltiplas fontes, Auto-update (3x/dia), Force update startup | Detecção offline |
 | **Logging** | Exception handlers, Remoção de prints | Padronização completa |
 | **Testes** | Setup pytest, 3 arquivos de teste | Mais cobertura |
@@ -199,8 +199,8 @@ class TitleDBSource:
 
 ### 2.2 Keyboard Navigation no Modal
 
-| Ícone | Status | 🔴 PENDENTE |
-|-------|--------|-------------|
+| Ícone | Status | ✅ CONCLUÍDO |
+|-------|--------|--------------|
 
 **Problema:** Não implementado navegação por teclado no modal de detalhes do jogo
 
@@ -208,54 +208,19 @@ class TitleDBSource:
 - Usuário não pode navegar entre jogos usando ← → ↑ ↓
 - UX limitada para usuários avançados
 
-**Solução Proposta:**
-```javascript
-// Em app/static/js/modals.js
+**Solução:** ✅ **IMPLEMENTADO** em Sprint 5  
+- setas ↑ ↓ para navegar entre jogos
+- ESC para fechar modal
+- Implementado em `app/templates/modals_shared.html`
 
-document.addEventListener('keydown', function(e) {
-    if (!currentModal || !currentModal.classList.contains('is-active')) return;
-    
-    // ESC: Fechar modal
-    if (e.key === 'Escape') {
-        closeModal(currentModal);
-    }
-    
-    // ← →: Navegar entre jogos
-    if (e.key === 'ArrowLeft') {
-        navigateGame(-1);
-    } else if (e.key === 'ArrowRight') {
-        navigateGame(1);
-    }
-    
-    // E: Editar dados
-    if (e.key === 'e' || e.key === 'E') {
-        if (!e.target.matches('input, textarea')) {
-            openEditDataModal();
-        }
-    }
-    
-    // F: Filtros rápidos
-    if (e.key === 'f' || e.key === 'F') {
-        if (!e.target.matches('input, textarea')) {
-            toggleQuickFilters();
-        }
-    }
-});
-```
-
-**Arquivos a Modificar:**
-- `app/templates/modals_shared.html`
-- `app/static/js/modals.js` (criar)
-**Esforço Estimado:** 2-4 horas  
-**Status:** ⏳ PENDENTE  
-**Referência:** `development/ROADMAP_MELHORIAS.md` - Seção 4.4.2
+**Status:** ✅ CONCLUÍDO
 
 ---
 
 ### 2.3 Padronização de Data YYYY-MM-DD para DLCs
 
-| Ícone | Status | 🔴 PENDENTE |
-|-------|--------|-------------|
+| Ícone | Status | ✅ CONCLUÍDO |
+|-------|--------|--------------|
 
 **Problema:** Formato de data inconsistente na exibição de lançamentos de DLCs
 
@@ -263,43 +228,18 @@ document.addEventListener('keydown', function(e) {
 - Confusão visual para o usuário
 - Inconsistência com padrões internacionais
 
-**Solução Proposta:**
-```python
-# Em app/routes/web.py - função format_date()
+**Solução:** ✅ **IMPLEMENTADO** em Sprint 5  
+- Função `format_release_date()` em `app/titles.py`
+- Todos os formatos de data padronizados para YYYY-MM-DD
 
-from datetime import datetime
-
-def format_date(date_input, pattern='%Y-%m-%d'):
-    """Formata data para padrão YYYY-MM-DD"""
-    if not date_input:
-        return 'N/A'
-    
-    if isinstance(date_input, str):
-        try:
-            # Tentar múltiplos formatos
-            for fmt in ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y%m%d']:
-                try:
-                    return datetime.strptime(date_input, fmt).strftime(pattern)
-                except ValueError:
-                    continue
-            return date_input  # Retorna original se não conseguir converter
-        except Exception:
-            return 'N/A'
-    
-    return date_input.strftime(pattern)
-```
-
-**Arquivos a Modificar:** `app/routes/web.py`, `app/routes/library.py`  
-**Esforço Estimado:** 1-2 horas  
-**Status:** ⏳ PENDENTE  
-**Referência:** `development/ROADMAP_MELHORIAS.md` - Seção 4.4.3
+**Status:** ✅ CONCLUÍDO
 
 ---
 
 ### 2.4 Ordenação por Tamanho
 
-| Ícone | Status | 🔴 PENDENTE |
-|-------|--------|-------------|
+| Ícone | Status | ✅ CONCLUÍDO |
+|-------|--------|--------------|
 
 **Problema:** Não implementado ordenação da biblioteca por tamanho do jogo
 
@@ -307,43 +247,11 @@ def format_date(date_input, pattern='%Y-%m-%d'):
 - Usuário não pode ordernar biblioteca por tamanho
 - Dificuldade em identificar jogos muito grandes
 
-**Solução Proposta:**
-```python
-# Em app/routes/library.py
+**Solução:** ✅ **IMPLEMENTADO** em Sprint 5  
+- Opções "Tamanho (Maior)" e "Tamanho (Menor)" no dropdown
+- Implementado em `app/templates/index.html`
 
-@app.route('/api/library')
-def get_library():
-    # ... código existente ...
-    
-    sort_by = request.args.get('sort', 'name')
-    sort_order = request.args.get('order', 'asc')
-    
-    if sort_by == 'size':
-        if sort_order == 'desc':
-            library.sort(key=lambda x: x.get('size', 0), reverse=True)
-        else:
-            library.sort(key=lambda x: x.get('size', 0))
-    elif sort_by == 'name':
-        library.sort(key=lambda x: x.get('name', '').lower())
-    elif sort_by == 'date_added':
-        library.sort(key=lambda x: x.get('added', ''), reverse=True)
-    
-    # ... resto do código ...
-```
-
-**Frontend (app/templates/index.html):**
-```html
-<select id="sortSelect" class="select" onchange="updateSort()">
-    <option value="name">Nome</option>
-    <option value="size">Tamanho</option>
-    <option value="date_added">Data Adicionada</option>
-</select>
-```
-
-**Arquivos a Modificar:** `app/routes/library.py`, `app/templates/index.html`  
-**Esforço Estimado:** 2-4 horas  
-**Status:** ⏳ PENDENTE  
-**Referência:** `development/ROADMAP_MELHORIAS.md` - Seção 4.4.4
+**Status:** ✅ CONCLUÍDO
 
 ---
 
@@ -639,21 +547,29 @@ Funcionalidades novas para versões futuras.
 
 ## 5. 📋 Sprints Recomendados
 
-### Sprint 5 (1 semana) - Exceções e Validação
+### Sprint 5 (CONCLUÍDO) - Bug fixes e UI/UX
 
-**Foco:** Qualidade de código e segurança
+**Foco:** Correções críticas e melhorias de experiência
 
-| Task | Esforço |
-|------|---------|
-| Aplicar exception hierarchy em todos os módulos | 8h |
-| Implementar validação com Marshmallow | 6h |
-| Completar logging padronizado | 6h |
-| Padronizar formato de data YYYY-MM-DD | 2h |
+| Task | Status | Esforço |
+|------|--------|---------|
+| BUILD_VERSION file fix | ✅ | 10min |
+| Wishlist owned status check | ✅ | 1h |
+| API pagination increase (100→500) | ✅ | 10min |
+| Keyboard navigation (↑↓, ESC) | ✅ | 2h |
+| Date format YYYY-MM-DD | ✅ | 1h |
+| Sort by size | ✅ | 2h |
+| i18n status sources | ✅ | 10min |
+| i18n permissions | ✅ | 10min |
+| Remove "Arquivo / Metadados" label | ✅ | 5min |
 
 **Entregáveis:**
-- Código mais robusto e testável
-- Validação consistente de entrada
-- Logs consistentes em todo o projeto
+- ✅ Versão exibida corretamente no rodapé
+- ✅ Wishlist mostra status "Atualizado" corretamente
+- ✅ API retorna mais itens por página
+- ✅ Navegação por teclado no modal
+- ✅ Datas padronizadas em formato internacional
+- ✅ Ordenação por tamanho disponível
 
 ---
 
@@ -663,14 +579,11 @@ Funcionalidades novas para versões futuras.
 
 | Task | Esforço |
 |------|---------|
-| Keyboard navigation no modal | 4h |
-| Ordenação por tamanho | 4h |
+| Atalhos de teclado (Ctrl+K, Ctrl+R, etc.) | 4h |
 | Verificador de integridade | 6h |
-| Atalhos de teclado | 4h |
 
 **Entregáveis:**
-- Navegação por teclado completa
-- Ordenação flexível
+- Atalhos de teclado completos
 - Ferramenta de diagnóstico
 
 ---
