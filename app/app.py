@@ -295,11 +295,17 @@ def init_internal(app):
             if titledb_missing:
                 logger.info("Initial scan required: TitleDB critical files are missing.")
                 # Force update TitleDB at startup (same logic as settings page)
-                threading.Thread(target=update_titledb_job, args=(True,), daemon=True).start()
+                def run_titledb_update():
+                    with app.app_context():
+                        update_titledb_job(force=True)
+                threading.Thread(target=run_titledb_update, daemon=True).start()
             else:
                 logger.info("Initial scan required: New or un-scanned libraries detected.")
                 # Start library scan in background
-                threading.Thread(target=scan_library_job, daemon=True).start()
+                def run_library_scan():
+                    with app.app_context():
+                        scan_library_job()
+                threading.Thread(target=run_library_scan, daemon=True).start()
 
     if hasattr(app, 'scheduler'):
         app.scheduler.add_job(
