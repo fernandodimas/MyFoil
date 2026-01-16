@@ -16,6 +16,7 @@ from utils import format_size_py
 from shop import gen_shop_files
 from shop import encrypt_shop
 from flask import Response
+from settings import load_settings
 
 web_bp = Blueprint('web', __name__)
 
@@ -25,7 +26,7 @@ def index():
     @tinfoil_access
     def access_tinfoil_shop():
         shop = {
-            "success": app_settings['shop']['motd']
+            "success": load_settings()['shop']['motd']
         }
 
         if request.verified_host is not None:
@@ -36,7 +37,7 @@ def index():
         shop["files"] = files_list
         shop["titles"] = titles_map
 
-        if app_settings['shop']['encrypt']:
+        if load_settings()['shop']['encrypt']:
             return Response(encrypt_shop(shop), mimetype='application/octet-stream')
 
         return jsonify(shop)
@@ -46,7 +47,7 @@ def index():
         logger.info(f"Tinfoil connection from {request.remote_addr}")
         return access_tinfoil_shop()
 
-    if not app_settings['shop']['public']:
+    if not load_settings()['shop']['public']:
         return access_shop_auth()
     return access_shop()
 
@@ -76,7 +77,7 @@ def access_shop():
     """Acesso à página da loja"""
     return render_template('index.html', title='Library',
                           admin_account_created=admin_account_created(),
-                          valid_keys=app_settings['titles']['valid_keys'],
+                          valid_keys=load_settings()['titles']['valid_keys'],
                           total_files=Files.query.count(),
                           games=None)
 

@@ -41,7 +41,7 @@ def settings_page():
         title='Settings',
         languages_from_titledb=languages,
         admin_account_created=admin_account_created(),
-        valid_keys=app_settings['titles']['valid_keys'],
+        valid_keys=load_settings()['titles']['valid_keys'],
         active_source=titles.get_active_source_info())
 
 @system_bp.route('/metrics')
