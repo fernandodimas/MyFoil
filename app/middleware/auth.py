@@ -4,7 +4,7 @@ Authentication Middleware - Decoradores e funções de autenticação
 from functools import wraps
 from flask import request, jsonify, current_app
 from flask_login import current_user
-from settings import app_settings
+from settings import load_settings
 import logging
 
 logger = logging.getLogger('main')
@@ -28,8 +28,6 @@ def tinfoil_access(f):
     """Decorador para acesso Tinfoil com verificação de host"""
     @wraps(f)
     def _tinfoil_access(*args, **kwargs):
-        from settings import reload_conf
-        reload_conf()
         hauth_success = None
         auth_success = None
         request.verified_host = None
@@ -38,6 +36,7 @@ def tinfoil_access(f):
         # Tinfoil doesn't send Hauth for file grabs, only directories, so ignore get_game endpoints.
         host_verification = "/api/get_game" not in request.path and (request.is_secure or request.headers.get("X-Forwarded-Proto") == "https")
         if host_verification:
+            app_settings = load_settings()
             request_host = request.host
             request_hauth = request.headers.get('Hauth')
             logger.info(f"Secure Tinfoil request from remote host {request_host}, proceeding with host verification.")
@@ -77,6 +76,7 @@ def tinfoil_access(f):
                 return tinfoil_error(error)
 
         # Now checking auth if shop is private
+        app_settings = load_settings()
         if not app_settings['shop']['public']:
             # Shop is private
             if auth_success is None:
