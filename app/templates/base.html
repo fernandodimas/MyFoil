@@ -330,7 +330,7 @@
             <div class="columns is-vcentered is-mobile is-multiline">
                 <div class="column is-12-mobile is-4-tablet">
                     <p class="is-size-7 opacity-70">
-                        <span class="has-text-weight-bold">Build:</span> <span id="buildVersionDisplay">{{ build_version }}</span>
+                        <span class="has-text-weight-bold">Build:</span> <span id="buildVersionDisplay">--</span>
                     </p>
                 </div>
                 <div class="column is-12-mobile is-4-tablet has-text-centered-tablet">
@@ -354,15 +354,13 @@
         document.addEventListener('DOMContentLoaded', function () {
             // Load system information for footer (Global)
             $.getJSON('/api/system/info', function (data) {
-                $('#idSource').text(data.id_source);
-                $('#updateSource').text(data.update_source);
-                // Update build version from API as fallback
-                if (data.build_version) {
-                    $('#buildVersionDisplay').text(data.build_version);
-                }
+                $('#idSource').text(data.id_source || 'N/A');
+                $('#updateSource').text(data.update_source || 'N/A');
+                $('#buildVersionDisplay').text(data.build_version || 'Unknown');
             }).fail(function () {
                 $('#idSource').text('N/A');
                 $('#updateSource').text('N/A');
+                $('#buildVersionDisplay').text('Unknown');
             });
 
             // WebSocket Global Listener with robust initialization

@@ -2,28 +2,6 @@
 
 
 
-<!-- Confirm Delete Modal -->
-<div class="modal" id="confirmDeleteModal">
-    <div class="modal-background" onclick="closeModal('confirmDeleteModal')"></div>
-    <div class="modal-card" style="max-width: 400px;">
-        <header class="modal-card-head has-background-danger">
-            <p class="modal-card-title has-text-white">Confirmar Exclusão</p>
-            <button class="delete" aria-label="close" onclick="closeModal('confirmDeleteModal')"></button>
-        </header>
-        <section class="modal-card-body">
-            <p class="has-text-centered">Tem certeza que deseja excluir este arquivo?</p>
-            <p class="has-text-centered has-text-grey is-size-7 mt-2">Esta ação não pode ser desfeita.</p>
-        </section>
-        <footer class="modal-card-foot is-justify-content-flex-end">
-            <button class="button is-light" onclick="closeModal('confirmDeleteModal')">Cancelar</button>
-            <button class="button is-danger" id="btnConfirmDelete" onclick="confirmDeleteFile()">
-                <span class="icon"><i class="bi bi-trash"></i></span>
-                <span>Excluir</span>
-            </button>
-        </footer>
-    </div>
-</div>
-
 <!-- Game Details Modal -->
 <div class="modal" id="gameDetailsModal" style="z-index: 1040;">
     <div class="modal-background" onclick="closeModal('gameDetailsModal')"></div>
@@ -176,9 +154,6 @@
 
         openModal('genericConfirmModal');
     };
-
-    let fileToDeleteId = null;
-    let fileToDeleteTitleId = null;
 
     function showGameDetails(id) {
         $.getJSON(`/api/app_info/${id}`, (game) => {
@@ -496,38 +471,39 @@
     }
 
     function deleteGameFile(fileId, titleId) {
-        fileToDeleteId = fileId;
-        fileToDeleteTitleId = titleId;
-        openModal('confirmDeleteModal');
-    }
-
-    function confirmDeleteFile() {
-        if (!fileToDeleteId) return;
-        const btnFn = $('#btnConfirmDelete');
-        btnFn.addClass('is-loading');
-
-        $.post(`/api/files/delete/${fileToDeleteId}`, (res) => {
-            closeModal('confirmDeleteModal');
-            btnFn.removeClass('is-loading');
-            if (res.success) {
-                if (fileToDeleteTitleId) {
-                    showGameDetails(fileToDeleteTitleId);
-                    if (typeof applyFilters === 'function') {
-                        // Special handling for index.html
-                        $.getJSON(`/api/app_info/${fileToDeleteTitleId}`, (updatedGame) => {
-                            if (!updatedGame || !updatedGame.id) return;
-                            const idx = games.findIndex(g => g && g.id === fileToDeleteTitleId);
-                            if (idx !== -1) {
-                                games[idx] = updatedGame;
-                                localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
-                                applyFilters();
-                            }
-                        });
+        confirmAction({
+            title: 'Confirmar Exclusão',
+            message: 'Tem certeza que deseja excluir este arquivo? Esta ação não pode ser desfeita.',
+            confirmText: 'Excluir',
+            confirmClass: 'is-danger',
+            onConfirm: () => {
+                const btn = $(event.target).closest('.button');
+                btn.addClass('is-loading');
+                
+                $.post(`/api/files/delete/${fileId}`, (res) => {
+                    btn.removeClass('is-loading');
+                    if (res.success) {
+                        showGameDetails(titleId);
+                        if (typeof applyFilters === 'function') {
+                            $.getJSON(`/api/app_info/${titleId}`, (updatedGame) => {
+                                if (!updatedGame || !updatedGame.id) return;
+                                const idx = games.findIndex(g => g && g.id === titleId);
+                                if (idx !== -1) {
+                                    games[idx] = updatedGame;
+                                    localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
+                                    applyFilters();
+                                }
+                            });
+                        }
+                        if (typeof loadWishlist === 'function') loadWishlist();
+                        showToast('Arquivo excluído com sucesso', 'success');
+                    } else {
+                        showToast(res.error || 'Erro ao excluir', 'error');
                     }
-                    if (typeof loadWishlist === 'function') loadWishlist();
-                }
-            } else {
-                showToast(res.error, 'error');
+                }).fail((xhr) => {
+                    btn.removeClass('is-loading');
+                    showToast('Erro de comunicação', 'error');
+                });
             }
         });
     }
