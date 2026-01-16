@@ -109,6 +109,54 @@ def library_scroll_api():
     return jsonify(response_data)
 
 
+@library_bp.route('/library/ignore/<title_id>', methods=['GET', 'POST'])
+@access_required('shop')
+def library_ignore_api(title_id):
+    """Get or set ignore preferences for a game"""
+    from flask_login import current_user
+    
+    # Try to find existing record
+    ignore_record = WishlistIgnore.query.filter_by(
+        user_id=current_user.id,
+        title_id=title_id
+    ).first()
+    
+    if request.method == 'GET':
+        if ignore_record:
+            return jsonify({
+                'success': True,
+                'ignore_dlc': ignore_record.ignore_dlc,
+                'ignore_update': ignore_record.ignore_update
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'ignore_dlc': False,
+                'ignore_update': False
+            })
+    
+    # POST - Save preferences
+    data = request.json or {}
+    ignore_dlc = data.get('ignore_dlc', False)
+    ignore_update = data.get('ignore_update', False)
+    
+    if ignore_record:
+        ignore_record.ignore_dlc = ignore_dlc
+        ignore_record.ignore_update = ignore_update
+    else:
+        ignore_record = WishlistIgnore(
+            user_id=current_user.id,
+            title_id=title_id,
+            ignore_dlc=ignore_dlc,
+            ignore_update=ignore_update
+        )
+        db.session.add(ignore_record)
+    
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+
 @library_bp.route('/library/search')
 @access_required('shop')
 def search_library_api():

@@ -18,14 +18,6 @@ def get_wishlist():
     
     items = Wishlist.query.filter_by(user_id=current_user.id).order_by(Wishlist.priority.desc()).all()
     
-    # Buscar todas as preferências de ignore do usuário
-    try:
-        ignore_records = WishlistIgnore.query.filter_by(user_id=current_user.id).all()
-        ignore_prefs = {r.title_id: {'ignore_dlc': r.ignore_dlc, 'ignore_update': r.ignore_update} for r in ignore_records}
-    except Exception:
-        # Table might not exist yet
-        ignore_prefs = {}
-    
     result = []
     
     for item in items:
@@ -43,18 +35,13 @@ def get_wishlist():
         # Obter informações do título
         title_info = titles.get_game_info(item.title_id) or {}
         
-        # Obter preferências de ignore
-        ignore_pref = ignore_prefs.get(item.title_id, {'ignore_dlc': False, 'ignore_update': False})
-        
         result.append({
             'id': item.id,
             'title_id': item.title_id,
             'name': title_info.get('name', f'Unknown ({item.title_id})'),
             'priority': item.priority,
             'added_date': item.added_date.isoformat() if item.added_date else None,
-            'owned': owned,
-            'ignore_dlc': ignore_pref['ignore_dlc'],
-            'ignore_update': ignore_pref['ignore_update']
+            'owned': owned
         })
     
     return jsonify(result)

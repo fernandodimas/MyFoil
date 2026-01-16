@@ -381,6 +381,31 @@
                                         <span>${t('Wishlist')}</span>
                                     </button>
                                 </div>
+                                <div class="ignore-section mb-2">
+                                    <p class="is-size-7 has-text-weight-bold mb-2">Ignorar notificações de:</p>
+                                    <div class="field">
+                                        <label class="checkbox is-small">
+                                            <input type="checkbox" id="ignoreDlc" onchange="toggleIgnoreGame('${game.id}', 'dlc', this.checked)">
+                                            DLCs
+                                        </label>
+                                    </div>
+                                    <div class="field">
+                                        <label class="checkbox is-small">
+                                            <input type="checkbox" id="ignoreUpdate" onchange="toggleIgnoreGame('${game.id}', 'update', this.checked)">
+                                            Updates
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="edit-section">
+                                    <button class="button is-fullwidth is-small is-ghost has-text-grey" 
+                                            onclick="editGameMetadata('${game.id}')"
+                                            ${!game.owned ? 'disabled title="Jogo não está na biblioteca"' : ''}>
+                                        <span class="icon"><i class="bi bi-pencil"></i></span>
+                                        <span>Editar Dados</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                                 <div class="edit-section">
                                     <button class="button is-fullwidth is-small is-ghost has-text-grey" 
                                             onclick="editGameMetadata('${game.id}')"
@@ -540,6 +565,31 @@
                 btn.removeClass('is-danger').addClass('is-light')
                     .find('i').removeClass('bi-heart-fill').addClass('bi-heart');
             }
+        });
+        // Load ignore preferences
+        $.getJSON(`/api/library/ignore/${titleId}`, (data) => {
+            $('#ignoreDlc').prop('checked', data.ignore_dlc || false);
+            $('#ignoreUpdate').prop('checked', data.ignore_update || false);
+        }).fail(() => {
+            $('#ignoreDlc').prop('checked', false);
+            $('#ignoreUpdate').prop('checked', false);
+        });
+    }
+
+    // Toggle ignore preferences for a game
+    function toggleIgnoreGame(titleId, type, value) {
+        $.post(`/api/library/ignore/${titleId}`, {
+            ignore_dlc: $('#ignoreDlc').is(':checked'),
+            ignore_update: $('#ignoreUpdate').is(':checked')
+        }, (res) => {
+            if (res.success) {
+                const msg = value ? `${type.toUpperCase()} será ignorado` : `${type.toUpperCase()} voltará a aparecer`;
+                showToast(msg, 'success');
+            } else {
+                showToast('Erro ao salvar preferência', 'error');
+            }
+        }).fail(() => {
+            showToast('Erro de conexão', 'error');
         });
     }
 
