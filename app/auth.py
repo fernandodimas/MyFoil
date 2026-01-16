@@ -5,7 +5,7 @@ from functools import wraps
 from db import *
 from flask_login import LoginManager
 from utils import sanitize_sensitive_data
-from i18n import get_build_version
+from constants import BUILD_VERSION
 
 import logging
 
@@ -165,7 +165,7 @@ def login():
             next_url = request.args.get('next', '')
             if current_user.is_authenticated:
                 return redirect(next_url if len(next_url) else '/')
-            return render_template('login.html', title='Login', build_version=get_build_version())
+            return render_template('login.html', title='Login', build_version=BUILD_VERSION)
             
         # login code goes here
         username = request.form.get('user')
@@ -193,7 +193,7 @@ def login():
 @login_required
 @access_required('backup')
 def profile():
-    return render_template('profile.html', build_version=get_build_version())
+    return render_template('profile.html', build_version=BUILD_VERSION)
 
 @auth_blueprint.route('/api/users')
 @access_required('admin')

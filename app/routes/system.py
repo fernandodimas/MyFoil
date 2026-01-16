@@ -11,7 +11,7 @@ import titledb
 import json
 from utils import format_size_py
 from metrics import generate_latest, CONTENT_TYPE_LATEST
-from i18n import get_build_version
+from constants import BUILD_VERSION
 
 system_bp = Blueprint('system', __name__, url_prefix='/api')
 
@@ -22,7 +22,7 @@ system_web_bp = Blueprint('system_web', __name__)
 @access_required('shop')
 def stats_page():
     """Página de estatísticas"""
-    return render_template('stats.html', title='Statistics', build_version=get_build_version())
+    return render_template('stats.html', title='Statistics', build_version=BUILD_VERSION)
 
 @system_web_bp.route('/settings')
 @access_required('admin')
@@ -45,7 +45,7 @@ def settings_page():
         admin_account_created=admin_account_created(),
         valid_keys=load_settings()['titles']['valid_keys'],
         active_source=titledb.get_active_source_info(),
-        build_version=get_build_version())
+        build_version=BUILD_VERSION)
 
 @system_bp.route('/metrics')
 def metrics():
@@ -56,7 +56,6 @@ def metrics():
 def system_info_api():
     """Informações do sistema"""
     from settings import load_settings
-    from i18n import get_build_version
     settings = load_settings()
 
     # Get detailed source info
@@ -75,7 +74,7 @@ def system_info_api():
         id_src = f"{source_name} (Não carregado)"
 
     return jsonify({
-        'build_version': get_build_version(),
+        'build_version': BUILD_VERSION,
         'id_source': id_src,
         'update_source': update_src,
         'titledb_region': settings.get('titles/region', 'US'),

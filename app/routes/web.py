@@ -14,7 +14,7 @@ from shop import gen_shop_files
 from shop import encrypt_shop
 from flask import Response
 from settings import load_settings
-from i18n import get_build_version
+from constants import BUILD_VERSION
 
 web_bp = Blueprint('web', __name__)
 
@@ -58,7 +58,7 @@ def api_docs_redirect():
 @login_required
 def wishlist_page():
     """Página da wishlist"""
-    return render_template('wishlist.html', title='Wishlist', build_version=get_build_version())
+    return render_template('wishlist.html', title='Wishlist', build_version=BUILD_VERSION)
 
 @web_bp.route('/api/get_game/<int:id>')
 @tinfoil_access
@@ -78,7 +78,7 @@ def access_shop():
                           valid_keys=load_settings()['titles']['valid_keys'],
                           total_files=Files.query.count(),
                           games=None,
-                          build_version=get_build_version())
+                          build_version=BUILD_VERSION)
 
 @access_required('shop')
 def access_shop_auth():
