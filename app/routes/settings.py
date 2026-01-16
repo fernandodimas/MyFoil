@@ -1,7 +1,7 @@
 """
 Settings Routes - Endpoints relacionados às configurações do sistema
 """
-from flask import Blueprint, render_template, request, jsonify, redirect, current_app
+from flask import Blueprint, request, jsonify
 from flask_login import current_user
 from db import *
 from db import app_files

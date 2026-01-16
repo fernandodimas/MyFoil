@@ -2,8 +2,6 @@ from celery_app import celery
 from flask import Flask
 from db import db
 from library import scan_library_path, identify_library_files, update_titles, generate_library
-import titles as titles_lib
-import os
 import structlog
 
 logger = structlog.get_logger('main')
@@ -12,7 +10,7 @@ def create_app_context():
     """Create a minimal app context for celery tasks"""
     app = Flask(__name__)
     # We need to reach constants for DB path
-    from constants import DB_FILE, SQLALCHEMY_DATABASE_URI
+    from constants import SQLALCHEMY_DATABASE_URI
     app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)

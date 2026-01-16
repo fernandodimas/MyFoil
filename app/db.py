@@ -10,7 +10,8 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 from flask_login import UserMixin
 from alembic import command
-import os, sys
+import os
+import sys
 import shutil
 import logging
 import datetime

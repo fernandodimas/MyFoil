@@ -34,7 +34,7 @@ def validate_file(filepath):
     if size == 0:
         raise ValueError("Arquivo vazio")
     if size > MAX_FILE_SIZE:
-        raise ValueError(f"Arquivo excede limite de tamanho (50GB)")
+        raise ValueError("Arquivo excede limite de tamanho (50GB)")
     
     # 3. Check for malicious symlinks
     if path.is_symlink():
@@ -433,7 +433,6 @@ def add_missing_apps_to_db():
 def trigger_library_update_notification():
     """Helper function to trigger library update notifications (used by Celery tasks)"""
     try:
-        from flask_socketio import SocketIO
         from app import socketio
         import datetime
         socketio.emit('library_updated', {'timestamp': datetime.datetime.now().isoformat()}, namespace='/')
@@ -441,7 +440,7 @@ def trigger_library_update_notification():
         logger.debug(f"Could not emit library_updated event: {e}")
 
 def process_library_identification(app):
-    logger.info(f"Starting library identification process for all libraries...")
+    logger.info("Starting library identification process for all libraries...")
     try:
         with app.app_context():
             libraries = get_libraries()
@@ -450,7 +449,7 @@ def process_library_identification(app):
 
     except Exception as e:
         logger.error(f"Error during library identification process: {e}")
-    logger.info(f"Library identification process for all libraries completed.")
+    logger.info("Library identification process for all libraries completed.")
 
 def update_titles():
     # Remove titles that no longer have any owned apps

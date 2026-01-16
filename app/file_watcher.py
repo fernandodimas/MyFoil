@@ -1,6 +1,7 @@
 from constants import *
 from utils import *
-import time, os
+import time
+import os
 from watchdog.observers.polling import PollingObserver
 from watchdog.events import FileSystemEventHandler
 from types import SimpleNamespace

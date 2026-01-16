@@ -1,6 +1,6 @@
 from constants import *
 import yaml
-import os, sys
+import os
 
 from nstools.nut import Keys
 

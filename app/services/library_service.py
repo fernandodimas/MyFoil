@@ -7,7 +7,6 @@ from settings import load_settings
 import titles
 import structlog
 from typing import Dict, List, Any, Optional
-import datetime
 
 logger = structlog.get_logger()
 

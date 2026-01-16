@@ -19,7 +19,6 @@ flask.cli.show_server_banner = lambda *args: None
 
 # Core Flask imports
 from flask import Flask
-from flask_login import LoginManager
 from flask_socketio import SocketIO
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -43,7 +42,6 @@ from routes.library import library_bp
 from routes.settings import settings_bp
 from routes.system import system_bp, system_web_bp
 from routes.web import web_bp
-from middleware.auth import access_required
 
 # Jobs
 from jobs.scheduler import JobScheduler
@@ -53,7 +51,7 @@ try:
     from celery_app import celery
     from tasks import scan_library_async, identify_file_async
     CELERY_ENABLED = True
-except ImportError as e:
+except ImportError:
     CELERY_ENABLED = False
 
 # Import additional modules for functions
@@ -66,9 +64,6 @@ from file_watcher import Watcher
 import threading
 import datetime
 from datetime import timedelta
-import hmac
-import hashlib
-import requests
 
 # Global variables
 app_settings = {}

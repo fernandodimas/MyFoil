@@ -1,8 +1,7 @@
 """
 Library Routes - Endpoints relacionados à biblioteca de jogos
 """
-from flask import Blueprint, render_template, request, jsonify
-from flask_login import current_user
+from flask import Blueprint, request, jsonify
 from sqlalchemy import func, and_, case
 from db import *
 from db import app_files
@@ -130,7 +129,6 @@ def get_stats_overview():
     """Estatísticas detalhadas da biblioteca com filtros - Otimizado"""
     import titles
     import library
-    from sqlalchemy import func, case, and_
 
     library_id = request.args.get('library_id', type=int)
 

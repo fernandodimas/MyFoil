@@ -1,16 +1,14 @@
 import os
-import sys
 import re
 import json
 import time
-import datetime
 
 import titledb
 from constants import *
 from utils import *
 from settings import *
 from pathlib import Path
-from binascii import hexlify as hx, unhexlify as uhx
+from binascii import hexlify as hx
 import logging
 
 from nstools.Fs import Pfs0, Nca, Type, factory
@@ -529,7 +527,7 @@ def identify_file(filepath):
 
 
 def get_game_info(title_id):
-    from db import db, Titles
+    from db import Titles
     global _titles_db
     
     search_id = str(title_id).upper()

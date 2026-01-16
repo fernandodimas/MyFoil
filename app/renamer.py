@@ -2,10 +2,8 @@ import os
 import re
 import shutil
 import logging
-from pathlib import Path
-from db import db, Files, Apps, Titles, to_dict
-from titles import get_game_info, get_file_info
-from i18n import I18n
+from db import db, Files, Titles
+from titles import get_game_info
 
 logger = logging.getLogger('main')
 

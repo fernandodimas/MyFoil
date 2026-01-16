@@ -11,7 +11,6 @@ import titledb
 import json
 from utils import format_size_py
 from metrics import generate_latest, CONTENT_TYPE_LATEST
-import datetime
 
 system_bp = Blueprint('system', __name__, url_prefix='/api')
 

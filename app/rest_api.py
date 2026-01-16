@@ -1,6 +1,4 @@
 from flask_restx import Api, Resource, fields
-from flask import request, jsonify, redirect
-from functools import wraps
 import logging
 from auth import access_required
 
@@ -253,7 +251,7 @@ def init_rest_api(app):
         @access_required('shop')
         def get(self):
             """Get general repository statistics"""
-            from db import Files, Apps, Titles
+            from db import Files, Apps
             from constants import APP_TYPE_BASE, APP_TYPE_DLC, APP_TYPE_UPD
             
             return {

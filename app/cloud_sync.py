@@ -1,9 +1,8 @@
 import os
 import json
 import logging
-import threading
 from abc import ABC, abstractmethod
-from typing import List, Dict, Optional, Any
+from typing import List, Dict
 from datetime import datetime
 
 logger = logging.getLogger('main')

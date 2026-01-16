@@ -1,7 +1,7 @@
 import json
 import os
 import structlog
-from flask import request, g
+from flask import request
 
 logger = structlog.get_logger('i18n')
 

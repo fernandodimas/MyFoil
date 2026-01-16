@@ -1,18 +1,15 @@
 """
 Web Routes - Rotas principais da aplicação web
 """
-from flask import Blueprint, render_template, request, redirect, url_for, jsonify, send_from_directory
-from flask_login import current_user, login_required
+from flask import Blueprint, render_template, request, redirect, jsonify, send_from_directory
+from flask_login import login_required
 from auth import access_required, admin_account_created
 from middleware.auth import tinfoil_access
-import titles
 from db import *
 import os
-import json
 import hmac
 import hashlib
 import requests
-from utils import format_size_py
 from shop import gen_shop_files
 from shop import encrypt_shop
 from flask import Response

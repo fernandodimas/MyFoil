@@ -3,7 +3,6 @@ TitleDB Update Module for MyFoil
 Enhanced with multiple source support and direct JSON downloads
 """
 import os
-import json
 import logging
 import requests
 
@@ -16,9 +15,6 @@ try:
 except ImportError:
     logger.warning("unzip-http module not found. Legacy ZIP TitleDB source will not be available.")
     HAS_UNZIP_HTTP = False
-import re
-import shutil
-from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 

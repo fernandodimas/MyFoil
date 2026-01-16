@@ -3,11 +3,10 @@ TitleDB Source Manager for MyFoil
 Supports multiple sources with automatic fallback and configurable priorities
 """
 import requests
-import os
 import json
 import logging
 from typing import Dict, List, Optional, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 logger = logging.getLogger('main')

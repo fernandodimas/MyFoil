@@ -1,7 +1,7 @@
 import os
 import importlib.util
 import logging
-from typing import List, Dict, Any, Callable
+from typing import List, Dict, Any
 
 logger = logging.getLogger('main')
 

@@ -2,7 +2,7 @@
 Authentication Middleware - Decoradores e funções de autenticação
 """
 from functools import wraps
-from flask import request, jsonify, current_app
+from flask import request, jsonify
 from flask_login import current_user
 from settings import load_settings
 import logging
