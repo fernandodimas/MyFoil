@@ -170,6 +170,66 @@ def library_ignore_api(title_id):
     return jsonify({'success': True})
 
 
+@library_bp.route('/library/<title_id>/status')
+@access_required('shop')
+def library_status_api(title_id):
+    """Retorna status do jogo considerando preferências de ignore do usuário"""
+    import json
+    from flask_login import current_user
+    import titles as titles_lib
+    
+    lib_data = library.load_library_from_disk()
+    if not lib_data or 'library' not in lib_data:
+        return jsonify({'error': 'Library not loaded'}), 500
+    
+    game = next((g for g in lib_data['library'] if g.get('id') == title_id), None)
+    if not game:
+        return jsonify({'error': 'Game not found'}), 404
+    
+    ignore_record = WishlistIgnore.query.filter_by(
+        user_id=current_user.id,
+        title_id=title_id
+    ).first()
+    
+    ignored_dlcs = json.loads(ignore_record.ignore_dlcs) if ignore_record and ignore_record.ignore_dlcs else {}
+    ignored_updates = json.loads(ignore_record.ignore_updates) if ignore_record and ignore_record.ignore_updates else {}
+    
+    all_dlc_ids = titles_lib.get_all_existing_dlc(title_id) or []
+    non_ignored_dlcs = [d for d in all_dlc_ids if not ignored_dlcs.get(str(d), False)]
+    
+    owned_dlc_ids = set()
+    for app in game.get('apps', []):
+        if app.get('app_type') == 'DLC' and app.get('owned'):
+            owned_dlc_ids.add(app.get('app_id'))
+    
+    available_but_not_owned_dlcs = [d for d in non_ignored_dlcs if d not in owned_dlc_ids]
+    has_pending_dlcs = len(available_but_not_owned_dlcs) > 0 if non_ignored_dlcs else False
+    
+    ignored_updates_set = set(str(v) for v in ignored_updates.keys())
+    latest_version = game.get('latest_version_available', 0)
+    owned_version = game.get('owned_version', 0)
+    
+    if latest_version > 0 and owned_version < latest_version:
+        next_version = owned_version + 1
+        while next_version <= latest_version:
+            if str(next_version) not in ignored_updates_set:
+                has_pending_updates = True
+                break
+            next_version += 1
+        else:
+            has_pending_updates = False
+    else:
+        has_pending_updates = False
+    
+    return jsonify({
+        'title_id': title_id,
+        'has_pending_dlcs': has_pending_dlcs,
+        'has_pending_updates': has_pending_updates,
+        'ignored_dlcs_count': len([d for d in ignored_dlcs.values() if d]),
+        'ignored_updates_count': len([v for v in ignored_updates.values() if v])
+    })
+
+
 @library_bp.route('/library/search')
 @access_required('shop')
 def search_library_api():

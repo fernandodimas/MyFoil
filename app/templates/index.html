@@ -394,6 +394,19 @@
     let pageSize = 24;
     let currentSort = localStorage.getItem('myfoil_library_sort') || 'name-asc';
     let currentView = localStorage.getItem('viewMode') || 'card';
+    let ignorePreferences = {};  // Cache for ignore preferences per title_id
+
+
+    // Fetch all ignore preferences on load
+    function loadIgnorePreferences() {
+        $.getJSON('/api/wishlist/ignore', (data) => {
+            ignorePreferences = data || {};
+            console.log('Ignore preferences loaded:', Object.keys(ignorePreferences).length, 'titles');
+        }).fail(() => {
+            console.warn('Failed to load ignore preferences');
+            ignorePreferences = {};
+        });
+    }
 
 
     // Helper functions
@@ -505,6 +518,35 @@
     function renderCardView(items) {
         items.forEach(game => {
             const statusDotClass = game.status_color === 'orange' ? 'bg-orange' : (game.status_color === 'green' ? 'bg-green' : 'bg-gray');
+            
+            // Check ignore preferences for this game
+            const gameIgnore = ignorePreferences[game.id] || {};
+            const ignoredDlcs = gameIgnore.dlcs || {};
+            const ignoredUpdates = gameIgnore.updates || {};
+            
+            // Check if there are non-ignored DLCs available but not owned
+            let hasNonIgnoredDlcs = false;
+            if (game.has_base && game.dlcs && Array.isArray(game.dlcs)) {
+                hasNonIgnoredDlcs = game.dlcs.some(dlc => {
+                    const isIgnored = ignoredDlcs[dlc.app_id];
+                    const isNotOwned = !dlc.owned;
+                    return isNotOwned && !isIgnored;
+                });
+            }
+            
+            // Check if there are non-ignored updates available
+            let hasNonIgnoredUpdates = false;
+            if (game.has_base && !game.has_latest_version && game.apps && Array.isArray(game.apps)) {
+                const ownedVersion = parseInt(game.owned_version) || 0;
+                const latestVersion = parseInt(game.latest_version_available) || 0;
+                for (let v = ownedVersion + 1; v <= latestVersion; v++) {
+                    if (!ignoredUpdates[v.toString()]) {
+                        hasNonIgnoredUpdates = true;
+                        break;
+                    }
+                }
+            }
+            
             const card = $(`
                 <div class="grid-item">
                     <div class="card game-card is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')">
@@ -527,8 +569,8 @@
                                     <span class="is-size-7 opacity-70 font-mono" title="Tamanho em disco">${game.size_formatted || '--'}</span>
                                 </div>
                                 <div class="is-flex gap-1 is-justify-content-end" style="margin-left: auto;">
-                                    ${!game.has_latest_version && game.has_base ? '<span class="tag tag-update has-text-weight-bold">UPDATE</span>' : ''}
-                                    ${!game.has_all_dlcs && game.has_base ? '<span class="tag tag-dlc has-text-weight-bold">DLC</span>' : ''}
+                                    ${hasNonIgnoredUpdates ? '<span class="tag tag-update has-text-weight-bold">UPDATE</span>' : ''}
+                                    ${hasNonIgnoredDlcs ? '<span class="tag tag-dlc has-text-weight-bold">DLC</span>' : ''}
                                     ${game.has_redundant_updates ? '<span class="tag tag-redundant has-text-weight-bold" title="Updates redundantes detectados">X-UPD</span>' : ''}
                                 </div>
                             </div>
@@ -867,6 +909,9 @@
             `;
             $('#libraryContainer').html(loadingHtml);
         }
+
+        // Load ignore preferences for the user
+        loadIgnorePreferences();
 
         // 2. Fetch fresh data
         refreshLibrary();
