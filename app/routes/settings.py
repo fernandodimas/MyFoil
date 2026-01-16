@@ -1,12 +1,11 @@
 """
 Settings Routes - Endpoints relacionados às configurações do sistema
 """
-from flask import Blueprint, render_template, request, jsonify, redirect
+from flask import Blueprint, render_template, request, jsonify, redirect, current_app
 from flask_login import current_user
 from db import *
 from settings import *
 from auth import access_required
-from app import app_settings
 import os
 import json
 
@@ -17,7 +16,7 @@ settings_bp = Blueprint('settings', __name__, url_prefix='/api')
 def get_settings_api():
     """Obter configurações atuais"""
     reload_conf()
-    settings = copy.deepcopy(app_settings)
+    settings = copy.deepcopy(current_app.app_settings)
 
     # Flatten settings for the JS frontend
     flattened = {}

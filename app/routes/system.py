@@ -10,7 +10,6 @@ import titles
 from utils import format_size_py
 from metrics import generate_latest, CONTENT_TYPE_LATEST
 import datetime
-from app import scan_in_progress, is_titledb_update_running, backup_manager
 
 system_bp = Blueprint('system', __name__, url_prefix='/api')
 
@@ -104,13 +103,12 @@ def scan_library_api():
     success = True
     errors = []
 
-    global scan_in_progress
-    with scan_lock:
-        if scan_in_progress:
+    import app
+    with app.scan_lock:
+        if app.scan_in_progress:
             logger.info('Skipping scan_library_api call: Scan already in progress')
             return jsonify({'success': False, 'errors': []})
-        # Set the scan status to in progress
-        scan_in_progress = True
+        app.scan_in_progress = True
 
     try:
         if CELERY_ENABLED:
@@ -136,8 +134,8 @@ def scan_library_api():
         logger.error(f"Error during library scan: {e}")
     finally:
         if not CELERY_ENABLED:
-            with scan_lock:
-                scan_in_progress = False
+            with app.scan_lock:
+                app.scan_in_progress = False
     resp = {
         'success': success,
         'errors': errors
@@ -235,9 +233,10 @@ def search_titledb_api():
 @system_bp.route('/status')
 def process_status_api():
     """Status do sistema"""
+    import app
     return jsonify({
-        'scanning': scan_in_progress,
-        'updating_titledb': is_titledb_update_running
+        'scanning': app.scan_in_progress,
+        'updating_titledb': app.is_titledb_update_running
     })
 
 @system_bp.post('/settings/titledb/update')
@@ -355,11 +354,11 @@ def delete_webhook_api(id):
 @access_required('admin')
 def create_backup_api():
     """Criar backup manual"""
-    global backup_manager
-    if not backup_manager:
+    import app
+    if not app.backup_manager:
         return jsonify({'success': False, 'error': 'Backup manager not initialized'}), 500
 
-    success, timestamp = backup_manager.create_backup()
+    success, timestamp = app.backup_manager.create_backup()
     if success:
         return jsonify({
             'success': True,
@@ -373,11 +372,11 @@ def create_backup_api():
 @access_required('admin')
 def list_backups_api():
     """Listar backups disponíveis"""
-    global backup_manager
-    if not backup_manager:
+    import app
+    if not app.backup_manager:
         return jsonify({'success': False, 'error': 'Backup manager not initialized'}), 500
 
-    backups = backup_manager.list_backups()
+    backups = app.backup_manager.list_backups()
     return jsonify({
         'success': True,
         'backups': backups
@@ -387,8 +386,8 @@ def list_backups_api():
 @access_required('admin')
 def restore_backup_api():
     """Restaurar backup"""
-    global backup_manager
-    if not backup_manager:
+    import app
+    if not app.backup_manager:
         return jsonify({'success': False, 'error': 'Backup manager not initialized'}), 500
 
     data = request.json
@@ -397,7 +396,7 @@ def restore_backup_api():
     if not filename:
         return jsonify({'success': False, 'error': 'Filename required'}), 400
 
-    success = backup_manager.restore_backup(filename)
+    success = app.backup_manager.restore_backup(filename)
     if success:
         return jsonify({
             'success': True,
