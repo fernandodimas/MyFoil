@@ -13,4 +13,5 @@ data
 /Scripts
 
 # pyenv
-.python-version
+.python-version*.db
+app/config/*.db
