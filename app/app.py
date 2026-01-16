@@ -7,12 +7,8 @@ import os
 import sys
 import logging
 
-# Suppress Eventlet and Flask-Limiter warnings
-warnings.filterwarnings("ignore", category=DeprecationWarning, module="eventlet")
+# Suppress Flask-Limiter warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="flask_limiter")
-
-import eventlet
-eventlet.monkey_patch()
 
 import flask.cli
 flask.cli.show_server_banner = lambda *args: None
@@ -351,9 +347,10 @@ def create_app():
     init_metrics(app)
 
     # Initialize SocketIO
+    # Using 'threading' mode instead of deprecated 'eventlet'
     socketio.init_app(app,
         cors_allowed_origins="*",
-        async_mode='eventlet',
+        async_mode='threading',
         engineio_logger=False,
         logger=False
     )
