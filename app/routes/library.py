@@ -5,6 +5,7 @@ from flask import Blueprint, render_template, request, jsonify
 from flask_login import current_user
 from sqlalchemy import func, and_, case
 from db import *
+from db import app_files
 from settings import load_settings
 from auth import access_required
 import titles
