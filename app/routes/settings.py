@@ -324,3 +324,43 @@ def titledb_sources_api():
             'success': success,
             'errors': [] if success else ['Failed to remove source']
         })
+
+@settings_bp.route('/settings/webhooks')
+@access_required('admin')
+def get_webhooks_api():
+    """Obter webhooks configurados"""
+    webhooks = Webhook.query.all()
+    return jsonify([w.to_dict() for w in webhooks])
+
+@settings_bp.post('/settings/webhooks')
+@access_required('admin')
+def add_webhook_api():
+    """Adicionar webhook"""
+    data = request.json
+    import json
+    webhook = Webhook(
+        url=data['url'],
+        events=json.dumps(data.get('events', ['library_updated'])),
+        secret=data.get('secret'),
+        active=data.get('active', True)
+    )
+    db.session.add(webhook)
+    try:
+        db.session.commit()
+        from app import log_activity
+        log_activity('webhook_created', details={'url': webhook.url}, user_id=current_user.id)
+        return jsonify({'success': True, 'webhook': webhook.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+@settings_bp.delete('/settings/webhooks/<int:id>')
+@access_required('admin')
+def delete_webhook_api(id):
+    """Remover webhook"""
+    webhook = db.session.get(Webhook, id)
+    if webhook:
+        db.session.delete(webhook)
+        db.session.commit()
+        return jsonify({'success': True})
+    return jsonify({'success': False, 'error': 'Webhook not found'}), 404
