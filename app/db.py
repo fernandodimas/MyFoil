@@ -277,6 +277,8 @@ def init_db(app):
                     engine = db.engine
                     with engine.connect() as conn:
                         inspector = inspect(engine)
+                        
+                        # Check titles table columns
                         existing_columns = [c['name'] for c in inspector.get_columns('titles')]
                         new_cols = [
                             ('name', 'TEXT'), 
@@ -289,7 +291,7 @@ def init_db(app):
                             ('size', 'INTEGER'), 
                             ('nsuid', 'TEXT'),
                             ('is_custom', 'BOOLEAN DEFAULT 0'),
-                            ('last_updated', 'DATETIME') # Removed DEFAULT CURRENT_TIMESTAMP to avoid SQLite error
+                            ('last_updated', 'DATETIME')
                         ]
                         
                         modified = False
@@ -305,6 +307,47 @@ def init_db(app):
                         if modified:
                             conn.commit()
                             logger.info("Database schema updated with new metadata columns.")
+                            
+                        # Check wishlist table columns (2026-01-16)
+                        wishlist_cols = [c['name'] for c in inspector.get_columns('wishlist')]
+                        wishlist_new_cols = [
+                            ('ignore_dlc', 'BOOLEAN DEFAULT 0'),
+                            ('ignore_update', 'BOOLEAN DEFAULT 0')
+                        ]
+                        
+                        wishlist_modified = False
+                        for col_name, col_type in wishlist_new_cols:
+                            if col_name not in wishlist_cols:
+                                logger.info(f"Adding missing column {col_name} to wishlist table...")
+                                try:
+                                    conn.execute(text(f"ALTER TABLE wishlist ADD COLUMN {col_name} {col_type}"))
+                                    wishlist_modified = True
+                                except Exception as e:
+                                    logger.error(f"Failed to add column {col_name} to wishlist: {e}")
+                        
+                        if wishlist_modified:
+                            conn.commit()
+                            logger.info("Database schema updated with wishlist ignore columns.")
+                            
+                        # Create wishlist_ignore table if not exists (2026-01-16)
+                        tables = inspector.get_table_names()
+                        if 'wishlist_ignore' not in tables:
+                            logger.info("Creating wishlist_ignore table...")
+                            conn.execute(text('''
+                                CREATE TABLE wishlist_ignore (
+                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    user_id INTEGER,
+                                    title_id VARCHAR NOT NULL,
+                                    ignore_dlc BOOLEAN DEFAULT 0,
+                                    ignore_update BOOLEAN DEFAULT 0,
+                                    created_at DATETIME,
+                                    FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE,
+                                    UNIQUE (user_id, title_id)
+                                )
+                            '''))
+                            conn.commit()
+                            logger.info("wishlist_ignore table created.")
+                            
                 except Exception as e:
                     logger.warning(f"Auto-migration check failed: {e}")
 
