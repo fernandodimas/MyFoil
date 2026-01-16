@@ -12,6 +12,8 @@ import json
 from utils import format_size_py
 from metrics import generate_latest, CONTENT_TYPE_LATEST
 import datetime
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 system_bp = Blueprint('system', __name__, url_prefix='/api')
 
@@ -278,6 +280,8 @@ def process_status_api():
         'scanning': app.scan_in_progress,
         'updating_titledb': app.is_titledb_update_running
     })
+
+process_status_api = limiter.exempt(process_status_api)
 
 @system_bp.post('/settings/titledb/update')
 @access_required('admin')
