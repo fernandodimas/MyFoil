@@ -246,14 +246,22 @@
         }
 
         /* Sticky Footer */
+        html, body {
+            height: 100%;
+        }
+        
         body {
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
         }
-
-        main {
+        
+        body > main {
             flex: 1;
+            width: 100%;
+        }
+        
+        .footer {
+            flex-shrink: 0;
         }
 
         /* Search clear button styling */

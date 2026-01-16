@@ -5,11 +5,34 @@ from functools import wraps
 from db import *
 from flask_login import LoginManager
 from utils import sanitize_sensitive_data
+import os
 
 import logging
 
 # Retrieve main logger
 logger = logging.getLogger('main')
+
+def get_build_version():
+    """Get build version from file or git"""
+    try:
+        version_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'BUILD_VERSION')
+        if os.path.exists(version_file):
+            with open(version_file, 'r') as f:
+                version = f.read().strip()
+                if version:
+                    return version
+    except:
+        pass
+    try:
+        import subprocess
+        version = subprocess.check_output(['git', 'describe', '--tags', '--always'], 
+                                          cwd=os.path.dirname(os.path.dirname(__file__)), 
+                                          stderr=subprocess.DEVNULL).decode().strip()
+        if version:
+            return version
+    except:
+        pass
+    return 'Unknown'
 
 def admin_account_created():
     return len(User.query.filter_by(admin_access=True).all())
@@ -164,7 +187,7 @@ def login():
             next_url = request.args.get('next', '')
             if current_user.is_authenticated:
                 return redirect(next_url if len(next_url) else '/')
-            return render_template('login.html', title='Login')
+            return render_template('login.html', title='Login', build_version=get_build_version())
             
         # login code goes here
         username = request.form.get('user')
@@ -192,7 +215,7 @@ def login():
 @login_required
 @access_required('backup')
 def profile():
-    return render_template('profile.html')
+    return render_template('profile.html', build_version=get_build_version())
 
 @auth_blueprint.route('/api/users')
 @access_required('admin')
