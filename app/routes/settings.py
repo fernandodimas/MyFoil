@@ -18,7 +18,8 @@ def get_settings_api():
     """Obter configurações atuais"""
     try:
         reload_conf()
-        settings = copy.deepcopy(current_app.app_settings)
+        import app
+        settings = copy.deepcopy(app.app_settings)
 
         # Flatten settings for the JS frontend
         flattened = {}
