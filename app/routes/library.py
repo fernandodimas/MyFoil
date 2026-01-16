@@ -478,10 +478,41 @@ def app_info_api(id):
 
     # Calculate status_color consistent with library list
     if result['has_base'] and (not result['has_latest_version'] or not result['has_all_dlcs']):
-        result['status_color'] = 'orange'
+         result['status_color'] = 'orange'
     elif result['has_base']:
          result['status_color'] = 'green'
     else:
          result['status_color'] = 'gray'
 
     return jsonify(result)
+
+@library_bp.route('/tags')
+@access_required('shop')
+def get_tags():
+    """Get all available tags"""
+    tags = Tag.query.all()
+    return jsonify([{
+        'id': t.id,
+        'name': t.name,
+        'color': t.color,
+        'icon': t.icon
+    } for t in tags])
+
+@library_bp.route('/titles/<title_id>/tags')
+@access_required('shop')
+def get_title_tags(title_id):
+    """Get tags for a specific title"""
+    title = Titles.query.filter_by(title_id=title_id).first()
+    if not title:
+        return jsonify({'error': 'Title not found'}), 404
+    
+    title_tags = TitleTag.query.filter_by(title_id=title_id).all()
+    tag_ids = [tt.tag_id for tt in title_tags]
+    tags = Tag.query.filter(Tag.id.in_(tag_ids)).all()
+    
+    return jsonify([{
+        'id': t.id,
+        'name': t.name,
+        'color': t.color,
+        'icon': t.icon
+    } for t in tags])
