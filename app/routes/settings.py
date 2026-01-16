@@ -4,10 +4,11 @@ Settings Routes - Endpoints relacionados às configurações do sistema
 from flask import Blueprint, render_template, request, jsonify, redirect, current_app
 from flask_login import current_user
 from db import *
-from settings import *
+from settings import reload_conf, load_settings, set_titles_settings, set_shop_settings, DEFAULT_SETTINGS, CONFIG_FILE
 from auth import access_required
 import os
 import json
+import copy
 
 settings_bp = Blueprint('settings', __name__, url_prefix='/api')
 

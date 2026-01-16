@@ -146,3 +146,9 @@ def toggle_plugin_settings(plugin_id, enabled):
     with open(CONFIG_FILE, 'w') as yaml_file:
         yaml.dump(settings, yaml_file)
     return True
+
+def reload_conf():
+    """Reload application settings cache"""
+    global _cached_settings
+    _cached_settings = None
+    return load_settings(force=True)
