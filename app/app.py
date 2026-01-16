@@ -345,6 +345,10 @@ def create_app():
     # Initialize I18n
     app.i18n = I18n(app)
 
+    # Register exception handlers
+    from exceptions import register_exception_handlers
+    register_exception_handlers(app)
+
     # Register blueprints
     app.register_blueprint(auth_blueprint)
     app.register_blueprint(web_bp)
@@ -373,11 +377,11 @@ def create_app():
     # SocketIO event handlers
     @socketio.on('connect')
     def handle_connect():
-        print('Client connected')
+        logger.info('Client connected')
 
     @socketio.on('disconnect')
     def handle_disconnect():
-        print('Client disconnected')
+        logger.info('Client disconnected')
 
     # Global initialization
     with app.app_context():

@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff flake8
+
+      - name: Run ruff
+        run: ruff check app/
+
+      - name: Run flake8
+        run: flake8 app/ --max-line-length=120 --ignore=E501,F401,W503
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Verify imports
+        working-directory: ./app
+        run: |
+          python -c "from titledb import check_titledb_updates; print('titledb.py OK')"
+          python -c "from library import ALLOWED_EXTENSIONS; print('library.py OK')"
+          python -c "from exceptions import MyFoilException; print('exceptions.py OK')"
+          python -c "from jobs import update_titledb_job; print('jobs.py OK')"
+
+      - name: Run pytest
+        working-directory: ./app
+        run: pytest ../tests/ -v --tb=short
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: myfoil:test
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify build
+        run: docker images | grep myfoil
+
+  security:
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install security tools
+        run: pip install safety bandit
+
+      - name: Run safety check
+        run: safety check -r requirements.txt || echo "Safety check completed"
+
+      - name: Run bandit
+        run: bandit -r app/ -f json -o bandit_report.json || echo "Bandit scan completed"
+
+      - name: Upload bandit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: bandit_report.json

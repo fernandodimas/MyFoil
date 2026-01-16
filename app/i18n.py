@@ -1,6 +1,10 @@
 import json
 import os
+import structlog
 from flask import request, g
+
+logger = structlog.get_logger('i18n')
+
 
 class I18n:
     def __init__(self, app=None):
@@ -26,7 +30,7 @@ class I18n:
                     with open(os.path.join(translations_dir, filename), 'r', encoding='utf-8') as f:
                         self.translations[locale] = json.load(f)
                 except Exception as e:
-                    print(f"Error loading translation {filename}: {e}")
+                    logger.error(f"Error loading translation {filename}: {e}")
 
     def get_locale(self):
         # 1. Check for language cookie
