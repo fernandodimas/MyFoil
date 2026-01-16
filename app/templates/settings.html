@@ -1530,9 +1530,9 @@
                             </td>
                             <td>
                                 <div class="tags">
-                                    <span class="tag ${user.shop_access ? 'is-success' : 'is-light'} is-small">{{ t('Shop') }}</span>
-                                    <span class="tag ${user.backup_access ? 'is-success' : 'is-light'} is-small">{{ t('Backup') }}</span>
-                                    <span class="tag ${user.admin_access ? 'is-primary' : 'is-light'} is-small">{{ t('Admin') }}</span>
+                                    <span class="tag ${user.shop_access ? 'is-success' : 'is-light'} is-small">${t('Shop')}</span>
+                                    <span class="tag ${user.backup_access ? 'is-success' : 'is-light'} is-small">${t('Backup')}</span>
+                                    <span class="tag ${user.admin_access ? 'is-primary' : 'is-light'} is-small">${t('Admin')}</span>
                                 </div>
                             </td>
                             <td class="has-text-right">
@@ -1621,7 +1621,7 @@
                         <td><input type="number" class="input is-small w-16" value="${source.priority}" style="width: 70px" onchange="updateSourcePriority('${source.name}', this.value)" /></td>
                         <td>
                             <span class="tag ${source.enabled ? 'is-success' : 'is-light'} is-small">
-                                ${source.enabled ? '{{ t("Enabled") }}' : '{{ t("Disabled") }}'}
+                                ${source.enabled ? t('Enabled') : t('Disabled')}
                             </span>
                         </td>
                         <td class="has-text-right">
