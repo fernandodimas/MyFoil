@@ -113,10 +113,9 @@
                                     class="has-text-danger">--</span>
                             </p>
                             <p class="is-size-7 opacity-70" title="Títulos sem nome no Banco de Dados">
-                                <i class="bi bi-question-circle mr-1"></i> <span id="stat-unrecognized-count"
+                            <i class="bi bi-question-circle mr-1"></i> <span id="stat-unrecognized-count"
                                     class="has-text-warning">--</span>
                             </p>
-                            <span id="stat-keys-badge">--</span>
                         </div>
                     </div>
                 </div>
@@ -229,14 +228,6 @@
             $('#stat-recognition-pct').text(data.identification.recognition_pct);
             $('#stat-unidentified-files').text(data.identification.unidentified_count);
             $('#stat-unrecognized-count').text(data.identification.unrecognized_count);
-
-            // Keys Status
-            const keysBadge = $('#stat-keys-badge');
-            if (data.identification.keys_valid) {
-                keysBadge.html('<span class="tag is-success is-light is-small">PROD.KEYS OK</span>');
-            } else {
-                keysBadge.html('<span class="tag is-danger is-light is-small">SEM KEYS</span>');
-            }
 
             // Render Genre Chart
             renderGenreChart(data.genres);

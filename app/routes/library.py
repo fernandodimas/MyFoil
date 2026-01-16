@@ -485,6 +485,9 @@ def app_info_api(id):
     else:
          result['status_color'] = 'gray'
 
+    # owned field for wishlist and other uses
+    result['owned'] = result['has_base']
+
     return jsonify(result)
 
 @library_bp.route('/tags')
