@@ -14,6 +14,7 @@ from metrics import generate_latest, CONTENT_TYPE_LATEST
 import datetime
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from app import limiter
 
 system_bp = Blueprint('system', __name__, url_prefix='/api')
 
