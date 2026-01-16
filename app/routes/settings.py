@@ -155,66 +155,67 @@ def set_shop_settings_api():
 @access_required('admin')
 def library_paths_api():
     """Gerenciar caminhos da biblioteca"""
-    if request.method == 'POST':
-        data = request.json
-        import app
-        from library import add_library_complete
-        success, errors = add_library_complete(app.app, app.watcher, data['path'])
-        if success:
+    try:
+        if request.method == 'POST':
+            data = request.json
+            import app
+            from library import add_library_complete
+            success, errors = add_library_complete(app.app, app.watcher, data['path'])
+            if success:
+                reload_conf()
+                from library import post_library_change
+                post_library_change()
+            resp = {
+                'success': success,
+                'errors': errors
+            }
+        elif request.method == 'GET':
             reload_conf()
-            from library import post_library_change
-            post_library_change()
-        resp = {
-            'success': success,
-            'errors': errors
-        }
-    elif request.method == 'GET':
-        reload_conf()
-        libs = Libraries.query.all()
-        paths_info = []
-        for l in libs:
-            # Files in this library
-            files_count = Files.query.filter_by(library_id=l.id).count()
-            total_size = db.session.query(func.sum(Files.size)).filter_by(library_id=l.id).scalar() or 0
+            libs = Libraries.query.all()
+            paths_info = []
+            for l in libs:
+                files_count = Files.query.filter_by(library_id=l.id).count()
+                total_size = db.session.query(func.sum(Files.size)).filter_by(library_id=l.id).scalar() or 0
 
-            # Identified titles (approximate by distinct apps)
-            # We join to get title_id from Apps linked to files in this library
-            try:
-                titles_query = db.session.query(Apps.title_id).distinct().join(Files).join(Apps).filter(Files.library_id == l.id)
-                titles_count = titles_query.count()
-            except Exception as e:
-                logger.error(f"Error counting titles for path {l.path}: {e}")
-                titles_count = 0
+                try:
+                    titles_query = db.session.query(Apps.title_id).distinct().join(Files).join(Apps).filter(Files.library_id == l.id)
+                    titles_count = titles_query.count()
+                except Exception as e:
+                    logger.error(f"Error counting titles for path {l.path}: {e}")
+                    titles_count = 0
 
-            paths_info.append({
-                'id': l.id,
-                'path': l.path,
-                'files_count': files_count,
-                'total_size': total_size,
-                'total_size_formatted': format_size_py(total_size),
-                'titles_count': titles_count,
-                'last_scan': l.last_scan.strftime("%Y-%m-%d %H:%M:%S") if l.last_scan else "Nunca"
-            })
+                paths_info.append({
+                    'id': l.id,
+                    'path': l.path,
+                    'files_count': files_count,
+                    'total_size': total_size,
+                    'total_size_formatted': format_size_py(total_size),
+                    'titles_count': titles_count,
+                    'last_scan': l.last_scan.strftime("%Y-%m-%d %H:%M:%S") if l.last_scan else "Nunca"
+                })
 
-        resp = {
-            'success': True,
-            'errors': [],
-            'paths': paths_info
-        }
-    elif request.method == 'DELETE':
-        data = request.json
-        import app
-        from library import remove_library_complete
-        success, errors = remove_library_complete(app.app, app.watcher, data['path'])
-        if success:
-            reload_conf()
-            from library import post_library_change
-            post_library_change()
-        resp = {
-            'success': success,
-            'errors': errors
-        }
-    return jsonify(resp)
+            resp = {
+                'success': True,
+                'errors': [],
+                'paths': paths_info
+            }
+        elif request.method == 'DELETE':
+            data = request.json
+            import app
+            from library import remove_library_complete
+            success, errors = remove_library_complete(app.app, app.watcher, data['path'])
+            if success:
+                reload_conf()
+                from library import post_library_change
+                post_library_change()
+            resp = {
+                'success': success,
+                'errors': errors
+            }
+        return jsonify(resp)
+    except Exception as e:
+        logger.error(f"Error in library_paths_api: {e}")
+        return jsonify({'success': False, 'errors': [str(e)]}), 500
 
 @settings_bp.post('/settings/keys')
 @access_required('admin')
@@ -254,83 +255,82 @@ def set_keys_api():
 @access_required('admin')
 def titledb_sources_api():
     """Gerenciar fontes do TitleDB"""
-    import titledb_sources
-    if request.method == 'GET':
-        # Get all sources and their status
-        sources = titledb_sources.TitleDBSourceManager().get_sources_status()
-        return jsonify({
-            'success': True,
-            'sources': sources
-        })
-
-    elif request.method == 'POST':
-        # Add a new source
-        data = request.json
-        name = data.get('name')
-        base_url = data.get('base_url')
-        priority = data.get('priority', 50)
-        enabled = data.get('enabled', True)
-        source_type = data.get('source_type', 'json')
-
-        if not name or not base_url:
+    try:
+        import titledb_sources
+        if request.method == 'GET':
+            sources = titledb_sources.TitleDBSourceManager().get_sources_status()
             return jsonify({
-                'success': False,
-                'errors': ['Name and base_url are required']
+                'success': True,
+                'sources': sources
             })
 
-        manager = titledb_sources.TitleDBSourceManager()
-        success = manager.add_source(name, base_url, priority, enabled, source_type)
-        return jsonify({
-            'success': success,
-            'errors': [] if success else ['Failed to add source']
-        })
+        elif request.method == 'POST':
+            data = request.json
+            name = data.get('name')
+            base_url = data.get('base_url')
+            priority = data.get('priority', 50)
+            enabled = data.get('enabled', True)
+            source_type = data.get('source_type', 'json')
 
-    elif request.method == 'PUT':
-        # Update an existing source
-        data = request.json
-        name = data.get('name')
+            if not name or not base_url:
+                return jsonify({
+                    'success': False,
+                    'errors': ['Name and base_url are required']
+                })
 
-        if not name:
+            manager = titledb_sources.TitleDBSourceManager()
+            success = manager.add_source(name, base_url, priority, enabled, source_type)
             return jsonify({
-                'success': False,
-                'errors': ['Name is required']
+                'success': success,
+                'errors': [] if success else ['Failed to add source']
             })
 
-        # Build kwargs for update
-        kwargs = {}
-        if 'base_url' in data:
-            kwargs['base_url'] = data['base_url']
-        if 'priority' in data:
-            kwargs['priority'] = data['priority']
-        if 'enabled' in data:
-            kwargs['enabled'] = data['enabled']
-        if 'source_type' in data:
-            kwargs['source_type'] = data['source_type']
+        elif request.method == 'PUT':
+            data = request.json
+            name = data.get('name')
 
-        manager = titledb_sources.TitleDBSourceManager()
-        success = manager.update_source(name, **kwargs)
-        return jsonify({
-            'success': success,
-            'errors': [] if success else ['Failed to update source']
-        })
+            if not name:
+                return jsonify({
+                    'success': False,
+                    'errors': ['Name is required']
+                })
 
-    elif request.method == 'DELETE':
-        # Remove a source
-        data = request.json
-        name = data.get('name')
+            kwargs = {}
+            if 'base_url' in data:
+                kwargs['base_url'] = data['base_url']
+            if 'priority' in data:
+                kwargs['priority'] = data['priority']
+            if 'enabled' in data:
+                kwargs['enabled'] = data['enabled']
+            if 'source_type' in data:
+                kwargs['source_type'] = data['source_type']
 
-        if not name:
+            manager = titledb_sources.TitleDBSourceManager()
+            success = manager.update_source(name, **kwargs)
             return jsonify({
-                'success': False,
-                'errors': ['Name is required']
+                'success': success,
+                'errors': [] if success else ['Failed to update source']
             })
 
-        manager = titledb_sources.TitleDBSourceManager()
-        success = manager.remove_source(name)
-        return jsonify({
-            'success': success,
-            'errors': [] if success else ['Failed to remove source']
-        })
+        elif request.method == 'DELETE':
+            data = request.json
+            name = data.get('name')
+
+            if not name:
+                return jsonify({
+                    'success': False,
+                    'errors': ['Name is required']
+                })
+
+            manager = titledb_sources.TitleDBSourceManager()
+            success = manager.remove_source(name)
+            return jsonify({
+                'success': success,
+                'errors': [] if success else ['Failed to remove source']
+            })
+    except Exception as e:
+        logger.error(f"Error in titledb_sources_api: {e}")
+        return jsonify({'success': False, 'errors': [str(e)]}), 500
 
 @settings_bp.route('/settings/webhooks')
 @access_required('admin')

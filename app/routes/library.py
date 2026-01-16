@@ -234,7 +234,7 @@ def get_stats_overview():
     keys_valid = app_settings.get('titles', {}).get('valid_keys', False)
 
     # TitleDB Info
-    active_src = titles.get_active_source_info()
+    active_src = titledb.get_active_source_info()
     source_name = active_src.get('name', 'Nenhuma') if active_src else 'Nenhuma'
 
     return jsonify({
