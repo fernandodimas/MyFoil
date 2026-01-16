@@ -44,9 +44,13 @@
                 <div class="navbar-item">
                     <div class="control has-icons-right">
                         <input class="input is-rounded is-small" id="navbarSearch" type="text"
-                            placeholder="Buscar jogos..." list="gameTitlesList">
-                        <span class="icon is-small is-right">
+                            placeholder="Buscar jogos..." list="gameTitlesList" oninput="toggleSearchClearBtn()">
+                        <span class="icon is-small is-right" id="searchIcon">
                             <i class="bi bi-search"></i>
+                        </span>
+                        <span class="icon is-small is-right is-clickable" id="searchClearBtn" 
+                            style="display: none; pointer-events: auto; cursor: pointer;" onclick="clearSearch()">
+                            <i class="bi bi-x"></i>
                         </span>
                         <datalist id="gameTitlesList"></datalist>
                     </div>

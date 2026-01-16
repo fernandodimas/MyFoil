@@ -279,14 +279,6 @@ def process_status_api():
         'updating_titledb': app.is_titledb_update_running
     })
 
-# Exempt from rate limiting using late import
-def _exempt_status_from_rate_limit():
-    from app import limiter
-    global process_status_api
-    process_status_api = limiter.exempt(process_status_api)
-
-_exempt_status_from_rate_limit()
-
 @system_bp.post('/settings/titledb/update')
 @access_required('admin')
 def force_titledb_update_api():

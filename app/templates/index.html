@@ -95,7 +95,7 @@
                     </button>
                 </div>
 
-                <button class="button is-small is-outlined is-danger" onclick="clearFilters()" title="Limpar Filtros">
+                <button id="clearFiltersBtn" class="button is-small is-outlined is-danger" onclick="clearFilters()" title="Limpar Filtros">
                     <span class="icon is-small"><i class="bi bi-x"></i></span>
                 </button>
             </div>
@@ -136,7 +136,7 @@
 
     <!-- No Results -->
     <div id="noResults" class="is-hidden has-text-centered py-6">
-        <div class="notification is-light">
+        <div class="card p-5">
             <i class="bi bi-search is-size-1 opacity-20 block mb-4"></i>
             <h3 class="title is-4">Nenhum jogo encontrado</h3>
             <p class="subtitle is-6 opacity-50">Tente ajustar seus filtros ou verifique as configurações.</p>
@@ -361,6 +361,28 @@
 
     .opacity-80 {
         opacity: 0.8;
+    }
+
+    /* Clear filters button - hidden by default, shown when filters active */
+    #clearFiltersBtn {
+        display: none;
+    }
+    #clearFiltersBtn.has-active {
+        display: inline-flex;
+    }
+
+    /* Search clear button */
+    .icon.is-right.is-clickable {
+        cursor: pointer;
+    }
+    .icon.is-right.is-clickable:hover {
+        color: var(--bulma-primary);
+    }
+    #searchClearBtn, #searchIcon {
+        pointer-events: none;
+    }
+    #searchClearBtn.is-clickable {
+        pointer-events: auto;
     }
 </style>
 
@@ -639,6 +661,13 @@
             return order === 'asc' ? comparison : -comparison;
         });
 
+        // Show/hide clear filters button based on active filters
+        const hasActiveFilters = query || gender || tag || 
+            $('#btnFilterPendingBase').hasClass('is-primary') ||
+            $('#btnFilterPendingUpd').hasClass('is-primary') ||
+            $('#btnFilterPendingDlc').hasClass('is-primary');
+        $('#clearFiltersBtn').toggleClass('has-active', hasActiveFilters);
+
         $('#totalItemsCount, #totalItemsCountMobile').text(`${filteredGames.length} Jogos`);
         currentPage = 1;
         renderLibrary();
@@ -650,7 +679,27 @@
         $('#filterGender').val('');
         $('#filterTag').val('');
         $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
+        $('#searchClearBtn').hide();
+        $('#searchIcon').show();
         applyFilters();
+    }
+
+    function clearSearch() {
+        $('#navbarSearch').val('');
+        $('#searchClearBtn').hide();
+        $('#searchIcon').show();
+        applyFilters();
+    }
+
+    function toggleSearchClearBtn() {
+        const searchValue = $('#navbarSearch').val();
+        if (searchValue.length > 0) {
+            $('#searchClearBtn').show();
+            $('#searchIcon').hide();
+        } else {
+            $('#searchClearBtn').hide();
+            $('#searchIcon').show();
+        }
     }
 
     $('#btnFilterPendingBase').on('click', function () {

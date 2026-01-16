@@ -121,7 +121,7 @@ def search_library_api():
 
     return jsonify({
         'count': len(results),
-        'results': results[:100]  # Limit to 100 for performance
+        'results': results
     })
 
 @library_bp.route('/stats/overview')
