@@ -614,19 +614,26 @@
 
         // Toggle ignore for a specific DLC or Update
         function toggleItemIgnore(titleId, type, itemId, value) {
-            $.post(`/api/library/ignore/${titleId}`, {
-                type: type,
-                item_id: itemId,
-                ignored: value
-            }, (res) => {
-                if (res.success) {
-                    const msg = value ? `${type.toUpperCase()} ${itemId} será ignorado` : `${type.toUpperCase()} ${itemId} voltará a aparecer`;
-                    showToast(msg, 'success');
-                } else {
-                    showToast('Erro ao salvar preferência', 'error');
+            $.ajax({
+                url: `/api/library/ignore/${titleId}`,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    type: type,
+                    item_id: itemId,
+                    ignored: value
+                }),
+                success: (res) => {
+                    if (res.success) {
+                        const msg = value ? `${type.toUpperCase()} ${itemId} será ignorado` : `${type.toUpperCase()} ${itemId} voltará a aparecer`;
+                        showToast(msg, 'success');
+                    } else {
+                        showToast('Erro ao salvar preferência', 'error');
+                    }
+                },
+                fail: () => {
+                    showToast('Erro de conexão', 'error');
                 }
-            }).fail(() => {
-                showToast('Erro de conexão', 'error');
             });
         }
 
