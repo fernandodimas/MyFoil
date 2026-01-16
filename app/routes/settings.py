@@ -4,10 +4,12 @@ Settings Routes - Endpoints relacionados às configurações do sistema
 from flask import Blueprint, render_template, request, jsonify, redirect, current_app
 from flask_login import current_user
 from db import *
+from db import app_files
 from sqlalchemy import func
 from settings import reload_conf, load_settings, set_titles_settings, set_shop_settings, DEFAULT_SETTINGS, CONFIG_FILE
 from auth import access_required
 from constants import CONFIG_DIR
+from utils import format_size_py
 import os
 import json
 import copy
@@ -181,7 +183,7 @@ def library_paths_api():
                 total_size = db.session.query(func.sum(Files.size)).filter_by(library_id=l.id).scalar() or 0
 
                 try:
-                    titles_query = db.session.query(Apps.title_id).distinct().join(Files).join(Apps).filter(Files.library_id == l.id)
+                    titles_query = db.session.query(Apps.title_id).distinct().select_from(Apps).join(app_files, Apps.id == app_files.c.app_id).join(Files, Files.id == app_files.c.file_id).filter(Files.library_id == l.id)
                     titles_count = titles_query.count()
                 except Exception as e:
                     logger.error(f"Error counting titles for path {l.path}: {e}")
