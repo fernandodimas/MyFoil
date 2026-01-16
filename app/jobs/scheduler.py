@@ -1,87 +1,76 @@
 """
 Background Jobs - Tarefas em background e agendamento
+Versão simplificada sem dependência do APScheduler
 """
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.interval import IntervalTrigger
-from apscheduler.triggers.cron import CronTrigger
-from datetime import datetime, timedelta
 import logging
 
 logger = logging.getLogger('main')
 
 class JobScheduler:
-    """Gerenciador de tarefas em background"""
+    """Gerenciador de tarefas em background (versão simplificada)"""
 
     def __init__(self):
-        self.scheduler = BackgroundScheduler()
+        self.app = None
         self._jobs_registered = False
+        self._running = False
 
     def init_app(self, app):
         """Inicializar scheduler com a aplicação Flask"""
-        self.scheduler.init_app(app)
+        self.app = app
         self._register_jobs(app)
-        self.scheduler.start()
-        logger.info("Job scheduler initialized")
+        self._start_scheduler()
+        logger.info("Job scheduler initialized (simple version without APScheduler)")
 
     def _register_jobs(self, app):
         """Registrar todas as tarefas agendadas"""
         if self._jobs_registered:
             return
 
-        # TitleDB update job (every 24 hours)
-        self.scheduler.add_job(
-            func=self._update_titledb_job,
-            trigger=IntervalTrigger(hours=24),
-            id='update_titledb',
-            name='Update TitleDB',
-            args=[app]
-        )
-
-        # Library scan job (every 24 hours, 5 min after TitleDB update)
-        self.scheduler.add_job(
-            func=self._scan_library_job,
-            trigger=IntervalTrigger(hours=24, start_date=datetime.now() + timedelta(minutes=5)),
-            id='scan_library',
-            name='Scan Library',
-            args=[app]
-        )
-
-        # Automatic backup (daily at 3 AM)
-        self.scheduler.add_job(
-            func=self._create_backup_job,
-            trigger=CronTrigger(hour=3, minute=0),
-            id='daily_backup',
-            name='Daily Backup',
-            args=[app]
-        )
-
+        # Nesta versão simplificada, as tarefas são registradas mas
+        # não são agendadas automaticamente. Elas podem ser executadas manualmente.
         self._jobs_registered = True
-        logger.info("Background jobs registered")
+        logger.info("Background jobs registered (manual execution only)")
 
     def add_job(self, job_id, func, **kwargs):
-        """Adicionar tarefa dinâmica"""
-        self.scheduler.add_job(id=job_id, func=func, **kwargs)
+        """Adicionar tarefa dinâmica (não implementada nesta versão)"""
+        logger.warning(f"Dynamic job scheduling not implemented in simple version: {job_id}")
 
-    def _update_titledb_job(self, app):
-        """Tarefa de atualização do TitleDB"""
-        from app import update_titledb_job
-        with app.app_context():
-            update_titledb_job()
+    def run_update_titledb_job(self):
+        """Executar tarefa de atualização do TitleDB manualmente"""
+        try:
+            from app import update_titledb_job
+            with self.app.app_context():
+                update_titledb_job()
+            logger.info("TitleDB update job executed manually")
+        except Exception as e:
+            logger.error(f"Error running TitleDB update job: {e}")
 
-    def _scan_library_job(self, app):
-        """Tarefa de scan da biblioteca"""
-        from app import scan_library_job
-        with app.app_context():
-            scan_library_job()
+    def run_scan_library_job(self):
+        """Executar tarefa de scan da biblioteca manualmente"""
+        try:
+            from app import scan_library_job
+            with self.app.app_context():
+                scan_library_job()
+            logger.info("Library scan job executed manually")
+        except Exception as e:
+            logger.error(f"Error running library scan job: {e}")
 
-    def _create_backup_job(self, app):
-        """Tarefa de backup automático"""
-        from app import create_automatic_backup
-        with app.app_context():
-            create_automatic_backup()
+    def run_backup_job(self):
+        """Executar tarefa de backup automático manualmente"""
+        try:
+            from app import create_automatic_backup
+            with self.app.app_context():
+                create_automatic_backup()
+            logger.info("Backup job executed manually")
+        except Exception as e:
+            logger.error(f"Error running backup job: {e}")
+
+    def _start_scheduler(self):
+        """Iniciar scheduler simplificado"""
+        self._running = True
+        logger.info("Simple scheduler started (no automatic scheduling)")
 
     def shutdown(self):
         """Encerrar scheduler"""
-        if self.scheduler.running:
-            self.scheduler.shutdown()
-            logger.info("Job scheduler shutdown")
+        self._running = False
+        logger.info("Job scheduler shutdown")
