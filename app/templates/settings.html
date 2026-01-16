@@ -301,10 +301,20 @@
                                         </div>
                                     </div>
                                     <div class="column is-narrow">
-                                        <button class="button is-dark is-outlined scanBtn" onclick="scanLibrary()">
+                                        <button class="button is-dark is-outlined scanBtn mr-2" onclick="scanLibrary()">
                                             <span class="icon"><i class="bi bi-arrow-clockwise"></i></span>
                                             <span>{{ t('Full Scan') }}</span>
                                         </button>
+                                        <button class="button is-warning is-outlined" id="btnCleanupOrphaned" onclick="cleanupOrphaned()">
+                                            <span class="icon"><i class="bi bi-trash"></i></span>
+                                            <span>Limpar Órfãos</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="cleanupStats" class="is-hidden mt-3">
+                                    <div class="notification is-info is-light py-2 is-size-7">
+                                        <span id="cleanupMissingFiles">0</span> arquivos deletados do disco |
+                                        <span id="cleanupMissingApps">0</span> registros órfãos
                                     </div>
                                 </div>
                             </div>
@@ -1890,6 +1900,55 @@
         });
     }
 
+    // Cleanup orphaned files and apps
+    function loadCleanupStats() {
+        $.getJSON('/api/cleanup/stats', (data) => {
+            if (data.success && data.has_orphaned) {
+                $('#cleanupStats').removeClass('is-hidden');
+                $('#cleanupMissingFiles').text(data.missing_files);
+                $('#cleanupMissingApps').text(data.missing_apps);
+            } else {
+                $('#cleanupStats').addClass('is-hidden');
+            }
+        }).fail(() => {
+            $('#cleanupStats').addClass('is-hidden');
+        });
+    }
+
+    function cleanupOrphaned() {
+        confirmAction({
+            title: 'Limpar Registros Órfãos',
+            message: 'Isso removerá do banco de dados todos os registros de arquivos que não existem mais no disco e todos os apps marcados como owned sem arquivos associados. Esta ação não pode ser desfeita.',
+            confirmText: 'Limpar',
+            confirmClass: 'is-warning',
+            onConfirm: () => {
+                const btn = $('#btnCleanupOrphaned');
+                btn.addClass('is-loading');
+                btn.find('span:last').text('Limpando...');
+                
+                $.post('/api/cleanup/orphaned', (res) => {
+                    btn.removeClass('is-loading');
+                    btn.find('span:last').text('Limpar Órfãos');
+                    
+                    if (res.success) {
+                        showToast(res.message, 'success');
+                        loadCleanupStats();
+                        // Refresh game details modal if open
+                        if (typeof showGameDetails === 'function' && currentGameId) {
+                            showGameDetails(currentGameId);
+                        }
+                    } else {
+                        showToast('Erro: ' + (res.error || 'Desconhecido'), 'error');
+                    }
+                }).fail((xhr) => {
+                    btn.removeClass('is-loading');
+                    btn.find('span:last').text('Limpar Órfãos');
+                    showToast('Erro de comunicação: ' + (xhr.responseJSON?.error || 'Desconhecido'), 'error');
+                });
+            }
+        });
+    }
+
     function refreshTitleDBDates() {
         $.post('/api/settings/titledb/sources/refresh-dates', () => {
             showToast('Buscando datas remotas em segundo plano...');
@@ -2502,6 +2561,7 @@
 
         fillUserTable();
         fillLibraryTable();
+        loadCleanupStats();
         fillTitleDBSourcesTable();
         fillErrorsTable();
         fillFilesExplorer();

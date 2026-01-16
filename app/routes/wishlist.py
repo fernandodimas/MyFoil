@@ -19,8 +19,12 @@ def get_wishlist():
     items = Wishlist.query.filter_by(user_id=current_user.id).order_by(Wishlist.priority.desc()).all()
     
     # Buscar todas as preferências de ignore do usuário
-    ignore_records = WishlistIgnore.query.filter_by(user_id=current_user.id).all()
-    ignore_prefs = {r.title_id: {'ignore_dlc': r.ignore_dlc, 'ignore_update': r.ignore_update} for r in ignore_records}
+    try:
+        ignore_records = WishlistIgnore.query.filter_by(user_id=current_user.id).all()
+        ignore_prefs = {r.title_id: {'ignore_dlc': r.ignore_dlc, 'ignore_update': r.ignore_update} for r in ignore_records}
+    except Exception:
+        # Table might not exist yet
+        ignore_prefs = {}
     
     result = []
     

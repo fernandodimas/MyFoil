@@ -1,5 +1,29 @@
 <!-- Shared Modals for MyFoil -->
 
+
+
+<!-- Confirm Delete Modal -->
+<div class="modal" id="confirmDeleteModal">
+    <div class="modal-background" onclick="closeModal('confirmDeleteModal')"></div>
+    <div class="modal-card" style="max-width: 400px;">
+        <header class="modal-card-head has-background-danger">
+            <p class="modal-card-title has-text-white">Confirmar Exclusão</p>
+            <button class="delete" aria-label="close" onclick="closeModal('confirmDeleteModal')"></button>
+        </header>
+        <section class="modal-card-body">
+            <p class="has-text-centered">Tem certeza que deseja excluir este arquivo?</p>
+            <p class="has-text-centered has-text-grey is-size-7 mt-2">Esta ação não pode ser desfeita.</p>
+        </section>
+        <footer class="modal-card-foot is-justify-content-flex-end">
+            <button class="button is-light" onclick="closeModal('confirmDeleteModal')">Cancelar</button>
+            <button class="button is-danger" id="btnConfirmDelete" onclick="confirmDeleteFile()">
+                <span class="icon"><i class="bi bi-trash"></i></span>
+                <span>Excluir</span>
+            </button>
+        </footer>
+    </div>
+</div>
+
 <!-- Game Details Modal -->
 <div class="modal" id="gameDetailsModal" style="z-index: 1040;">
     <div class="modal-background" onclick="closeModal('gameDetailsModal')"></div>

@@ -267,9 +267,27 @@ def delete_file_api(file_id):
 @system_bp.post('/cleanup/orphaned')
 @access_required('admin')
 def cleanup_orphaned_apps_api():
-    """Limpar registros órfãos (apps owned sem arquivos)"""
+    """Limpar registros órfãos e arquivos deletados"""
     try:
-        # Find all Apps records where owned=True but no files
+        results = {
+            'deleted_files': 0,
+            'deleted_apps': 0,
+            'errors': []
+        }
+        
+        # 1. Find Files records where file doesn't exist on disk
+        all_files = Files.query.all()
+        for file_obj in all_files:
+            if file_obj.filepath and not os.path.exists(file_obj.filepath):
+                try:
+                    db.session.delete(file_obj)
+                    results['deleted_files'] += 1
+                except Exception as ex:
+                    results['errors'].append(f"File {file_obj.id}: {str(ex)}")
+        
+        db.session.commit()
+        
+        # 2. Find all Apps records where owned=True but no files
         orphaned_apps = []
         all_apps = Apps.query.filter_by(owned=True).all()
         
@@ -281,30 +299,58 @@ def cleanup_orphaned_apps_api():
                     'app_type': app.app_type
                 })
         
-        deleted_count = 0
         for orphaned in orphaned_apps:
             try:
                 app_obj = db.session.get(Apps, orphaned['id'])
                 if app_obj:
                     db.session.delete(app_obj)
-                    deleted_count += 1
+                    results['deleted_apps'] += 1
             except Exception as ex:
-                logger.error(f"Error deleting orphaned app {orphaned['id']}: {ex}")
+                results['errors'].append(f"App {orphaned['id']}: {str(ex)}")
         
         db.session.commit()
         
-        # Invalidate library cache
+        # 3. Invalidate library cache
         from library import invalidate_library_cache
         invalidate_library_cache()
         
+        msg = f"{results['deleted_files']} arquivos deletados do disco removidos. {results['deleted_apps']} registros órfãos removidos."
+        if results['errors']:
+            msg += f" {len(results['errors'])} erros."
+        
         return jsonify({
             'success': True,
-            'deleted_count': deleted_count,
-            'message': f'{deleted_count} registros órfãos removidos'
+            'results': results,
+            'message': msg
         })
     except Exception as e:
         db.session.rollback()
         logger.exception(f"Error cleaning orphaned apps: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@system_bp.route('/cleanup/stats')
+@access_required('admin')
+def cleanup_stats_api():
+    """Mostrar estatísticas de itens órfãos"""
+    try:
+        # Count files that don't exist on disk
+        missing_files = 0
+        all_files = Files.query.all()
+        for file_obj in all_files:
+            if file_obj.filepath and not os.path.exists(file_obj.filepath):
+                missing_files += 1
+        
+        # Count apps with owned=True but no files
+        orphaned_apps = Apps.query.filter_by(owned=True).all()
+        missing_apps = sum(1 for a in orphaned_apps if not a.files or len(a.files) == 0)
+        
+        return jsonify({
+            'success': True,
+            'missing_files': missing_files,
+            'missing_apps': missing_apps,
+            'has_orphaned': missing_files > 0 or missing_apps > 0
+        })
+    except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @system_bp.route('/titledb/search')
