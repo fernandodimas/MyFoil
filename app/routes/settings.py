@@ -148,11 +148,11 @@ def set_shop_settings_api():
 @access_required('admin')
 def library_paths_api():
     """Gerenciar caminhos da biblioteca"""
-    from app import watcher
     if request.method == 'POST':
         data = request.json
+        import app
         from library import add_library_complete
-        success, errors = add_library_complete(app, watcher, data['path'])
+        success, errors = add_library_complete(app.app, app.watcher, data['path'])
         if success:
             reload_conf()
             from library import post_library_change
@@ -173,7 +173,7 @@ def library_paths_api():
             # Identified titles (approximate by distinct apps)
             # We join to get title_id from Apps linked to files in this library
             try:
-                titles_query = db.session.query(Apps.title_id).distinct().join(app_files).join(Files).filter(Files.library_id == l.id)
+                titles_query = db.session.query(Apps.title_id).distinct().join(Files).join(Apps).filter(Files.library_id == l.id)
                 titles_count = titles_query.count()
             except Exception as e:
                 logger.error(f"Error counting titles for path {l.path}: {e}")
@@ -196,8 +196,9 @@ def library_paths_api():
         }
     elif request.method == 'DELETE':
         data = request.json
+        import app
         from library import remove_library_complete
-        success, errors = remove_library_complete(app, watcher, data['path'])
+        success, errors = remove_library_complete(app.app, app.watcher, data['path'])
         if success:
             reload_conf()
             from library import post_library_change
