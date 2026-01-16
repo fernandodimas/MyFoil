@@ -6,6 +6,7 @@ from flask_login import current_user
 from db import *
 from settings import *
 from auth import access_required
+from app import app_settings
 import os
 import json
 
