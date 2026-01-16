@@ -9,6 +9,7 @@ from db import app_files
 from settings import load_settings
 from auth import access_required
 import titles
+import titledb
 import library
 from utils import format_size_py
 
