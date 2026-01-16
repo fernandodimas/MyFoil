@@ -360,6 +360,15 @@ def create_app():
         logger=False
     )
 
+    # SocketIO event handlers
+    @socketio.on('connect')
+    def handle_connect():
+        print('Client connected')
+
+    @socketio.on('disconnect')
+    def handle_disconnect():
+        print('Client disconnected')
+
     # Global initialization
     with app.app_context():
         global backup_manager, plugin_manager, cloud_manager

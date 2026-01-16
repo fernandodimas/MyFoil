@@ -88,49 +88,55 @@ def remove_from_wishlist(title_id):
 @login_required
 def export_wishlist():
     """Exporta wishlist em json, csv ou html"""
-    format_type = request.args.get('format', 'json')
-    
-    items = Wishlist.query.filter_by(user_id=current_user.id).order_by(Wishlist.priority.desc()).all()
-    
-    if format_type == 'json':
-        result = []
-        for item in items:
-            title_info = titles.get_title_info(item.title_id) or {}
-            result.append({
-                'title_id': item.title_id,
-                'name': title_info.get('name', 'Unknown'),
-                'priority': item.priority,
-                'added_date': item.added_date.isoformat() if item.added_date else None
-            })
-        return jsonify(result)
-    
-    elif format_type == 'csv':
-        output = StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['title_id', 'name', 'priority', 'added_date'])
-        for item in items:
-            title_info = titles.get_title_info(item.title_id) or {}
-            writer.writerow([
-                item.title_id,
-                title_info.get('name', 'Unknown'),
-                item.priority,
-                item.added_date.isoformat() if item.added_date else ''
-            ])
-        return Response(
-            output.getvalue(),
-            mimetype='text/csv',
-            headers={'Content-Disposition': 'attachment; filename=wishlist.csv'}
-        )
-    
-    elif format_type == 'html':
-        html = '<html><head><title>Wishlist Export</title></head><body>'
-        html += '<h1>Wishlist</h1>'
-        html += '<table border="1"><tr><th>Title ID</th><th>Name</th><th>Priority</th><th>Added Date</th></tr>'
-        for item in items:
-            title_info = titles.get_title_info(item.title_id) or {}
-            html += f'<tr><td>{item.title_id}</td><td>{title_info.get("name", "Unknown")}</td>'
-            html += f'<td>{item.priority}</td><td>{item.added_date}</td></tr>'
-        html += '</table></body></html>'
-        return Response(html, mimetype='text/html')
-    
-    return jsonify({'error': 'Formato não suportado. Use json, csv ou html'}), 400
+    try:
+        format_type = request.args.get('format', 'json')
+        
+        items = Wishlist.query.filter_by(user_id=current_user.id).order_by(Wishlist.priority.desc()).all()
+        
+        if format_type == 'json':
+            result = []
+            for item in items:
+                title_info = titles.get_game_info(item.title_id) or {}
+                result.append({
+                    'title_id': item.title_id,
+                    'name': title_info.get('name', 'Unknown'),
+                    'priority': item.priority,
+                    'added_date': item.added_date.isoformat() if item.added_date else None
+                })
+            return jsonify(result)
+        
+        elif format_type == 'csv':
+            output = StringIO()
+            writer = csv.writer(output)
+            writer.writerow(['title_id', 'name', 'priority', 'added_date'])
+            for item in items:
+                title_info = titles.get_game_info(item.title_id) or {}
+                writer.writerow([
+                    item.title_id,
+                    title_info.get('name', 'Unknown'),
+                    item.priority,
+                    item.added_date.isoformat() if item.added_date else ''
+                ])
+            return Response(
+                output.getvalue(),
+                mimetype='text/csv',
+                headers={'Content-Disposition': 'attachment; filename=wishlist.csv'}
+            )
+        
+        elif format_type == 'html':
+            html = '<html><head><title>Wishlist Export</title></head><body>'
+            html += '<h1>Wishlist</h1>'
+            html += '<table border="1"><tr><th>Title ID</th><th>Name</th><th>Priority</th><th>Added Date</th></tr>'
+            for item in items:
+                title_info = titles.get_game_info(item.title_id) or {}
+                html += f'<tr><td>{item.title_id}</td><td>{title_info.get("name", "Unknown")}</td>'
+                html += f'<td>{item.priority}</td><td>{item.added_date}</td></tr>'
+            html += '</table></body></html>'
+            return Response(html, mimetype='text/html')
+        
+        return jsonify({'error': 'Formato não suportado. Use json, csv ou html'}), 400
+    except Exception as e:
+        import logging
+        logger = logging.getLogger('main')
+        logger.error(f"Error exporting wishlist: {e}")
+        return jsonify({'error': str(e)}), 500
