@@ -61,20 +61,17 @@
                             <a class="dropdown-item is-size-7 sort-option" data-sort="name-asc">A-Z (Nome)</a>
                             <a class="dropdown-item is-size-7 sort-option" data-sort="name-desc">Z-A (Nome)</a>
                             <hr class="dropdown-divider">
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-desc">Lançamento
-                                (Novo)</a>
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-asc">Lançamento
-                                (Antigo)</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-desc">Lançamento (Novo)</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-asc">Lançamento (Antigo)</a>
                             <hr class="dropdown-divider">
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-desc">Adicionado
-                                Recentemente</a>
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-asc">Adicionado
-                                Antigamente</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-desc">Adicionado Recentemente</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-asc">Adicionado Antigamente</a>
                             <hr class="dropdown-divider">
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="id-asc">Title ID
-                                (Crescente)</a>
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="status-desc">Status de
-                                Atualização</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="id-asc">Title ID (Crescente)</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="status-desc">Status de Atualização</a>
+                            <hr class="dropdown-divider">
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="size-desc">Tamanho (Maior)</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="size-asc">Tamanho (Menor)</a>
                         </div>
                     </div>
                 </div>
@@ -653,6 +650,11 @@
                 comparison = (a.id || '').localeCompare(b.id || '');
             } else if (field === 'status') {
                 comparison = (a.status_score || 0) - (b.status_score || 0);
+                if (comparison === 0) {
+                    comparison = (a.name || '').localeCompare(b.name || '');
+                }
+            } else if (field === 'size') {
+                comparison = (a.size || 0) - (b.size || 0);
                 if (comparison === 0) {
                     comparison = (a.name || '').localeCompare(b.name || '');
                 }

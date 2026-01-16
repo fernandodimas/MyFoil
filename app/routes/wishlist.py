@@ -14,15 +14,35 @@ wishlist_bp = Blueprint('wishlist', __name__, url_prefix='/api')
 @login_required
 def get_wishlist():
     """Obtém lista de wishlist do usuário logado"""
+    from constants import APP_TYPE_BASE
+    
     items = Wishlist.query.filter_by(user_id=current_user.id).order_by(Wishlist.priority.desc()).all()
     result = []
+    
     for item in items:
+        # Verificar se usuário possui o jogo na biblioteca
+        owned = False
+        app_entry = Apps.query.filter_by(
+            title_id=item.title_id,
+            app_type=APP_TYPE_BASE,
+            owned=True
+        ).first()
+        
+        if app_entry:
+            owned = True
+        
+        # Obter informações do título
+        title_info = titles.get_game_info(item.title_id) or {}
+        
         result.append({
             'id': item.id,
             'title_id': item.title_id,
+            'name': title_info.get('name', f'Unknown ({item.title_id})'),
             'priority': item.priority,
-            'added_date': item.added_date.isoformat() if item.added_date else None
+            'added_date': item.added_date.isoformat() if item.added_date else None,
+            'owned': owned  # Adicionado campo owned
         })
+    
     return jsonify(result)
 
 @wishlist_bp.route('/wishlist', methods=['POST'])

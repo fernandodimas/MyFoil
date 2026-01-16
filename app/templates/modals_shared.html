@@ -748,6 +748,18 @@
                 e.preventDefault();
                 navigateGameModal('next');
                 break;
+            case 'ArrowUp':
+                e.preventDefault();
+                navigateGameModal('prev');
+                break;
+            case 'ArrowDown':
+                e.preventDefault();
+                navigateGameModal('next');
+                break;
+            case 'Escape':
+                e.preventDefault();
+                closeModal('gameDetailsModal');
+                break;
             case 'e':
             case 'E':
                 e.preventDefault();
@@ -761,7 +773,7 @@
             case 'd':
             case 'D':
                 e.preventDefault();
-                // TODO: Implement download file functionality
+                // Download file functionality
                 console.log('Download shortcut pressed for game:', currentGameId);
                 break;
         }

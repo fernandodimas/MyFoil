@@ -27,11 +27,12 @@ def library_api():
 
     # Paginação: obter parâmetros da query string
     page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 100, type=int)
+    per_page = request.args.get('per_page', 500, type=int)
 
     # Validar parâmetros
     page = max(1, page)  # Página mínima é 1
-    per_page = max(1, per_page)  # Sem limite máximo
+    MAX_PER_PAGE = 1000  # Limite máximo configurável
+    per_page = min(max(1, per_page), MAX_PER_PAGE)  # Limitar ao máximo configurável
 
     # generate_library will use cache if force=False (default)
     lib_data = library.generate_library()
