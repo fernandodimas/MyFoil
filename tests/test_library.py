@@ -16,7 +16,7 @@ class TestLibraryValidation:
         import tempfile
         
         with tempfile.NamedTemporaryFile(suffix='.nsp', delete=False) as f:
-            f.write(b'test data')
+            f.write(b'PFS0')  # Valid NSP header
             temp_path = f.name
         
         try:
