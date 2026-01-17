@@ -1025,7 +1025,11 @@
         }
 
         // Load ignore preferences for the user
-        loadIgnorePreferences();
+        if (typeof loadIgnorePreferences === 'function') {
+            loadIgnorePreferences();
+        } else {
+            console.warn('loadIgnorePreferences not defined, skipping...');
+        }
 
         // 2. Fetch fresh data
         refreshLibrary();
