@@ -714,11 +714,15 @@
 
         // Debug: Show filtered/sorted order
         console.log('[Filters] Applied filters:', {query, gender, tag, currentSort, count: filteredGames.length});
-        console.log('[Filters] First 5 games:', filteredGames.slice(0, 5).map(g => ({
+        const sizeSorted = currentSort.split('-')[0] === 'size';
+        const first5 = filteredGames.slice(0, 5).map(g => ({
             name: g ? g.name : 'null',
-            size: g ? (g.size_formatted || g.size || 'no-size') : 'no-game'
-        })));
+            size: g ? g.size : 'no-size',
+            sizeFormatted: g ? g.size_formatted : 'no-size'
+        }));
+        console.log('[Filters] First 5 games:', first5);
         console.log('[Filters] currentSort field:', currentSort.split('-')[0]);
+        console.log('[Filters] size field check - first game size:', filteredGames[0] ? filteredGames[0].size : 'null');
 
         // Show/hide clear filters button based on active filters
         const hasActiveFilters = query || gender || tag || 
