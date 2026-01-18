@@ -122,6 +122,20 @@ body {
     transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
+@media screen and (min-width: 769px) {
+    .footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 40;
+    }
+    
+    body {
+        padding-bottom: 52px;
+    }
+}
+
 /* Navigation */
 .navbar {
     background-color: var(--bg-soft) !important;

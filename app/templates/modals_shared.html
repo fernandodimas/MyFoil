@@ -230,13 +230,15 @@
                                             </button>
                                         </p>
                                     </div>
-                                ` : (u.owned ? '<span class="tag is-warning is-light is-small">Erro</span>' : '<span class="tag is-danger is-light is-small">Falta</span>')}
-                            </td>
-                            <td class="has-text-centered">
-                                <input type="checkbox" class="is-small" 
-                                    id="${ignoreId}"
-                                    title="Ignorar esta atualização"
-                                    onchange="toggleItemIgnore('${game.id}', 'update', '${u.version}', this.checked)">
+                                ` : (u.owned ? '<span class="tag is-warning is-light is-small">Erro</span>' : `
+                                    <div class="field is-grouped is-grouped-centered is-align-items-center">
+                                        <span class="tag is-danger is-light is-small mr-2">Falta</span>
+                                        <input type="checkbox" class="is-small" 
+                                            id="${ignoreId}"
+                                            title="Ignorar esta atualização"
+                                            onchange="toggleItemIgnore('${game.id}', 'update', '${u.version}', this.checked)">
+                                    </div>
+                                `)}
                             </td>
                         </tr>
                     `;
@@ -253,12 +255,11 @@
                         </div>
                         <div class="table-container">
                             <table class="table is-narrow is-fullwidth is-size-7">
-                                <thead>
-                                    <tr>
-                                        <th>Versão</th>
+                                <tr>
+                                        <thead>
+                                    <th>Versão</th>
                                         <th>Lançamento</th>
                                         <th class="has-text-centered">Status</th>
-                                        <th class="has-text-centered" title="Ignorar">Ignorar</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -284,7 +285,6 @@
                                     <th>Nome</th>
                                     <th class="has-text-centered">Lançamento</th>
                                     <th class="has-text-centered">Status</th>
-                                    <th class="has-text-centered" title="Ignorar">Ignorar</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -310,13 +310,15 @@
                                                         </button>
                                                     </p>
                                                 </div>
-                                            ` : (d.owned ? '<span class="tag is-warning is-light is-small">Erro</span>' : '<span class="tag is-danger is-light is-small">Falta</span>')}
-                                        </td>
-                                        <td class="has-text-centered">
-                                            <input type="checkbox" class="is-small"
-                                                id="${ignoreId}"
-                                                title="Ignorar notificações desta DLC"
-                                                onchange="toggleItemIgnore('${game.id}', 'dlc', '${d.app_id}', this.checked)">
+                                            ` : (d.owned ? '<span class="tag is-warning is-light is-small">Erro</span>' : `
+                                                <div class="field is-grouped is-grouped-centered is-align-items-center">
+                                                    <span class="tag is-danger is-light is-small mr-2">Falta</span>
+                                                    <input type="checkbox" class="is-small"
+                                                        id="${ignoreId}"
+                                                        title="Ignorar esta DLC"
+                                                        onchange="toggleItemIgnore('${game.id}', 'dlc', '${d.app_id}', this.checked)">
+                                                </div>
+                                            `)}
                                         </td>
                                     </tr>
                                     `;
