@@ -1032,10 +1032,6 @@
         $('#gridZoom').val(savedZoom);
         updateGridZoom(savedZoom);
 
-        // Initialize pageSize from localStorage
-        pageSize = parseInt(localStorage.getItem('pageSize')) || 24;
-        updatePageSizeButtons();
-
         // Populated globally outside raw block
         setView(currentView);
     });
