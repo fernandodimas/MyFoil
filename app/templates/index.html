@@ -719,6 +719,14 @@
             sizeFormatted: g ? g.size_formatted : 'null'
         }));
         console.log('[Filters] First 5 games with SIZE:', first5);
+        
+        // Show last 5 to verify ordering
+        const last5 = filteredGames.slice(-5).map(g => ({
+            name: g ? g.name : 'null',
+            size: g ? String(g.size) : 'null',
+            sizeFormatted: g ? g.size_formatted : 'null'
+        }));
+        console.log('[Filters] Last 5 games (should be largest):', last5);
         console.log('[Filters] currentSort:', currentSort);
 
         // Show/hide clear filters button based on active filters
