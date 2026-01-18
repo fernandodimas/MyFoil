@@ -713,16 +713,13 @@
         });
 
         // Debug: Show filtered/sorted order
-        console.log('[Filters] Applied filters:', {query, gender, tag, currentSort, count: filteredGames.length});
-        const sizeSorted = currentSort.split('-')[0] === 'size';
         const first5 = filteredGames.slice(0, 5).map(g => ({
             name: g ? g.name : 'null',
-            size: g ? g.size : 'no-size',
-            sizeFormatted: g ? g.size_formatted : 'no-size'
+            size: g ? String(g.size) : 'null',
+            sizeFormatted: g ? g.size_formatted : 'null'
         }));
-        console.log('[Filters] First 5 games:', first5);
-        console.log('[Filters] currentSort field:', currentSort.split('-')[0]);
-        console.log('[Filters] size field check - first game size:', filteredGames[0] ? filteredGames[0].size : 'null');
+        console.log('[Filters] First 5 games with SIZE:', first5);
+        console.log('[Filters] currentSort:', currentSort);
 
         // Show/hide clear filters button based on active filters
         const hasActiveFilters = query || gender || tag || 
