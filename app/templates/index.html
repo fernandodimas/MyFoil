@@ -484,13 +484,6 @@
         setupInfiniteScroll();
     }
 
-        if (currentView === 'card') renderCardView(paged);
-        else if (currentView === 'icon') renderIconView(paged);
-        else renderListView(paged);
-
-        updatePagination();
-    }
-
     function refreshLibrary() {
         console.log("Refreshing library data...");
         
