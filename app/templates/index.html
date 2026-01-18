@@ -838,12 +838,23 @@
         const target = e.target.closest('[data-game-id]');
         if (!target) return;
 
-        const items = Array.from(document.querySelectorAll('#libraryContainer .grid-item, #libraryContainer tbody tr'));
-        const totalItems = items.length;
-        let currentIndex = items.indexOf(target);
-        if (currentIndex === -1) return;
+        // Get the game ID from the focused element
+        const currentGameId = target.dataset.gameId;
+        
+        // Find the current index in filteredGames (respects filters and sorting)
+        let currentIndex = filteredGames.findIndex(g => g && g.id === currentGameId);
+        if (currentIndex === -1) {
+            // Fallback to DOM order if not found in filteredGames
+            const items = Array.from(document.querySelectorAll('#libraryContainer .grid-item, #libraryContainer tbody tr'));
+            currentIndex = items.indexOf(target);
+            if (currentIndex === -1) return;
+        }
+
+        const totalItems = filteredGames.length;
+        if (totalItems === 0) return;
 
         // Calculate grid columns
+        const container = document.getElementById('libraryContainer');
         let columns = 1;
         if (currentView === 'card' || currentView === 'icon') {
             const gridElement = container.querySelector(':scope > .columns.is-grid, .is-grid');
@@ -883,19 +894,24 @@
             case 'Enter':
             case ' ':
                 e.preventDefault();
-                const gameId = target.dataset.gameId;
-                if (gameId) {
-                    showGameDetails(gameId);
+                if (currentGameId) {
+                    showGameDetails(currentGameId);
                 }
                 return;
             default:
                 return;
         }
 
-        if (nextIndex !== currentIndex && items[nextIndex]) {
-            items[nextIndex].focus();
-            currentlyFocusedIndex = nextIndex;
-            items[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (nextIndex !== currentIndex && nextIndex >= 0 && nextIndex < totalItems) {
+            const nextGame = filteredGames[nextIndex];
+            if (nextGame && nextGame.id) {
+                const nextElement = container.querySelector(`[data-game-id="${nextGame.id}"]`);
+                if (nextElement) {
+                    nextElement.focus();
+                    currentlyFocusedIndex = nextIndex;
+                    nextElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
         }
     }
 
@@ -903,8 +919,11 @@
         const target = e.target.closest('[data-game-id]');
         if (!target) return;
 
-        const items = document.querySelectorAll('#libraryContainer .grid-item, #libraryContainer tbody tr');
-        currentlyFocusedIndex = Array.from(items).indexOf(target);
+        const currentGameId = target.dataset.gameId;
+        const index = filteredGames.findIndex(g => g && g.id === currentGameId);
+        if (index !== -1) {
+            currentlyFocusedIndex = index;
+        }
     }
 
     function toggleSearchClearBtn() {
