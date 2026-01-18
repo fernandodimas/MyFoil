@@ -160,11 +160,9 @@
             $('#modalTitle').text(game.name);
 
             // Set navigation context for keyboard shortcuts
-            if (typeof games !== 'undefined' && games.length) {
-                window.setModalNavigationContext(id, games);
-            } else if (typeof filteredGames !== 'undefined' && filteredGames.length) {
-                window.setModalNavigationContext(id, filteredGames);
-            }
+            // Use filteredGames if available (follows current sort/filter), otherwise fall back to games
+            const navGames = (window.filteredGames && window.filteredGames.length) ? window.filteredGames : (window.games || []);
+            window.setModalNavigationContext(id, navGames);
 
             // Base Files Section
             let filesHtml = game.files && game.files.length > 0 ? `
@@ -770,6 +768,19 @@
     window.setModalNavigationContext = function (gameId, gamesList) {
         currentGameId = gameId;
         availableGames = gamesList || [];
+
+        // Debug: Log navigation context
+        if (availableGames.length > 0) {
+            const firstGame = availableGames[0];
+            const lastGame = availableGames[availableGames.length - 1];
+            console.log('[ModalNav] Context set:', {
+                currentId: gameId,
+                total: availableGames.length,
+                first: firstGame.name,
+                last: lastGame.name,
+                sort: window.filteredGames && window.filteredGames.length ? 'FILTERED' : 'ALL'
+            });
+        }
     };
 
     // Navigate to next/previous game

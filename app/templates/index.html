@@ -385,7 +385,7 @@
     {% raw %}
 
     let games = [];
-    let filteredGames = [];
+    window.filteredGames = [];
     let currentPage = 1;
     let pageSize = 24;
     let currentSort = localStorage.getItem('myfoil_library_sort') || 'name-asc';
@@ -663,7 +663,7 @@
         const showOnlyUpdates = $('#btnFilterPendingUpd').hasClass('is-primary');
         const showOnlyDlcs = $('#btnFilterPendingDlc').hasClass('is-primary');
 
-        filteredGames = games.filter(g => {
+        window.filteredGames = games.filter(g => {
             if (!g) return false;
             const gName = g.name || '';
             const gId = g.id || '';
@@ -680,7 +680,7 @@
         });
 
         // Apply Sorting
-        filteredGames.sort((a, b) => {
+        window.filteredGames.sort((a, b) => {
             const [field, order] = currentSort.split('-');
             let comparison = 0;
 
@@ -1063,7 +1063,7 @@
 
     // Initialize empty
     games = [];
-    filteredGames = [];
+    window.filteredGames = [];
 
     // Fetch games from API
     // Fetch games from API
@@ -1078,7 +1078,7 @@
                 if (games.length > 0) {
                     initGenders(games);
                     initTags(games);
-                    filteredGames = [...games];
+                    window.filteredGames = [...games];
                     applyFilters(); // Render cached data immediately
                 }
             } catch (e) {
