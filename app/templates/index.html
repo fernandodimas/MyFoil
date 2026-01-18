@@ -575,9 +575,6 @@
             `);
             $('#libraryContainer').append(card);
         });
-        
-        // Add keyboard navigation for cards
-        setupKeyboardNavigation();
     }
 
     function renderIconView(items) {
@@ -599,9 +596,6 @@
             `);
             $('#libraryContainer').append(card);
         });
-        
-        // Add keyboard navigation for icons
-        setupKeyboardNavigation();
     }
 
     function renderListView(items) {
@@ -643,9 +637,6 @@
             `);
         });
         $('#libraryContainer').append(table);
-        
-        // Add keyboard navigation for list
-        setupKeyboardNavigation();
     }
 
 
@@ -782,6 +773,9 @@
             renderListView(currentBatch);
         }
 
+        // Setup keyboard navigation for newly loaded items
+        setupKeyboardNavigation();
+
         scrollOffset += currentBatch.length;
 
         // Check if there are more items
@@ -812,31 +806,36 @@
     let currentlyFocusedIndex = -1;
 
     function setupKeyboardNavigation() {
-        const items = document.querySelectorAll('#libraryContainer .grid-item, #libraryContainer tbody tr');
-        items.forEach((item, index) => {
-            item.addEventListener('keydown', (e) => handleKeyboardNavigation(e, index));
-            item.addEventListener('focus', () => {
-                currentlyFocusedIndex = index;
-            });
-        });
+        // Use event delegation instead of adding listeners to each item
+        const container = document.getElementById('libraryContainer');
+        if (!container) return;
+
+        // Remove any existing delegated listener
+        container.removeEventListener('keydown', handleKeyDown);
+        container.removeEventListener('focus', handleFocus, true);
+
+        // Add new listeners using event delegation
+        container.addEventListener('keydown', handleKeyDown);
+        container.addEventListener('focus', handleFocus, true);
     }
 
-    function handleKeyboardNavigation(e, currentIndex) {
+    function handleKeyDown(e) {
+        const target = e.target.closest('[data-game-id]');
+        if (!target) return;
+
         const items = document.querySelectorAll('#libraryContainer .grid-item, #libraryContainer tbody tr');
         const totalItems = items.length;
+        let currentIndex = Array.from(items).indexOf(target);
+        if (currentIndex === -1) return;
 
         // Calculate grid columns for proper navigation
         const container = document.getElementById('libraryContainer');
-        const gridItems = container.querySelectorAll('.grid-item');
-        
-        // Get computed style to determine columns
         let columns = 1;
         if (currentView === 'card' || currentView === 'icon') {
-            const gridElement = container.querySelector('.is-grid');
+            const gridElement = container.querySelector(':scope > .columns.is-grid, .is-grid');
             if (gridElement) {
                 const gridStyle = window.getComputedStyle(gridElement);
-                const gridTemplateColumns = gridStyle.gridTemplateColumns;
-                columns = gridTemplateColumns.split(' ').length || 1;
+                columns = gridStyle.gridTemplateColumns.split(' ').length || 1;
             }
         }
 
@@ -853,17 +852,11 @@
                 break;
             case 'ArrowDown':
                 e.preventDefault();
-                nextIndex = currentIndex + columns;
-                if (nextIndex >= totalItems) {
-                    nextIndex = totalItems - 1;
-                }
+                nextIndex = Math.min(currentIndex + columns, totalItems - 1);
                 break;
             case 'ArrowUp':
                 e.preventDefault();
-                nextIndex = currentIndex - columns;
-                if (nextIndex < 0) {
-                    nextIndex = 0;
-                }
+                nextIndex = Math.max(currentIndex - columns, 0);
                 break;
             case 'Home':
                 e.preventDefault();
@@ -876,22 +869,28 @@
             case 'Enter':
             case ' ':
                 e.preventDefault();
-                const gameId = items[currentIndex].dataset.gameId;
+                const gameId = target.dataset.gameId;
                 if (gameId) {
                     showGameDetails(gameId);
                 }
                 return;
             default:
-                return; // Allow other keys to propagate
+                return;
         }
 
         if (nextIndex !== currentIndex && items[nextIndex]) {
             items[nextIndex].focus();
             currentlyFocusedIndex = nextIndex;
-            
-            // Scroll item into view if needed
             items[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
+    }
+
+    function handleFocus(e) {
+        const target = e.target.closest('[data-game-id]');
+        if (!target) return;
+
+        const items = document.querySelectorAll('#libraryContainer .grid-item, #libraryContainer tbody tr');
+        currentlyFocusedIndex = Array.from(items).indexOf(target);
     }
 
     function toggleSearchClearBtn() {
