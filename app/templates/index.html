@@ -555,8 +555,8 @@
             }
             
             const card = $(`
-                <div class="grid-item" data-index="${index}" data-game-id="${game.id}" tabindex="0" role="button" aria-label="${game.name}">
-                    <div class="card game-card is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')">
+                <div class="grid-item" data-index="${index}" data-game-id="${game.id}" tabindex="0" role="button" aria-label="${game.name}" onclick="focusAndOpenGame('${game.id}')">
+                    <div class="card game-card is-paddingless is-shadowless">
                         <div class="card-image position-relative overflow-hidden">
                             <figure class="image is-16by9">
                                 <img src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" style="object-fit: cover;">
@@ -593,8 +593,8 @@
         items.forEach((game, index) => {
             const statusDotClass = game.status_color === 'orange' ? 'bg-orange' : (game.status_color === 'green' ? 'bg-green' : 'bg-gray');
             const card = $(`
-                <div class="grid-item" data-index="${index}" data-game-id="${game.id}" tabindex="0" role="button" aria-label="${game.name}">
-                    <div class="card game-card is-paddingless is-shadowless" onclick="showGameDetails('${game.id}')" title="${game.name}">
+                <div class="grid-item" data-index="${index}" data-game-id="${game.id}" tabindex="0" role="button" aria-label="${game.name}" onclick="focusAndOpenGame('${game.id}')" title="${game.name}">
+                    <div class="card game-card is-paddingless is-shadowless">
                         <div class="card-image">
                             <figure class="image is-square bg-light relative">
                                 <img src="${game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" class="p-0" loading="lazy" style="object-fit: cover; width: 100%; height: 100%;">
@@ -635,7 +635,7 @@
             const statusText = game.status_color === 'orange' ? t('Missing') : (game.status_color === 'green' ? t('Owned') : t('Incomplete'));
 
             table.find('tbody').append(`
-                <tr data-index="${index}" data-game-id="${game.id || game.title_id}" tabindex="0" role="button" onclick="showGameDetails('${game.id || game.title_id}')">
+                <tr data-index="${index}" data-game-id="${game.id || game.title_id}" tabindex="0" role="button" onclick="focusAndOpenGame('${game.id || game.title_id}')">
                     <td class="p-1 has-text-centered"><img src="${game.iconUrl || '/static/img/no-icon.png'}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;"></td>
                     <td class="is-vcentered">
                         <strong class="is-size-7-mobile">${game.name || 'Unknown'}</strong>
@@ -953,6 +953,18 @@
             $('#searchClearBtn').hide();
             $('#searchIcon').show();
         }
+    }
+
+    // Focus on grid item and open game details
+    function focusAndOpenGame(gameId) {
+        // Find the grid-item and focus it
+        const gridItem = document.querySelector(`.grid-item[data-game-id="${gameId}"]`);
+        if (gridItem) {
+            gridItem.focus();
+            console.log('[Click] Focused grid-item:', gameId);
+        }
+        // Then show details
+        showGameDetails(gameId);
     }
 
     $('#btnFilterPendingBase').on('click', function () {
