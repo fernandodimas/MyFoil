@@ -768,19 +768,6 @@
     window.setModalNavigationContext = function (gameId, gamesList) {
         currentGameId = gameId;
         availableGames = gamesList || [];
-
-        // Debug: Log navigation context
-        if (availableGames.length > 0) {
-            const firstGame = availableGames[0];
-            const lastGame = availableGames[availableGames.length - 1];
-            console.log('[ModalNav] Context set:', {
-                currentId: gameId,
-                total: availableGames.length,
-                first: firstGame.name,
-                last: lastGame.name,
-                sort: window.filteredGames && window.filteredGames.length ? 'FILTERED' : 'ALL'
-            });
-        }
     };
 
     // Navigate to next/previous game

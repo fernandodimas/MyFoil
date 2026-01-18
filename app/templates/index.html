@@ -718,7 +718,6 @@
             size: g ? String(g.size) : 'null',
             sizeFormatted: g ? g.size_formatted : 'null'
         }));
-        console.log('[Filters] First 5 games with SIZE:', first5);
         
         // Show last 5 to verify ordering
         const last5 = filteredGames.slice(-5).map(g => ({
@@ -726,8 +725,7 @@
             size: g ? String(g.size) : 'null',
             sizeFormatted: g ? g.size_formatted : 'null'
         }));
-        console.log('[Filters] Last 5 games (should be largest):', last5);
-        console.log('[Filters] currentSort:', currentSort);
+        console.log('[Debug] Sorting check - First 5:', first5, '| Last 5:', last5);
 
         // Show/hide clear filters button based on active filters
         const hasActiveFilters = query || gender || tag || 
@@ -855,23 +853,16 @@
         const target = e.target.closest('[data-game-id]');
         if (!target) return;
 
-        // Debug logging
-        console.log('[Keyboard] Key pressed:', e.key, '| Current target:', target.dataset.gameId);
-        console.log('[Keyboard] filteredGames length:', filteredGames.length, '| currentlyFocusedIndex:', currentlyFocusedIndex);
-
         // Get the game ID from the focused element
         const currentGameId = target.dataset.gameId;
         
         // Find the current index in filteredGames (respects filters and sorting)
         let currentIndex = filteredGames.findIndex(g => g && g.id === currentGameId);
         
-        console.log('[Keyboard] Current game:', currentGameId, '| Found at index:', currentIndex);
-
         if (currentIndex === -1) {
             // Fallback to DOM order if not found in filteredGames
             const items = Array.from(document.querySelectorAll('#libraryContainer .grid-item, tbody tr'));
             currentIndex = items.indexOf(target);
-            console.log('[Keyboard] Not in filteredGames, using DOM index:', currentIndex);
             if (currentIndex === -1) return;
         }
 
@@ -927,15 +918,11 @@
                 return;
         }
 
-        console.log('[Keyboard] Navigating from index', currentIndex, 'to', nextIndex);
-
         if (nextIndex !== currentIndex && nextIndex >= 0 && nextIndex < totalItems) {
             const nextGame = filteredGames[nextIndex];
-            console.log('[Keyboard] Next game:', nextGame ? nextGame.name : 'null', '| ID:', nextGame ? nextGame.id : 'null');
             
             if (nextGame && nextGame.id) {
                 const nextElement = container.querySelector(`[data-game-id="${nextGame.id}"]`);
-                console.log('[Keyboard] Next element found:', !!nextElement);
                 
                 if (nextElement) {
                     nextElement.focus();
