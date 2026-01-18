@@ -209,6 +209,18 @@
         box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
     }
 
+    .game-card:focus-within,
+    .grid-item:focus,
+    .grid-item:focus-within {
+        outline: 2px solid var(--bulma-primary);
+        outline-offset: 2px;
+    }
+
+    .grid-item:focus .game-card,
+    .grid-item:focus-within .game-card {
+        box-shadow: 0 0 0 3px var(--bulma-primary-light);
+    }
+
     .card-image img {
         transition: transform 0.3s;
     }
@@ -806,30 +818,32 @@
     let currentlyFocusedIndex = -1;
 
     function setupKeyboardNavigation() {
-        // Use event delegation instead of adding listeners to each item
         const container = document.getElementById('libraryContainer');
-        if (!container) return;
+        if (!container) {
+            console.warn('Keyboard nav: container not found');
+            return;
+        }
 
-        // Remove any existing delegated listener
+        // Use event delegation - add listeners to container only
         container.removeEventListener('keydown', handleKeyDown);
         container.removeEventListener('focus', handleFocus, true);
 
-        // Add new listeners using event delegation
         container.addEventListener('keydown', handleKeyDown);
         container.addEventListener('focus', handleFocus, true);
+        
+        console.log('Keyboard navigation setup complete, items:', container.querySelectorAll('.grid-item, tbody tr').length);
     }
 
     function handleKeyDown(e) {
         const target = e.target.closest('[data-game-id]');
         if (!target) return;
 
-        const items = document.querySelectorAll('#libraryContainer .grid-item, #libraryContainer tbody tr');
+        const items = Array.from(document.querySelectorAll('#libraryContainer .grid-item, #libraryContainer tbody tr'));
         const totalItems = items.length;
-        let currentIndex = Array.from(items).indexOf(target);
+        let currentIndex = items.indexOf(target);
         if (currentIndex === -1) return;
 
-        // Calculate grid columns for proper navigation
-        const container = document.getElementById('libraryContainer');
+        // Calculate grid columns
         let columns = 1;
         if (currentView === 'card' || currentView === 'icon') {
             const gridElement = container.querySelector(':scope > .columns.is-grid, .is-grid');
