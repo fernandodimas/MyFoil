@@ -168,51 +168,48 @@ body {
     gap: 0.5rem;
 }
 
-.carousel-viewport {
-    flex: 1;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-behavior: smooth;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
+/* Swiper Screenshot Carousel Custom Styles */
+.swiper-screenshots {
+    padding: 10px 0 40px 0;
 }
 
-.carousel-images {
-    display: flex;
-    gap: 8px;
-    transition: transform 0.3s ease;
-    scroll-behavior: smooth;
+.swiper-screenshots .swiper-slide {
+    width: auto;
+    max-width: 320px;
 }
 
-.carousel-slide {
-    flex-shrink: 0;
-    width: 280px;
-    height: 158px;
-    scroll-snap-align: start;
+.swiper-screenshots .swiper-slide img {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.carousel-slide img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 6px;
-    border: 1px solid var(--border-color);
-    transition: transform 0.2s ease;
+.swiper-pagination-bullet {
+    background: var(--bulma-text) !important;
+    opacity: 0.5 !important;
 }
 
-.carousel-slide img:hover {
-    transform: scale(1.02);
+.swiper-pagination-bullet-active {
+    background: var(--bulma-primary) !important;
+    opacity: 1 !important;
 }
 
-.carousel-nav {
-    flex-shrink: 0;
+.swiper-button-prev,
+.swiper-button-next {
+    color: var(--bulma-text) !important;
+    background: rgba(255, 255, 255, 0.8);
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50%;
 }
 
-@media screen and (max-width: 768px) {
-    .carousel-slide {
-        width: 200px;
-        height: 113px;
-    }
+.swiper-button-prev:after,
+.swiper-button-next:after {
+    font-size: 16px !important;
+}
+
+[data-theme="dark"] .swiper-button-prev,
+[data-theme="dark"] .swiper-button-next {
+    background: rgba(255, 255, 255, 0.15);
 }
 
 /* Navigation */

@@ -442,26 +442,17 @@
                             ${game.screenshots && game.screenshots.length > 0 ? `
                             <div class="screenshot-carousel mt-5">
                                 <p class="heading has-text-weight-bold mb-3">Screenshots</p>
-                                <div class="carousel is-align-items-center" id="gameScreenshotsCarousel">
-                                    <div class="carousel-nav">
-                                        <button class="button is-small is-light" onclick="scrollScreenshots(-1)">
-                                            <span class="icon"><i class="bi bi-chevron-left"></i></span>
-                                        </button>
+                                <div class="swiper swiper-screenshots" id="gameScreenshotsSwiper">
+                                    <div class="swiper-wrapper">
+                                        ${game.screenshots.map((url, idx) => `
+                                            <div class="swiper-slide">
+                                                <img src="${url}" alt="Screenshot ${idx + 1}" loading="lazy" onclick="openScreenshotModal('${url}')" style="cursor: pointer; width: 100%; height: 180px; object-fit: cover; border-radius: 8px;">
+                                            </div>
+                                        `).join('')}
                                     </div>
-                                    <div class="carousel-viewport">
-                                        <div class="carousel-images" id="gameScreenshots">
-                                            ${game.screenshots.map((url, idx) => `
-                                                <div class="carousel-slide" data-index="${idx}">
-                                                    <img src="${url}" alt="Screenshot ${idx + 1}" loading="lazy" onclick="openScreenshotModal('${url}')" style="cursor: pointer;">
-                                                </div>
-                                            `).join('')}
-                                        </div>
-                                    </div>
-                                    <div class="carousel-nav">
-                                        <button class="button is-small is-light" onclick="scrollScreenshots(1)">
-                                            <span class="icon"><i class="bi bi-chevron-right"></i></span>
-                                        </button>
-                                    </div>
+                                    <div class="swiper-pagination"></div>
+                                    <div class="swiper-button-prev"></div>
+                                    <div class="swiper-button-next"></div>
                                 </div>
                             </div>
                             ` : ''}
@@ -472,6 +463,27 @@
             $('#modalContent').html(content);
             loadGameTagsAndWishlist(game.id);
             openModal('gameDetailsModal');
+            
+            // Initialize Swiper carousel
+            setTimeout(() => {
+                const swiperEl = document.querySelector('.swiper-screenshots');
+                if (swiperEl && !swiperEl.swiper) {
+                    new Swiper('.swiper-screenshots', {
+                        slidesPerView: 'auto',
+                        spaceBetween: 12,
+                        centeredSlides: true,
+                        loop: true,
+                        pagination: {
+                            el: '.swiper-pagination',
+                            clickable: true,
+                        },
+                        navigation: {
+                            nextEl: '.swiper-button-next',
+                            prevEl: '.swiper-button-prev',
+                        },
+                    });
+                }
+            }, 100);
         });
     }
 
@@ -879,21 +891,6 @@
                 break;
         }
     });
-
-    // Screenshot Carousel Functions
-    function scrollScreenshots(direction) {
-        const container = document.getElementById('gameScreenshotsCarousel');
-        if (!container) return;
-
-        const viewport = container.querySelector('.carousel-viewport');
-        if (!viewport) return;
-
-        const slideWidth = 288; // 280px + 8px gap
-        viewport.scrollBy({
-            left: direction * slideWidth,
-            behavior: 'smooth'
-        });
-    }
 
     function openScreenshotModal(url) {
         $('#screenshotModalImage').attr('src', url);
