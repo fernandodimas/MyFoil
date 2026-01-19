@@ -148,3 +148,160 @@ python app/app.py
 ## License
 
 Same as Ownfoil - see LICENSE file
+
+---
+
+# Histórico de Alterações Detalhado (2026-01-19)
+
+## 1. Funcionalidades Implementadas após b684b5b
+
+### 1.1 Carrossel de Screenshots no Modal de Informações
+
+**Commit:** `8eadb41`  
+**Descrição:** Adicionado componente de carrossel para exibir screenshots dos jogos no modal de informações.
+
+**Arquivos modificados:**
+- `app/titles.py` - Adicionado campo `screenshots` na resposta da API
+- `app/rest_api.py` - Adicionado campo `screenshots` ao `game_model`
+- `app/templates/modals_shared.html` - Componente de carrossel HTML/CSS
+- `app/static/style.css` - Estilos do carrossel
+
+### 1.2 Footer Fixo Desktop / Estático Mobile
+
+**Commits:** `94dff45`, `205493c`, `ac52f93`  
+**Descrição:** Footer com posicionamento correto em diferentes dispositivos.
+
+**Simplificações:**
+- Removida seção "Updates"
+- "Identificação" movida para a direita
+- CSS consolidado no style.css
+
+### 1.3 Filtros com Ignore (Pendentes Ocultos)
+
+**Commit:** `8eadb41`, `b684b5b`  
+**Descrição:** Jogos com updates/DLCs ignorados não aparecem nos filtros de "Pendente" e mostram status green.
+
+**Lógica:**
+```javascript
+if (g.has_base && !g.has_latest_version) {
+    for (let v = ownedVersion + 1; v <= latestVersion; v++) {
+        if (!ignoredUpdates[v.toString()]) {
+            hasNonIgnoredUpdates = true;
+            break;
+        }
+    }
+}
+```
+
+### 1.4 Campo `added_at` (Data de Inclusão na Biblioteca)
+
+**Commit:** `6da0ad4`  
+**Descrição:** Rastreia quando cada jogo foi adicionado à biblioteca.
+
+**Arquivos:**
+- `app/db.py` - Coluna `added_at` no modelo Titles
+- `app/library.py` - Define `added_at` quando jogo obtém base
+- `app/rest_api.py` - Campo na API
+- `app/templates/modals_shared.html` - Exibição discreta no modal
+- `app/migrations/versions/a1b2c3d4e5f7_add_added_at_to_titles.py` - Migração
+
+### 1.5 Checkbox de Ignorar Apenas para Ficheiros Faltantes
+
+**Commit:** `81b5b9b`  
+**Descrição:** Checkbox aparece inline com status "Falta".
+
+### 1.6 Screenshots Carregadas do titles.json
+
+**Commit:** `1386407`  
+**Descrição:** Screenshots do titles.json principal, não regionais.
+
+**Solução:**
+- `get_screenshots_from_titles_json()` - Busca do titles.json
+- Não sobrepor screenshots vazias no merge
+
+---
+
+## 2. Correções de Performance
+
+### 2.1 Pre-loading de Versions e DLCs
+
+**Commit:** `fe42e06`  
+**Antes:** O(n*m) - 260 jogos × 50000+ DLCs  
+**Depois:** O(n) + O(m) - uma carga + acesso O(1)
+
+**Resultado:** ~8 minutos → ~6 segundos
+
+### 2.2 DLC Index para Lookup O(1)
+
+**Commit:** `f58e88a`  
+**Descrição:** Criar índice `_dlc_index` para DLCs.
+
+```python
+_dlc_index = {}
+for app_id, versions in _cnmts_db.items():
+    for version, version_description in versions.items():
+        if version_description.get("titleType") == 130:  # DLC
+            base_tid = version_description.get("otherApplicationId")
+            _dlc_index[base_tid].append(app_id.upper())
+```
+
+### 2.3 Batch Loading de DLC Info
+
+**Commit:** `57514ef`  
+**Descrição:** Pre-fetch de todas as DLC info de uma vez.
+
+---
+
+## 3. Correções de Bugs
+
+### 3.1 Ignore Preferences Carregadas Antes dos Filtros
+
+**Commit:** `b684b5b`  
+**Problema:** `applyFilters()` executado antes de `ignorePreferences`.
+
+### 3.2 Alembic Multiple Heads
+
+**Commit:** `fa95c56`  
+**Problema:** Duas migrações dependendo do mesmo revision.
+
+### 3.3 Footer Mobile Fixo
+
+**Commits:** `205493c`, `ac52f93`  
+**Solução:** Media query para max-width: 768px
+
+### 3.4 Load Keys Retornando Boolean
+
+**Commit:** `5dac8f1`  
+**Correção:** Retornar lista vazia `[]` em vez de `False`
+
+---
+
+## 4. Navegação por Teclado
+
+**Commits:** `dd5d130`, `267f6e5`, `ab4f860`  
+- setas esquerda/direita para navegar
+- Home/End para primeiro/último jogo
+- Enter para abrir detalhes
+- Focus segue ordem filtrada/sorteada
+
+---
+
+## 5. Resumo por Status
+
+| Funcionalidade | Status | Commit |
+|----------------|--------|--------|
+| Carrossel screenshots | ✅ | `8eadb41` |
+| Footer desktop/mobile | ✅ | `94dff45`, `205493c` |
+| Filtros com ignore | ✅ | `8eadb41`, `b684b5b` |
+| Campo added_at | ✅ | `6da0ad4` |
+| Checkbox ignorar | ✅ | `81b5b9b` |
+| Screenshots titles.json | ✅ | `1386407` |
+| Performance pre-loading | ✅ | `fe42e06` |
+| DLC index O(1) | ✅ | `f58e88a` |
+| Batch DLC loading | ✅ | `57514ef` |
+| Cleanup órfãos | ❌ | `0f01c50` (revertido) |
+| Settings cache | ❌ | `0f01c50` (revertido) |
+
+---
+
+*Documento gerado em: 2026-01-19*

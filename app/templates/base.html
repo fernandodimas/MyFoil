@@ -245,15 +245,34 @@
             }
         }
 
-        /* Sticky Footer - Fixed at bottom always visible */
+        /* Footer - Fixed on desktop, static on mobile */
         .footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
+            border-top: 1px solid var(--border-color);
+        }
+
+        @media screen and (min-width: 769px) {
+            .footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 1000;
+            }
+            body {
+                padding-bottom: 52px;
+            }
+        }
+
+        @media screen and (max-width: 768px) {
+            .footer {
+                position: static !important;
+                bottom: auto !important;
+            }
+            body {
+                padding-bottom: 0 !important;
+            }
         }
 
         /* Search clear button styling */
