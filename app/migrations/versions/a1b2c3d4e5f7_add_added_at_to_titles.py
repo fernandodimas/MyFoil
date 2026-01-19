@@ -1,7 +1,7 @@
 """Add added_at column to Titles
 
 Revision ID: a1b2c3d4e5f7
-Revises: 9207770128d9
+Revises: a1b2c3d4e5f6
 
 """
 
@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 
 # revision identifiers, used by Alembic.
 revision = "a1b2c3d4e5f7"
-down_revision = "9207770128d9"
+down_revision = "a1b2c3d4e5f6"
 branch_labels = None
 depends_on = None
 
