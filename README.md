@@ -166,11 +166,6 @@ MyFoil comes with four pre-configured sources (in priority order):
    - Updated frequently by the community
    - Direct from GitHub's raw content
 
-4. **julesontheroad/titledb (GitHub)** - Priority 4 (Enabled)
-   - Reliable mirror of TitleDB metadata
-   - Good fallback option
-   - Hosted on GitHub
-
 ## How It Works
 
 When MyFoil needs to update TitleDB:

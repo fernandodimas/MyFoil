@@ -155,12 +155,6 @@ class TitleDBSourceManager:
             base_url="https://raw.githubusercontent.com/blawar/titledb/master",
             priority=3,
             source_type='json'
-        ),
-        TitleDBSource(
-            name="julesontheroad/titledb (GitHub)",
-            base_url="https://raw.githubusercontent.com/julesontheroad/titledb/master",
-            priority=4,
-            source_type='json'
         )
     ]
     
@@ -180,8 +174,14 @@ class TitleDBSourceManager:
                 
                 # Migration: Remove defunct sources and add new defaults
                 config_urls = [s.base_url for s in self.sources]
-                defunct_urls = ["https://raw.githubusercontent.com/Big-On-The-Bottle/titledb/main"]
-                defunct_names = ["bottle/titledb (GitHub)"]
+                defunct_urls = [
+                    "https://raw.githubusercontent.com/Big-On-The-Bottle/titledb/main",
+                    "https://raw.githubusercontent.com/julesontheroad/titledb/master"
+                ]
+                defunct_names = [
+                    "bottle/titledb (GitHub)",
+                    "julesontheroad/titledb (GitHub)"
+                ]
                 
                 # Filter out defunct
                 original_count = len(self.sources)
@@ -194,6 +194,7 @@ class TitleDBSourceManager:
                     if default_s.base_url not in new_config_urls:
                         self.sources.append(default_s)
                         added = True
+                
                 
                 if len(self.sources) != original_count or added:
                     logger.info("Syncing TitleDB sources (removing defunct or adding newly defaults)...")
