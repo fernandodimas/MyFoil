@@ -357,6 +357,12 @@
                                     <p class="is-size-7 heading mb-1 opacity-50">Total em Disco</p>
                                     <p class="is-size-6 has-text-weight-bold font-mono">${game.size_formatted || '--'}</p>
                                 </div>
+                                ${game.added_at ? `
+                                <div class="mb-3">
+                                    <p class="is-size-7 heading mb-1 opacity-30">Adicionado</p>
+                                    <p class="is-size-7 opacity-40 font-mono">${new Date(game.added_at).toLocaleDateString()}</p>
+                                </div>
+                                ` : ''}
                                 <div>
                                     <p class="is-size-7 heading mb-1 opacity-50">${t('Genre')}</p>
                                     <div class="tags">
