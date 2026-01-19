@@ -139,7 +139,7 @@ def save_titledb_to_db(source_files):
 
         logger.info("Saving TitleDB to database cache...")
 
-        now = time.time()
+        now = datetime.datetime.now()
 
         # Clear old cache entries
         try:
@@ -191,7 +191,7 @@ def save_titledb_to_db(source_files):
             db.session.bulk_save_objects(dlc_entries)
 
         db.session.commit()
-        _titledb_cache_timestamp = now
+        _titledb_cache_timestamp = time.time()  # Use time.time() for cache TTL comparison
         logger.info(
             f"TitleDB saved to DB cache: {len(title_entries)} titles, {len(version_entries)} versions, {len(dlc_entries)} DLCs"
         )
