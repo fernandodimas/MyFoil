@@ -684,7 +684,11 @@ def app_info_api(id):
     has_owned_files = len(unique_base_files) > 0
     result["owned"] = result["has_base"] or has_owned_files
 
-    return jsonify(result)
+    resp = jsonify(result)
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 
 @library_bp.route("/tags")
