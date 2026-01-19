@@ -59,13 +59,162 @@ _titles_db = None
 _versions_db = None
 _versions_db = None
 _loaded_titles_file = None  # Track which titles file was loaded
-_titledb_cache_timestamp = None  # Timestamp when TitleDB was last loaded
-_titledb_cache_ttl = 3600  # TTL em segundos (1 hora padrão) - pode ser configurado via settings
+_titledb_cache_timestamp = None  # Timestamp when TitleDB is last loaded
+_titledb_cache_ttl = 3600  # TTL in seconds (1 hour default)
 
 
 def get_titles_count():
     global _titles_db
     return len(_titles_db) if _titles_db else 0
+
+
+# Database cache functions for TitleDB
+def load_titledb_from_db():
+    """Load TitleDB data from database cache if available and valid."""
+    global _titles_db, _versions_db, _cnmts_db, _titledb_cache_timestamp, _titles_db_loaded
+
+    try:
+        from db import db, TitleDBCache, TitleDBVersions, TitleDBDLCs
+
+        # Check if cache tables exist
+        try:
+            cache_count = TitleDBCache.query.count()
+            if cache_count == 0:
+                logger.info("TitleDB cache is empty, will load from files")
+                return False
+        except Exception:
+            logger.warning("TitleDB cache tables don't exist yet")
+            return False
+
+        # Load titles from cache
+        logger.info(f"Loading TitleDB from database cache ({cache_count} titles)...")
+        cached_titles = TitleDBCache.query.all()
+
+        _titles_db = {}
+        for entry in cached_titles:
+            _titles_db[entry.title_id.upper()] = entry.data
+
+        # Load versions from cache
+        cached_versions = TitleDBVersions.query.all()
+        _versions_db = {}
+        for entry in cached_versions:
+            tid = entry.title_id.lower()
+            if tid not in _versions_db:
+                _versions_db[tid] = {}
+            _versions_db[tid][str(entry.version)] = entry.release_date
+
+        # Load DLCs from cache and build index
+        _cnmts_db = {}
+        cached_dlcs = TitleDBDLCs.query.all()
+        for entry in cached_dlcs:
+            base_tid = entry.base_title_id.lower()
+            dlc_app_id = entry.dlc_app_id.upper()
+
+            # Build CNMT-style structure for compatibility
+            if base_tid not in _cnmts_db:
+                _cnmts_db[base_tid] = {}
+            _cnmts_db[base_tid][dlc_app_id] = {
+                "titleType": 130,  # DLC type
+                "otherApplicationId": base_tid,
+            }
+
+        _titles_db_loaded = True
+        _titledb_cache_timestamp = datetime.datetime.now()
+        logger.info(
+            f"TitleDB loaded from DB cache: {len(_titles_db)} titles, {len(_versions_db)} versions, {len(cached_dlcs)} DLCs"
+        )
+        return True
+
+    except Exception as e:
+        logger.error(f"Error loading TitleDB from cache: {e}")
+        return False
+
+
+def save_titledb_to_db(source_files):
+    """Save TitleDB data to database cache for fast loading."""
+    global _titles_db, _versions_db, _cnmts_db, _titledb_cache_timestamp
+
+    try:
+        from db import db, TitleDBCache, TitleDBVersions, TitleDBDLCs
+
+        logger.info("Saving TitleDB to database cache...")
+
+        now = datetime.datetime.now()
+
+        # Clear old cache entries
+        try:
+            TitleDBCache.query.delete()
+            TitleDBVersions.query.delete()
+            TitleDBDLCs.query.delete()
+            db.session.commit()
+        except Exception as e:
+            logger.warning(f"Could not clear old cache: {e}")
+            db.session.rollback()
+
+        # Batch insert titles
+        title_entries = []
+        for tid, data in _titles_db.items():
+            title_entries.append(
+                TitleDBCache(
+                    title_id=tid,
+                    data=data,
+                    source=source_files.get(tid.lower(), "titles.json"),
+                    downloaded_at=now,
+                    updated_at=now,
+                )
+            )
+
+        if title_entries:
+            db.session.bulk_save_objects(title_entries)
+
+        # Batch insert versions
+        version_entries = []
+        for tid, versions in (_versions_db or {}).items():
+            for version_str, release_date in versions.items():
+                try:
+                    version_entries.append(
+                        TitleDBVersions(title_id=tid, version=int(version_str), release_date=release_date)
+                    )
+                except (ValueError, TypeError):
+                    continue
+
+        if version_entries:
+            db.session.bulk_save_objects(version_entries)
+
+        # Batch insert DLCs
+        dlc_entries = []
+        for base_tid, dlcs in (_cnmts_db or {}).items():
+            for dlc_app_id in dlcs.keys():
+                dlc_entries.append(TitleDBDLCs(base_title_id=base_tid, dlc_app_id=dlc_app_id))
+
+        if dlc_entries:
+            db.session.bulk_save_objects(dlc_entries)
+
+        db.session.commit()
+        _titledb_cache_timestamp = now
+        logger.info(
+            f"TitleDB saved to DB cache: {len(title_entries)} titles, {len(version_entries)} versions, {len(dlc_entries)} DLCs"
+        )
+        return True
+
+    except Exception as e:
+        logger.error(f"Error saving TitleDB to cache: {e}")
+        try:
+            db.session.rollback()
+        except:
+            pass
+        return False
+
+
+def is_db_cache_valid():
+    """Check if database cache is still valid (not expired)."""
+    global _titledb_cache_timestamp, _titledb_cache_ttl
+
+    if _titledb_cache_timestamp is None:
+        return False
+
+    age = (datetime.datetime.now() - _titledb_cache_timestamp).total_seconds()
+    return age < _titledb_cache_ttl
 
 
 def robust_json_load(filepath):
@@ -339,6 +488,12 @@ def load_titledb(force=False):
         _titledb_cache_timestamp = None
 
     if not _titles_db_loaded:
+        # Priority 1: Try loading from database cache (fast - < 100ms)
+        if is_db_cache_valid():
+            if load_titledb_from_db():
+                identification_in_progress_count -= 1
+                return
+
         logger.info("Loading TitleDBs into memory...")
 
         # Ensure TitleDB directory exists
@@ -451,6 +606,12 @@ def load_titledb(force=False):
         _titles_db_loaded = True
         _titledb_cache_timestamp = current_time  # Atualizar timestamp do cache
         logger.info(f"TitleDBs loaded. Cache TTL: {_titledb_cache_ttl}s")
+
+        # Save to database cache for fast loading next time
+        source_files = {}
+        for f in _loaded_titles_file:
+            source_files[f.lower().replace(".json", "")] = f
+        save_titledb_to_db(source_files)
 
         # Sync metadata to database if loaded
         if _titles_db:

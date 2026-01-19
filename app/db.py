@@ -125,6 +125,45 @@ class Titles(db.Model):
     tags = db.relationship("Tag", secondary="title_tag", backref=db.backref("titles", lazy="dynamic"))
 
 
+# TitleDB Cache - stores downloaded TitleDB data for fast access
+class TitleDBCache(db.Model):
+    __tablename__ = "titledb_cache"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title_id = db.Column(db.String(16), unique=True, nullable=False, index=True)
+    data = db.Column(db.JSON, nullable=False)  # Full title data as JSON
+    source = db.Column(db.String(50), nullable=False)  # 'titles.json', 'titles.BR.pt.json', etc.
+    downloaded_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
+    updated_at = db.Column(db.DateTime, nullable=False, default=db.func.now(), onupdate=db.func.now())
+
+    # Indexes for fast lookups
+    __table_args__ = (db.Index("idx_source", "source"),)
+
+
+class TitleDBVersions(db.Model):
+    __tablename__ = "titledb_versions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title_id = db.Column(db.String(16), nullable=False, index=True)
+    version = db.Column(db.Integer, nullable=False)
+    release_date = db.Column(db.String(8))  # YYYYMMDD
+
+    __table_args__ = (db.Index("idx_title_version", "title_id", "version"),)
+
+
+class TitleDBDLCs(db.Model):
+    __tablename__ = "titledb_dlcs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    base_title_id = db.Column(db.String(16), nullable=False, index=True)
+    dlc_app_id = db.Column(db.String(16), nullable=False, index=True)
+
+    __table_args__ = (
+        db.Index("idx_dlc_base", "base_title_id"),
+        db.Index("idx_dlc_app", "dlc_app_id"),
+    )
+
+
 # Association table for many-to-many relationship between Apps and Files
 app_files = db.Table(
     "app_files",
