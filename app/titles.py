@@ -119,7 +119,7 @@ def load_titledb_from_db():
             }
 
         _titles_db_loaded = True
-        _titledb_cache_timestamp = datetime.datetime.now()
+        _titledb_cache_timestamp = time.time()
         logger.info(
             f"TitleDB loaded from DB cache: {len(_titles_db)} titles, {len(_versions_db)} versions, {len(cached_dlcs)} DLCs"
         )
@@ -139,7 +139,7 @@ def save_titledb_to_db(source_files):
 
         logger.info("Saving TitleDB to database cache...")
 
-        now = datetime.datetime.now()
+        now = time.time()
 
         # Clear old cache entries
         try:
@@ -213,7 +213,7 @@ def is_db_cache_valid():
     if _titledb_cache_timestamp is None:
         return False
 
-    age = (datetime.datetime.now() - _titledb_cache_timestamp).total_seconds()
+    age = time.time() - _titledb_cache_timestamp
     return age < _titledb_cache_ttl
 
 
@@ -604,7 +604,7 @@ def load_titledb(force=False):
         _cnmts_db = _cnmts_db or {}
 
         _titles_db_loaded = True
-        _titledb_cache_timestamp = current_time  # Atualizar timestamp do cache
+        _titledb_cache_timestamp = time.time()  # Use Unix timestamp for consistency
         logger.info(f"TitleDBs loaded. Cache TTL: {_titledb_cache_ttl}s")
 
         # Save to database cache for fast loading next time
