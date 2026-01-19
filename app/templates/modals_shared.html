@@ -112,6 +112,15 @@
     </div>
 </div>
 
+<!-- Screenshot Modal -->
+<div class="modal" id="screenshotModal" style="z-index: 9999;">
+    <div class="modal-background" onclick="closeModal('screenshotModal')"></div>
+    <div class="modal-content is-flex is-justify-content-center is-align-items-center p-0" style="max-width: 90vw; max-height: 90vh;">
+        <img id="screenshotModalImage" src="" alt="Screenshot" style="max-width: 100%; max-height: 90vh; object-fit: contain;">
+    </div>
+    <button class="modal-close is-large" aria-label="close" onclick="closeModal('screenshotModal')" style="background: transparent; border: none;"></button>
+</div>
+
 <!-- Confirmation Modal (Generic) -->
 <div class="modal" id="genericConfirmModal" style="z-index: 9999;">
     <div class="modal-background" onclick="closeModal('genericConfirmModal')"></div>
@@ -429,6 +438,33 @@
                                 ${updatesHtml}
                                 ${dlcsHtml}
                             </div>
+                            
+                            ${game.screenshots && game.screenshots.length > 0 ? `
+                            <div class="screenshot-carousel mt-5">
+                                <p class="heading has-text-weight-bold mb-3">Screenshots</p>
+                                <div class="carousel is-align-items-center" id="gameScreenshotsCarousel">
+                                    <div class="carousel-nav">
+                                        <button class="button is-small is-light" onclick="scrollScreenshots(-1)">
+                                            <span class="icon"><i class="bi bi-chevron-left"></i></span>
+                                        </button>
+                                    </div>
+                                    <div class="carousel-viewport">
+                                        <div class="carousel-images" id="gameScreenshots">
+                                            ${game.screenshots.map((url, idx) => `
+                                                <div class="carousel-slide" data-index="${idx}">
+                                                    <img src="${url}" alt="Screenshot ${idx + 1}" loading="lazy" onclick="openScreenshotModal('${url}')" style="cursor: pointer;">
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                    <div class="carousel-nav">
+                                        <button class="button is-small is-light" onclick="scrollScreenshots(1)">
+                                            <span class="icon"><i class="bi bi-chevron-right"></i></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
@@ -841,6 +877,38 @@
                 // Download file functionality
                 console.log('Download shortcut pressed for game:', currentGameId);
                 break;
+        }
+    });
+
+    // Screenshot Carousel Functions
+    let currentScreenshotIndex = 0;
+
+    function scrollScreenshots(direction) {
+        const container = document.getElementById('gameScreenshots');
+        if (!container) return;
+
+        const slides = container.querySelectorAll('.carousel-slide');
+        if (slides.length === 0) return;
+
+        currentScreenshotIndex += direction;
+        if (currentScreenshotIndex < 0) currentScreenshotIndex = slides.length - 1;
+        if (currentScreenshotIndex >= slides.length) currentScreenshotIndex = 0;
+
+        const slideWidth = slides[0].offsetWidth + 8; // +8 for gap
+        container.style.transform = `translateX(-${currentScreenshotIndex * slideWidth}px)`;
+    }
+
+    function openScreenshotModal(url) {
+        $('#screenshotModalImage').attr('src', url);
+        openModal('screenshotModal');
+    }
+
+    // Initialize screenshot carousel when modal opens
+    $(document).on('shown.bs.modal', '#gameDetailsModal', function() {
+        currentScreenshotIndex = 0;
+        const container = document.getElementById('gameScreenshots');
+        if (container) {
+            container.style.transform = 'translateX(0)';
         }
     });
 </script>

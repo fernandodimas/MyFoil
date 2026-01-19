@@ -57,6 +57,7 @@ def init_rest_api(app):
             "is_hack": fields.Boolean(description="Is a hack/modification"),
             "owned": fields.Boolean(description="Is owned by user"),
             "added_at": fields.String(description="Date added to library"),
+            "screenshots": fields.List(fields.String, description="Screenshot URLs"),
         },
     )
 

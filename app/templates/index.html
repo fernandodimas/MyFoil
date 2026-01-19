@@ -395,7 +395,7 @@
 
     // Fetch all ignore preferences on load
     function loadIgnorePreferences() {
-        $.getJSON('/api/wishlist/ignore', (data) => {
+        return $.getJSON('/api/wishlist/ignore', (data) => {
             ignorePreferences = data || {};
         }).fail(() => {
             console.warn('Failed to load ignore preferences');
@@ -525,34 +525,6 @@
         items.forEach((game, index) => {
             const statusDotClass = game.status_color === 'orange' ? 'bg-orange' : (game.status_color === 'green' ? 'bg-green' : 'bg-gray');
             
-            // Check ignore preferences for this game
-            const gameIgnore = ignorePreferences[game.id] || {};
-            const ignoredDlcs = gameIgnore.dlcs || {};
-            const ignoredUpdates = gameIgnore.updates || {};
-            
-            // Check if there are non-ignored DLCs available but not owned
-            let hasNonIgnoredDlcs = false;
-            if (game.has_base && game.dlcs && Array.isArray(game.dlcs)) {
-                hasNonIgnoredDlcs = game.dlcs.some(dlc => {
-                    const isIgnored = ignoredDlcs[dlc.app_id];
-                    const isNotOwned = !dlc.owned;
-                    return isNotOwned && !isIgnored;
-                });
-            }
-            
-            // Check if there are non-ignored updates available
-            let hasNonIgnoredUpdates = false;
-            if (game.has_base && !game.has_latest_version && game.apps && Array.isArray(game.apps)) {
-                const ownedVersion = parseInt(game.owned_version) || 0;
-                const latestVersion = parseInt(game.latest_version_available) || 0;
-                for (let v = ownedVersion + 1; v <= latestVersion; v++) {
-                    if (!ignoredUpdates[v.toString()]) {
-                        hasNonIgnoredUpdates = true;
-                        break;
-                    }
-                }
-            }
-            
             const card = $(`
                 <div class="grid-item" data-index="${index}" data-game-id="${game.id}" tabindex="0" role="button" aria-label="${game.name}" onclick="focusAndOpenGame('${game.id}')">
                     <div class="card game-card is-paddingless is-shadowless">
@@ -575,8 +547,8 @@
                                     <span class="is-size-7 opacity-70 font-mono" title="Tamanho em disco">${game.size_formatted || '--'}</span>
                                 </div>
                                 <div class="is-flex gap-1 is-justify-content-end" style="margin-left: auto;">
-                                    ${hasNonIgnoredUpdates ? '<span class="tag tag-update has-text-weight-bold">UPDATE</span>' : ''}
-                                    ${hasNonIgnoredDlcs ? '<span class="tag tag-dlc has-text-weight-bold">DLC</span>' : ''}
+                                    ${game.has_non_ignored_updates ? '<span class="tag tag-update has-text-weight-bold">UPDATE</span>' : ''}
+                                    ${game.has_non_ignored_dlcs ? '<span class="tag tag-dlc has-text-weight-bold">DLC</span>' : ''}
                                     ${game.has_redundant_updates ? '<span class="tag tag-redundant has-text-weight-bold" title="Updates redundantes detectados">X-UPD</span>' : ''}
                                 </div>
                             </div>
@@ -662,6 +634,51 @@
         const showOnlyUpdates = $('#btnFilterPendingUpd').hasClass('is-primary');
         const showOnlyDlcs = $('#btnFilterPendingDlc').hasClass('is-primary');
 
+        // First, calculate has_non_ignored_* for each game
+        games.forEach(g => {
+            if (!g) return;
+            const gameIgnore = ignorePreferences[g.id] || {};
+            const ignoredDlcs = gameIgnore.dlcs || {};
+            const ignoredUpdates = gameIgnore.updates || {};
+            
+            // Calculate has_non_ignored_updates
+            let hasNonIgnoredUpdates = false;
+            if (g.has_base && !g.has_latest_version && g.apps && Array.isArray(g.apps)) {
+                const ownedVersion = parseInt(g.owned_version) || 0;
+                const latestVersion = parseInt(g.latest_version_available) || 0;
+                for (let v = ownedVersion + 1; v <= latestVersion; v++) {
+                    if (!ignoredUpdates[v.toString()]) {
+                        hasNonIgnoredUpdates = true;
+                        break;
+                    }
+                }
+            }
+            g.has_non_ignored_updates = hasNonIgnoredUpdates;
+            
+            // Calculate has_non_ignored_dlcs
+            let hasNonIgnoredDlcs = false;
+            if (g.has_base && g.dlcs && Array.isArray(g.dlcs)) {
+                hasNonIgnoredDlcs = g.dlcs.some(dlc => {
+                    const isIgnored = ignoredDlcs[dlc.app_id];
+                    const isNotOwned = !dlc.owned;
+                    return isNotOwned && !isIgnored;
+                });
+            }
+            g.has_non_ignored_dlcs = hasNonIgnoredDlcs;
+            
+            // Update status_color based on non-ignored status
+            if (!g.has_base) {
+                g.status_color = 'orange';
+                g.status_score = 0;
+            } else if (g.has_non_ignored_updates || g.has_non_ignored_dlcs) {
+                g.status_color = 'orange';
+                g.status_score = 1;
+            } else {
+                g.status_color = 'green';
+                g.status_score = 2;
+            }
+        });
+
         window.filteredGames = games.filter(g => {
             if (!g) return false;
             const gName = g.name || '';
@@ -672,8 +689,8 @@
 
             let matchesStatus = true;
             if (showOnlyBase) matchesStatus = matchesStatus && !g.has_base;
-            if (showOnlyUpdates) matchesStatus = matchesStatus && (g.has_base && !g.has_latest_version);
-            if (showOnlyDlcs) matchesStatus = matchesStatus && (g.has_base && !g.has_all_dlcs);
+            if (showOnlyUpdates) matchesStatus = matchesStatus && (g.has_base && g.has_non_ignored_updates);
+            if (showOnlyDlcs) matchesStatus = matchesStatus && (g.has_base && g.has_non_ignored_dlcs);
 
             return matchesSearch && matchesGender && matchesTag && matchesStatus;
         });
@@ -1076,13 +1093,13 @@
 
         // Load ignore preferences for the user
         if (typeof loadIgnorePreferences === 'function') {
-            loadIgnorePreferences();
+            loadIgnorePreferences().then(() => {
+                refreshLibrary();
+            });
         } else {
             console.warn('loadIgnorePreferences not defined, skipping...');
+            refreshLibrary();
         }
-
-        // 2. Fetch fresh data
-        refreshLibrary();
 
         // Initialize zoom from localStorage
         const savedZoom = localStorage.getItem('gridZoom') || 240;
