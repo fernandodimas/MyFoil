@@ -397,7 +397,6 @@
     function loadIgnorePreferences() {
         $.getJSON('/api/wishlist/ignore', (data) => {
             ignorePreferences = data || {};
-            console.log('Ignore preferences loaded:', Object.keys(ignorePreferences).length, 'titles');
         }).fail(() => {
             console.warn('Failed to load ignore preferences');
             ignorePreferences = {};
@@ -725,7 +724,6 @@
             size: g ? String(g.size) : 'null',
             sizeFormatted: g ? g.size_formatted : 'null'
         }));
-        console.log('[Debug] Sorting check - First 5:', first5, '| Last 5:', last5);
 
         // Show/hide clear filters button based on active filters
         const hasActiveFilters = query || gender || tag || 
@@ -845,8 +843,6 @@
 
         container.addEventListener('keydown', handleKeyDown);
         container.addEventListener('focus', handleFocus, true);
-        
-        console.log('Keyboard navigation setup complete, items:', container.querySelectorAll('.grid-item, tbody tr').length);
     }
 
     function handleKeyDown(e) {
@@ -961,7 +957,6 @@
         const gridItem = document.querySelector(`.grid-item[data-game-id="${gameId}"]`);
         if (gridItem) {
             gridItem.focus();
-            console.log('[Click] Focused grid-item:', gameId);
         }
         // Then show details
         showGameDetails(gameId);
