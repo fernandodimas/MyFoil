@@ -2,6 +2,7 @@
 MyFoil - Enhanced Nintendo Switch Library Manager
 Application Factory e Inicialização
 """
+
 import warnings
 import os
 import sys
@@ -12,9 +13,11 @@ warnings.filterwarnings("ignore", category=DeprecationWarning, module="eventlet"
 warnings.filterwarnings("ignore", category=UserWarning, module="flask_limiter")
 
 import eventlet
+
 eventlet.monkey_patch()
 
 import flask.cli
+
 flask.cli.show_server_banner = lambda *args: None
 
 # Core Flask imports
@@ -51,7 +54,16 @@ from jobs.scheduler import JobScheduler
 try:
     from celery_app import celery
     from tasks import scan_library_async, identify_file_async
-    CELERY_ENABLED = True
+
+    # Test Redis connection before enabling Celery
+    import redis
+
+    try:
+        celery.connection().ensure_connection(max_retries=1)
+        CELERY_ENABLED = True
+    except Exception as redis_error:
+        print(f"Redis not available, disabling Celery: {redis_error}")
+        CELERY_ENABLED = False
 except ImportError:
     CELERY_ENABLED = False
 
@@ -80,16 +92,13 @@ cloud_manager = None
 
 # Logging configuration
 formatter = ColoredFormatter(
-    '[%(asctime)s.%(msecs)03d] %(levelname)s (%(module)s) %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
+    "[%(asctime)s.%(msecs)03d] %(levelname)s (%(module)s) %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(formatter)
 
-logging.basicConfig(
-    level=logging.INFO,
-    handlers=[handler]
-)
+logging.basicConfig(level=logging.INFO, handlers=[handler])
 
 structlog.configure(
     processors=[
@@ -101,7 +110,9 @@ structlog.configure(
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
-        structlog.processors.JSONRenderer() if os.environ.get('LOG_FORMAT') == 'json' else structlog.dev.ConsoleRenderer()
+        structlog.processors.JSONRenderer()
+        if os.environ.get("LOG_FORMAT") == "json"
+        else structlog.dev.ConsoleRenderer(),
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
@@ -109,11 +120,12 @@ structlog.configure(
     cache_logger_on_first_use=True,
 )
 
-logger = structlog.get_logger('main')
+logger = structlog.get_logger("main")
 
 # Apply filter to hide date from http access logs
-logging.getLogger('werkzeug').addFilter(FilterRemoveDateFromWerkzeugLogs())
-logging.getLogger('alembic.runtime.migration').setLevel(logging.WARNING)
+logging.getLogger("werkzeug").addFilter(FilterRemoveDateFromWerkzeugLogs())
+logging.getLogger("alembic.runtime.migration").setLevel(logging.WARNING)
+
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -123,38 +135,42 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.execute("PRAGMA synchronous=NORMAL")
     cursor.close()
 
+
 # ===== LEGACY FUNCTIONS - TO BE REFACTORED =====
 # These functions are kept for backward compatibility
 # They should be moved to appropriate service modules in the future
+
 
 @login_manager.user_loader
 def load_user(user_id):
     """Load user for Flask-Login"""
     return db.session.get(User, int(user_id))
 
+
 def reload_conf():
     """Reload application settings"""
     global app_settings
     app_settings = load_settings()
 
+
 def on_library_change(events):
     """Handle library file changes"""
     with app.app_context():
-        created_events = [e for e in events if e.type == 'created']
-        modified_events = [e for e in events if e.type != 'created']
+        created_events = [e for e in events if e.type == "created"]
+        modified_events = [e for e in events if e.type != "created"]
 
         for event in modified_events:
-            if event.type == 'moved':
+            if event.type == "moved":
                 if file_exists_in_db(event.src_path):
                     update_file_path(event.directory, event.src_path, event.dest_path)
                 else:
                     event.src_path = event.dest_path
                     created_events.append(event)
 
-            elif event.type == 'deleted':
+            elif event.type == "deleted":
                 delete_file_by_filepath(event.src_path)
 
-            elif event.type == 'modified':
+            elif event.type == "modified":
                 add_files_to_library(event.directory, [event.src_path])
 
         if created_events:
@@ -173,6 +189,7 @@ def on_library_change(events):
     else:
         post_library_change()  # For now, still call to update UI state
 
+
 def update_titledb_job(force=False):
     """Update TitleDB in background"""
     global is_titledb_update_running
@@ -186,9 +203,10 @@ def update_titledb_job(force=False):
     try:
         current_settings = load_settings()
         import titledb
+
         titledb.update_titledb(current_settings, force=force)
 
-        if 'app' in globals():
+        if "app" in globals():
             with app.app_context():
                 logger.info("Syncing new TitleDB versions to library...")
                 add_missing_apps_to_db()
@@ -200,24 +218,27 @@ def update_titledb_job(force=False):
         return True
     except Exception as e:
         logger.error(f"Error during TitleDB update job: {e}")
-        log_activity('titledb_update_failed', details={'error': str(e)})
+        log_activity("titledb_update_failed", details={"error": str(e)})
         return False
     finally:
         with titledb_update_lock:
             is_titledb_update_running = False
+
 
 def scan_library_job():
     """Scan library in background"""
     global is_titledb_update_running
     with titledb_update_lock:
         if is_titledb_update_running:
-            logger.info("Skipping scheduled library scan: update_titledb job is currently in progress. Rescheduling in 5 minutes.")
-            if 'app' in globals() and hasattr(app, 'scheduler'):
+            logger.info(
+                "Skipping scheduled library scan: update_titledb job is currently in progress. Rescheduling in 5 minutes."
+            )
+            if "app" in globals() and hasattr(app, "scheduler"):
                 app.scheduler.add_job(
-                    job_id=f'scan_library_rescheduled_{datetime.datetime.now().timestamp()}',
+                    job_id=f"scan_library_rescheduled_{datetime.datetime.now().timestamp()}",
                     func=scan_library_job,
                     run_once=True,
-                    start_date=datetime.datetime.now().replace(microsecond=0) + timedelta(minutes=5)
+                    start_date=datetime.datetime.now().replace(microsecond=0) + timedelta(minutes=5),
                 )
             return
 
@@ -225,27 +246,30 @@ def scan_library_job():
     global scan_in_progress
     with scan_lock:
         if scan_in_progress:
-            logger.info('Skipping library scan: scan already in progress.')
+            logger.info("Skipping library scan: scan already in progress.")
             return
         scan_in_progress = True
     try:
         from metrics import ACTIVE_SCANS
+
         with ACTIVE_SCANS.track_inprogress():
             if CELERY_ENABLED:
                 from tasks import scan_all_libraries_async
+
                 scan_all_libraries_async.delay()
                 logger.info("Scheduled library scan queued to Celery.")
             else:
                 scan_library()
                 post_library_change()
-        log_activity('library_scan_completed')
+        log_activity("library_scan_completed")
         logger.info("Library scan job completed.")
     except Exception as e:
         logger.error(f"Error during library scan job: {e}")
-        log_activity('library_scan_failed', details={'error': str(e)})
+        log_activity("library_scan_failed", details={"error": str(e)})
     finally:
         with scan_lock:
             scan_in_progress = False
+
 
 def create_automatic_backup():
     """Create automatic backup"""
@@ -258,20 +282,22 @@ def create_automatic_backup():
         else:
             logger.error("Automatic backup failed")
 
+
 def init_internal(app):
     """Initialize internal components"""
     global watcher, watcher_thread
-    logger.info('Initializing File Watcher...')
+    logger.info("Initializing File Watcher...")
     watcher = Watcher(on_library_change)
     watcher_thread = threading.Thread(target=watcher.run)
     watcher_thread.daemon = True
     watcher_thread.start()
 
-    library_paths = app_settings.get('library', {}).get('paths', [])
+    library_paths = app_settings.get("library", {}).get("paths", [])
     init_libraries(app, watcher, library_paths)
 
     # Initialize job scheduler
     from jobs.scheduler import JobScheduler
+
     job_scheduler = JobScheduler()
     job_scheduler.init_app(app)
 
@@ -280,52 +306,58 @@ def init_internal(app):
     with app.app_context():
         libs = get_libraries()
 
-        critical_files = ['cnmts.json', 'versions.json']
+        critical_files = ["cnmts.json", "versions.json"]
         import os
         from constants import TITLEDB_DIR
+
         titledb_missing = any(not os.path.exists(os.path.join(TITLEDB_DIR, f)) for f in critical_files)
 
         if not libs or any(l.last_scan is None for l in libs) or titledb_missing:
             run_now = True
             if titledb_missing:
                 logger.info("Initial scan required: TitleDB critical files are missing.")
+
                 # Force update TitleDB at startup (same logic as settings page)
                 def run_titledb_update():
                     with app.app_context():
                         update_titledb_job(force=True)
+
                 threading.Thread(target=run_titledb_update, daemon=True).start()
             else:
                 logger.info("Initial scan required: New or un-scanned libraries detected.")
+
                 # Start library scan in background
                 def run_library_scan():
                     with app.app_context():
                         scan_library_job()
+
                 threading.Thread(target=run_library_scan, daemon=True).start()
 
-    if hasattr(app, 'scheduler'):
+    if hasattr(app, "scheduler"):
         app.scheduler.add_job(
-            job_id='update_db_and_scan',
+            job_id="update_db_and_scan",
             func=lambda: (update_titledb_job(), scan_library_job()),
             interval=timedelta(hours=24),
-            run_first=False
+            run_first=False,
         )
 
         app.scheduler.add_job(
-            job_id='daily_backup',
+            job_id="daily_backup",
             func=create_automatic_backup,
             interval=timedelta(days=1),
             run_first=False,
-            start_date=datetime.datetime.now().replace(hour=3, minute=0, second=0, microsecond=0)
+            start_date=datetime.datetime.now().replace(hour=3, minute=0, second=0, microsecond=0),
         )
 
-    log_activity('system_startup', details={'version': BUILD_VERSION})
+    log_activity("system_startup", details={"version": BUILD_VERSION})
+
 
 def create_app():
     """Application factory"""
     app = Flask(__name__)
     app.config["SQLALCHEMY_DATABASE_URI"] = MYFOIL_DB
-    app.config['SECRET_KEY'] = get_or_create_secret_key()
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config["SECRET_KEY"] = get_or_create_secret_key()
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     # Initialize components
     db.init_app(app)
@@ -333,7 +365,7 @@ def create_app():
 
     # Initialize login manager
     login_manager.init_app(app)
-    login_manager.login_view = 'auth.login'
+    login_manager.login_view = "auth.login"
 
     limiter.init_app(app)
 
@@ -342,6 +374,7 @@ def create_app():
 
     # Register exception handlers
     from exceptions import register_exception_handlers
+
     register_exception_handlers(app)
 
     # Register blueprints
@@ -354,7 +387,7 @@ def create_app():
     app.register_blueprint(wishlist_bp)
 
     # Initialize REST API
-    api_bp = Blueprint('api', __name__, url_prefix='/api')
+    api_bp = Blueprint("api", __name__, url_prefix="/api")
     init_rest_api(api_bp)
     app.register_blueprint(api_bp)
 
@@ -362,21 +395,16 @@ def create_app():
     init_metrics(app)
 
     # Initialize SocketIO
-    socketio.init_app(app,
-        cors_allowed_origins="*",
-        async_mode='eventlet',
-        engineio_logger=False,
-        logger=False
-    )
+    socketio.init_app(app, cors_allowed_origins="*", async_mode="eventlet", engineio_logger=False, logger=False)
 
     # SocketIO event handlers
-    @socketio.on('connect')
+    @socketio.on("connect")
     def handle_connect():
-        logger.info('Client connected')
+        logger.info("Client connected")
 
-    @socketio.on('disconnect')
+    @socketio.on("disconnect")
     def handle_disconnect():
-        logger.info('Client disconnected')
+        logger.info("Client disconnected")
 
     # Global initialization
     with app.app_context():
@@ -397,7 +425,7 @@ def create_app():
 
         # Initialize plugins
         plugin_manager = get_plugin_manager(PLUGINS_DIR, app)
-        disabled_plugins = app_settings.get('plugins', {}).get('disabled', [])
+        disabled_plugins = app_settings.get("plugins", {}).get("disabled", [])
         plugin_manager.load_plugins(disabled_plugins)
 
         # Initialize cloud manager
@@ -412,11 +440,12 @@ def create_app():
 
     return app
 
+
 # Create app instance
 app = create_app()
 
-if __name__ == '__main__':
-    logger.info(f'Build Version: {BUILD_VERSION}')
-    logger.info('Starting server on port 8465...')
+if __name__ == "__main__":
+    logger.info(f"Build Version: {BUILD_VERSION}")
+    logger.info("Starting server on port 8465...")
     socketio.run(app, debug=False, use_reloader=False, host="0.0.0.0", port=8465)
-    logger.info('Shutting down server...')
+    logger.info("Shutting down server...")

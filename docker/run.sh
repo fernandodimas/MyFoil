@@ -21,4 +21,10 @@ chown -R ${uid}:${gid} /games 2>/dev/null || true
 echo "Starting MyFoil as UID ${uid}..."
 
 # Run the application
-exec sudo -E -u "#${uid}" python /app/app.py
+if [ "$1" = "worker" ]; then
+    echo "Starting Celery Worker..."
+    exec sudo -E -u "#${uid}" celery -A app.celery_app.celery worker --loglevel=info
+else
+    echo "Starting Web Application..."
+    exec sudo -E -u "#${uid}" python /app/app.py
+fi
