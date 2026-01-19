@@ -834,6 +834,18 @@
         try {
             const itemJson = decodeURIComponent(atob(element.dataset.item));
             const item = JSON.parse(itemJson);
+            console.log('=== TitleDB Game Selected ===');
+            console.log('Game:', item);
+            console.log('Name:', item.name);
+            console.log('ID:', item.id);
+            console.log('Publisher:', item.publisher);
+            console.log('Description:', item.description);
+            console.log('Genre/Category:', item.category || item.genre);
+            console.log('Release Date:', item.releaseDate || item.release_date);
+            console.log('Icon URL:', item.iconUrl);
+            console.log('Banner URL:', item.bannerUrl);
+            console.log('Screenshots:', item.screenshots ? `${item.screenshots.length} screenshots` : 'None');
+            console.log('Full Data:', item);
             useMetadata(item);
         } catch (e) {
             console.error('Error parsing metadata:', e);
