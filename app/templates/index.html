@@ -1069,6 +1069,7 @@
     $(document).ready(() => {
         // 1. Try to load from cache first
         const cached = localStorage.getItem('myfoil_library_cache');
+        let hasCachedData = false;
         if (cached) {
             try {
                 const parsedCache = JSON.parse(cached);
@@ -1078,7 +1079,7 @@
                     initGenders(games);
                     initTags(games);
                     window.filteredGames = [...games];
-                    applyFilters(); // Render cached data immediately
+                    hasCachedData = true;
                 }
             } catch (e) {
                 console.error("Cache parse error", e);
@@ -1094,10 +1095,17 @@
         // Load ignore preferences for the user
         if (typeof loadIgnorePreferences === 'function') {
             loadIgnorePreferences().then(() => {
+                // Apply filters with ignore preferences now available
+                if (hasCachedData) {
+                    applyFilters();
+                }
                 refreshLibrary();
             });
         } else {
             console.warn('loadIgnorePreferences not defined, skipping...');
+            if (hasCachedData) {
+                applyFilters();
+            }
             refreshLibrary();
         }
 
