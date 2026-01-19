@@ -19,6 +19,9 @@ from nstools.nut import Keys
 # Retrieve main logger
 logger = logging.getLogger("main")
 
+# Get project root directory (parent of app/)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 Pfs0.Print.silent = True
 
 app_id_regex = r"\[([0-9A-Fa-f]{16})\]"
@@ -538,7 +541,12 @@ def load_titledb(force=False):
         load_order.append("custom.json")
 
         for filename in load_order:
+            # Try both TITLEDB_DIR and PROJECT_ROOT
             filepath = os.path.join(TITLEDB_DIR, filename)
+            if not os.path.exists(filepath):
+                # Check in project root
+                filepath = os.path.join(PROJECT_ROOT, filename)
+
             if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
                 logger.info(f"Loading TitleDB: {filename}...")
                 loaded = robust_json_load(filepath)
@@ -600,7 +608,10 @@ def load_titledb(force=False):
             logger.error("CRITICAL: Failed to load any TitleDB. Game identification will be limited.")
             _titles_db = {}
 
-        _versions_db = robust_json_load(os.path.join(TITLEDB_DIR, "versions.json")) or {}
+        _versions_db_path = os.path.join(TITLEDB_DIR, "versions.json")
+        if not os.path.exists(_versions_db_path):
+            _versions_db_path = os.path.join(PROJECT_ROOT, "versions.json")
+        _versions_db = robust_json_load(_versions_db_path) or {}
         _cnmts_db = _cnmts_db or {}
 
         _titles_db_loaded = True
@@ -610,7 +621,11 @@ def load_titledb(force=False):
         # Save to database cache for fast loading next time
         source_files = {}
         for f in _loaded_titles_file:
-            source_files[f.lower().replace(".json", "")] = f
+            # Check if file is in project root or TITLEDB_DIR
+            if os.path.exists(os.path.join(PROJECT_ROOT, f)):
+                source_files[f.lower().replace(".json", "")] = f
+            else:
+                source_files[f.lower().replace(".json", "")] = f
         save_titledb_to_db(source_files)
 
         # Sync metadata to database if loaded
