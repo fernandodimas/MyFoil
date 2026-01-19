@@ -692,6 +692,36 @@ def add_title_id_in_db(title_id):
         db.session.commit()
 
 
+def backfill_added_at_for_existing_titles():
+    """Retroactively set added_at for titles that don't have it, based on earliest file date."""
+    import time
+
+    start = time.time()
+    logger.info("Backfilling added_at for existing titles...")
+
+    titles = Titles.query.all()
+    updated = 0
+
+    for title in titles:
+        if not title.added_at and title.apps:
+            # Find earliest file date across all apps
+            earliest_date = None
+            for app in title.apps:
+                for file in app.files:
+                    if file.last_attempt:
+                        if earliest_date is None or file.last_attempt < earliest_date:
+                            earliest_date = file.last_attempt
+            if earliest_date:
+                title.added_at = earliest_date
+                updated += 1
+
+    if updated > 0:
+        db.session.commit()
+        logger.info(f"Backfilled added_at for {updated} titles in {(time.time() - start):.2f}s")
+    else:
+        logger.info("No titles needed backfill for added_at")
+
+
 def get_all_title_apps(title_id):
     title = (
         Titles.query.options(joinedload(Titles.apps).joinedload(Apps.files), joinedload(Titles.tags))

@@ -753,7 +753,69 @@
         $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
         $('#searchClearBtn').hide();
         $('#searchIcon').show();
+        
+        // Reset sort to default
+        currentSort = 'name-asc';
+        localStorage.setItem('myfoil_library_sort', currentSort);
+        $('.sort-option').removeClass('is-active has-text-weight-bold');
+        $(`.sort-option[data-sort="${currentSort}"]`).addClass('is-active has-text-weight-bold');
+        
         applyFilters();
+    }
+
+    function clearSearch() {
+        $('#navbarSearch').val('');
+        $('#searchClearBtn').hide();
+        $('#searchIcon').show();
+        applyFilters();
+    }
+
+    // ========== CACHE OPTIMIZATION ==========
+    let libraryCacheTime = 0;
+    const LIBRARY_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+
+    function shouldRefreshFromServer() {
+        const cached = localStorage.getItem('myfoil_library_cache_time');
+        if (!cached) return true;
+        const cacheTime = parseInt(cached);
+        return (Date.now() - cacheTime) > LIBRARY_CACHE_DURATION;
+    }
+
+    function refreshLibrary() {
+        console.log("Refreshing library data...");
+        
+        // Check if we should skip refresh due to cache
+        if (!shouldRefreshFromServer()) {
+            console.log("Using cached library data (valid for 5 min)");
+            // Just apply filters with cached data
+            if (games.length > 0) {
+                applyFilters();
+            }
+            return;
+        }
+        
+        // Show loading indicator
+        $('#loadingIndicator').removeClass('is-hidden');
+        $('#libraryContainer').empty();
+        
+        $.getJSON('/api/library', function (data) {
+            // API now returns {items: [...], pagination: {...}}
+            games = (data && data.items) ? data.items : (Array.isArray(data) ? data : []);
+            localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
+            localStorage.setItem('myfoil_library_cache_time', Date.now().toString());
+            initGenders(games);
+            initTags(games);
+
+            // Hide loading indicator
+            $('#loadingIndicator').addClass('is-hidden');
+            
+            // Reset and apply filters
+            applyFilters();
+            showToast(t('Library updated!'), 'success');
+        }).fail(() => {
+            $('#loadingIndicator').addClass('is-hidden');
+            showToast(t('Failed to refresh library'), 'error');
+        });
     }
 
     function clearSearch() {
@@ -1083,21 +1145,27 @@
             $('#loadingIndicator').removeClass('is-hidden');
         }
 
-        // Load ignore preferences for the user
+        // Load ignore preferences for the user and decide if we need to refresh
         if (typeof loadIgnorePreferences === 'function') {
             loadIgnorePreferences().then(() => {
                 // Apply filters with ignore preferences now available
                 if (hasCachedData) {
                     applyFilters();
                 }
-                refreshLibrary();
+                // Only refresh if cache is expired or doesn't exist
+                if (!hasCachedData || shouldRefreshFromServer()) {
+                    refreshLibrary();
+                }
             });
         } else {
             console.warn('loadIgnorePreferences not defined, skipping...');
             if (hasCachedData) {
                 applyFilters();
             }
-            refreshLibrary();
+            // Only refresh if cache is expired or doesn't exist
+            if (!hasCachedData || shouldRefreshFromServer()) {
+                refreshLibrary();
+            }
         }
 
         // Initialize zoom from localStorage
