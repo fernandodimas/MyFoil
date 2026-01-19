@@ -370,8 +370,6 @@ def get_stats_overview():
     # 5. Up-to-date Logic (Requires Title level check)
     # This is more complex to filter strictly by library if a title bridges libraries,
     # but we'll use the TitleDB coverage logic globally for now.
-    all_titles_count = Titles.query.count()  # Total in database
-    titles_db_count = titles.get_titles_count()
 
     # Status breakdown (Global titles)
     # Note: We still use the library cache for genre and status for now if no filter
@@ -408,7 +406,12 @@ def get_stats_overview():
     recognized_games = len([g for g in filtered_games if g.get("name") and not g.get("name", "").startswith("Unknown")])
     recognition_rate = round((recognized_games / total_owned * 100), 1) if total_owned > 0 else 0
 
-    coverage_pct = round((total_owned / titles_db_count * 100), 2) if titles_db_count > 0 else 0
+    # Coverage: percentage of library games that have TitleDB metadata
+    games_with_titledb = len(
+        [g for g in filtered_games if g.get("name") and not g.get("name", "").startswith("Unknown")]
+    )
+    coverage_pct = round((games_with_titledb / total_owned * 100), 2) if total_owned > 0 else 0
+
     app_settings = load_settings()
     keys_valid = app_settings.get("titles", {}).get("valid_keys", False)
 
@@ -431,7 +434,11 @@ def get_stats_overview():
                 "pending": total_owned - up_to_date,
                 "completion_rate": round((up_to_date / total_owned * 100), 1) if total_owned > 0 else 0,
             },
-            "titledb": {"total_available": titles_db_count, "coverage_pct": coverage_pct, "source_name": source_name},
+            "titledb": {
+                "total_available": games_with_titledb,
+                "coverage_pct": coverage_pct,
+                "source_name": source_name,
+            },
             "identification": {
                 "total_files": total_files,
                 "identified_pct": id_rate,
