@@ -856,7 +856,17 @@ def generate_library(force=False):
     save_library_to_disk(library_data)
 
     with _CACHE_LOCK:
-        save_library_to_disk({"hash": compute_apps_hash(), "library": _LIBRARY_CACHE})
+        _LIBRARY_CACHE = sorted_library
+
+    titles_lib.identification_in_progress_count -= 1
+    titles_lib.unload_titledb()
+
+    # Update library size metric
+    total_size = sum(g.get("size", 0) for g in games_info)
+    LIBRARY_SIZE.set(total_size)
+
+    logger.info(f"Generating library done. Found {len(games_info)} games.")
+    return sorted_library
 
 
 def post_library_change():
