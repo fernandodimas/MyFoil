@@ -55,6 +55,7 @@
             </div>
 
             <input type="hidden" id="editMetaId">
+            <input type="hidden" id="editMetaFullData">
             <div class="field">
                 <label class="label">Nome</label>
                 <div class="control">
@@ -738,6 +739,8 @@
 
     function saveGameMetadata() {
         const titleId = $('#editMetaId').val();
+        
+        // Get form data
         const data = {
             name: $('#editMetaName').val(),
             publisher: $('#editMetaPublisher').val(),
@@ -747,6 +750,23 @@
             genre: $('#editMetaGenre').val(),
             release_date: $('#editMetaRelease').val()
         };
+
+        // Merge with full TitleDB data if available
+        const fullDataStr = $('#editMetaFullData').val();
+        if (fullDataStr) {
+            try {
+                const fullData = JSON.parse(fullDataStr);
+                // Merge all fields from TitleDB, overriding with form values where present
+                Object.keys(fullData).forEach(key => {
+                    if (data[key] !== undefined && data[key] !== '') {
+                        fullData[key] = data[key];
+                    }
+                });
+                Object.assign(data, fullData);
+            } catch (e) {
+                console.error('Error parsing full metadata:', e);
+            }
+        }
 
         $('#btnSaveMetadata').addClass('is-loading');
 
@@ -807,6 +827,10 @@
     }
 
     function useMetadata(item) {
+        // Store full item data for saving all fields
+        $('#editMetaFullData').val(JSON.stringify(item));
+        
+        // Fill form fields
         if (item.name) $('#editMetaName').val(item.name);
         if (item.publisher) $('#editMetaPublisher').val(item.publisher);
         if (item.description) $('#editMetaDescription').val(item.description);
@@ -814,6 +838,11 @@
         if (item.bannerUrl) $('#editMetaBanner').val(item.bannerUrl);
         if (item.category || item.genre) $('#editMetaGenre').val(Array.isArray(item.category) ? item.category.join(', ') : (item.category || item.genre || ''));
         if (item.releaseDate || item.release_date) $('#editMetaRelease').val(item.releaseDate || item.release_date);
+        if (item.size) $('#editMetaSize').val(item.size);
+        if (item.nsuId || item.nsuid) $('#editMetaNsuid').val(item.nsuId || item.nsuid);
+        
+        // Show toast indicating all fields will be saved
+        showToast('Metadados carregados! Todos os campos serão salvos.', 'info');
     }
 
     // Keyboard Navigation for Game Details Modal
