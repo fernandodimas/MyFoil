@@ -134,10 +134,14 @@ def scan_library_api():
                 logger.info(f"Triggered asynchronous library scan for: {path}")
             return jsonify({"success": True, "async": True, "errors": []})
         else:
-            from library import scan_library_path, scan_library
+            from library import scan_library_path, Libraries
+            from db import db
 
             if path is None:
-                scan_library()
+                # Scan all libraries
+                libraries = Libraries.query.all()
+                for lib in libraries:
+                    scan_library_path(lib.path)
             else:
                 scan_library_path(path)
             from library import post_library_change
