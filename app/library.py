@@ -856,63 +856,23 @@ def generate_library(force=False):
     save_library_to_disk(library_data)
 
     with _CACHE_LOCK:
-        _LIBRARY_CACHE = sorted_library
-
-    titles_lib.identification_in_progress_count -= 1
-    titles_lib.unload_titledb()
-
-    # Update library size metric
-    total_size = sum(g.get("size", 0) for g in games_info)
-    LIBRARY_SIZE.set(total_size)
-
-    logger.info(f"Generating library done. Found {len(games_info)} games.")
-    return sorted_library
+        save_library_to_disk({"hash": compute_apps_hash(), "library": _LIBRARY_CACHE})
 
 
-def update_game_in_cache(title_id):
-    """Update a single game in the memory and disk cache"""
+def post_library_change():
+    """Called after library changes to update titles and regenerate library cache"""
     global _LIBRARY_CACHE
+    _LIBRARY_CACHE = None  # Invalidate cache
 
-    # Ensure TitleDB is loaded
-    titles_lib.load_titledb()
+    try:
+        # Update titles with new files
+        update_titles()
 
-    # Get fresh data for this title
-    title = Titles.query.options(joinedload(Titles.apps).joinedload(Apps.files)).filter_by(title_id=title_id).first()
-    if not title:
-        # If title no longer exists, remove from cache if present
-        with _CACHE_LOCK:
-            if _LIBRARY_CACHE:
-                _LIBRARY_CACHE = [g for g in _LIBRARY_CACHE if g["id"] != title_id]
-        return
+        # Regenerate library cache
+        generate_library(force=True)
 
-    # Convert to the format expected by get_game_info_item
-    title_data = to_dict(title)
-    title_data["apps"] = []
-    for a in title.apps:
-        a_dict = to_dict(a)
-        a_dict["files_info"] = [{"path": f.filepath, "size": f.size} for f in a.files]
-        title_data["apps"].append(a_dict)
-
-    updated_game = get_game_info_item(title_id, title_data)
-
-    with _CACHE_LOCK:
-        if _LIBRARY_CACHE:
-            # Find and update or add
-            found = False
-            for i, g in enumerate(_LIBRARY_CACHE):
-                if g["id"] == title_id:
-                    if updated_game:
-                        _LIBRARY_CACHE[i] = updated_game
-                    else:
-                        _LIBRARY_CACHE.pop(i)
-                    found = True
-                    break
-
-            if not found and updated_game:
-                _LIBRARY_CACHE.append(updated_game)
-                _LIBRARY_CACHE.sort(key=lambda x: x.get("name", "Unrecognized") or "Unrecognized")
-
-            # Update disk cache too
-            save_library_to_disk({"hash": compute_apps_hash(), "library": _LIBRARY_CACHE})
+        logger.info("Library cache regenerated after library change")
+    except Exception as e:
+        logger.error(f"Error in post_library_change: {e}")
 
     titles_lib.unload_titledb()
