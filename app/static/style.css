@@ -557,7 +557,8 @@ p.game-description {
         padding-right: 0.5rem !important;
     }
     .columns.is-variable.is-3 {
-        --columnGap: 0.25rem;
+        margin-left: -0.75rem !important;
+        margin-right: -0.75rem !important;
     }
 }
 
