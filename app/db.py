@@ -453,6 +453,12 @@ def init_db(app):
                     upgrade()
                     logger.info("Database migration applied successfully.")
 
+                # Backfill added_at for existing titles
+                try:
+                    backfill_added_at_for_existing_titles()
+                except Exception as e:
+                    logger.warning(f"Backfill added_at failed: {e}")
+
 
 def file_exists_in_db(filepath):
     return Files.query.filter_by(filepath=filepath).first() is not None
