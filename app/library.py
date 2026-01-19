@@ -737,9 +737,17 @@ def get_game_info_item(tid, title_data):
 
     # Added date from database (when game was first added to library)
     game["added_at"] = title_data.get("added_at")
+    if game["added_at"]:
+        # Convert datetime to ISO string for JSON serialization
+        if hasattr(game["added_at"], "isoformat"):
+            game["added_at"] = game["added_at"].isoformat()
 
     # Tags from Title object
     game["tags"] = title_data.get("tags", [])
+
+    # Screenshots from TitleDB
+    info = titles_lib.get_game_info(tid)
+    game["screenshots"] = info.get("screenshots", []) if info else []
 
     # Files and details
     game["base_files"] = []
