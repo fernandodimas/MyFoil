@@ -881,21 +881,18 @@
     });
 
     // Screenshot Carousel Functions
-    let currentScreenshotIndex = 0;
-
     function scrollScreenshots(direction) {
-        const container = document.getElementById('gameScreenshots');
+        const container = document.getElementById('gameScreenshotsCarousel');
         if (!container) return;
 
-        const slides = container.querySelectorAll('.carousel-slide');
-        if (slides.length === 0) return;
+        const viewport = container.querySelector('.carousel-viewport');
+        if (!viewport) return;
 
-        currentScreenshotIndex += direction;
-        if (currentScreenshotIndex < 0) currentScreenshotIndex = slides.length - 1;
-        if (currentScreenshotIndex >= slides.length) currentScreenshotIndex = 0;
-
-        const slideWidth = slides[0].offsetWidth + 8; // +8 for gap
-        container.style.transform = `translateX(-${currentScreenshotIndex * slideWidth}px)`;
+        const slideWidth = 288; // 280px + 8px gap
+        viewport.scrollBy({
+            left: direction * slideWidth,
+            behavior: 'smooth'
+        });
     }
 
     function openScreenshotModal(url) {
@@ -905,10 +902,9 @@
 
     // Initialize screenshot carousel when modal opens
     $(document).on('shown.bs.modal', '#gameDetailsModal', function() {
-        currentScreenshotIndex = 0;
-        const container = document.getElementById('gameScreenshots');
-        if (container) {
-            container.style.transform = 'translateX(0)';
+        const viewport = document.querySelector('#gameScreenshotsCarousel .carousel-viewport');
+        if (viewport) {
+            viewport.scrollLeft = 0;
         }
     });
 </script>

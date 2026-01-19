@@ -170,8 +170,11 @@ body {
 
 .carousel-viewport {
     flex: 1;
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
     scroll-behavior: smooth;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
 }
 
 .carousel-images {
@@ -185,6 +188,7 @@ body {
     flex-shrink: 0;
     width: 280px;
     height: 158px;
+    scroll-snap-align: start;
 }
 
 .carousel-slide img {
