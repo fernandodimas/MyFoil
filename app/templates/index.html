@@ -386,8 +386,6 @@
 
     let games = [];
     window.filteredGames = [];
-    let currentPage = 1;
-    let pageSize = 24;
     let currentSort = localStorage.getItem('myfoil_library_sort') || 'name-asc';
     let currentView = localStorage.getItem('viewMode') || 'card';
     let ignorePreferences = {};  // Cache for ignore preferences per title_id
@@ -447,15 +445,6 @@
         // ESC: Close all modals
         if (e.key === 'Escape') {
             $('.modal').removeClass('is-active');
-        }
-
-        // Arrow keys for pagination if no modal is open and search is not focused
-        if (!$('.modal.is-active').length && document.activeElement.id !== 'navbarSearch') {
-            if (e.key === 'ArrowLeft' && currentPage > 1) {
-                changePage(currentPage - 1);
-            } else if (e.key === 'ArrowRight' && currentPage < Math.ceil(filteredGames.length / pageSize)) {
-                changePage(currentPage + 1);
-            }
         }
     });
 
@@ -750,7 +739,6 @@
         $('#clearFiltersBtn').toggleClass('has-active', hasActiveFilters);
 
         $('#totalItemsCount, #totalItemsCountMobile').text(`${filteredGames.length} Jogos`);
-        currentPage = 1;
         renderLibrary();
     }
 
