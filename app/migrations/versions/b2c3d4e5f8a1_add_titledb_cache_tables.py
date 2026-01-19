@@ -8,7 +8,6 @@ Revises: a1b2c3d4e5f7
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import Column, Integer, String, DateTime, JSON
-from sqlalchemy.orm import sessionmaker
 
 # revision identifiers, used by Alembic.
 revision = "b2c3d4e5f8a1"
@@ -18,41 +17,40 @@ depends_on = None
 
 
 def upgrade():
-    # Create titledb_cache table
-    op.create_table(
-        "titledb_cache",
-        Column("id", Integer, primary_key=True),
-        Column("title_id", String(16), unique=True, nullable=False, index=True),
-        Column("data", JSON, nullable=False),
-        Column("source", String(50), nullable=False),
-        Column("downloaded_at", DateTime, nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
-        Column("updated_at", DateTime, nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
-    )
-    op.create_index("idx_source", "titledb_cache", ["source"])
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS titledb_cache (
+            id INTEGER PRIMARY KEY,
+            title_id VARCHAR(16) UNIQUE NOT NULL,
+            data JSON NOT NULL,
+            source VARCHAR(50) NOT NULL,
+            downloaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    op.execute("CREATE INDEX IF NOT EXISTS idx_source ON titledb_cache (source)")
 
-    # Create titledb_versions table
-    op.create_table(
-        "titledb_versions",
-        Column("id", Integer, primary_key=True),
-        Column("title_id", String(16), nullable=False, index=True),
-        Column("version", Integer, nullable=False),
-        Column("release_date", String(8)),
-    )
-    op.create_index("idx_title_version", "titledb_versions", ["title_id", "version"])
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS titledb_versions (
+            id INTEGER PRIMARY KEY,
+            title_id VARCHAR(16) NOT NULL,
+            version INTEGER NOT NULL,
+            release_date VARCHAR(8)
+        )
+    """)
+    op.execute("CREATE INDEX IF NOT EXISTS idx_title_version ON titledb_versions (title_id, version)")
 
-    # Create titledb_dlcs table
-    op.create_table(
-        "titledb_dlcs",
-        Column("id", Integer, primary_key=True),
-        Column("base_title_id", String(16), nullable=False, index=True),
-        Column("dlc_app_id", String(16), nullable=False, index=True),
-    )
-    op.create_index("idx_dlc_base", "titledb_dlcs", ["base_title_id"])
-    op.create_index("idx_dlc_app", "titledb_dlcs", ["dlc_app_id"])
+    op.execute("""
+        CREATE TABLE IF NOT EXISTS titledb_dlcs (
+            id INTEGER PRIMARY KEY,
+            base_title_id VARCHAR(16) NOT NULL,
+            dlc_app_id VARCHAR(16) NOT NULL
+        )
+    """)
+    op.execute("CREATE INDEX IF NOT EXISTS idx_dlc_base ON titledb_dlcs (base_title_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS idx_dlc_app ON titledb_dlcs (dlc_app_id)")
 
 
 def downgrade():
-    # Drop tables in reverse order
-    op.drop_table("titledb_dlcs")
-    op.drop_table("titledb_versions")
-    op.drop_table("titledb_cache")
+    op.execute("DROP TABLE IF EXISTS titledb_dlcs")
+    op.execute("DROP TABLE IF EXISTS titledb_versions")
+    op.execute("DROP TABLE IF EXISTS titledb_cache")
