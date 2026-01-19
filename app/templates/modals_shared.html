@@ -806,10 +806,11 @@
                 return;
             }
             let html = '<div class="list is-hoverable">';
-            results.forEach(item => {
-                const safeItem = JSON.stringify(item).replace(/"/g, '&quot;');
+            results.forEach((item, index) => {
+                const itemId = `titleDBResult_${index}`;
+                const itemJson = btoa(encodeURIComponent(JSON.stringify(item)));
                 html += `
-                    <a class="list-item" onclick="useMetadata(${safeItem})">
+                    <a class="list-item" id="${itemId}" data-item="${itemJson}" onclick="useMetadataFromDataAttr('${itemId}')">
                         <div class="media is-align-items-center">
                             <div class="media-left">
                                 <figure class="image is-32x32"><img src="${item.iconUrl || '/static/img/no-icon.png'}" class="is-rounded"></figure>
@@ -824,6 +825,19 @@
             html += '</div>';
             resultsContainer.html(html);
         });
+    }
+
+    function useMetadataFromDataAttr(elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        
+        try {
+            const itemJson = decodeURIComponent(atob(element.dataset.item));
+            const item = JSON.parse(itemJson);
+            useMetadata(item);
+        } catch (e) {
+            console.error('Error parsing metadata:', e);
+        }
     }
 
     function useMetadata(item) {
