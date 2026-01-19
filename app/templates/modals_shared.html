@@ -807,10 +807,12 @@
             }
             let html = '<div class="list is-hoverable">';
             results.forEach((item, index) => {
+                // Use unique ID and store data in a global object to avoid encoding issues
                 const itemId = `titleDBResult_${index}`;
-                const itemJson = btoa(encodeURIComponent(JSON.stringify(item)));
+                window.__titleDBResults = window.__titleDBResults || {};
+                window.__titleDBResults[itemId] = item;
                 html += `
-                    <a class="list-item" id="${itemId}" data-item="${itemJson}" onclick="useMetadataFromDataAttr('${itemId}')">
+                    <a class="list-item" onclick="useMetadataFromDataAttr('${itemId}')">
                         <div class="media is-align-items-center">
                             <div class="media-left">
                                 <figure class="image is-32x32"><img src="${item.iconUrl || '/static/img/no-icon.png'}" class="is-rounded"></figure>
@@ -828,28 +830,26 @@
     }
 
     function useMetadataFromDataAttr(elementId) {
-        const element = document.getElementById(elementId);
-        if (!element) return;
-        
-        try {
-            const itemJson = decodeURIComponent(atob(element.dataset.item));
-            const item = JSON.parse(itemJson);
-            console.log('=== TitleDB Game Selected ===');
-            console.log('Game:', item);
-            console.log('Name:', item.name);
-            console.log('ID:', item.id);
-            console.log('Publisher:', item.publisher);
-            console.log('Description:', item.description);
-            console.log('Genre/Category:', item.category || item.genre);
-            console.log('Release Date:', item.releaseDate || item.release_date);
-            console.log('Icon URL:', item.iconUrl);
-            console.log('Banner URL:', item.bannerUrl);
-            console.log('Screenshots:', item.screenshots ? `${item.screenshots.length} screenshots` : 'None');
-            console.log('Full Data:', item);
-            useMetadata(item);
-        } catch (e) {
-            console.error('Error parsing metadata:', e);
+        const item = window.__titleDBResults && window.__titleDBResults[elementId];
+        if (!item) {
+            console.error('Item not found:', elementId);
+            return;
         }
+        
+        console.log('=== TitleDB Game Selected ===');
+        console.log('Game:', item);
+        console.log('Name:', item.name);
+        console.log('ID:', item.id);
+        console.log('Publisher:', item.publisher);
+        console.log('Description:', item.description);
+        console.log('Genre/Category:', item.category || item.genre);
+        console.log('Release Date:', item.releaseDate || item.release_date);
+        console.log('Icon URL:', item.iconUrl);
+        console.log('Banner URL:', item.bannerUrl);
+        console.log('Screenshots:', item.screenshots ? `${item.screenshots.length} screenshots` : 'None');
+        console.log('Full Data:', item);
+        
+        useMetadata(item);
     }
 
     function useMetadata(item) {
