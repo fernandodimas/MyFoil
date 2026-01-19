@@ -103,7 +103,7 @@ def set_language(lang):
     return jsonify({"success": False, "error": "Invalid language"}), 400
 
 
-@system_bp.route("/library/scan")
+@system_bp.route("/library/scan", methods=["POST"])
 @access_required("admin")
 def scan_library_api():
     """Iniciar scan da biblioteca"""
