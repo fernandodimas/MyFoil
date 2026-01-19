@@ -687,7 +687,7 @@ def add_title_id_in_db(title_id):
     existing_title = Titles.query.filter_by(title_id=title_id).first()
 
     if not existing_title:
-        new_title = Titles(title_id=title_id)
+        new_title = Titles(title_id=title_id, added_at=datetime.datetime.now())
         db.session.add(new_title)
         db.session.commit()
 

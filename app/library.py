@@ -524,8 +524,15 @@ def update_titles():
 
         # Set added_at when game is first added to library (first base file found)
         if have_base and not title.added_at:
-            title.added_at = datetime.datetime.now()
-            logger.info(f"Setting added_at for title {title_id}")
+            # Use the earliest file's last_attempt date as the added_at
+            earliest_date = None
+            for app in title.apps:
+                for file in app.files:
+                    if file.last_attempt:
+                        if earliest_date is None or file.last_attempt < earliest_date:
+                            earliest_date = file.last_attempt
+            title.added_at = earliest_date or datetime.datetime.now()
+            logger.info(f"Setting added_at for title {title_id} to {title.added_at}")
 
         # Commit every 100 titles to avoid excessive memory use
         if (n + 1) % 100 == 0:

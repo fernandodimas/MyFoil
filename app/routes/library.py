@@ -639,6 +639,9 @@ def app_info_api(id):
     result["app_id"] = tid
     result["title_id"] = tid
 
+    # Include added_at for display in modal
+    result["added_at"] = title_obj.added_at.isoformat() if title_obj and title_obj.added_at else None
+
     # Ensure screenshots are included
     result["screenshots"] = info.get("screenshots", [])
 
