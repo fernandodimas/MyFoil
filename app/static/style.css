@@ -511,27 +511,6 @@ p.game-description {
     color: var(--text-color) !important;
 }
 
-/* Dark mode button visibility */
-[data-theme="dark"] .button.is-dark.is-outlined {
-    border-color: var(--bulma-primary) !important;
-    color: var(--bulma-primary) !important;
-}
-
-[data-theme="dark"] .button.is-dark.is-outlined:hover {
-    background-color: var(--bulma-primary) !important;
-    color: white !important;
-}
-
-[data-theme="dark"] .updateTitleDBBtn {
-    border-color: var(--bulma-info) !important;
-    color: var(--bulma-info) !important;
-}
-
-[data-theme="dark"] .updateTitleDBBtn:hover {
-    background-color: var(--bulma-info) !important;
-    color: white !important;
-}
-
 /* Responsive Design */
 @media screen and (min-width: 1024px) {
     .container.is-fluid {
