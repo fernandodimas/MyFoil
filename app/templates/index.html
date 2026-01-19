@@ -635,7 +635,7 @@
             
             // Calculate has_non_ignored_updates
             let hasNonIgnoredUpdates = false;
-            if (g.has_base && !g.has_latest_version && g.apps && Array.isArray(g.apps)) {
+            if (g.has_base && !g.has_latest_version) {
                 const ownedVersion = parseInt(g.owned_version) || 0;
                 const latestVersion = parseInt(g.latest_version_available) || 0;
                 for (let v = ownedVersion + 1; v <= latestVersion; v++) {

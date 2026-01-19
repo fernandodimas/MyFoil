@@ -720,6 +720,9 @@ def get_game_info_item(tid, title_data):
 
     game["owned"] = len(owned_apps) > 0
 
+    # Include apps for frontend filtering
+    game["apps"] = all_title_apps
+
     # Determine status color for UI and numeric score for sorting
     # Score: 2 = Complete (Green), 1 = Pending (Orange), 0 = No Base (Red/Orange)
     if not game["has_base"]:
