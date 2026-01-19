@@ -783,6 +783,15 @@ def get_game_info(title_id):
     try:
         db_title = Titles.query.filter_by(title_id=search_id).first()
         if db_title and (db_title.name or db_title.is_custom):
+            # Get screenshots from TitleDB
+            screenshots = []
+            if not _titles_db:
+                load_titledb()
+            if _titles_db:
+                info = _titles_db.get(search_id)
+                if info:
+                    screenshots = info.get("screenshots", []) or []
+
             # If we have basic info or it's custom, return it
             return {
                 "name": db_title.name or "Unknown Title",
@@ -796,7 +805,7 @@ def get_game_info(title_id):
                 "description": db_title.description or "",
                 "nsuid": db_title.nsuid or "",
                 "is_custom": db_title.is_custom,
-                "screenshots": [],
+                "screenshots": screenshots,
             }
     except Exception as e:
         logger.error(f"Error querying database for game info {search_id}: {e}")
