@@ -401,9 +401,9 @@ def search_titledb_api():
 @system_bp.route("/status")
 def process_status_api():
     """Status do sistema"""
-    import app
+    from app import scan_in_progress, is_titledb_update_running
 
-    return jsonify({"scanning": app.scan_in_progress, "updating_titledb": app.is_titledb_update_running})
+    return jsonify({"scanning": scan_in_progress, "updating_titledb": is_titledb_update_running})
 
 
 @system_bp.post("/settings/titledb/update")
@@ -514,12 +514,12 @@ def delete_webhook_api(id):
 @access_required("admin")
 def create_backup_api():
     """Criar backup manual"""
-    import app
+    from app import backup_manager
 
-    if not app.backup_manager:
+    if not backup_manager:
         return jsonify({"success": False, "error": "Backup manager not initialized"}), 500
 
-    success, timestamp = app.backup_manager.create_backup()
+    success, timestamp = backup_manager.create_backup()
     if success:
         return jsonify({"success": True, "timestamp": timestamp, "message": "Backup created successfully"})
     else:
@@ -530,12 +530,12 @@ def create_backup_api():
 @access_required("admin")
 def list_backups_api():
     """Listar backups disponíveis"""
-    import app
+    from app import backup_manager
 
-    if not app.backup_manager:
+    if not backup_manager:
         return jsonify({"success": False, "error": "Backup manager not initialized"}), 500
 
-    backups = app.backup_manager.list_backups()
+    backups = backup_manager.list_backups()
     return jsonify({"success": True, "backups": backups})
 
 
@@ -543,9 +543,9 @@ def list_backups_api():
 @access_required("admin")
 def restore_backup_api():
     """Restaurar backup"""
-    import app
+    from app import backup_manager
 
-    if not app.backup_manager:
+    if not backup_manager:
         return jsonify({"success": False, "error": "Backup manager not initialized"}), 500
 
     data = request.json
