@@ -108,19 +108,6 @@ def set_titles_settings_api():
     resp = {"success": True, "errors": []}
     return jsonify(resp)
 
-    set_titles_settings(region, language, dbi_versions, auto_use_latest)
-    reload_conf()
-
-    # Only run TitleDB update if region or language changed
-    if region_changed or language_changed:
-        from app import update_titledb_job
-        import threading
-
-        threading.Thread(target=update_titledb_job, args=(True,)).start()
-
-    resp = {"success": True, "errors": []}
-    return jsonify(resp)
-
 
 @settings_bp.route("/settings/regions")
 @access_required("admin")
