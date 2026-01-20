@@ -124,8 +124,8 @@
         });
     }
 
-    // Check every 3 seconds
-    setInterval(checkProcessStatus, 3000);
+    // Check every 10 seconds instead of 3 to reduce API calls
+    setInterval(checkProcessStatus, 10000);
     // Initial check
     checkProcessStatus();
 </script>
