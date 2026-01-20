@@ -62,6 +62,7 @@ def set_titles_settings_api():
     region = settings.get("region", current_settings["titles"].get("region", "US"))
     language = settings.get("language", current_settings["titles"].get("language", "en"))
     dbi_versions = settings.get("dbi_versions", current_settings["titles"].get("dbi_versions", False))
+    auto_use_latest = settings.get("auto_use_latest")
 
     languages_path = os.path.join(TITLEDB_DIR, "languages.json")
     if os.path.exists(languages_path):
@@ -78,7 +79,7 @@ def set_titles_settings_api():
             }
             return jsonify(resp)
 
-    set_titles_settings(region, language, dbi_versions)
+    set_titles_settings(region, language, dbi_versions, auto_use_latest)
     reload_conf()
 
     # Run update in background

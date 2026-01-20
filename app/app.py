@@ -10,7 +10,10 @@ import logging
 
 # Suppress Eventlet and Flask-Limiter warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="eventlet")
-warnings.filterwarnings("ignore", category=UserWarning, module="flask_limiter")
+
+# Suppress Eventlet deprecation warnings if using older versions
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="eventlet")
 
 import eventlet
 
@@ -57,9 +60,11 @@ try:
 
     # Test Redis connection before enabling Celery
     import redis
-
+    redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+    r = redis.from_url(redis_url)
     try:
-        celery.connection().ensure_connection(max_retries=1)
+        r.ping()
+
         CELERY_ENABLED = True
     except Exception as redis_error:
         print(f"Redis not available, disabling Celery: {redis_error}")
