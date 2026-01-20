@@ -179,22 +179,24 @@
                 <div class="mb-5">
                     <p class="heading has-text-weight-bold mb-3 has-text-primary">Arquivos Base Encontrados (${game.files.length})</p>
                     ${game.files.map(f => `
-                        <div class="box is-shadowless border p-3 mb-2 bg-light-soft">
-                            <div class="columns is-vcentered is-mobile is-gapless">
-                                <div class="column">
-                                    <p class="is-size-7 has-text-weight-bold break-word" title="${f.filename}">${f.filename}</p>
-                                    <p class="is-size-7 opacity-50 break-word" title="${f.filepath}">${f.filepath}</p>
-                                </div>
-                                <div class="column is-narrow ml-2 is-flex align-items-center">
-                                    <span class="tag is-info is-light font-mono mr-1">v${f.version || '0'}</span>
-                                    <span class="tag is-light font-mono mr-2">${f.size_formatted || '--'}</span>
-                                    <a href="/api/get_game/${f.id}" class="button is-primary is-small mr-1" title="Download">
-                                        <span class="icon is-small"><i class="bi bi-download"></i></span>
-                                    </a>
-                                    <button class="button is-danger is-small is-light" onclick="deleteGameFile(${f.id}, '${game.id}')" title="Excluir Arquivo">
-                                        <span class="icon is-small"><i class="bi bi-trash-fill"></i></span>
-                                    </button>
-                                </div>
+                        <div class="box is-shadowless border p-3 mb-2 bg-light-soft base-file-info">
+                            <div class="file-name">
+                                <p class="is-size-7 has-text-weight-bold break-word" title="${f.filename}">${f.filename}</p>
+                                <p class="is-size-7 opacity-50 break-word" title="${f.filepath}">${f.filepath}</p>
+                            </div>
+                            <div class="file-version">
+                                <span class="tag is-info is-light font-mono">v${f.version || '0'}</span>
+                            </div>
+                            <div class="file-size">
+                                <span class="tag is-light font-mono">${f.size_formatted || '--'}</span>
+                            </div>
+                            <div class="file-actions buttons">
+                                <a href="/api/get_game/${f.id}" class="button is-primary is-small" title="Download">
+                                    <span class="icon is-small"><i class="bi bi-download"></i></span>
+                                </a>
+                                <button class="button is-danger is-small is-light" onclick="deleteGameFile(${f.id}, '${game.id}')" title="Excluir Arquivo">
+                                    <span class="icon is-small"><i class="bi bi-trash-fill"></i></span>
+                                </button>
                             </div>
                         </div>
                     `).join('')}

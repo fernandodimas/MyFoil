@@ -530,38 +530,6 @@ p.game-description {
     }
 }
 
-/* Mobile Optimization */
-@media screen and (max-width: 768px) {
-    .section {
-        padding: 0.5rem 0.25rem !important;
-    }
-    .container {
-        padding-left: 0 !important;
-        padding-right: 0 !important;
-    }
-    .card-content {
-        padding: 0.5rem 0.4rem !important;
-    }
-    .card-image {
-        margin: 0 !important;
-    }
-    .box {
-        padding: 0.5rem 0.4rem !important;
-        margin-bottom: 0.75rem !important;
-    }
-    .navbar-container {
-        padding-left: 0.25rem !important;
-        padding-right: 0.25rem !important;
-    }
-    .navbar-item {
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
-    }
-    .columns.is-variable.is-3 {
-        margin-left: -0.75rem !important;
-        margin-right: -0.75rem !important;
-    }
-    
     /* Game Details Modal - Full screen on mobile */
     #gameDetailsModal .modal-card {
         position: fixed !important;
@@ -577,12 +545,12 @@ p.game-description {
     }
     #gameDetailsModal .modal-card-body {
         padding: 0.75rem !important;
-        width: 95% !important;
+        width: 98% !important;
         margin: 0 auto !important;
     }
     #gameDetailsModal .modal-card-head,
     #gameDetailsModal .modal-card-foot {
-        width: 95% !important;
+        width: 98% !important;
         margin: 0 auto !important;
     }
     
@@ -600,12 +568,12 @@ p.game-description {
         transform: none !important;
     }
     #dlcDetailsModal .modal-card-body {
-        width: 95% !important;
+        width: 98% !important;
         margin: 0 auto !important;
     }
     #dlcDetailsModal .modal-card-head,
     #dlcDetailsModal .modal-card-foot {
-        width: 95% !important;
+        width: 98% !important;
         margin: 0 auto !important;
     }
     
@@ -623,13 +591,28 @@ p.game-description {
         transform: none !important;
     }
     #editMetadataModal .modal-card-body {
-        width: 95% !important;
+        width: 98% !important;
         margin: 0 auto !important;
     }
     #editMetadataModal .modal-card-head,
     #editMetadataModal .modal-card-foot {
-        width: 95% !important;
+        width: 98% !important;
         margin: 0 auto !important;
+    }
+    
+    /* Base file info - break into separate lines on mobile */
+    #gameDetailsModal .base-file-info {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+    }
+    #gameDetailsModal .base-file-info > * {
+        width: 100% !important;
+    }
+    #gameDetailsModal .base-file-info .buttons {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
     }
 }
 
