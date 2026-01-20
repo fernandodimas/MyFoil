@@ -8,12 +8,12 @@ import os
 import sys
 import logging
 
-# Suppress Eventlet and Flask-Limiter warnings
-warnings.filterwarnings("ignore", category=DeprecationWarning, module="eventlet")
 
-# Suppress Eventlet deprecation warnings if using older versions
+# Suppress Eventlet and Flask-Limiter warnings
 import warnings
+
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="eventlet")
+warnings.filterwarnings("ignore", category=UserWarning, module="flask_limiter")
 
 import eventlet
 
@@ -60,7 +60,8 @@ try:
 
     # Test Redis connection before enabling Celery
     import redis
-    redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
+    redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
     r = redis.from_url(redis_url)
     try:
         r.ping()
@@ -86,7 +87,17 @@ from datetime import timedelta
 # Global variables
 app_settings = {}
 socketio = SocketIO()
-limiter = Limiter(key_func=get_remote_address, default_limits=["300 per day", "100 per hour"])
+
+# Initialize Limiter
+redis_url = os.environ.get("REDIS_URL")
+if redis_url:
+    limiter = Limiter(
+        key_func=get_remote_address, storage_uri=redis_url, default_limits=["1000 per day", "500 per hour"]
+    )
+else:
+    # Fallback to memory (will warn)
+    limiter = Limiter(key_func=get_remote_address, default_limits=["300 per day", "100 per hour"])
+
 backup_manager = None
 scan_in_progress = False
 scan_lock = threading.Lock()
