@@ -613,24 +613,7 @@
                                     </div>
                                 </nav>
                                 {% endif %}
-
-                                <div class="table-container">
-                                    <table class="table is-fullwidth" id="titledbSourcesTable">
-                                        <thead>
-                                            <tr>
-                                                <th>{{ t('Source') }}</th>
-                                                <th>{{ t('Last Modified (Remote)') }}</th>
-                                                <th>{{ t('Last Download (Local)') }}</th>
-                                                <th>{{ t('Priority') }}</th>
-                                                <th>{{ t('Status') }}</th>
-                                                <th class="has-text-right">{{ t('Actions') }}</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody></tbody>
-                                    </table>
                                 </div>
-
-
 
 
                                 <div class="block mt-6">
@@ -1789,9 +1772,6 @@
     }
 
 
-
-
-
     function deleteErrorFile(id) {
         confirmAction({
             title: 'Excluir Arquivo',
@@ -2152,7 +2132,6 @@
             });
         }
     }
-
 
 
     function submitShopSettings() {

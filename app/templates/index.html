@@ -445,8 +445,12 @@
             $('#navbarSearch').focus();
         }
 
-        // ESC: Close all modals
+        // ESC: Clear search and close all modals
         if (e.key === 'Escape') {
+            const searchValue = $('#navbarSearch').val();
+            if (searchValue) {
+                clearSearch();
+            }
             $('.modal').removeClass('is-active');
         }
     });

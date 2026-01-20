@@ -561,6 +561,36 @@ p.game-description {
         margin-left: -0.75rem !important;
         margin-right: -0.75rem !important;
     }
+    
+    /* Game Details Modal - Full width on mobile */
+    #gameDetailsModal .modal-card {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        max-height: 95vh !important;
+        border-radius: 8px !important;
+        margin: 2.5vw !important;
+    }
+    #gameDetailsModal .modal-card-body {
+        padding: 0.75rem !important;
+    }
+    
+    /* DLC Details Modal - Full width on mobile */
+    #dlcDetailsModal .modal-card {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        max-height: 95vh !important;
+        border-radius: 8px !important;
+        margin: 2.5vw !important;
+    }
+    
+    /* Edit Metadata Modal - Full width on mobile */
+    #editMetadataModal .modal-card {
+        width: 95vw !important;
+        max-width: 95vw !important;
+        max-height: 95vh !important;
+        border-radius: 8px !important;
+        margin: 2.5vw !important;
+    }
 }
 
 /* Custom Size */
