@@ -784,16 +784,7 @@
     function refreshLibrary() {
         console.log("Refreshing library data...");
         
-        // Check if we should skip refresh due to cache
-        if (!shouldRefreshFromServer()) {
-            console.log("Using cached library data (valid for 5 min)");
-            // Just apply filters with cached data
-            if (games.length > 0) {
-                applyFilters();
-            }
-            return;
-        }
-        
+        // Always fetch fresh data from server on page load
         // Show loading indicator
         $('#loadingIndicator').removeClass('is-hidden');
         $('#libraryContainer').empty();
@@ -1120,53 +1111,12 @@
     // Fetch games from API
     // Fetch games from API
     $(document).ready(() => {
-        // 1. Try to load from cache first
-        const cached = localStorage.getItem('myfoil_library_cache');
-        let hasCachedData = false;
-        if (cached) {
-            try {
-                const parsedCache = JSON.parse(cached);
-                // Ensure it's an array (old cache format or new format)
-                games = Array.isArray(parsedCache) ? parsedCache : [];
-                if (games.length > 0) {
-                    initGenders(games);
-                    initTags(games);
-                    window.filteredGames = [...games];
-                    hasCachedData = true;
-                }
-            } catch (e) {
-                console.error("Cache parse error", e);
-                localStorage.removeItem('myfoil_library_cache'); // Clear corrupted cache
-                // Show loading indicator
-                $('#loadingIndicator').removeClass('is-hidden');
-            }
-        } else {
-            // Show loading indicator
-            $('#loadingIndicator').removeClass('is-hidden');
-        }
-
-        // Load ignore preferences for the user and decide if we need to refresh
-        if (typeof loadIgnorePreferences === 'function') {
-            loadIgnorePreferences().then(() => {
-                // Apply filters with ignore preferences now available
-                if (hasCachedData) {
-                    applyFilters();
-                }
-                // Only refresh if cache is expired or doesn't exist
-                if (!hasCachedData || shouldRefreshFromServer()) {
-                    refreshLibrary();
-                }
-            });
-        } else {
-            console.warn('loadIgnorePreferences not defined, skipping...');
-            if (hasCachedData) {
-                applyFilters();
-            }
-            // Only refresh if cache is expired or doesn't exist
-            if (!hasCachedData || shouldRefreshFromServer()) {
-                refreshLibrary();
-            }
-        }
+        // Show loading indicator immediately
+        $('#loadingIndicator').removeClass('is-hidden');
+        $('#libraryContainer').empty();
+        
+        // Always fetch fresh data on page load to ensure latest games are visible
+        refreshLibrary();
 
         // Initialize zoom from localStorage
         const savedZoom = localStorage.getItem('gridZoom') || 240;
