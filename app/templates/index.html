@@ -706,7 +706,9 @@
                     comparison = (a.name || '').localeCompare(b.name || '');
                 }
             } else if (field === 'added') {
-                comparison = (a.added_at || 0) - (b.added_at || 0);
+                const dateA = a.added_at ? new Date(a.added_at).getTime() : 0;
+                const dateB = b.added_at ? new Date(b.added_at).getTime() : 0;
+                comparison = dateA - dateB;
             } else if (field === 'id') {
                 comparison = (a.id || '').localeCompare(b.id || '');
             } else if (field === 'status') {
