@@ -598,38 +598,28 @@ p.game-description {
     #editMetadataModal .modal-card-foot {
         width: 98% !important;
         margin: 0 auto !important;
-    }
-    
-    /* Base file info - inline on mobile */
+    /* Base file info - ALL IN ONE LINE (mobile & desktop) */
     #gameDetailsModal .base-file-info {
         display: flex !important;
         flex-wrap: nowrap !important;
         align-items: center !important;
         gap: 0.5rem !important;
+        width: 100% !important;
     }
     #gameDetailsModal .base-file-info .file-name {
-        flex: 1 !important;
+        flex: 1 1 auto !important;
         min-width: 0 !important;
         overflow: hidden !important;
+    }
+    #gameDetailsModal .base-file-info .file-name p {
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
     #gameDetailsModal .base-file-info .file-version,
     #gameDetailsModal .base-file-info .file-size,
     #gameDetailsModal .base-file-info .file-actions {
-        flex-shrink: 0 !important;
-    }
-}
-
-/* Desktop - Original layout for base file info */
-@media screen and (min-width: 769px) {
-    #gameDetailsModal .base-file-info {
-        display: grid !important;
-        grid-template-columns: 1fr auto auto auto !important;
-        gap: 0.75rem !important;
-        align-items: center !important;
-    }
-    #gameDetailsModal .base-file-info .file-name {
-        grid-column: 1 !important;
-        flex: none !important;
+        flex: 0 0 auto !important;
     }
 }
 
