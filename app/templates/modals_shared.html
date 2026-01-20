@@ -5,7 +5,7 @@
 <!-- Game Details Modal -->
 <div class="modal" id="gameDetailsModal" style="z-index: 1040;">
     <div class="modal-background" onclick="closeModal('gameDetailsModal')"></div>
-    <div class="modal-card"
+    <div class="modal-card" id="gameDetailsCard"
         style="max-height: 90vh; max-width: 90vw; width: 90vw; overflow: hidden; border-radius: 12px;">
         <section class="modal-card-body p-0 overflow-y-auto" id="modalContent">
             <!-- Injected via JS -->
@@ -464,6 +464,9 @@
             $('#modalContent').html(content);
             loadGameTagsAndWishlist(game.id);
             openModal('gameDetailsModal');
+            
+            // Adjust modal for mobile
+            adjustModalForMobile('gameDetailsCard');
             
             // Initialize Swiper carousel
             setTimeout(() => {
@@ -950,6 +953,24 @@
     function openScreenshotModal(url) {
         $('#screenshotModalImage').attr('src', url);
         openModal('screenshotModal');
+    }
+    
+    function adjustModalForMobile(cardId) {
+        const card = document.getElementById(cardId);
+        if (!card) return;
+        
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            card.style.width = '100%';
+            card.style.maxWidth = '100%';
+            card.style.height = '100%';
+            card.style.maxHeight = '100%';
+            card.style.borderRadius = '0';
+            card.style.margin = '0';
+            card.style.position = 'fixed';
+            card.style.top = '0';
+            card.style.left = '0';
+        }
     }
 
     // Initialize screenshot carousel when modal opens

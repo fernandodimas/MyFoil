@@ -562,18 +562,21 @@ p.game-description {
         margin-right: -0.75rem !important;
     }
     
-    /* Game Details Modal - Full width on mobile */
+    /* Game Details Modal - Full screen on mobile */
     #gameDetailsModal .modal-card {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
         width: 100% !important;
+        height: 100% !important;
         max-width: 100% !important;
-        max-height: 100vh !important;
+        max-height: 100% !important;
         border-radius: 0 !important;
         margin: 0 !important;
-        height: 100vh !important;
-        max-height: 100vh !important;
+        transform: none !important;
     }
     #gameDetailsModal .modal-card-body {
-        padding: 0.5rem !important;
+        padding: 0.75rem !important;
         width: 95% !important;
         margin: 0 auto !important;
     }
@@ -583,15 +586,18 @@ p.game-description {
         margin: 0 auto !important;
     }
     
-    /* DLC Details Modal - Full width on mobile */
+    /* DLC Details Modal - Full screen on mobile */
     #dlcDetailsModal .modal-card {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
         width: 100% !important;
+        height: 100% !important;
         max-width: 100% !important;
-        max-height: 100vh !important;
+        max-height: 100% !important;
         border-radius: 0 !important;
         margin: 0 !important;
-        height: 100vh !important;
-        max-height: 100vh !important;
+        transform: none !important;
     }
     #dlcDetailsModal .modal-card-body {
         width: 95% !important;
@@ -603,15 +609,18 @@ p.game-description {
         margin: 0 auto !important;
     }
     
-    /* Edit Metadata Modal - Full width on mobile */
+    /* Edit Metadata Modal - Full screen on mobile */
     #editMetadataModal .modal-card {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
         width: 100% !important;
+        height: 100% !important;
         max-width: 100% !important;
-        max-height: 100vh !important;
+        max-height: 100% !important;
         border-radius: 0 !important;
         margin: 0 !important;
-        height: 100vh !important;
-        max-height: 100vh !important;
+        transform: none !important;
     }
     #editMetadataModal .modal-card-body {
         width: 95% !important;
