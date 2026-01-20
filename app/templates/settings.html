@@ -510,17 +510,73 @@
                                         onclick="forceTitleDBUpdate()">
                                         <i class="bi bi-cloud-download mr-1"></i> {{ t('Force Update') }}
                                     </button>
-                                    <label class="checkbox is-small is-flex is-align-items-center" title="{{ t('Automatically use the source with the most recent data') }}">
-                                        <input type="checkbox" id="autoUseLatest" class="mr-2">
-                                        {{ t('Auto-use latest') }}
-                                    </label>
-                                    <button class="button is-small is-primary ml-3" onclick="saveTitleDBSettings()"
-                                        title="{{ t('Save TitleDB settings') }}">
-                                        <i class="bi bi-check-lg mr-1"></i> {{ t('Save') }}
-                                    </button>
-                                    <button class="button is-small is-ghost ml-2" onclick="refreshTitleDBDates()"
+                                    <button class="button is-small is-ghost" onclick="refreshTitleDBDates()"
                                         title="{{ t('Refresh remote dates') }}">
                                         <i class="bi bi-calendar-event mr-1"></i>
+                                    </button>
+                                </div>
+                            </header>
+                            <div class="card-content pt-0">
+                                {% if active_source %}
+                                <nav class="level box is-shadowless notification py-3 mb-6"
+                                    style="background: rgba(87,13,248,0.05)">
+                                    <div class="level-item has-text-centered">
+                                        <div>
+                                            <p class="heading">{{ t('Active Source') }}</p>
+                                            <p class="title is-5 has-text-primary">{{ active_source.name }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="level-item has-text-centered">
+                                        <div>
+                                            <p class="heading">{{ t('Last Download') }}</p>
+                                            <p class="title is-5">{{ active_source.last_download_date }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="level-item has-text-centered">
+                                        <div>
+                                            <p class="heading">{{ t('Titles Detected') }}</p>
+                                            <p class="title is-5">{{ active_source.titles_count }}</p>
+                                        </div>
+                                    </div>
+                                    <div class="level-item has-text-centered">
+                                        <div>
+                                            <p class="heading">{{ t('Status') }}</p>
+                                            <span
+                                                class="tag {{ 'is-success' if active_source.is_updated else 'is-warning' }} is-light">
+                                                {{ t('Up to date') if active_source.is_updated else t('Outdated') }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </nav>
+                                {% endif %}
+
+                                <div class="table-container">
+                                    <table class="table is-fullwidth" id="titledbSourcesTable">
+                                        <thead>
+                                            <tr>
+                                                <th></th>
+                                                <th>{{ t('Source') }}</th>
+                                                <th>{{ t('Last Modified (Remote)') }}</th>
+                                                <th>{{ t('Last Download (Local)') }}</th>
+                                                <th>{{ t('Priority') }}</th>
+                                                <th>{{ t('Status') }}</th>
+                                                <th class="has-text-right">{{ t('Actions') }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+
+                                <div class="box is-shadowless mt-4" style="background: rgba(87,13,248,0.03);">
+                                    <label class="checkbox is-flex is-align-items-center">
+                                        <input type="checkbox" id="autoUseLatest" class="mr-2">
+                                        {{ t('Auto-use latest') }} - <span class="is-size-7 ml-2 opacity-75">{{ t('Automatically use the source with the most recent data') }}</span>
+                                    </label>
+                                </div>
+
+                                <div class="buttons mt-4">
+                                    <button class="button is-primary" onclick="saveTitleDBSettings()">
+                                        <i class="bi bi-check-lg mr-1"></i> {{ t('Save') }}
                                     </button>
                                 </div>
                             </header>

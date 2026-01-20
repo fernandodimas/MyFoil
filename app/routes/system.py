@@ -417,28 +417,14 @@ def force_titledb_update_api():
     return jsonify({"success": True, "message": "Update started in background"})
 
 
-@system_bp.post("/settings/titledb/sources/reorder")
-@access_required("admin")
-def titledb_sources_reorder_api():
-    """Reordenar prioridades das fontes TitleDB"""
-    import titledb_sources
-
-    data = request.json
-    if not data:
-        return jsonify({"success": False, "errors": ["No data provided"]})
-
-    manager = titledb_sources.TitleDBSourceManager()
-    success = manager.update_priorities(data)
-    return jsonify({"success": success, "errors": [] if success else ["Failed to update priorities"]})
-
-
 @system_bp.post("/settings/titledb/sources/refresh-dates")
 @access_required("admin")
 def refresh_titledb_sources_dates_api():
     """Atualizar datas remotas das fontes TitleDB"""
+    from settings import CONFIG_DIR
     import titledb_sources
 
-    manager = titledb_sources.TitleDBSourceManager()
+    manager = titledb_sources.TitleDBSourceManager(CONFIG_DIR)
     manager.refresh_remote_dates()
     return jsonify({"success": True})
 

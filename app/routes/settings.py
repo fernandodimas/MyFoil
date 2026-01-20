@@ -423,19 +423,35 @@ def update_webhook_api(id):
 @access_required("admin")
 def reorder_sources_api():
     """Reordenar fontes do TitleDB"""
+    import logging
+
+    logger = logging.getLogger("main")
+
     data = request.json
-    priorities = data.get("priorities", [])
+    priorities = data  # Can be dict or list
 
     import titledb_sources
 
     manager = titledb_sources.TitleDBSourceManager(CONFIG_DIR)
 
-    for item in priorities:
-        name = item.get("name")
-        priority = item.get("priority")
-        if name and priority is not None:
+    updated = 0
+    if isinstance(priorities, dict):
+        # Frontend sends {source_name: priority, ...}
+        for name, priority in priorities.items():
             manager.update_source(name, priority=priority)
+            updated += 1
+            logger.info(f"Updated source {name} priority to {priority}")
+    elif isinstance(priorities, list):
+        # Frontend might send [{name, priority}, ...]
+        for item in priorities:
+            name = item.get("name")
+            priority = item.get("priority")
+            if name and priority is not None:
+                manager.update_source(name, priority=priority)
+                updated += 1
+                logger.info(f"Updated source {name} priority to {priority}")
 
+    logger.info(f"Reordered {updated} sources")
     return jsonify({"success": True})
 
 
