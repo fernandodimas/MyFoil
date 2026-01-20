@@ -599,27 +599,35 @@ p.game-description {
         width: 98% !important;
         margin: 0 auto !important;
     /* Base file info - ALL IN ONE LINE (mobile & desktop) */
-    #gameDetailsModal .base-file-info {
+    #gameDetailsModal .base-file-info.box {
         display: flex !important;
+        flex-direction: row !important;
         flex-wrap: nowrap !important;
         align-items: center !important;
+        justify-content: flex-start !important;
         gap: 0.5rem !important;
         width: 100% !important;
     }
-    #gameDetailsModal .base-file-info .file-name {
+    #gameDetailsModal .base-file-info.box > .file-name {
         flex: 1 1 auto !important;
         min-width: 0 !important;
-        overflow: hidden !important;
+        max-width: calc(100% - 200px) !important;
     }
-    #gameDetailsModal .base-file-info .file-name p {
+    #gameDetailsModal .base-file-info.box > .file-name p {
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
     }
-    #gameDetailsModal .base-file-info .file-version,
-    #gameDetailsModal .base-file-info .file-size,
-    #gameDetailsModal .base-file-info .file-actions {
+    #gameDetailsModal .base-file-info.box > .file-version,
+    #gameDetailsModal .base-file-info.box > .file-size,
+    #gameDetailsModal .base-file-info.box > .file-actions {
         flex: 0 0 auto !important;
+        flex-shrink: 0 !important;
+    }
+    #gameDetailsModal .base-file-info.box > .file-actions {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 0.25rem !important;
     }
 }
 
