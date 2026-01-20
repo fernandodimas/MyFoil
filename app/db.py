@@ -88,6 +88,7 @@ class Files(db.Model):
     identification_error = db.Column(db.String)
     identification_attempts = db.Column(db.Integer, default=0)
     last_attempt = db.Column(db.DateTime, default=datetime.datetime.now())
+    titledb_version = db.Column(db.String)  # TitleDB version when file was identified
 
     library = db.relationship("Libraries", backref=db.backref("files", lazy=True, cascade="all, delete-orphan"))
 
@@ -570,6 +571,21 @@ def delete_file_from_db_and_disk(file_id):
 
 def get_files_with_identification_from_library(library_id, identification_type):
     return Files.query.filter_by(library_id=library_id, identification_type=identification_type).all()
+
+
+def get_filename_identified_files_needing_reidentification(library_id, current_titledb_timestamp):
+    """Get files identified by 'filename' that need re-identification due to TitleDB update."""
+    if current_titledb_timestamp is None:
+        return []
+    try:
+        ts_float = float(current_titledb_timestamp)
+    except (ValueError, TypeError):
+        return []
+    return (
+        Files.query.filter(Files.library_id == library_id, Files.identification_type == "filename")
+        .filter(db.or_(Files.titledb_version == None, Files.titledb_version < str(ts_float)))
+        .all()
+    )
 
 
 def get_shop_files():

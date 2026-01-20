@@ -223,6 +223,18 @@ def is_db_cache_valid():
     return age < _titledb_cache_ttl
 
 
+def get_titledb_cache_timestamp():
+    """Get the timestamp of the latest TitleDB cache update."""
+    global _titledb_cache_timestamp
+    return _titledb_cache_timestamp
+
+
+def set_titledb_cache_timestamp(timestamp):
+    """Set the TitleDB cache timestamp (used after loading from files)."""
+    global _titledb_cache_timestamp
+    _titledb_cache_timestamp = timestamp
+
+
 def robust_json_load(filepath):
     """Reliably load JSON files even with invalid escape sequences or control characters."""
     if not os.path.exists(filepath):

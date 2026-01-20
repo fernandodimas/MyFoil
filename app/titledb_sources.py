@@ -2,6 +2,7 @@
 TitleDB Source Manager for MyFoil
 Supports multiple sources with automatic fallback and configurable priorities
 """
+
 import requests
 import json
 import logging
@@ -9,68 +10,66 @@ from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 from pathlib import Path
 
-logger = logging.getLogger('main')
+logger = logging.getLogger("main")
+
 
 class TitleDBSource:
     """Represents a single TitleDB source"""
-    
-    def __init__(self, name: str, base_url: str, enabled: bool = True, priority: int = 0, source_type: str = 'json'):
+
+    def __init__(self, name: str, base_url: str, enabled: bool = True, priority: int = 0, source_type: str = "json"):
         self.name = name
-        self.base_url = base_url.rstrip('/')
+        self.base_url = base_url.rstrip("/")
         self.enabled = enabled
         self.priority = priority
-        self.source_type = source_type # 'json' or 'zip_legacy'
+        self.source_type = source_type  # 'json' or 'zip_legacy'
         self.last_success = None
         self.last_error = None
         self.remote_date = None
         self.is_fetching = False
-        
+
     def get_file_url(self, filename: str) -> str:
         """Get the full URL for a specific file"""
         return f"{self.base_url}/{filename}"
-    
+
     def to_dict(self) -> Dict:
         """Convert to dictionary for serialization"""
         return {
-            'name': self.name,
-            'base_url': self.base_url,
-            'enabled': self.enabled,
-            'priority': self.priority,
-            'source_type': self.source_type,
-            'last_success': self.last_success.isoformat() if self.last_success else None,
-            'last_error': self.last_error,
-            'remote_date': self.remote_date.isoformat() if self.remote_date else None,
-            'is_fetching': self.is_fetching
+            "name": self.name,
+            "base_url": self.base_url,
+            "enabled": self.enabled,
+            "priority": self.priority,
+            "source_type": self.source_type,
+            "last_success": self.last_success.isoformat() if self.last_success else None,
+            "last_error": self.last_error,
+            "remote_date": self.remote_date.isoformat() if self.remote_date else None,
+            "is_fetching": self.is_fetching,
         }
 
     def get_last_modified_date(self, filenames: List[str]) -> Optional[datetime]:
         """Get the last modified date of any of the regional files from the source"""
         if not isinstance(filenames, list):
             filenames = [filenames]
-            
+
         try:
             # Check if it's a raw GitHub URL
             if "raw.githubusercontent.com" in self.base_url:
                 # https://raw.githubusercontent.com/<user>/<repo>/<branch>
-                parts = self.base_url.split('/')
+                parts = self.base_url.split("/")
                 if len(parts) >= 6:
                     user = parts[3]
                     repo = parts[4]
-                    branch = parts[5].rstrip('/')
-                    
+                    branch = parts[5].rstrip("/")
+
                     # Try to get commit info for the file
                     def _get_github_date(fname, br):
                         api_url = f"https://api.github.com/repos/{user}/{repo}/commits?path={fname}&sha={br}&per_page=1"
-                        headers = {
-                            'User-Agent': 'MyFoil-App',
-                            'Accept': 'application/vnd.github.v3+json'
-                        }
+                        headers = {"User-Agent": "MyFoil-App", "Accept": "application/vnd.github.v3+json"}
                         try:
                             resp = requests.get(api_url, headers=headers, timeout=5)
                             if resp.status_code == 200:
                                 data = resp.json()
                                 if data and isinstance(data, list) and len(data) > 0:
-                                    commit_date = data[0]['commit']['committer']['date']
+                                    commit_date = data[0]["commit"]["committer"]["date"]
                                     return datetime.fromisoformat(commit_date.replace("Z", "+00:00"))
                             elif resp.status_code == 403:
                                 logger.warning(f"GitHub API rate limited for {self.name}")
@@ -81,112 +80,109 @@ class TitleDBSource:
                     # Try each filename on the branch
                     for fname in filenames:
                         d = _get_github_date(fname, branch)
-                        if d: return d
-                    
+                        if d:
+                            return d
+
                     # Try generic titles.json
                     if "titles.json" not in filenames:
                         d = _get_github_date("titles.json", branch)
-                        if d: return d
-                    
+                        if d:
+                            return d
+
                     # Fallback branch check
-                    alt_branch = 'master' if branch == 'main' else 'main'
+                    alt_branch = "master" if branch == "main" else "main"
                     for fname in filenames:
                         d = _get_github_date(fname, alt_branch)
-                        if d: return d
-            
+                        if d:
+                            return d
+
             # Fallback to standard HEAD request for each filename
             for fname in filenames:
                 url = self.get_file_url(fname)
                 response = requests.head(url, timeout=5)
                 if response.status_code == 200:
-                    if 'Last-Modified' in response.headers:
-                        return datetime.strptime(response.headers['Last-Modified'], '%a, %d %b %Y %H:%M:%S %Z')
-            
+                    if "Last-Modified" in response.headers:
+                        return datetime.strptime(response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S %Z")
+
             # Final attempt: try generic titles.json
             if "titles.json" not in filenames:
                 url_generic = self.get_file_url("titles.json")
                 response = requests.head(url_generic, timeout=5)
-                if response.status_code == 200 and 'Last-Modified' in response.headers:
-                    return datetime.strptime(response.headers['Last-Modified'], '%a, %d %b %Y %H:%M:%S %Z')
-                    
+                if response.status_code == 200 and "Last-Modified" in response.headers:
+                    return datetime.strptime(response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S %Z")
+
         except Exception as e:
             logger.debug(f"Error fetching remote date for {self.name}: {e}")
-            
+
         return None
-    
+
     @classmethod
-    def from_dict(cls, data: Dict) -> 'TitleDBSource':
+    def from_dict(cls, data: Dict) -> "TitleDBSource":
         """Create from dictionary"""
         source = cls(
-            name=data['name'],
-            base_url=data['base_url'],
-            enabled=data.get('enabled', True),
-            priority=data.get('priority', 0),
-            source_type=data.get('source_type', 'json')
+            name=data["name"],
+            base_url=data["base_url"],
+            enabled=data.get("enabled", True),
+            priority=data.get("priority", 0),
+            source_type=data.get("source_type", "json"),
         )
-        if data.get('last_success'):
-            source.last_success = datetime.fromisoformat(data['last_success'])
-        if data.get('remote_date'):
-            source.remote_date = datetime.fromisoformat(data['remote_date'])
-        source.last_error = data.get('last_error')
+        if data.get("last_success"):
+            source.last_success = datetime.fromisoformat(data["last_success"])
+        if data.get("remote_date"):
+            source.remote_date = datetime.fromisoformat(data["remote_date"])
+        source.last_error = data.get("last_error")
         return source
 
 
 class TitleDBSourceManager:
     """Manages multiple TitleDB sources with fallback support"""
-    
+
     # Default sources
     DEFAULT_SOURCES = [
-        TitleDBSource(
-            name="tinfoil.media",
-            base_url="https://tinfoil.media/repo/db",
-            priority=1,
-            source_type='json'
-        ),
+        TitleDBSource(name="tinfoil.media", base_url="https://tinfoil.media/repo/db", priority=1, source_type="json"),
         TitleDBSource(
             name="MyFoil (Legacy)",
             base_url="https://nightly.link/a1ex4/ownfoil/workflows/region_titles/master/titledb.zip",
             enabled=True,
             priority=2,
-            source_type='zip_legacy'
+            source_type="zip_legacy",
         ),
         TitleDBSource(
             name="blawar/titledb (GitHub)",
             base_url="https://raw.githubusercontent.com/blawar/titledb/master",
             priority=3,
-            source_type='json'
-        )
+            source_type="json",
+        ),
     ]
-    
+
     def __init__(self, config_dir: str):
         self.config_dir = Path(config_dir)
-        self.sources_file = self.config_dir / 'titledb_sources.json'
+        self.sources_file = self.config_dir / "titledb_sources.json"
         self.sources: List[TitleDBSource] = []
         self.load_sources()
-    
+
     def load_sources(self):
         """Load sources from config file or use defaults"""
         if self.sources_file.exists():
             try:
-                with open(self.sources_file, 'r') as f:
+                with open(self.sources_file, "r") as f:
                     data = json.load(f)
                     self.sources = [TitleDBSource.from_dict(s) for s in data]
-                
+
                 # Migration: Remove defunct sources and add new defaults
                 config_urls = [s.base_url for s in self.sources]
                 defunct_urls = [
                     "https://raw.githubusercontent.com/Big-On-The-Bottle/titledb/main",
-                    "https://raw.githubusercontent.com/julesontheroad/titledb/master"
+                    "https://raw.githubusercontent.com/julesontheroad/titledb/master",
                 ]
-                defunct_names = [
-                    "bottle/titledb (GitHub)",
-                    "julesontheroad/titledb (GitHub)"
-                ]
-                
+                defunct_names = ["bottle/titledb (GitHub)", "julesontheroad/titledb (GitHub)"]
+
                 # Filter out defunct
                 original_count = len(self.sources)
-                self.sources = [s for s in self.sources if s.base_url not in defunct_urls and s.name not in defunct_names]
-                
+                self.sources = [
+                    s for s in self.sources if s.base_url not in defunct_urls and s.name not in defunct_names
+                ]
+
                 # Add missing defaults
                 added = False
                 new_config_urls = [s.base_url for s in self.sources]
@@ -194,12 +190,11 @@ class TitleDBSourceManager:
                     if default_s.base_url not in new_config_urls:
                         self.sources.append(default_s)
                         added = True
-                
-                
+
                 if len(self.sources) != original_count or added:
                     logger.info("Syncing TitleDB sources (removing defunct or adding newly defaults)...")
                     self.save_sources()
-                
+
                 logger.info(f"Loaded {len(self.sources)} TitleDB sources from config")
             except Exception as e:
                 logger.error(f"Error loading TitleDB sources: {e}, using defaults")
@@ -208,55 +203,57 @@ class TitleDBSourceManager:
             logger.info("No TitleDB sources config found, using defaults")
             self.sources = self.DEFAULT_SOURCES.copy()
             self.save_sources()
-    
+
     def save_sources(self):
         """Save sources to config file"""
         try:
             self.config_dir.mkdir(parents=True, exist_ok=True)
-            with open(self.sources_file, 'w') as f:
+            with open(self.sources_file, "w") as f:
                 json.dump([s.to_dict() for s in self.sources], f, indent=2)
             logger.debug("Saved TitleDB sources to config")
         except Exception as e:
             logger.error(f"Error saving TitleDB sources: {e}")
-    
+
     def get_active_sources(self) -> List[TitleDBSource]:
         """Get enabled sources sorted by priority"""
         active = [s for s in self.sources if s.enabled]
         return sorted(active, key=lambda x: x.priority)
-    
-    def download_file(self, filename: str, dest_path: str, timeout: int = 30) -> Tuple[bool, Optional[str], Optional[str]]:
+
+    def download_file(
+        self, filename: str, dest_path: str, timeout: int = 30
+    ) -> Tuple[bool, Optional[str], Optional[str]]:
         """
         Download a file from sources with automatic fallback
-        
+
         Returns:
             Tuple of (success, source_name, error_message)
         """
         active_sources = self.get_active_sources()
-        
+
         if not active_sources:
             return False, None, "No active TitleDB sources configured"
-        
+
         for source in active_sources:
             url = source.get_file_url(filename)
             logger.info(f"Attempting to download {filename} from {source.name}...")
-            
+
             try:
                 response = requests.get(url, timeout=timeout, stream=True)
                 response.raise_for_status()
-                
+
                 # Write to file
-                with open(dest_path, 'wb') as f:
+                with open(dest_path, "wb") as f:
                     for chunk in response.iter_content(chunk_size=8192):
                         f.write(chunk)
-                
+
                 # Update source status
                 source.last_success = datetime.now()
                 source.last_error = None
                 self.save_sources()
-                
+
                 logger.info(f"Successfully downloaded {filename} from {source.name}")
                 return True, source.name, None
-                
+
             except requests.exceptions.RequestException as e:
                 error_msg = f"Failed to download from {source.name}: {str(e)}"
                 logger.warning(error_msg)
@@ -267,55 +264,59 @@ class TitleDBSourceManager:
                 logger.error(error_msg)
                 source.last_error = str(e)
                 continue
-        
+
         # All sources failed
         self.save_sources()
         return False, None, "All TitleDB sources failed"
-    
-    def add_source(self, name: str, base_url: str, priority: int = 50, enabled: bool = True, source_type: str = 'json') -> bool:
+
+    def add_source(
+        self, name: str, base_url: str, priority: int = 50, enabled: bool = True, source_type: str = "json"
+    ) -> bool:
         """Add a new custom source"""
         # Check if source already exists
         if any(s.name == name for s in self.sources):
             logger.warning(f"Source {name} already exists")
             return False
-        
+
         new_source = TitleDBSource(name, base_url, enabled, priority, source_type)
         self.sources.append(new_source)
         self.save_sources()
         logger.info(f"Added new TitleDB source: {name} (Type: {source_type})")
         return True
-    
+
     def remove_source(self, name: str) -> bool:
         """Remove a source by name"""
         original_count = len(self.sources)
         self.sources = [s for s in self.sources if s.name != name]
-        
+
         if len(self.sources) < original_count:
             self.save_sources()
             logger.info(f"Removed TitleDB source: {name}")
             return True
-        
+
         logger.warning(f"Source {name} not found")
         return False
-    
+
     def update_source(self, name: str, **kwargs) -> bool:
         """Update source properties"""
         for source in self.sources:
             if source.name == name:
-                if 'base_url' in kwargs:
-                    source.base_url = kwargs['base_url'].rstrip('/')
-                if 'enabled' in kwargs:
-                    source.enabled = kwargs['enabled']
-                if 'priority' in kwargs:
-                    source.priority = kwargs['priority']
-                
+                if "base_url" in kwargs:
+                    source.base_url = kwargs["base_url"].rstrip("/")
+                if "enabled" in kwargs:
+                    source.enabled = kwargs["enabled"]
+                if "priority" in kwargs:
+                    source.priority = kwargs["priority"]
+                if "source_type" in kwargs:
+                    source.source_type = kwargs["source_type"]
+
                 self.save_sources()
                 logger.info(f"Updated TitleDB source: {name}")
                 return True
-        
+
         logger.warning(f"Source {name} not found")
         return False
-    
+
     def get_sources_status(self) -> List[Dict]:
         """Get status of all sources using cached dates"""
         return [s.to_dict() for s in sorted(self.sources, key=lambda x: x.priority)]
@@ -323,6 +324,7 @@ class TitleDBSourceManager:
     def refresh_remote_dates(self):
         """Asynchronously refresh remote dates for all enabled sources"""
         import threading
+
         thread = threading.Thread(target=self._refresh_remote_dates_worker)
         thread.daemon = True
         thread.start()
@@ -331,19 +333,19 @@ class TitleDBSourceManager:
         """Worker thread for remote date refreshing"""
         from settings import load_settings
         import titledb
-        
+
         logger.info("Starting background TitleDB remote date refresh...")
         app_settings = load_settings()
-        region = app_settings['titles'].get('region', 'US')
-        language = app_settings['titles'].get('language', 'en')
+        region = app_settings["titles"].get("region", "US")
+        language = app_settings["titles"].get("language", "en")
         possible_files = titledb.get_region_titles_filenames(region, language)
-        
+
         logger.info(f"Targeting files: {possible_files} for region {region}/{language}")
-        
+
         for source in self.sources:
             if not source.enabled:
                 continue
-                
+
             source.is_fetching = True
             try:
                 logger.info(f"Checking remote date for source: {source.name}...")
@@ -352,10 +354,12 @@ class TitleDBSourceManager:
                     source.remote_date = new_date
                     logger.info(f"Source {source.name} remote date updated to {new_date}")
                 else:
-                    logger.info(f"Could not find remote date for source: {source.name} (This is normal for some sources)")
+                    logger.info(
+                        f"Could not find remote date for source: {source.name} (This is normal for some sources)"
+                    )
             finally:
                 source.is_fetching = False
-        
+
         self.save_sources()
         logger.info("Finished background TitleDB remote date refresh.")
 
@@ -371,7 +375,7 @@ class TitleDBSourceManager:
                 if source.priority != new_prio:
                     source.priority = new_prio
                     changed = True
-        
+
         if changed:
             self.save_sources()
             logger.info("Batch updated TitleDB source priorities")

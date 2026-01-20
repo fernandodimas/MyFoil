@@ -227,6 +227,12 @@ def update_titledb_job(force=False):
                 logger.info("Syncing new TitleDB versions to library...")
                 add_missing_apps_to_db()
                 update_titles()
+                # Re-identify files that were identified by filename (now TitleDB has more data)
+                from library import identify_library_files, get_libraries
+
+                libraries = get_libraries()
+                for library in libraries:
+                    identify_library_files(library.path)
                 generate_library(force=True)
                 logger.info("Library cache regenerated after TitleDB update.")
 

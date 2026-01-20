@@ -262,9 +262,20 @@ def scan_library_path(library_path):
 
 def get_files_to_identify(library_id):
     non_identified_files = get_all_non_identified_files_from_library(library_id)
+
+    # Re-identify files identified by "filename" if TitleDB has been updated
+    current_titledb_timestamp = titles_lib.get_titledb_cache_timestamp()
+    files_to_reidentify = get_filename_identified_files_needing_reidentification(library_id, current_titledb_timestamp)
+
     if titles_lib.Keys.keys_loaded:
         files_to_identify_with_cnmt = get_files_with_identification_from_library(library_id, "filename")
-        non_identified_files = list(set(non_identified_files).union(files_to_identify_with_cnmt))
+        non_identified_files = list(
+            set(non_identified_files).union(files_to_identify_with_cnmt).union(files_to_reidentify)
+        )
+    else:
+        # Even without keys, re-identify filename files if TitleDB was updated
+        non_identified_files = list(set(non_identified_files).union(files_to_reidentify))
+
     return non_identified_files
 
 
@@ -351,6 +362,11 @@ def identify_library_files(library):
                 file.identified = False
 
             file.identification_type = identification
+
+            # Update TitleDB version timestamp after successful identification
+            current_titledb_ts = titles_lib.get_titledb_cache_timestamp()
+            if current_titledb_ts:
+                file.titledb_version = str(current_titledb_ts)
 
         except Exception as e:
             logger.warning(f"Error identifying file {filename}: {e}")
