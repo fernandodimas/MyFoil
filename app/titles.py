@@ -133,11 +133,17 @@ def load_titledb_from_db():
         return False
 
 
-def save_titledb_to_db(source_files):
+def save_titledb_to_db(source_files, app_context=None):
     """Save TitleDB data to database cache for fast loading."""
     global _titles_db, _versions_db, _cnmts_db, _titledb_cache_timestamp
 
     try:
+        from flask import has_app_context
+
+        if not has_app_context():
+            logger.warning("Cannot save TitleDB cache: no app context")
+            return False
+
         from db import db, TitleDBCache, TitleDBVersions, TitleDBDLCs
 
         logger.info("Saving TitleDB to database cache...")

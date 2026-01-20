@@ -1583,8 +1583,8 @@
                             contentType: 'application/json',
                             data: JSON.stringify(priorities),
                             success: function (res) {
-                                if (res.success) showToast('{{ t("Priorities updated") }}');
-                                else showToast('{{ t("Failed to update priorities") }}', 'error');
+                                if (res.success) showToast(t('Priorities updated'));
+                                else showToast(t('Failed to update priorities'), 'error');
                             }
                         });
                     }
@@ -2043,7 +2043,7 @@
             contentType: "application/json",
             success: (r) => {
                 if (!r.success) showToast(r.errors?.[0]?.error, 'error');
-                else showToast('{{ t("Settings saved") }}');
+                else showToast(t('Settings saved'));
             }
         });
 
@@ -2086,7 +2086,7 @@
             type: 'POST',
             data: JSON.stringify(data),
             contentType: "application/json",
-            success: () => showToast('{{ t("Shop settings saved") }}')
+            success: () => showToast(t('Shop settings saved'))
         });
     }
 
