@@ -273,16 +273,15 @@ def delete_file_api(file_id):
         if success:
             logger.info(f"File {file_id} deleted. Updating cache for titles: {title_ids}")
             # Invalidate full library cache to ensure consistency
-            from library import invalidate_library_cache
+            from library import invalidate_library_cache, generate_library
 
             invalidate_library_cache()
-            for tid in title_ids:
-                try:
-                    from library import update_game_in_cache
-
-                    update_game_in_cache(tid)
-                except Exception as ex:
-                    logger.error(f"Error updating cache for title {tid}: {ex}")
+            # Regenerate the library cache
+            try:
+                generate_library(force=True)
+                logger.info("Library cache regenerated after file deletion")
+            except Exception as gen_err:
+                logger.error(f"Error regenerating library cache: {gen_err}")
 
             # Run orphaned files cleanup after successful deletion
             try:

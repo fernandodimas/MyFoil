@@ -26,7 +26,7 @@ TITLEDB_DEFAULT_FILES = [
 
 MYFOIL_DB = "sqlite:///" + DB_FILE
 
-BUILD_VERSION = '20260120_1529'
+BUILD_VERSION = '20260120_1546'
 
 DEFAULT_SETTINGS = {
     "library": {
@@ -60,10 +60,10 @@ DEFAULT_SETTINGS = {
 TINFOIL_HEADERS = ["Theme", "Uid", "Version", "Revision", "Language", "Hauth", "Uauth"]
 
 ALLOWED_EXTENSIONS = [
-    "nsp",
-    "nsz",
-    "xci",
-    "xcz",
+    ".nsp",
+    ".nsz",
+    ".xci",
+    ".xcz",
 ]
 
 APP_TYPE_BASE = "BASE"
