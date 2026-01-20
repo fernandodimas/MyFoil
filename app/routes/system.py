@@ -690,7 +690,12 @@ def cloud_callback_api(provider):
 @access_required("admin")
 def cloud_status_api():
     """Status da integração com nuvem"""
-    from app import cloud_manager
+    from cloud_sync import get_cloud_manager
+
+    try:
+        cloud_manager = get_cloud_manager(CONFIG_DIR)
+    except Exception:
+        return jsonify({})
 
     if not cloud_manager:
         return jsonify({})

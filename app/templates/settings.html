@@ -506,12 +506,20 @@
                                     <i class="bi bi-database-fill mr-2"></i> {{ t('TitleDB Sources') }}
                                 </p>
                                 <div class="card-header-icon pt-4 pr-5">
-                                    <button class="button is-small is-warning is-outlined updateTitleDBBtn"
+                                    <button class="button is-small is-warning is-outlined updateTitleDBBtn mr-2"
                                         onclick="forceTitleDBUpdate()">
                                         <i class="bi bi-cloud-download mr-1"></i> {{ t('Force Update') }}
                                     </button>
-                                    <button class="button is-small is-ghost" onclick="refreshTitleDBDates()"
-                                        title="Atualizar datas remotas">
+                                    <label class="checkbox is-small is-flex is-align-items-center" title="{{ t('Automatically use the source with the most recent data') }}">
+                                        <input type="checkbox" id="autoUseLatest" class="mr-2">
+                                        {{ t('Auto-use latest') }}
+                                    </label>
+                                    <button class="button is-small is-primary ml-3" onclick="saveTitleDBSettings()"
+                                        title="{{ t('Save TitleDB settings') }}">
+                                        <i class="bi bi-check-lg mr-1"></i> {{ t('Save') }}
+                                    </button>
+                                    <button class="button is-small is-ghost ml-2" onclick="refreshTitleDBDates()"
+                                        title="{{ t('Refresh remote dates') }}">
                                         <i class="bi bi-calendar-event mr-1"></i>
                                     </button>
                                 </div>
@@ -2030,10 +2038,28 @@
         });
     }
 
+    function saveTitleDBSettings() {
+        const data = {
+            auto_use_latest: $('#autoUseLatest').is(':checked')
+        };
+
+        $.ajax({
+            url: "/api/settings/titles",
+            type: 'POST',
+            data: JSON.stringify(data),
+            contentType: "application/json",
+            success: (r) => {
+                if (!r.success) showToast(r.errors?.[0]?.error, 'error');
+                else showToast(t('Settings saved'));
+            }
+        });
+    }
+
     function submitTitlesSettings() {
         const data = {
             region: $('#selectRegion').val(),
-            language: $('#selectLanguage').val()
+            language: $('#selectLanguage').val(),
+            auto_use_latest: $('#autoUseLatest').is(':checked')
         };
 
         $.ajax({
@@ -2585,6 +2611,9 @@
             const selectLanguage = $('#selectLanguage').empty();
             languagesData.languages.forEach(l => selectLanguage.append(new Option(l, l)));
             selectLanguage.val(settingsData['titles/language']);
+
+            // Auto-use latest
+            $('#autoUseLatest').prop('checked', settingsData['titles/auto_use_latest'] === true);
 
             // General
             $('#languageSelect').val(document.cookie.match(/language=([^;]+)/)?.[1] || 'en');

@@ -304,6 +304,20 @@ def init_internal(app):
     # Check for initial scan
     run_now = False
     with app.app_context():
+        # Log active TitleDB source
+        try:
+            import titledb
+
+            active_src = titledb.get_active_source_info()
+            if active_src:
+                logger.info(
+                    f"Active TitleDB source: {active_src.get('name', 'Unknown')} (last download: {active_src.get('last_download_date', 'N/A')}, titles: {active_src.get('titles_count', 0)})"
+                )
+            else:
+                logger.warning("No active TitleDB source configured")
+        except Exception as e:
+            logger.warning(f"Could not get active TitleDB source: {e}")
+
         libs = get_libraries()
 
         critical_files = ["cnmts.json", "versions.json"]
