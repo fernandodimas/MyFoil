@@ -301,11 +301,13 @@
                                         </div>
                                     </div>
                                     <div class="column is-narrow">
-                                        <button class="button is-warning is-outlined scanBtn mr-2" onclick="scanLibrary()">
+                                        <button class="button is-warning is-outlined scanBtn mr-2"
+                                            onclick="scanLibrary()">
                                             <span class="icon"><i class="bi bi-arrow-clockwise"></i></span>
                                             <span>{{ t('Full Scan') }}</span>
                                         </button>
-                                        <button class="button is-warning is-outlined" id="btnCleanupOrphaned" onclick="cleanupOrphaned()">
+                                        <button class="button is-warning is-outlined" id="btnCleanupOrphaned"
+                                            onclick="cleanupOrphaned()">
                                             <span class="icon"><i class="bi bi-trash"></i></span>
                                             <span>Limpar Órfãos</span>
                                         </button>
@@ -554,7 +556,6 @@
                                     <table class="table is-fullwidth" id="titledbSourcesTable">
                                         <thead>
                                             <tr>
-                                                <th></th>
                                                 <th>{{ t('Source') }}</th>
                                                 <th>{{ t('Last Modified (Remote)') }}</th>
                                                 <th>{{ t('Last Download (Local)') }}</th>
@@ -566,55 +567,6 @@
                                         <tbody></tbody>
                                     </table>
                                 </div>
-
-                                <div class="box is-shadowless mt-4" style="background: rgba(87,13,248,0.03);">
-                                    <label class="checkbox is-flex is-align-items-center">
-                                        <input type="checkbox" id="autoUseLatest" class="mr-2">
-                                        {{ t('Auto-use latest') }} - <span class="is-size-7 ml-2 opacity-75">{{ t('Automatically use the source with the most recent data') }}</span>
-                                    </label>
-                                </div>
-
-                                <div class="buttons mt-4">
-                                    <button class="button is-primary" onclick="saveTitleDBSettings()">
-                                        <i class="bi bi-check-lg mr-1"></i> {{ t('Save') }}
-                                    </button>
-                                </div>
-                            </header>
-                            <div class="card-content pt-0">
-                                {% if active_source %}
-                                <nav class="level box is-shadowless notification py-3 mb-6"
-                                    style="background: rgba(87,13,248,0.05)">
-                                    <div class="level-item has-text-centered">
-                                        <div>
-                                            <p class="heading">{{ t('Active Source') }}</p>
-                                            <p class="title is-5 has-text-primary">{{ active_source.name }}</p>
-                                        </div>
-                                    </div>
-                                    <div class="level-item has-text-centered">
-                                        <div>
-                                            <p class="heading">{{ t('Last Download') }}</p>
-                                            <p class="title is-5">{{ active_source.last_download_date }}</p>
-                                        </div>
-                                    </div>
-                                    <div class="level-item has-text-centered">
-                                        <div>
-                                            <p class="heading">{{ t('Titles Detected') }}</p>
-                                            <p class="title is-5">{{ active_source.titles_count }}</p>
-                                        </div>
-                                    </div>
-                                    <div class="level-item has-text-centered">
-                                        <div>
-                                            <p class="heading">{{ t('Status') }}</p>
-                                            <span
-                                                class="tag {{ 'is-success' if active_source.is_updated else 'is-warning' }} is-light">
-                                                {{ t('Up to date') if active_source.is_updated else t('Outdated') }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </nav>
-                                {% endif %}
-                                </div>
-
 
                                 <div class="block mt-6">
                                     <button class="button is-small is-primary is-outlined" id="toggleAddSource">
@@ -659,488 +611,499 @@
                                             t('Save Source') }}</button>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </section>
 
-                    <!-- Shop Section -->
-                    <section id="section-Shop" class="settings-section is-hidden">
-                        <div class="card box shadow-sm">
-                            <header class="card-header border-none shadow-none">
-                                <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-cart-fill mr-2"></i> {{ t('Shop Configuration') }}
-                                </p>
-                            </header>
-                            <div class="card-content pt-0">
-                                <div class="field mb-6">
-                                    <label class="label">{{ t('Public Access URL') }}</label>
-                                    <div class="field has-addons">
-                                        <p class="control"><a class="button is-static">https://</a></p>
-                                        <div class="control is-expanded">
-                                            <input class="input" id="shopHostInput" type="text"
-                                                placeholder="tinfoil.domain.com">
-                                        </div>
-                                    </div>
-                                    <p class="help opacity-50">{{ t('Used for host verification and remote access') }}
-                                    </p>
+                                <div class="box is-shadowless mt-4" style="background: rgba(87,13,248,0.03);">
+                                    <label class="checkbox is-flex is-align-items-center">
+                                        <input type="checkbox" id="autoUseLatest" class="mr-2">
+                                        {{ t('Auto-use latest') }} - <span class="is-size-7 ml-2 opacity-75">{{
+                                            t('Automatically use the source with the most recent data') }}</span>
+                                    </label>
                                 </div>
 
-                                <div class="field is-grouped mb-6">
-                                    <div class="control">
-                                        <label class="checkbox has-text-weight-bold mr-6">
-                                            <input type="checkbox" id="publicShopCheck"> {{ t('Public Index') }}
-                                        </label>
-                                    </div>
-                                    <div class="control">
-                                        <label class="checkbox has-text-weight-bold">
-                                            <input type="checkbox" id="encryptShopCheck" checked> {{ t('Encrypted Shop')
-                                            }}
-                                        </label>
-                                    </div>
-                                    <div class="control">
-                                        <label class="checkbox has-text-weight-bold">
-                                            <input type="checkbox" id="publicProfileCheck"> Perfil Público (Web)
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div class="field mb-6">
-                                    <label class="label">{{ t('Message of the Day') }}</label>
-                                    <div class="control">
-                                        <textarea class="textarea font-mono is-small" id="motdTextArea" rows="4"
-                                            placeholder="Welcome to MyFoil..."></textarea>
-                                    </div>
-                                </div>
-
-                                <button class="button is-primary px-6" onclick="submitShopSettings()">
-                                    {{ t('Save Shop Changes') }}
-                                </button>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Errors Section -->
-                    <section id="section-Errors" class="settings-section is-hidden">
-                        <div class="card box shadow-sm">
-                            <header class="card-header border-none shadow-none">
-                                <p class="card-header-title has-text-danger">
-                                    <i class="bi bi-exclamation-octagon-fill mr-2"></i> Arquivos não Identificados
-                                </p>
-                                <div class="card-header-icon pt-4 pr-5">
-                                    <button class="button is-small is-dark is-outlined" onclick="fillErrorsTable()">
-                                        <i class="bi bi-arrow-clockwise mr-1"></i> Atualizar
+                                <div class="buttons mt-4">
+                                    <button class="button is-primary" onclick="saveTitleDBSettings()">
+                                        <i class="bi bi-check-lg mr-1"></i> {{ t('Save') }}
                                     </button>
                                 </div>
-                            </header>
-                            <div class="card-content pt-0">
-                                <p class="is-size-7 mb-4 opacity-70">Abaixo estão listados os arquivos que o MyFoil não
-                                    conseguiu identificar automaticamente. Você pode verificar o motivo do erro ou
-                                    excluir o arquivo se for lixo.</p>
-                                <div class="table-container">
-                                    <div id="bulkActionsBar"
-                                        class="notification is-ghost border py-2 px-3 mb-3 is-hidden"
-                                        style="border-left: 5px solid var(--color-primary) !important;">
-                                        <div class="is-flex is-justify-content-between is-align-items-center">
-                                            <span class="is-size-7 has-text-weight-bold" id="selectedCountText">0 itens
-                                                selecionados</span>
-                                            <div class="buttons">
-                                                <button class="button is-small is-danger is-light"
-                                                    onclick="bulkDeleteFiles()">
-                                                    <i class="bi bi-trash3 mr-1"></i> Excluir Selecionados
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <table class="table is-fullwidth is-hoverable" id="errorsTable">
-                                        <thead>
-                                            <tr>
-                                                <th width="40"><input type="checkbox" id="selectAllErrors"
-                                                        onclick="toggleAllErrors(this)"></th>
-                                                <th>Arquivo</th>
-                                                <th>Erro</th>
-                                                <th class="has-text-right">Ações</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody></tbody>
-                                    </table>
-                                </div>
+                                </header>
+
+                            </div>
+
+
+
+                        </div>
+                </div>
+</section>
+
+<!-- Shop Section -->
+<section id="section-Shop" class="settings-section is-hidden">
+    <div class="card box shadow-sm">
+        <header class="card-header border-none shadow-none">
+            <p class="card-header-title has-text-primary">
+                <i class="bi bi-cart-fill mr-2"></i> {{ t('Shop Configuration') }}
+            </p>
+        </header>
+        <div class="card-content pt-0">
+            <div class="field mb-6">
+                <label class="label">{{ t('Public Access URL') }}</label>
+                <div class="field has-addons">
+                    <p class="control"><a class="button is-static">https://</a></p>
+                    <div class="control is-expanded">
+                        <input class="input" id="shopHostInput" type="text" placeholder="tinfoil.domain.com">
+                    </div>
+                </div>
+                <p class="help opacity-50">{{ t('Used for host verification and remote access') }}
+                </p>
+            </div>
+
+            <div class="field is-grouped mb-6">
+                <div class="control">
+                    <label class="checkbox has-text-weight-bold mr-6">
+                        <input type="checkbox" id="publicShopCheck"> {{ t('Public Index') }}
+                    </label>
+                </div>
+                <div class="control">
+                    <label class="checkbox has-text-weight-bold">
+                        <input type="checkbox" id="encryptShopCheck" checked> {{ t('Encrypted Shop')
+                        }}
+                    </label>
+                </div>
+                <div class="control">
+                    <label class="checkbox has-text-weight-bold">
+                        <input type="checkbox" id="publicProfileCheck"> Perfil Público (Web)
+                    </label>
+                </div>
+            </div>
+
+            <div class="field mb-6">
+                <label class="label">{{ t('Message of the Day') }}</label>
+                <div class="control">
+                    <textarea class="textarea font-mono is-small" id="motdTextArea" rows="4"
+                        placeholder="Welcome to MyFoil..."></textarea>
+                </div>
+            </div>
+
+            <button class="button is-primary px-6" onclick="submitShopSettings()">
+                {{ t('Save Shop Changes') }}
+            </button>
+        </div>
+    </div>
+</section>
+
+<!-- Errors Section -->
+<section id="section-Errors" class="settings-section is-hidden">
+    <div class="card box shadow-sm">
+        <header class="card-header border-none shadow-none">
+            <p class="card-header-title has-text-danger">
+                <i class="bi bi-exclamation-octagon-fill mr-2"></i> Arquivos não Identificados
+            </p>
+            <div class="card-header-icon pt-4 pr-5">
+                <button class="button is-small is-dark is-outlined" onclick="fillErrorsTable()">
+                    <i class="bi bi-arrow-clockwise mr-1"></i> Atualizar
+                </button>
+            </div>
+        </header>
+        <div class="card-content pt-0">
+            <p class="is-size-7 mb-4 opacity-70">Abaixo estão listados os arquivos que o MyFoil não
+                conseguiu identificar automaticamente. Você pode verificar o motivo do erro ou
+                excluir o arquivo se for lixo.</p>
+            <div class="table-container">
+                <div id="bulkActionsBar" class="notification is-ghost border py-2 px-3 mb-3 is-hidden"
+                    style="border-left: 5px solid var(--color-primary) !important;">
+                    <div class="is-flex is-justify-content-between is-align-items-center">
+                        <span class="is-size-7 has-text-weight-bold" id="selectedCountText">0 itens
+                            selecionados</span>
+                        <div class="buttons">
+                            <button class="button is-small is-danger is-light" onclick="bulkDeleteFiles()">
+                                <i class="bi bi-trash3 mr-1"></i> Excluir Selecionados
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <table class="table is-fullwidth is-hoverable" id="errorsTable">
+                    <thead>
+                        <tr>
+                            <th width="40"><input type="checkbox" id="selectAllErrors" onclick="toggleAllErrors(this)">
+                            </th>
+                            <th>Arquivo</th>
+                            <th>Erro</th>
+                            <th class="has-text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Tags Section -->
+<section id="section-Tags" class="settings-section is-hidden">
+    <div class="card box shadow-sm">
+        <header class="card-header border-none shadow-none">
+            <p class="card-header-title has-text-primary">
+                <i class="bi bi-tags-fill mr-2"></i> Gerenciar Tags
+            </p>
+        </header>
+        <div class="card-content pt-0">
+            <div class="notification is-ghost border p-5 mb-5"
+                style="border-left: 5px solid var(--color-primary) !important;">
+                <div class="columns is-vcentered">
+                    <div class="column is-4">
+                        <input class="input" type="text" id="tagNameInput" placeholder="Nome da Tag">
+                    </div>
+                    <div class="column is-3">
+                        <input class="input" type="color" id="tagColorInput" value="#3273dc"
+                            style="height: 40px; padding: 2px;">
+                    </div>
+                    <div class="column is-3">
+                        <div class="select is-fullwidth">
+                            <select id="tagIconInput">
+                                <option value="bi-tag">Etiqueta</option>
+                                <option value="bi-star">Estrela</option>
+                                <option value="bi-heart">Coração</option>
+                                <option value="bi-fire">Fogo</option>
+                                <option value="bi-controller">Controle</option>
+                                <option value="bi-trophy">Troféu</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="column is-2">
+                        <button class="button is-primary is-fullwidth" onclick="createTag()">Criar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="table is-fullwidth" id="tagsTable">
+                    <thead>
+                        <tr>
+                            <th>Tag</th>
+                            <th>Visualização</th>
+                            <th class="has-text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Activity Section -->
+<section id="section-Activity" class="settings-section is-hidden">
+    <div class="card box shadow-sm">
+        <header class="card-header border-none shadow-none">
+            <p class="card-header-title has-text-primary">
+                <i class="bi bi-clock-history mr-2"></i> Histórico de Atividade
+            </p>
+            <div class="card-header-icon pt-4 pr-5">
+                <button class="button is-small is-ghost" onclick="fillActivityLogs()">
+                    <i class="bi bi-arrow-clockwise mr-1"></i> Atualizar
+                </button>
+            </div>
+        </header>
+        <div class="card-content pt-0">
+            <div id="activityLogsList" class="activity-timeline">
+                <!-- Log items injected via JS -->
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Webhooks Section -->
+<section id="section-Webhooks" class="settings-section is-hidden">
+    <div class="card box shadow-sm">
+        <header class="card-header border-none shadow-none">
+            <p class="card-header-title has-text-primary">
+                <i class="bi bi-hdd-network mr-2"></i> Webhooks de Integração
+            </p>
+        </header>
+        <div class="card-content pt-0">
+            <p class="is-size-7 opacity-60 mb-5">
+                Notifique serviços externos (Discord, Slack, Home Assistant) sobre eventos na sua
+                biblioteca.
+            </p>
+
+            <div id="webhooksList" class="mb-5">
+                <!-- Webhooks will be listed here -->
+            </div>
+
+            <div class="notification is-ghost border p-5 border"
+                style="border-left: 5px solid var(--color-primary) !important;">
+                <p class="heading has-text-weight-bold mb-4">Adicionar Novo Webhook</p>
+                <div class="columns is-multiline">
+                    <div class="column is-12">
+                        <div class="field">
+                            <label class="label is-size-7">URL do Endpoint</label>
+                            <input class="input is-small" type="url" id="webhookUrl"
+                                placeholder="https://discord.com/api/webhooks/...">
+                        </div>
+                    </div>
+                    <div class="column is-6">
+                        <div class="field">
+                            <label class="label is-size-7">Segredo (Opcional)</label>
+                            <input class="input is-small" type="text" id="webhookSecret"
+                                placeholder="Para assinatura HMAC-SHA256">
+                        </div>
+                    </div>
+                    <div class="column is-6">
+                        <div class="field">
+                            <label class="label is-size-7">Eventos</label>
+                            <div class="control">
+                                <label class="checkbox is-size-7">
+                                    <input type="checkbox" id="eventLibraryUpdated" checked>
+                                    Alteração na Biblioteca
+                                </label>
                             </div>
                         </div>
-                    </section>
+                    </div>
+                </div>
+                <button class="button is-primary is-small" onclick="addWebhook()">Adicionar
+                    Webhook</button>
+            </div>
+        </div>
+    </div>
+</section>
 
-                    <!-- Tags Section -->
-                    <section id="section-Tags" class="settings-section is-hidden">
-                        <div class="card box shadow-sm">
-                            <header class="card-header border-none shadow-none">
-                                <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-tags-fill mr-2"></i> Gerenciar Tags
-                                </p>
-                            </header>
-                            <div class="card-content pt-0">
-                                <div class="notification is-ghost border p-5 mb-5"
-                                    style="border-left: 5px solid var(--color-primary) !important;">
-                                    <div class="columns is-vcentered">
-                                        <div class="column is-4">
-                                            <input class="input" type="text" id="tagNameInput"
-                                                placeholder="Nome da Tag">
-                                        </div>
-                                        <div class="column is-3">
-                                            <input class="input" type="color" id="tagColorInput" value="#3273dc"
-                                                style="height: 40px; padding: 2px;">
-                                        </div>
-                                        <div class="column is-3">
-                                            <div class="select is-fullwidth">
-                                                <select id="tagIconInput">
-                                                    <option value="bi-tag">Etiqueta</option>
-                                                    <option value="bi-star">Estrela</option>
-                                                    <option value="bi-heart">Coração</option>
-                                                    <option value="bi-fire">Fogo</option>
-                                                    <option value="bi-controller">Controle</option>
-                                                    <option value="bi-trophy">Troféu</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="column is-2">
-                                            <button class="button is-primary is-fullwidth"
-                                                onclick="createTag()">Criar</button>
-                                        </div>
-                                    </div>
-                                </div>
+<!-- Plugins Section -->
+<!-- Help Section -->
+<section id="section-Help" class="settings-section is-hidden">
+    <div class="card box shadow-sm">
+        <header class="card-header border-none shadow-none">
+            <p class="card-header-title has-text-info">
+                <i class="bi bi-question-circle mr-2"></i> Ajuda e Documentação
+            </p>
+        </header>
+        <div class="card-content pt-0">
 
-                                <div class="table-container">
-                                    <table class="table is-fullwidth" id="tagsTable">
-                                        <thead>
-                                            <tr>
-                                                <th>Tag</th>
-                                                <th>Visualização</th>
-                                                <th class="has-text-right">Ações</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody></tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+            <!-- Keyboard Shortcuts -->
+            <div class="box is-shadowless border p-4 mb-4" style="border-left: 4px solid var(--color-info) !important;">
+                <p class="heading has-text-weight-bold mb-3"><i class="bi bi-keyboard mr-2"></i>
+                    Atalhos de Teclado</p>
+                <div class="columns is-multiline">
+                    <div class="column is-6">
+                        <table class="table is-fullwidth is-size-7">
+                            <thead>
+                                <tr>
+                                    <th>Atalho</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><kbd>Ctrl/Cmd + K</kbd></td>
+                                    <td>Focar na busca</td>
+                                </tr>
+                                <tr>
+                                    <td><kbd>ESC</kbd></td>
+                                    <td>Fechar modais</td>
+                                </tr>
+                                <tr>
+                                    <td><kbd>← / →</kbd></td>
+                                    <td>Navegar paginação</td>
+                                </tr>
+                                <tr>
+                                    <td><kbd>E</kbd> (no modal)</td>
+                                    <td>Editar metadados</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="column is-6">
+                        <table class="table is-fullwidth is-size-7">
+                            <thead>
+                                <tr>
+                                    <th>Atalho</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><kbd>F</kbd> (no modal)</td>
+                                    <td>Toggle Wishlist</td>
+                                </tr>
+                                <tr>
+                                    <td><kbd>D</kbd> (no modal)</td>
+                                    <td>Baixar arquivo</td>
+                                </tr>
+                                <tr>
+                                    <td><kbd>Enter</kbd></td>
+                                    <td>Abrir jogo selecionado</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
 
-                    <!-- Activity Section -->
-                    <section id="section-Activity" class="settings-section is-hidden">
-                        <div class="card box shadow-sm">
-                            <header class="card-header border-none shadow-none">
-                                <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-clock-history mr-2"></i> Histórico de Atividade
-                                </p>
-                                <div class="card-header-icon pt-4 pr-5">
-                                    <button class="button is-small is-ghost" onclick="fillActivityLogs()">
-                                        <i class="bi bi-arrow-clockwise mr-1"></i> Atualizar
-                                    </button>
-                                </div>
-                            </header>
-                            <div class="card-content pt-0">
-                                <div id="activityLogsList" class="activity-timeline">
-                                    <!-- Log items injected via JS -->
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+            <!-- Quick Start Guide -->
+            <div class="box is-shadowless border p-4 mb-4"
+                style="border-left: 4px solid var(--color-success) !important;">
+                <p class="heading has-text-weight-bold mb-3"><i class="bi bi-book mr-2"></i> Guia
+                    Rápido</p>
+                <div class="content is-size-7">
+                    <ol>
+                        <li><strong>Configurar Biblioteca:</strong> Vá em "Biblioteca" e adicione o
+                            caminho da pasta com
+                            seus jogos NSP/NSZ/XCI.</li>
+                        <li><strong>Atualizar TitleDB:</strong> Clique em "Atualizar Agora" na aba
+                            TitleDB para baixar
+                            informações dos jogos.</li>
+                        <li><strong>Escanear:</strong> Após adicionar a pasta, clique em "Escanear
+                            Biblioteca" para
+                            identificar seus jogos.</li>
+                        <li><strong>Configurar Loja:</strong> Na aba "Loja", defina o hostname e
+                            ative a shop para o
+                            Tinfoil.</li>
+                        <li><strong>Conectar Tinfoil:</strong> No Switch, adicione
+                            <code>protocol://HOST:5000</code> nas
+                            File Browsers.
+                        </li>
+                    </ol>
+                </div>
+            </div>
 
-                    <!-- Webhooks Section -->
-                    <section id="section-Webhooks" class="settings-section is-hidden">
-                        <div class="card box shadow-sm">
-                            <header class="card-header border-none shadow-none">
-                                <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-hdd-network mr-2"></i> Webhooks de Integração
-                                </p>
-                            </header>
-                            <div class="card-content pt-0">
-                                <p class="is-size-7 opacity-60 mb-5">
-                                    Notifique serviços externos (Discord, Slack, Home Assistant) sobre eventos na sua
-                                    biblioteca.
-                                </p>
+            <!-- FAQ -->
+            <div class="box is-shadowless border p-4 mb-4"
+                style="border-left: 4px solid var(--color-warning) !important;">
+                <p class="heading has-text-weight-bold mb-3"><i class="bi bi-patch-question mr-2"></i> Perguntas
+                    Frequentes</p>
+                <div class="content is-size-7">
+                    <details class="mb-3">
+                        <summary class="has-text-weight-bold mb-2" style="cursor: pointer;">Como
+                            identificar jogos que
+                            aparecem como "Unknown"?</summary>
+                        <p>Vá em "Erros/Identificação", encontre o jogo e clique em "Reconhecer".
+                            Busque o jogo correto
+                            no TitleDB e clique em "Usar Metadados".</p>
+                    </details>
+                    <details class="mb-3">
+                        <summary class="has-text-weight-bold mb-2" style="cursor: pointer;">Por que
+                            alguns jogos não
+                            aparecem na loja do Tinfoil?</summary>
+                        <p>Verifique se: (1) O arquivo foi identificado corretamente, (2) Você tem
+                            permissão
+                            "shop_access" no seu usuário, (3) A loja está configurada como pública
+                            ou você tem login
+                            correto.</p>
+                    </details>
+                    <details class="mb-3">
+                        <summary class="has-text-weight-bold mb-2" style="cursor: pointer;">Como
+                            adicionar metadados
+                            customizados?</summary>
+                        <p>Clique no jogo, depois em "Editar Dados". Você pode buscar informações no
+                            TitleDB ou
+                            preencher manualmente.</p>
+                    </details>
+                    <details class="mb-3">
+                        <summary class="has-text-weight-bold mb-2" style="cursor: pointer;">Qual a
+                            diferença entre as
+                            fontes do TitleDB?</summary>
+                        <p>MyFoil suporta múltiplas fontes com fallback automático. Fontes com maior
+                            prioridade são
+                            tentadas primeiro. Recomendamos manter ao menos 2 fontes ativas.</p>
+                    </details>
+                </div>
+            </div>
 
-                                <div id="webhooksList" class="mb-5">
-                                    <!-- Webhooks will be listed here -->
-                                </div>
-
-                                <div class="notification is-ghost border p-5 border"
-                                    style="border-left: 5px solid var(--color-primary) !important;">
-                                    <p class="heading has-text-weight-bold mb-4">Adicionar Novo Webhook</p>
-                                    <div class="columns is-multiline">
-                                        <div class="column is-12">
-                                            <div class="field">
-                                                <label class="label is-size-7">URL do Endpoint</label>
-                                                <input class="input is-small" type="url" id="webhookUrl"
-                                                    placeholder="https://discord.com/api/webhooks/...">
-                                            </div>
-                                        </div>
-                                        <div class="column is-6">
-                                            <div class="field">
-                                                <label class="label is-size-7">Segredo (Opcional)</label>
-                                                <input class="input is-small" type="text" id="webhookSecret"
-                                                    placeholder="Para assinatura HMAC-SHA256">
-                                            </div>
-                                        </div>
-                                        <div class="column is-6">
-                                            <div class="field">
-                                                <label class="label is-size-7">Eventos</label>
-                                                <div class="control">
-                                                    <label class="checkbox is-size-7">
-                                                        <input type="checkbox" id="eventLibraryUpdated" checked>
-                                                        Alteração na Biblioteca
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button class="button is-primary is-small" onclick="addWebhook()">Adicionar
-                                        Webhook</button>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Plugins Section -->
-                    <!-- Help Section -->
-                    <section id="section-Help" class="settings-section is-hidden">
-                        <div class="card box shadow-sm">
-                            <header class="card-header border-none shadow-none">
-                                <p class="card-header-title has-text-info">
-                                    <i class="bi bi-question-circle mr-2"></i> Ajuda e Documentação
-                                </p>
-                            </header>
-                            <div class="card-content pt-0">
-
-                                <!-- Keyboard Shortcuts -->
-                                <div class="box is-shadowless border p-4 mb-4"
-                                    style="border-left: 4px solid var(--color-info) !important;">
-                                    <p class="heading has-text-weight-bold mb-3"><i class="bi bi-keyboard mr-2"></i>
-                                        Atalhos de Teclado</p>
-                                    <div class="columns is-multiline">
-                                        <div class="column is-6">
-                                            <table class="table is-fullwidth is-size-7">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Atalho</th>
-                                                        <th>Ação</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <td><kbd>Ctrl/Cmd + K</kbd></td>
-                                                        <td>Focar na busca</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td><kbd>ESC</kbd></td>
-                                                        <td>Fechar modais</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td><kbd>← / →</kbd></td>
-                                                        <td>Navegar paginação</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td><kbd>E</kbd> (no modal)</td>
-                                                        <td>Editar metadados</td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div class="column is-6">
-                                            <table class="table is-fullwidth is-size-7">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Atalho</th>
-                                                        <th>Ação</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <td><kbd>F</kbd> (no modal)</td>
-                                                        <td>Toggle Wishlist</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td><kbd>D</kbd> (no modal)</td>
-                                                        <td>Baixar arquivo</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td><kbd>Enter</kbd></td>
-                                                        <td>Abrir jogo selecionado</td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Quick Start Guide -->
-                                <div class="box is-shadowless border p-4 mb-4"
-                                    style="border-left: 4px solid var(--color-success) !important;">
-                                    <p class="heading has-text-weight-bold mb-3"><i class="bi bi-book mr-2"></i> Guia
-                                        Rápido</p>
-                                    <div class="content is-size-7">
-                                        <ol>
-                                            <li><strong>Configurar Biblioteca:</strong> Vá em "Biblioteca" e adicione o
-                                                caminho da pasta com
-                                                seus jogos NSP/NSZ/XCI.</li>
-                                            <li><strong>Atualizar TitleDB:</strong> Clique em "Atualizar Agora" na aba
-                                                TitleDB para baixar
-                                                informações dos jogos.</li>
-                                            <li><strong>Escanear:</strong> Após adicionar a pasta, clique em "Escanear
-                                                Biblioteca" para
-                                                identificar seus jogos.</li>
-                                            <li><strong>Configurar Loja:</strong> Na aba "Loja", defina o hostname e
-                                                ative a shop para o
-                                                Tinfoil.</li>
-                                            <li><strong>Conectar Tinfoil:</strong> No Switch, adicione
-                                                <code>protocol://HOST:5000</code> nas
-                                                File Browsers.
-                                            </li>
-                                        </ol>
-                                    </div>
-                                </div>
-
-                                <!-- FAQ -->
-                                <div class="box is-shadowless border p-4 mb-4"
-                                    style="border-left: 4px solid var(--color-warning) !important;">
-                                    <p class="heading has-text-weight-bold mb-3"><i
-                                            class="bi bi-patch-question mr-2"></i> Perguntas
-                                        Frequentes</p>
-                                    <div class="content is-size-7">
-                                        <details class="mb-3">
-                                            <summary class="has-text-weight-bold mb-2" style="cursor: pointer;">Como
-                                                identificar jogos que
-                                                aparecem como "Unknown"?</summary>
-                                            <p>Vá em "Erros/Identificação", encontre o jogo e clique em "Reconhecer".
-                                                Busque o jogo correto
-                                                no TitleDB e clique em "Usar Metadados".</p>
-                                        </details>
-                                        <details class="mb-3">
-                                            <summary class="has-text-weight-bold mb-2" style="cursor: pointer;">Por que
-                                                alguns jogos não
-                                                aparecem na loja do Tinfoil?</summary>
-                                            <p>Verifique se: (1) O arquivo foi identificado corretamente, (2) Você tem
-                                                permissão
-                                                "shop_access" no seu usuário, (3) A loja está configurada como pública
-                                                ou você tem login
-                                                correto.</p>
-                                        </details>
-                                        <details class="mb-3">
-                                            <summary class="has-text-weight-bold mb-2" style="cursor: pointer;">Como
-                                                adicionar metadados
-                                                customizados?</summary>
-                                            <p>Clique no jogo, depois em "Editar Dados". Você pode buscar informações no
-                                                TitleDB ou
-                                                preencher manualmente.</p>
-                                        </details>
-                                        <details class="mb-3">
-                                            <summary class="has-text-weight-bold mb-2" style="cursor: pointer;">Qual a
-                                                diferença entre as
-                                                fontes do TitleDB?</summary>
-                                            <p>MyFoil suporta múltiplas fontes com fallback automático. Fontes com maior
-                                                prioridade são
-                                                tentadas primeiro. Recomendamos manter ao menos 2 fontes ativas.</p>
-                                        </details>
-                                    </div>
-                                </div>
-
-                                <!-- Links -->
-                                <div class="box is-shadowless border p-4"
-                                    style="border-left: 4px solid var(--color-primary) !important;">
-                                    <p class="heading has-text-weight-bold mb-3"><i class="bi bi-link-45deg mr-2"></i>
-                                        Links Úteis</p>
-                                    <div class="buttons">
-                                        <a href="https://github.com/fernandodimas/MyFoil" target="_blank"
-                                            class="button is-small is-dark">
-                                            <i class="bi bi-github mr-2"></i> GitHub
-                                        </a>
-                                        <a href="https://github.com/fernandodimas/MyFoil/issues" target="_blank"
-                                            class="button is-small is-info">
-                                            <i class="bi bi-bug mr-2"></i> Reportar Bug
-                                        </a>
-                                        <a href="https://github.com/fernandodimas/MyFoil/wiki" target="_blank"
-                                            class="button is-small is-link">
-                                            <i class="bi bi-book mr-2"></i> Wiki Completa
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section id="section-Plugins" class="settings-section is-hidden">
-                        <div class="card box shadow-sm">
-                            <header class="card-header border-none shadow-none">
-                                <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-patch-check mr-2"></i> Plugins Instalados
-                                </p>
-                            </header>
-                            <div class="card-content pt-0">
-                                <p class="is-size-7 opacity-60 mb-5">
-                                    Plugins permitem estender a funcionalidade do MyFoil com recursos personalizados.
-                                </p>
-                                <div id="pluginsList">
-                                    <!-- Plugins injected by JS -->
-                                </div>
-                                <div class="notification is-ghost border is-size-7 mt-5"
-                                    style="border-left: 5px solid var(--color-info) !important;">
-                                    <i class="bi bi-info-circle mr-2"></i> Para instalar novos plugins, adicione-os na
-                                    pasta <code>app/plugins/</code>.
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Cloud Section -->
-                    <section id="section-Cloud" class="settings-section is-hidden">
-                        <div class="card box shadow-sm">
-                            <header class="card-header border-none shadow-none">
-                                <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-cloud-fill mr-2"></i> Integração Cloud
-                                </p>
-                            </header>
-                            <div class="card-content pt-0">
-                                <div class="columns">
-                                    <div class="column is-6">
-                                        <div class="box border is-shadowless" id="cloud-gdrive"
-                                            style="border-left: 4px solid var(--color-primary) !important;">
-                                            <p class="has-text-weight-bold mb-3"><i class="bi bi-google mr-2"></i>
-                                                Google Drive</p>
-                                            <p class="is-size-7 opacity-60 mb-4">Sincronize sua biblioteca diretamente
-                                                com uma pasta do Google Drive.</p>
-                                            <div class="cloud-status mb-3 is-hidden">
-                                                <span class="tag is-success is-light"><i
-                                                        class="bi bi-check-circle mr-1"></i> Conectado</span>
-                                            </div>
-                                            <button class="button is-small is-primary is-fullwidth btn-connect"
-                                                onclick="connectCloud('gdrive')">Conectar</button>
-                                            <p class="is-size-7 has-text-danger mt-2 is-hidden btn-config-needed">
-                                                Configuração necessária (secret.json não encontrado)</p>
-                                        </div>
-                                    </div>
-                                    <div class="column is-6">
-                                        <div class="box border is-shadowless" id="cloud-dropbox"
-                                            style="border-left: 4px solid var(--color-info) !important;">
-                                            <p class="has-text-weight-bold mb-3"><i class="bi bi-dropbox mr-2"></i>
-                                                Dropbox</p>
-                                            <p class="is-size-7 opacity-60 mb-4">Mantenha seu acervo seguro e acessível
-                                                via Dropbox.</p>
-                                            <div class="cloud-status mb-3 is-hidden">
-                                                <span class="tag is-success is-light"><i
-                                                        class="bi bi-check-circle mr-1"></i> Conectado</span>
-                                            </div>
-                                            <button class="button is-small is-primary is-fullwidth btn-connect"
-                                                onclick="connectCloud('dropbox')">Conectar</button>
-                                            <p class="is-size-7 has-text-danger mt-2 is-hidden btn-config-needed">
-                                                Configuração necessária (app_key.txt não encontrado)</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+            <!-- Links -->
+            <div class="box is-shadowless border p-4" style="border-left: 4px solid var(--color-primary) !important;">
+                <p class="heading has-text-weight-bold mb-3"><i class="bi bi-link-45deg mr-2"></i>
+                    Links Úteis</p>
+                <div class="buttons">
+                    <a href="https://github.com/fernandodimas/MyFoil" target="_blank" class="button is-small is-dark">
+                        <i class="bi bi-github mr-2"></i> GitHub
+                    </a>
+                    <a href="https://github.com/fernandodimas/MyFoil/issues" target="_blank"
+                        class="button is-small is-info">
+                        <i class="bi bi-bug mr-2"></i> Reportar Bug
+                    </a>
+                    <a href="https://github.com/fernandodimas/MyFoil/wiki" target="_blank"
+                        class="button is-small is-link">
+                        <i class="bi bi-book mr-2"></i> Wiki Completa
+                    </a>
                 </div>
             </div>
         </div>
     </div>
+</section>
+
+<section id="section-Plugins" class="settings-section is-hidden">
+    <div class="card box shadow-sm">
+        <header class="card-header border-none shadow-none">
+            <p class="card-header-title has-text-primary">
+                <i class="bi bi-patch-check mr-2"></i> Plugins Instalados
+            </p>
+        </header>
+        <div class="card-content pt-0">
+            <p class="is-size-7 opacity-60 mb-5">
+                Plugins permitem estender a funcionalidade do MyFoil com recursos personalizados.
+            </p>
+            <div id="pluginsList">
+                <!-- Plugins injected by JS -->
+            </div>
+            <div class="notification is-ghost border is-size-7 mt-5"
+                style="border-left: 5px solid var(--color-info) !important;">
+                <i class="bi bi-info-circle mr-2"></i> Para instalar novos plugins, adicione-os na
+                pasta <code>app/plugins/</code>.
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Cloud Section -->
+<section id="section-Cloud" class="settings-section is-hidden">
+    <div class="card box shadow-sm">
+        <header class="card-header border-none shadow-none">
+            <p class="card-header-title has-text-primary">
+                <i class="bi bi-cloud-fill mr-2"></i> Integração Cloud
+            </p>
+        </header>
+        <div class="card-content pt-0">
+            <div class="columns">
+                <div class="column is-6">
+                    <div class="box border is-shadowless" id="cloud-gdrive"
+                        style="border-left: 4px solid var(--color-primary) !important;">
+                        <p class="has-text-weight-bold mb-3"><i class="bi bi-google mr-2"></i>
+                            Google Drive</p>
+                        <p class="is-size-7 opacity-60 mb-4">Sincronize sua biblioteca diretamente
+                            com uma pasta do Google Drive.</p>
+                        <div class="cloud-status mb-3 is-hidden">
+                            <span class="tag is-success is-light"><i class="bi bi-check-circle mr-1"></i>
+                                Conectado</span>
+                        </div>
+                        <button class="button is-small is-primary is-fullwidth btn-connect"
+                            onclick="connectCloud('gdrive')">Conectar</button>
+                        <p class="is-size-7 has-text-danger mt-2 is-hidden btn-config-needed">
+                            Configuração necessária (secret.json não encontrado)</p>
+                    </div>
+                </div>
+                <div class="column is-6">
+                    <div class="box border is-shadowless" id="cloud-dropbox"
+                        style="border-left: 4px solid var(--color-info) !important;">
+                        <p class="has-text-weight-bold mb-3"><i class="bi bi-dropbox mr-2"></i>
+                            Dropbox</p>
+                        <p class="is-size-7 opacity-60 mb-4">Mantenha seu acervo seguro e acessível
+                            via Dropbox.</p>
+                        <div class="cloud-status mb-3 is-hidden">
+                            <span class="tag is-success is-light"><i class="bi bi-check-circle mr-1"></i>
+                                Conectado</span>
+                        </div>
+                        <button class="button is-small is-primary is-fullwidth btn-connect"
+                            onclick="connectCloud('dropbox')">Conectar</button>
+                        <p class="is-size-7 has-text-danger mt-2 is-hidden btn-config-needed">
+                            Configuração necessária (app_key.txt não encontrado)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</div>
+</div>
+</div>
+</div>
 </section>
 
 <!-- Modals -->
@@ -1969,11 +1932,11 @@
                 const btn = $('#btnCleanupOrphaned');
                 btn.addClass('is-loading');
                 btn.find('span:last').text('Limpando...');
-                
+
                 $.post('/api/cleanup/orphaned', (res) => {
                     btn.removeClass('is-loading');
                     btn.find('span:last').text('Limpar Órfãos');
-                    
+
                     if (res.success) {
                         showToast(res.message, 'success');
                         loadCleanupStats();
