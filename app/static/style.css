@@ -564,32 +564,63 @@ p.game-description {
     
     /* Game Details Modal - Full width on mobile */
     #gameDetailsModal .modal-card {
-        width: 95vw !important;
-        max-width: 95vw !important;
-        max-height: 95vh !important;
-        border-radius: 8px !important;
-        margin: 2.5vw !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
     }
     #gameDetailsModal .modal-card-body {
-        padding: 0.75rem !important;
+        padding: 0.5rem !important;
+        width: 95% !important;
+        margin: 0 auto !important;
+    }
+    #gameDetailsModal .modal-card-head,
+    #gameDetailsModal .modal-card-foot {
+        width: 95% !important;
+        margin: 0 auto !important;
     }
     
     /* DLC Details Modal - Full width on mobile */
     #dlcDetailsModal .modal-card {
-        width: 95vw !important;
-        max-width: 95vw !important;
-        max-height: 95vh !important;
-        border-radius: 8px !important;
-        margin: 2.5vw !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+    }
+    #dlcDetailsModal .modal-card-body {
+        width: 95% !important;
+        margin: 0 auto !important;
+    }
+    #dlcDetailsModal .modal-card-head,
+    #dlcDetailsModal .modal-card-foot {
+        width: 95% !important;
+        margin: 0 auto !important;
     }
     
     /* Edit Metadata Modal - Full width on mobile */
     #editMetadataModal .modal-card {
-        width: 95vw !important;
-        max-width: 95vw !important;
-        max-height: 95vh !important;
-        border-radius: 8px !important;
-        margin: 2.5vw !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+    }
+    #editMetadataModal .modal-card-body {
+        width: 95% !important;
+        margin: 0 auto !important;
+    }
+    #editMetadataModal .modal-card-head,
+    #editMetadataModal .modal-card-foot {
+        width: 95% !important;
+        margin: 0 auto !important;
     }
 }
 
