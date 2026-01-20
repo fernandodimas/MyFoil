@@ -105,6 +105,8 @@ is_titledb_update_running = False
 titledb_update_lock = threading.Lock()
 plugin_manager = None
 cloud_manager = None
+watcher = None
+watcher_thread = None
 
 # Logging configuration
 formatter = ColoredFormatter(
@@ -171,9 +173,12 @@ def reload_conf():
 
 def on_library_change(events):
     """Handle library file changes"""
+    logger.info(f"Library change detected: {len(events)} events")
     with app.app_context():
         created_events = [e for e in events if e.type == "created"]
         modified_events = [e for e in events if e.type != "created"]
+
+        logger.debug(f"Created: {len(created_events)}, Modified/Other: {len(modified_events)}")
 
         for event in modified_events:
             if event.type == "moved":
@@ -193,6 +198,7 @@ def on_library_change(events):
             directories = list(set(e.directory for e in created_events))
             for library_path in directories:
                 new_files = [e.src_path for e in created_events if e.directory == library_path]
+                logger.info(f"Adding {len(new_files)} new files to library: {library_path}")
                 add_files_to_library(library_path, new_files)
 
                 if CELERY_ENABLED:

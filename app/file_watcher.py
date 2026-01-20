@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import logging
 
 # Retrieve main logger
-logger = logging.getLogger('main')
+logger = logging.getLogger("main")
 
 
 class Watcher:
@@ -21,39 +21,40 @@ class Watcher:
 
     def run(self):
         self.observer.start()
-        logger.debug('Successfully started observer.')
+        logger.debug("Successfully started observer.")
 
     def stop(self):
-        logger.debug('Stopping observer...')
+        logger.debug("Stopping observer...")
         self.observer.stop()
         self.observer.join()
-        logger.debug('Successfully stopped observer.')
+        logger.debug("Successfully stopped observer.")
 
     def add_directory(self, directory):
         if directory not in self.directories:
             if not os.path.exists(directory):
-                logger.warning(f'Directory {directory} does not exist, not added to watchdog.')
+                logger.warning(f"Directory {directory} does not exist, not added to watchdog.")
                 return False
-            logger.info(f'Adding directory {directory} to watchdog.')
+            logger.info(f"Adding directory {directory} to watchdog.")
             task = self.observer.schedule(self.event_handler, directory, recursive=True)
             self.scheduler_map[directory] = task
             self.directories.add(directory)
             self.event_handler.add_directory(directory)
             return True
         return False
-    
+
     def remove_directory(self, directory):
-        logger.debug(f'Removing {directory} from watchdog monitoring...')
+        logger.debug(f"Removing {directory} from watchdog monitoring...")
         if directory in self.directories:
             if directory in self.scheduler_map:
                 self.observer.unschedule(self.scheduler_map[directory])
                 del self.scheduler_map[directory]
             self.directories.remove(directory)
-            logger.info(f'Removed {directory} from watchdog monitoring.')
+            logger.info(f"Removed {directory} from watchdog monitoring.")
             return True
         else:
-            logger.info(f'{directory} not in watchdog, nothing to do.')
+            logger.info(f"{directory} not in watchdog, nothing to do.")
         return False
+
 
 class Handler(FileSystemEventHandler):
     def __init__(self, callback, stability_duration=5):
@@ -69,14 +70,16 @@ class Handler(FileSystemEventHandler):
 
     def _debounce(self, func, wait):
         """Debounce decorator for the stability check."""
+
         @debounce(wait)
         def debounced():
             func()
+
         return debounced
 
     def _track_file(self, event):
         """Start or update tracking for a file."""
-        if event.type == 'moved':
+        if event.type == "moved":
             file_path = event.dest_path
         else:
             file_path = event.src_path
@@ -114,16 +117,19 @@ class Handler(FileSystemEventHandler):
         if source_event.is_directory:
             return
 
-        if not any(source_event.src_path.endswith(ext) or (source_event.dest_path and source_event.dest_path.endswith(ext)) for ext in ALLOWED_EXTENSIONS):
+        if not any(
+            source_event.src_path.endswith(ext) or (source_event.dest_path and source_event.dest_path.endswith(ext))
+            for ext in ALLOWED_EXTENSIONS
+        ):
             return
 
         # Ignore macOS metadata files starting with ._
         filename = os.path.basename(source_event.src_path)
-        if filename.startswith('._'):
+        if filename.startswith("._"):
             return
-        if hasattr(source_event, 'dest_path') and source_event.dest_path:
+        if hasattr(source_event, "dest_path") and source_event.dest_path:
             dest_filename = os.path.basename(source_event.dest_path)
-            if dest_filename.startswith('._'):
+            if dest_filename.startswith("._"):
                 return
 
         library_event = SimpleNamespace(
@@ -133,10 +139,12 @@ class Handler(FileSystemEventHandler):
             dest_path=source_event.dest_path,
         )
 
-        if library_event.type == 'moved' and not any(library_event.dest_path.endswith(ext) for ext in ALLOWED_EXTENSIONS):
-            library_event.type = 'deleted'
+        if library_event.type == "moved" and not any(
+            library_event.dest_path.endswith(ext) for ext in ALLOWED_EXTENSIONS
+        ):
+            library_event.type = "deleted"
 
-        if library_event.type == 'deleted':
+        if library_event.type == "deleted":
             self._raw_callback([library_event])
 
         else:
@@ -147,6 +155,7 @@ class Handler(FileSystemEventHandler):
         self._check_file_stability()
 
     def on_any_event(self, event):
+        logger.debug(f"Watchdog event detected: {event.event_type} - {event.src_path}")
         for directory in self.directories:
             if event.src_path.startswith(directory):
                 self.collect_event(event, directory)
