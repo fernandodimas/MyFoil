@@ -120,10 +120,16 @@ function setView(view) {
     renderLibrary();
 }
 
-function updateGridZoom(val) {
-    document.documentElement.style.setProperty('--card-width', `${val}px`);
-    localStorage.setItem('gridZoom', val);
-}
+// Update Grid Zoom
+window.updateGridZoom = function (val) {
+    const zoomVal = parseInt(val);
+    if (isNaN(zoomVal)) return;
+
+    document.documentElement.style.setProperty('--card-width', `${zoomVal}px`);
+    // Also apply to container directly as a fallback
+    $('#libraryContainer').css('--card-width', `${zoomVal}px`);
+    localStorage.setItem('gridZoom', zoomVal);
+};
 
 function renderLibrary() {
     const container = $('#libraryContainer');
@@ -623,6 +629,11 @@ $(document).ready(() => {
     // Initial Load
     loadIgnorePreferences().then(() => {
         refreshLibrary();
+    });
+
+    // Grid Zoom Listener
+    $('#gridZoom').on('input', function () {
+        updateGridZoom($(this).val());
     });
 
     const savedZoom = localStorage.getItem('gridZoom') || 240;
