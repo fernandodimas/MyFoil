@@ -1375,6 +1375,77 @@
                             opacity: 0.6;
                             display: block;
                         }
+
+                        /* ===== CORREÇÕES DE FORMATAÇÃO ===== */
+                        
+                        /* Container Principal - Padding Otimizado */
+                        .settings-container {
+                            padding: 1rem !important;
+                        }
+
+                        /* Responsividade Mobile */
+                        @media screen and (max-width: 1023px) {
+                            .settings-container {
+                                padding: 0.5rem !important;
+                            }
+                            
+                            .menu.is-sticky {
+                                position: relative !important;
+                                top: 0 !important;
+                                margin-bottom: 2rem;
+                            }
+                        }
+
+                        /* Cards - Estilos Consistentes */
+                        .card.box {
+                            margin-bottom: 1.5rem;
+                            overflow: hidden;
+                        }
+
+                        /* Card Content - Padding Adequado */
+                        .card-header + .card-content {
+                            padding-top: 1rem !important;
+                        }
+
+                        /* Notificações - Padding Consistente */
+                        .notification.is-ghost {
+                            padding: 1rem !important;
+                            margin-bottom: 1rem;
+                        }
+
+                        /* Tabelas - Melhor Espaçamento */
+                        .table thead th {
+                            font-weight: 600;
+                            text-transform: uppercase;
+                            font-size: 0.75rem;
+                            letter-spacing: 0.05em;
+                        }
+
+                        /* Campos de Formulário */
+                        .field {
+                            margin-bottom: 1rem;
+                        }
+
+                        .field .label {
+                            margin-bottom: 0.5rem;
+                            font-weight: 600;
+                        }
+
+                        /* Inputs - Melhor Aparência */
+                        .input:focus,
+                        .textarea:focus,
+                        .select select:focus {
+                            border-color: var(--color-primary);
+                            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+                        }
+
+                        /* Sticky Sidebar em Telas Grandes */
+                        @media screen and (min-width: 1024px) {
+                            .is-sticky {
+                                max-height: calc(100vh - 100px);
+                                overflow-y: auto;
+                            }
+                        }
                     </style>
 
                     <script>

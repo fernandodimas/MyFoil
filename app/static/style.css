@@ -598,6 +598,8 @@ p.game-description {
     #editMetadataModal .modal-card-foot {
         width: 98% !important;
         margin: 0 auto !important;
+    }
+    
     /* Base file info - ALL IN ONE LINE (mobile & desktop) */
     #gameDetailsModal .base-file-info.box {
         display: flex !important;
