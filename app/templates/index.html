@@ -5,7 +5,6 @@
 
 <div class="container is-fluid px-5 mt-5 pb-6">
 
-
     <!-- Controls Row -->
     <div class="box p-2 mb-4 shadow-sm border-none bg-glass" style="position: relative; z-index: 20;">
         <div class="is-flex is-flex-wrap-wrap is-align-items-center gap-2 px-1 py-1">
@@ -17,7 +16,7 @@
                     <div class="dropdown-trigger">
                         <button class="button is-primary is-small" aria-haspopup="true">
                             <span class="icon is-small"><i class="bi bi-funnel-fill"></i></span>
-                            <span class="is-hidden-mobile ml-1">Filtros</span>
+                            <span class="is-hidden-mobile ml-1">{{ t('Filtros') }}</span>
                             <span class="icon is-small ml-1 is-hidden-tablet"><i class="bi bi-caret-down-fill"
                                     style="font-size: 0.5rem"></i></span>
                         </button>
@@ -25,21 +24,21 @@
                     <div class="dropdown-menu" id="dropdown-menu" role="menu" style="z-index: 200;">
                         <div class="dropdown-content p-4" style="min-width: 260px;">
                             <div class="field mb-3">
-                                <label class="label is-size-7 opacity-70">Gênero</label>
+                                <label class="label is-size-7 opacity-70">{{ t('Gênero') }}</label>
                                 <div class="control">
                                     <div class="select is-small is-fullwidth">
                                         <select id="filterGender" class="filterInput">
-                                            <option value="">Todos os Gêneros</option>
+                                            <option value="">{{ t('Todos os Gêneros') }}</option>
                                         </select>
                                     </div>
                                 </div>
                             </div>
                             <div class="field">
-                                <label class="label is-size-7 opacity-70">Tag</label>
+                                <label class="label is-size-7 opacity-70">{{ t('Tag') }}</label>
                                 <div class="control">
                                     <div class="select is-small is-fullwidth">
                                         <select id="filterTag" class="filterInput">
-                                            <option value="">Todas as Tags</option>
+                                            <option value="">{{ t('Todas as Tags') }}</option>
                                         </select>
                                     </div>
                                 </div>
@@ -53,52 +52,59 @@
                     <div class="dropdown-trigger">
                         <button class="button is-info is-small is-light" aria-haspopup="true">
                             <span class="icon is-small"><i class="bi bi-sort-down"></i></span>
-                            <span class="is-hidden-mobile ml-1">Ordenar</span>
+                            <span class="is-hidden-mobile ml-1">{{ t('Ordenar') }}</span>
                         </button>
                     </div>
                     <div class="dropdown-menu" id="sort-menu" role="menu" style="z-index: 200;">
                         <div class="dropdown-content p-2" style="min-width: 200px;">
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="name-asc">A-Z (Nome)</a>
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="name-desc">Z-A (Nome)</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="name-asc">{{ t('A-Z (Nome)')
+                                }}</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="name-desc">{{ t('Z-A (Nome)')
+                                }}</a>
                             <hr class="dropdown-divider">
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-desc">Lançamento
-                                (Novo)</a>
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-asc">Lançamento
-                                (Antigo)</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-desc">{{ t('Lançamento
+                                (Novo)') }}</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-asc">{{ t('Lançamento
+                                (Antigo)') }}</a>
                             <hr class="dropdown-divider">
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-desc">Adicionado
-                                Recentemente</a>
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-asc">Adicionado
-                                Antigamente</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-desc">{{ t('Adicionado
+                                Recentemente') }}</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-asc">{{ t('Adicionado
+                                Antigamente') }}</a>
                             <hr class="dropdown-divider">
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="id-asc">Title ID (Crescente)</a>
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="status-desc">Status de
-                                Atualização</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="id-asc">{{ t('Title ID
+                                (Crescente)') }}</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="status-desc">{{ t('Status de
+                                Atualização') }}</a>
                             <hr class="dropdown-divider">
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="size-desc">Tamanho (Maior)</a>
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="size-asc">Tamanho (Menor)</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="size-desc">{{ t('Tamanho (Maior)')
+                                }}</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="size-asc">{{ t('Tamanho (Menor)')
+                                }}</a>
                         </div>
                     </div>
                 </div>
 
                 <!-- Quick Status Filters -->
                 <div class="buttons has-addons m-0">
-                    <button class="button is-small is-light" id="btnFilterPendingBase" title="Falta Arquivo Base">
+                    <button class="button is-small is-light" id="btnFilterPendingBase"
+                        title="{{ t('Falta Arquivo Base') }}">
                         <span class="icon is-small"><i class="bi bi-disc"></i></span>
                         <span class="is-hidden-mobile ml-1">Base</span>
                     </button>
-                    <button class="button is-small is-light" id="btnFilterPendingUpd" title="Pendente Atualização">
+                    <button class="button is-small is-light" id="btnFilterPendingUpd"
+                        title="{{ t('Pendente Atualização') }}">
                         <span class="icon is-small"><i class="bi bi-arrow-up-circle"></i></span>
                         <span class="is-hidden-mobile ml-1">Update</span>
                     </button>
-                    <button class="button is-small is-light" id="btnFilterPendingDlc" title="Pendente DLC">
+                    <button class="button is-small is-light" id="btnFilterPendingDlc" title="{{ t('Pendente DLC') }}">
                         <span class="icon is-small"><i class="bi bi-plus-circle"></i></span>
                         <span class="is-hidden-mobile ml-1">DLC</span>
                     </button>
                 </div>
 
                 <button id="clearFiltersBtn" class="button is-small is-outlined is-danger" onclick="clearFilters()"
-                    title="Limpar Filtros">
+                    title="{{ t('Limpar Filtros') }}">
                     <span class="icon is-small"><i class="bi bi-x"></i></span>
                 </button>
             </div>
@@ -117,12 +123,12 @@
                 </div>
 
                 <div class="buttons has-addons m-0" id="viewToggleButtons">
-                    <button class="button is-small p-2" onclick="setView('card')" id="btnViewCard" title="Grade"><i
-                            class="bi bi-grid-fill"></i></button>
-                    <button class="button is-small p-2" onclick="setView('icon')" id="btnViewIcon" title="Ícones"><i
-                            class="bi bi-image"></i></button>
-                    <button class="button is-small p-2" onclick="setView('list')" id="btnViewList" title="Lista"><i
-                            class="bi bi-list-ul"></i></button>
+                    <button class="button is-small p-2" onclick="setView('card')" id="btnViewCard"
+                        title="{{ t('Grade') }}"><i class="bi bi-grid-fill"></i></button>
+                    <button class="button is-small p-2" onclick="setView('icon')" id="btnViewIcon"
+                        title="{{ t('Ícones') }}"><i class="bi bi-image"></i></button>
+                    <button class="button is-small p-2" onclick="setView('list')" id="btnViewList"
+                        title="{{ t('Lista') }}"><i class="bi bi-list-ul"></i></button>
                 </div>
             </div>
 
@@ -134,7 +140,7 @@
 
     <!-- Library Content -->
     <div class="box bg-transparent shadow-none border-none">
-        <div id="libraryContainer" class="columns is-multiline is-variable is-3 mt-2" style="overflow-x: hidden;">
+        <div id="libraryContainer" class="columns is-multiline is-variable is-3 mt-2">
             <!-- Dynamic content injected via JS -->
         </div>
     </div>
@@ -143,1082 +149,23 @@
     <div id="noResults" class="is-hidden has-text-centered py-6">
         <div class="card p-5">
             <i class="bi bi-search is-size-1 opacity-20 block mb-4"></i>
-            <h3 class="title is-4">Nenhum jogo encontrado</h3>
-            <p class="subtitle is-6 opacity-50">Tente ajustar seus filtros ou verifique as configurações.</p>
+            <h3 class="title is-4">{{ t('Nenhum jogo encontrado') }}</h3>
+            <p class="subtitle is-6 opacity-50">{{ t('Tente ajustar seus filtros ou verifique as configurações.') }}</p>
         </div>
     </div>
 
     <!-- Infinite scroll loading indicator -->
     <div id="scrollLoading" class="has-text-centered py-4 is-hidden">
         <span class="loader is-loading is-inline-block" style="width: 24px; height: 24px; border-width: 3px;"></span>
-        <p class="is-size-7 mt-2 opacity-60">Carregando mais jogos...</p>
+        <p class="is-size-7 mt-2 opacity-60">{{ t('Carregando mais jogos...') }}</p>
     </div>
 
     <!-- Loading indicator -->
     <div id="loadingIndicator" class="has-text-centered py-6 is-hidden">
         <span class="loader is-loading is-inline-block" style="width: 48px; height: 48px; border-width: 4px;"></span>
-        <p class="is-size-6 mt-4 opacity-60">Carregando Biblioteca...</p>
+        <p class="is-size-6 mt-4 opacity-60">{{ t('Carregando Biblioteca...') }}</p>
     </div>
 </div>
-</div>
 
-<style>
-    .gap-4 {
-        gap: 1rem;
-    }
-
-    .gap-2 {
-        gap: 0.5rem;
-    }
-
-    .mb-6 {
-        margin-bottom: 1.5rem;
-    }
-
-    .mr-2 {
-        margin-right: 0.5rem;
-    }
-
-    .ml-2 {
-        margin-left: 0.5rem;
-    }
-
-    .p-0 {
-        padding: 0 !important;
-    }
-
-    .border-top {
-        border-top: 1px solid rgba(0, 0, 0, 0.05);
-    }
-
-    .border-success-soft {
-        border-color: var(--bulma-success) !important;
-        opacity: 0.3;
-    }
-
-    .border-warning-soft {
-        border-color: var(--bulma-warning) !important;
-        opacity: 0.3;
-    }
-
-    .border-danger-soft {
-        border-color: var(--bulma-danger) !important;
-        opacity: 0.3;
-    }
-
-    .game-card {
-        height: 100%;
-        transition: transform 0.2s, box-shadow 0.2s;
-        border: 1px solid rgba(0, 0, 0, 0.05);
-    }
-
-    .game-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
-    }
-
-    .game-card:focus-within,
-    .grid-item:focus,
-    .grid-item:focus-within {
-        outline: 2px solid var(--bulma-primary);
-        outline-offset: 2px;
-    }
-
-    .grid-item:focus .game-card,
-    .grid-item:focus-within .game-card {
-        box-shadow: 0 0 0 3px var(--bulma-primary-light);
-    }
-
-    .card-image img {
-        transition: transform 0.3s;
-    }
-
-    .game-card:hover .card-image img {
-        transform: scale(1.05);
-    }
-
-    #libraryContainer {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(var(--card-width, 240px), 1fr));
-        gap: 1.25rem;
-        overflow-x: hidden;
-    }
-
-    #libraryContainer.is-list-view {
-        display: block;
-    }
-
-
-
-    @media screen and (min-width: 769px) {
-        .modal-card {
-            width: 800px;
-        }
-    }
-
-    @media screen and (min-width: 1216px) {
-        .modal-card {
-            width: 1000px;
-        }
-    }
-
-    @media screen and (min-width: 1408px) {
-        .modal-card {
-            width: 1250px;
-        }
-    }
-
-    .dlc-tag {
-        display: inline-flex !important;
-        align-items: center;
-        height: auto !important;
-        padding-top: 0.5rem !important;
-        padding-bottom: 0.5rem !important;
-        line-height: 1.25 !important;
-    }
-
-    .truncate {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    @media screen and (max-width: 768px) {
-        .is-flex-grow-1-mobile {
-            flex-grow: 1 !important;
-        }
-
-        .is-justify-content-center-mobile {
-            justify-content: center !important;
-        }
-    }
-
-    .game-card {
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        transition: transform 0.2s, box-shadow 0.2s;
-        border: 1px solid var(--bulma-border);
-        background: var(--bulma-card-background);
-    }
-
-    .card-image img {
-        transition: transform 0.3s;
-        background-color: var(--bulma-background);
-    }
-
-    .game-card:hover .card-image img {
-        transform: scale(1.02);
-    }
-
-    .bg-light-soft {
-        background: var(--bulma-background-scheme);
-    }
-
-    .border-none {
-        border: none !important;
-    }
-
-    .hover-bg-light:hover {
-        background: var(--bulma-background-scheme);
-    }
-
-    .rounded {
-        border-radius: 4px;
-    }
-
-    .break-word {
-        word-wrap: break-word;
-        word-break: break-all;
-        overflow-wrap: break-word;
-    }
-
-    #modalTitle {
-        word-break: break-word;
-    }
-
-    .opacity-10 {
-        opacity: 0.1;
-    }
-
-    .opacity-20 {
-        opacity: 0.2;
-    }
-
-    .opacity-30 {
-        opacity: 0.3;
-    }
-
-    .opacity-50 {
-        opacity: 0.5;
-    }
-
-    .opacity-60 {
-        opacity: 0.6;
-    }
-
-    .opacity-70 {
-        opacity: 0.7;
-    }
-
-    .opacity-80 {
-        opacity: 0.8;
-    }
-
-    /* Clear filters button - hidden by default, shown when filters active */
-    #clearFiltersBtn {
-        display: none;
-    }
-
-    #clearFiltersBtn.has-active {
-        display: inline-flex;
-    }
-
-    /* Search clear button */
-    .icon.is-right.is-clickable {
-        cursor: pointer;
-    }
-
-    .icon.is-right.is-clickable:hover {
-        color: var(--bulma-primary);
-    }
-
-    #searchClearBtn,
-    #searchIcon {
-        pointer-events: none;
-    }
-
-    #searchClearBtn.is-clickable {
-        pointer-events: auto;
-    }
-</style>
-
-
-
-<script>
-    {% raw %}
-
-    let games = [];
-    window.filteredGames = [];
-    let currentSort = localStorage.getItem('myfoil_library_sort') || 'name-asc';
-    let currentView = localStorage.getItem('viewMode') || 'card';
-    let ignorePreferences = {};  // Cache for ignore preferences per title_id
-
-
-    // Fetch all ignore preferences on load
-    function loadIgnorePreferences() {
-        return $.getJSON('/api/wishlist/ignore', (data) => {
-            ignorePreferences = data || {};
-            debugLog('Ignore preferences loaded:', ignorePreferences);
-        }).fail(() => {
-            debugWarn('Failed to load ignore preferences');
-            showToast(t('Failed to load ignore preferences'), 'danger');
-            ignorePreferences = {};
-        });
-    }
-
-
-    // Helper functions
-
-
-    // Lazy Loading Images
-    function observeImages() {
-        if ('IntersectionObserver' in window) {
-            const imageObserver = new IntersectionObserver((entries, observer) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const img = entry.target;
-                        const src = img.getAttribute('data-src');
-                        if (src) {
-                            img.src = src;
-                            img.onload = () => {
-                                img.style.opacity = 1;
-                            };
-                            img.removeAttribute('data-src');
-                        }
-                        observer.unobserve(img);
-                    }
-                });
-            });
-
-            document.querySelectorAll('img.lazy-image').forEach(img => {
-                imageObserver.observe(img);
-            });
-        } else {
-            // Fallback for older browsers
-            document.querySelectorAll('img.lazy-image').forEach(img => {
-                const src = img.getAttribute('data-src');
-                if (src) {
-                    img.src = src;
-                    img.style.opacity = 1;
-                }
-            });
-        }
-    }
-
-    // Debounce Utility
-    function debounce(func, wait) {
-        let timeout;
-        return function (...args) {
-            const context = this;
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(context, args), wait);
-        };
-    }
-
-    function initGenders(gamesList) {
-        const genders = new Set();
-        gamesList.forEach(g => {
-            if (g && g.category && Array.isArray(g.category)) {
-                g.category.forEach(c => genders.add(c));
-            }
-        });
-
-        const currentVal = $('#filterGender').val();
-        const genderSelect = $('#filterGender').empty().append(`<option value="">${t('All Genres')}</option>`);
-        Array.from(genders).sort().forEach(g => genderSelect.append(new Option(g, g)));
-        if (currentVal) $('#filterGender').val(currentVal);
-    }
-
-    function initTags(gamesList) {
-        const tags = new Set();
-        gamesList.forEach(g => {
-            if (g && g.tags && Array.isArray(g.tags)) {
-                g.tags.forEach(t => tags.add(t));
-            }
-        });
-
-        const currentVal = $('#filterTag').val();
-        const tagSelect = $('#filterTag').empty().append(`<option value="">${t('All Tags')}</option>`);
-        Array.from(tags).sort().forEach(t => tagSelect.append(new Option(t, t)));
-        if (currentVal) $('#filterTag').val(currentVal);
-    }
-
-
-    // Keyboard Shortcuts
-    document.addEventListener('keydown', (e) => {
-        // Ctrl/Cmd + K: Focus search
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-            e.preventDefault();
-            $('#navbarSearch').focus();
-        }
-
-        // ESC: Clear search and close all modals
-        if (e.key === 'Escape') {
-            const searchValue = $('#navbarSearch').val();
-            if (searchValue) {
-                clearSearch();
-            }
-            $('.modal').removeClass('is-active');
-        }
-    });
-
-    function setView(view) {
-        currentView = view;
-        localStorage.setItem('viewMode', view);
-        $('#viewToggleButtons .button').removeClass('is-primary');
-        $(`#btnView${view.charAt(0).toUpperCase() + view.slice(1)}`).addClass('is-primary');
-        renderLibrary();
-    }
-
-    function updateGridZoom(val) {
-        document.documentElement.style.setProperty('--card-width', `${val}px`);
-        localStorage.setItem('gridZoom', val);
-    }
-
-    function renderLibrary() {
-        const container = $('#libraryContainer');
-        const paged = filteredGames;
-        const totalItems = paged.length;
-
-        // Clear container and reset scroll
-        container.empty();
-
-        // Show item count
-        $('#totalItemsCount, #totalItemsCountMobile').text(`${totalItems} Jogos`);
-
-        // Handle list view width
-        if (currentView === 'list') {
-            container.addClass('is-list-view');
-        } else {
-            container.removeClass('is-list-view');
-        }
-
-        // Use infinite scroll instead of pagination
-        resetInfiniteScroll();
-        setupInfiniteScroll();
-    }
-
-    function refreshLibrary() {
-        console.log("Refreshing library data...");
-
-        // Show loading indicator
-        $('#loadingIndicator').removeClass('is-hidden');
-        $('#libraryContainer').empty();
-
-        $.getJSON('/api/library', function (data) {
-            // API now returns {items: [...], pagination: {...}}
-            games = (data && data.items) ? data.items : (Array.isArray(data) ? data : []);
-            localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
-            initGenders(games);
-            initTags(games);
-
-            // Hide loading indicator
-            $('#loadingIndicator').addClass('is-hidden');
-
-            // Reset and apply filters
-            applyFilters();
-            showToast(t('Library updated!'), 'success');
-        }).fail(() => {
-            $('#loadingIndicator').addClass('is-hidden');
-            showToast(t('Failed to refresh library'), 'error');
-        });
-    }
-
-    function renderCardView(items) {
-        items.forEach((game, index) => {
-            const statusDotClass = game.status_color === 'orange' ? 'bg-orange' : (game.status_color === 'green' ? 'bg-green' : 'bg-gray');
-            const safeName = escapeHtml(game.name);
-            const safeId = escapeHtml(game.id);
-
-            const card = $(`
-                <div class="grid-item" data-index="${index}" data-game-id="${safeId}" tabindex="0" role="button" aria-label="${safeName}" onclick="focusAndOpenGame('${safeId}')">
-                    <div class="card game-card is-paddingless is-shadowless">
-                        <div class="card-image position-relative overflow-hidden">
-                            <figure class="image is-16by9">
-                                <img src="/static/img/no-icon.png" 
-                                     data-src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" 
-                                     alt="${safeName}" 
-                                     loading="lazy"
-                                     class="lazy-image"
-                                     style="object-fit: cover; opacity: 0; transition: opacity 0.3s;">
-                            </figure>
-                        </div>
-                        <div class="card-content p-3">
-                            <div class="is-flex is-justify-content-between is-align-items-start is-flex-wrap-wrap mb-2" style="gap: 4px;">
-                                <span class="font-mono is-size-7 opacity-40">${safeId}</span>
-                                <span class="font-mono is-size-7 has-text-weight-bold" style="margin-left: auto;">v${game.display_version}</span>
-                            </div>
-                            
-                            <p class="is-size-6 has-text-weight-bold mb-3 truncate" title="${safeName}">${safeName}</p>
-                            
-                            <div class="is-flex is-justify-content-between is-align-items-center">
-                                <div class="is-flex is-align-items-center gap-1">
-                                    <span class="status-dot ${statusDotClass}"></span>
-                                    <span class="is-size-7 opacity-70 font-mono" title="Tamanho em disco">${game.size_formatted || '--'}</span>
-                                </div>
-                                <div class="is-flex gap-1 is-justify-content-end" style="margin-left: auto;">
-                                    ${game.has_non_ignored_updates ? '<span class="tag tag-update has-text-weight-bold">UPDATE</span>' : ''}
-                                    ${game.has_non_ignored_dlcs ? '<span class="tag tag-dlc has-text-weight-bold">DLC</span>' : ''}
-                                    ${game.has_redundant_updates ? '<span class="tag tag-redundant has-text-weight-bold" title="Updates redundantes detectados">X-UPD</span>' : ''}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `);
-            $('#libraryContainer').append(card);
-        });
-
-        // Initialize lazy loading
-        observeImages();
-    }
-
-    function renderIconView(items) {
-        items.forEach((game, index) => {
-            const statusDotClass = game.status_color === 'orange' ? 'bg-orange' : (game.status_color === 'green' ? 'bg-green' : 'bg-gray');
-            const safeName = escapeHtml(game.name);
-            const safeId = escapeHtml(game.id);
-
-            const card = $(`
-                <div class="grid-item" data-index="${index}" data-game-id="${safeId}" tabindex="0" role="button" aria-label="${safeName}" onclick="focusAndOpenGame('${safeId}')" title="${safeName}">
-                    <div class="card game-card is-paddingless is-shadowless">
-                        <div class="card-image">
-                            <figure class="image is-square bg-light relative">
-                                <img src="/static/img/no-icon.png" 
-                                     data-src="${game.iconUrl || '/static/img/no-icon.png'}" 
-                                     alt="${safeName}" 
-                                     loading="lazy"
-                                     class="lazy-image p-0" 
-                                     style="object-fit: cover; width: 100%; height: 100%; opacity: 0; transition: opacity 0.3s;">
-                                <div class="status-indicator position-absolute" style="bottom: 5px; right: 5px;">
-                                    <span class="status-dot ${statusDotClass}"></span>
-                                </div>
-                            </figure>
-                        </div>
-                    </div>
-                </div>
-            `);
-            $('#libraryContainer').append(card);
-        });
-
-        // Initialize lazy loading
-        observeImages();
-    }
-
-    function renderListView(items) {
-        const table = $(`
-            <div class="column is-12" style="width: 100%;">
-                <div class="table-container box is-paddingless shadow-sm overflow-hidden border-none">
-                    <table class="table is-fullwidth is-hoverable game-list-table mb-0">
-                        <thead>
-                            <tr class="has-background-light-soft" style="border-bottom: 2px solid var(--bulma-primary)">
-                                <th width="65" class="has-text-centered p-1">Ícone</th>
-                                <th>Título do Jogo</th>
-                                <th width="140">Title ID</th>
-                                <th width="80" class="has-text-centered">Versão</th>
-                                <th class="is-hidden-mobile" width="100">Tamanho</th>
-                                <th class="is-hidden-mobile" width="100">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        `);
-        items.forEach((game, index) => {
-            const statusColor = game.status_color === 'orange' ? 'has-text-warning' : (game.status_color === 'green' ? 'has-text-success' : 'has-text-grey');
-            const statusText = game.status_color === 'orange' ? t('Missing') : (game.status_color === 'green' ? t('Owned') : t('Incomplete'));
-
-            table.find('tbody').append(`
-                <tr data-index="${index}" data-game-id="${game.id || game.title_id}" tabindex="0" role="button" onclick="focusAndOpenGame('${game.id || game.title_id}')">
-                    <td class="p-1 has-text-centered"><img src="${game.iconUrl || '/static/img/no-icon.png'}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;"></td>
-                    <td class="is-vcentered">
-                        <strong class="is-size-7-mobile">${game.name || 'Unknown'}</strong>
-                        ${game.has_redundant_updates ? '<span class="tag tag-redundant ml-2 has-text-weight-bold">X-UPD</span>' : ''}
-                    </td>
-                    <td class="font-mono is-size-7 is-vcentered">${game.id || game.title_id || '--'}</td>
-                    <td class="is-vcentered has-text-centered"><span class="tag is-light is-small">v${game.display_version || '0'}</span></td>
-                    <td class="is-hidden-mobile is-vcentered font-mono is-size-7">${game.size_formatted || '--'}</td>
-                    <td class="is-hidden-mobile ${statusColor} has-text-weight-bold is-size-7 is-vcentered">${statusText}</td>
-                </tr>
-            `);
-        });
-        $('#libraryContainer').append(table);
-    }
-
-
-
-    function applyFilters() {
-        const query = ($('#navbarSearch').val() || '').toLowerCase();
-        const gender = $('#filterGender').val();
-        const tag = $('#filterTag').val();
-
-        // Specific button filters
-        const showOnlyBase = $('#btnFilterPendingBase').hasClass('is-primary');
-        const showOnlyUpdates = $('#btnFilterPendingUpd').hasClass('is-primary');
-        const showOnlyDlcs = $('#btnFilterPendingDlc').hasClass('is-primary');
-
-        // First, calculate has_non_ignored_* for each game
-        games.forEach(g => {
-            if (!g) return;
-            const gameIgnore = ignorePreferences[g.id] || {};
-            const ignoredDlcs = gameIgnore.dlcs || {};
-            const ignoredUpdates = gameIgnore.updates || {};
-
-            // Calculate has_non_ignored_updates
-            // Only show update badge if there are updates available that are NOT ignored
-            // AND we don't have all updates (some are missing and not ignored)
-            let hasNonIgnoredUpdates = false;
-            if (g.has_base && !g.has_latest_version) {
-                const ownedVersion = parseInt(g.owned_version) || 0;
-                const latestVersion = parseInt(g.latest_version_available) || 0;
-                let allUpdatesIgnored = true;
-                for (let v = ownedVersion + 1; v <= latestVersion; v++) {
-                    if (!ignoredUpdates[v.toString()]) {
-                        allUpdatesIgnored = false;
-                        break;
-                    }
-                }
-                hasNonIgnoredUpdates = !allUpdatesIgnored;
-            }
-            g.has_non_ignored_updates = hasNonIgnoredUpdates;
-
-            // Calculate has_non_ignored_dlcs
-            let hasNonIgnoredDlcs = false;
-            if (g.has_base && g.dlcs && Array.isArray(g.dlcs)) {
-                hasNonIgnoredDlcs = g.dlcs.some(dlc => {
-                    const isIgnored = ignoredDlcs[dlc.app_id];
-                    const isNotOwned = !dlc.owned;
-                    return isNotOwned && !isIgnored;
-                });
-            }
-            g.has_non_ignored_dlcs = hasNonIgnoredDlcs;
-
-            // Update status_color based on non-ignored status
-            if (!g.has_base) {
-                g.status_color = 'orange';
-                g.status_score = 0;
-            } else if (g.has_non_ignored_updates || g.has_non_ignored_dlcs) {
-                g.status_color = 'orange';
-                g.status_score = 1;
-            } else {
-                g.status_color = 'green';
-                g.status_score = 2;
-            }
-        });
-
-        window.filteredGames = games.filter(g => {
-            if (!g) return false;
-            const gName = g.name || '';
-            const gId = g.id || '';
-            const matchesSearch = !query || gName.toLowerCase().includes(query) || gId.toLowerCase().includes(query);
-            const matchesGender = !gender || (g.category && g.category.includes(gender));
-            const matchesTag = !tag || (g.tags && g.tags.includes(tag));
-
-            let matchesStatus = true;
-            if (showOnlyBase) matchesStatus = matchesStatus && !g.has_base;
-            if (showOnlyUpdates) matchesStatus = matchesStatus && (g.has_base && g.has_non_ignored_updates);
-            if (showOnlyDlcs) matchesStatus = matchesStatus && (g.has_base && g.has_non_ignored_dlcs);
-
-            return matchesSearch && matchesGender && matchesTag && matchesStatus;
-        });
-
-        // Apply Sorting
-        window.filteredGames.sort((a, b) => {
-            const [field, order] = currentSort.split('-');
-            let comparison = 0;
-
-            if (field === 'name') {
-                comparison = (a.name || '').localeCompare(b.name || '');
-            } else if (field === 'release') {
-                const dateA = String(a.release_date || a.latest_release_date || '0000-00-00');
-                const dateB = String(b.release_date || b.latest_release_date || '0000-00-00');
-                comparison = dateA.localeCompare(dateB);
-                if (comparison === 0) {
-                    comparison = (a.name || '').localeCompare(b.name || '');
-                }
-            } else if (field === 'added') {
-                const dateA = a.added_at ? new Date(a.added_at).getTime() : 0;
-                const dateB = b.added_at ? new Date(b.added_at).getTime() : 0;
-                comparison = dateA - dateB;
-            } else if (field === 'id') {
-                comparison = (a.id || '').localeCompare(b.id || '');
-            } else if (field === 'status') {
-                comparison = (a.status_score || 0) - (b.status_score || 0);
-                if (comparison === 0) {
-                    comparison = (a.name || '').localeCompare(b.name || '');
-                }
-            } else if (field === 'size') {
-                comparison = (a.size || 0) - (b.size || 0);
-                if (comparison === 0) {
-                    comparison = (a.name || '').localeCompare(b.name || '');
-                }
-            }
-
-            return order === 'asc' ? comparison : -comparison;
-        });
-
-        // Debug: Show filtered/sorted order
-        const first5 = filteredGames.slice(0, 5).map(g => ({
-            name: g ? g.name : 'null',
-            size: g ? String(g.size) : 'null',
-            sizeFormatted: g ? g.size_formatted : 'null'
-        }));
-
-        // Show last 5 to verify ordering
-        const last5 = filteredGames.slice(-5).map(g => ({
-            name: g ? g.name : 'null',
-            size: g ? String(g.size) : 'null',
-            sizeFormatted: g ? g.size_formatted : 'null'
-        }));
-
-        // Show/hide clear filters button based on active filters
-        const hasActiveFilters = query || gender || tag ||
-            $('#btnFilterPendingBase').hasClass('is-primary') ||
-            $('#btnFilterPendingUpd').hasClass('is-primary') ||
-            $('#btnFilterPendingDlc').hasClass('is-primary');
-        $('#clearFiltersBtn').toggleClass('has-active', hasActiveFilters);
-
-        $('#totalItemsCount, #totalItemsCountMobile').text(`${filteredGames.length} Jogos`);
-        renderLibrary();
-    }
-
-
-    function clearFilters() {
-        $('#navbarSearch').val('');
-        $('#filterGender').val('');
-        $('#filterTag').val('');
-        $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
-        $('#searchClearBtn').hide();
-        $('#searchIcon').show();
-
-        // Reset sort to default
-        currentSort = 'name-asc';
-        localStorage.setItem('myfoil_library_sort', currentSort);
-        $('.sort-option').removeClass('is-active has-text-weight-bold');
-        $(`.sort-option[data-sort="${currentSort}"]`).addClass('is-active has-text-weight-bold');
-
-        applyFilters();
-    }
-
-    function clearSearch() {
-        $('#navbarSearch').val('');
-        $('#searchClearBtn').hide();
-        $('#searchIcon').show();
-        applyFilters();
-    }
-
-    // ========== CACHE OPTIMIZATION ==========
-    let libraryCacheTime = 0;
-    const LIBRARY_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
-
-    function shouldRefreshFromServer() {
-        const cached = localStorage.getItem('myfoil_library_cache_time');
-        if (!cached) return true;
-        const cacheTime = parseInt(cached);
-        return (Date.now() - cacheTime) > LIBRARY_CACHE_DURATION;
-    }
-
-    function refreshLibrary() {
-        console.log("Refreshing library data...");
-
-        // Always fetch fresh data from server on page load
-        // Show loading indicator
-        $('#loadingIndicator').removeClass('is-hidden');
-        $('#libraryContainer').empty();
-
-        $.getJSON('/api/library', function (data) {
-            // API now returns {items: [...], pagination: {...}}
-            games = (data && data.items) ? data.items : (Array.isArray(data) ? data : []);
-            localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
-            localStorage.setItem('myfoil_library_cache_time', Date.now().toString());
-            initGenders(games);
-            initTags(games);
-
-            // Hide loading indicator
-            $('#loadingIndicator').addClass('is-hidden');
-
-            // Reset and apply filters
-            applyFilters();
-            showToast(t('Library updated!'), 'success');
-        }).fail(() => {
-            $('#loadingIndicator').addClass('is-hidden');
-            showToast(t('Failed to refresh library'), 'error');
-        });
-    }
-
-    function clearSearch() {
-        $('#navbarSearch').val('');
-        $('#searchClearBtn').hide();
-        $('#searchIcon').show();
-        applyFilters();
-    }
-
-    // ========== INFINITE SCROLL ==========
-    let scrollOffset = 0;
-    let isLoadingMore = false;
-    let hasMoreItems = true;
-    const SCROLL_BATCH_SIZE = 48;
-
-    function setupInfiniteScroll() {
-        const sentinel = document.getElementById('scrollSentinel');
-        if (!sentinel) return;
-
-        const observer = new IntersectionObserver((entries) => {
-            const entry = entries[0];
-            if (entry.isIntersecting && !isLoadingMore && hasMoreItems && filteredGames.length > scrollOffset) {
-                loadMoreItems();
-            }
-        }, {
-            rootMargin: '200px'
-        });
-
-        observer.observe(sentinel);
-    }
-
-    function loadMoreItems() {
-        if (isLoadingMore) return;
-        isLoadingMore = true;
-
-        const currentBatch = filteredGames.slice(scrollOffset, scrollOffset + SCROLL_BATCH_SIZE);
-
-        if (currentBatch.length === 0) {
-            hasMoreItems = false;
-            isLoadingMore = false;
-            return;
-        }
-
-        // Render the next batch
-        if (currentView === 'card') {
-            renderCardView(currentBatch);
-        } else if (currentView === 'icon') {
-            renderIconView(currentBatch);
-        } else {
-            renderListView(currentBatch);
-        }
-
-        // Setup keyboard navigation for newly loaded items
-        setupKeyboardNavigation();
-
-        scrollOffset += currentBatch.length;
-
-        // Check if there are more items
-        hasMoreItems = scrollOffset < filteredGames.length;
-        isLoadingMore = false;
-
-        // Update scroll sentinel visibility
-        const sentinel = document.getElementById('scrollSentinel');
-        if (sentinel) {
-            sentinel.style.display = hasMoreItems ? 'block' : 'none';
-        }
-    }
-
-    function resetInfiniteScroll() {
-        scrollOffset = 0;
-        hasMoreItems = true;
-        isLoadingMore = false;
-        $('#libraryContainer').empty();
-
-        // Add sentinel element
-        $('#libraryContainer').after('<div id="scrollSentinel" style="height: 20px; width: 100%;"></div>');
-
-        // Load first batch
-        loadMoreItems();
-    }
-
-    // ========== KEYBOARD NAVIGATION ==========
-    let currentlyFocusedIndex = -1;
-
-    function setupKeyboardNavigation() {
-        const container = document.getElementById('libraryContainer');
-        if (!container) {
-            console.warn('Keyboard nav: container not found');
-            return;
-        }
-
-        // Use event delegation - add listeners to container only
-        container.removeEventListener('keydown', handleKeyDown);
-        container.removeEventListener('focus', handleFocus, true);
-
-        container.addEventListener('keydown', handleKeyDown);
-        container.addEventListener('focus', handleFocus, true);
-    }
-
-    function handleKeyDown(e) {
-        const target = e.target.closest('[data-game-id]');
-        if (!target) return;
-
-        // Get the game ID from the focused element
-        const currentGameId = target.dataset.gameId;
-
-        // Find the current index in filteredGames (respects filters and sorting)
-        let currentIndex = filteredGames.findIndex(g => g && g.id === currentGameId);
-
-        if (currentIndex === -1) {
-            // Fallback to DOM order if not found in filteredGames
-            const items = Array.from(document.querySelectorAll('#libraryContainer .grid-item, tbody tr'));
-            currentIndex = items.indexOf(target);
-            if (currentIndex === -1) return;
-        }
-
-        const totalItems = filteredGames.length;
-        if (totalItems === 0) return;
-
-        // Calculate grid columns
-        const container = document.getElementById('libraryContainer');
-        let columns = 1;
-        if (currentView === 'card' || currentView === 'icon') {
-            const gridElement = container.querySelector(':scope > .columns.is-grid, .is-grid');
-            if (gridElement) {
-                const gridStyle = window.getComputedStyle(gridElement);
-                columns = gridStyle.gridTemplateColumns.split(' ').length || 1;
-            }
-        }
-
-        let nextIndex = currentIndex;
-
-        switch (e.key) {
-            case 'ArrowRight':
-                e.preventDefault();
-                nextIndex = Math.min(currentIndex + 1, totalItems - 1);
-                break;
-            case 'ArrowLeft':
-                e.preventDefault();
-                nextIndex = Math.max(currentIndex - 1, 0);
-                break;
-            case 'ArrowDown':
-                e.preventDefault();
-                nextIndex = Math.min(currentIndex + columns, totalItems - 1);
-                break;
-            case 'ArrowUp':
-                e.preventDefault();
-                nextIndex = Math.max(currentIndex - columns, 0);
-                break;
-            case 'Home':
-                e.preventDefault();
-                nextIndex = 0;
-                break;
-            case 'End':
-                e.preventDefault();
-                nextIndex = totalItems - 1;
-                break;
-            case 'Enter':
-            case ' ':
-                e.preventDefault();
-                if (currentGameId) {
-                    showGameDetails(currentGameId);
-                }
-                return;
-            default:
-                return;
-        }
-
-        if (nextIndex !== currentIndex && nextIndex >= 0 && nextIndex < totalItems) {
-            const nextGame = filteredGames[nextIndex];
-
-            if (nextGame && nextGame.id) {
-                const nextElement = container.querySelector(`[data-game-id="${nextGame.id}"]`);
-
-                if (nextElement) {
-                    nextElement.focus();
-                    currentlyFocusedIndex = nextIndex;
-                    nextElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-            }
-        }
-    }
-
-    function handleFocus(e) {
-        const target = e.target.closest('[data-game-id]');
-        if (!target) return;
-
-        const currentGameId = target.dataset.gameId;
-        const index = filteredGames.findIndex(g => g && g.id === currentGameId);
-        if (index !== -1) {
-            currentlyFocusedIndex = index;
-        }
-    }
-
-    function toggleSearchClearBtn() {
-        const searchValue = $('#navbarSearch').val();
-        if (searchValue.length > 0) {
-            $('#searchClearBtn').show();
-            $('#searchIcon').hide();
-        } else {
-            $('#searchClearBtn').hide();
-            $('#searchIcon').show();
-        }
-    }
-
-    // Focus on grid item and open game details
-    function focusAndOpenGame(gameId) {
-        // Find the grid-item and focus it
-        const gridItem = document.querySelector(`.grid-item[data-game-id="${gameId}"]`);
-        if (gridItem) {
-            gridItem.focus();
-        }
-        // Then show details
-        showGameDetails(gameId);
-    }
-
-    $('#btnFilterPendingBase').on('click', function () {
-        $(this).toggleClass('is-primary is-light');
-        if ($(this).hasClass('is-primary')) {
-            $('#btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
-        }
-        applyFilters();
-    });
-
-    $('#btnFilterPendingUpd').on('click', function () {
-        $(this).toggleClass('is-primary is-light');
-        if ($(this).hasClass('is-primary')) {
-            $('#btnFilterPendingBase, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
-        }
-        applyFilters();
-    });
-
-    $('#btnFilterPendingDlc').on('click', function () {
-        $(this).toggleClass('is-primary is-light');
-        if ($(this).hasClass('is-primary')) {
-            $('#btnFilterPendingBase, #btnFilterPendingUpd').removeClass('is-primary').addClass('is-light');
-        }
-        applyFilters();
-    });
-
-
-    // Event Listeners
-    $('.filterInput').on('change', applyFilters);
-    $('#navbarSearch').on('input', debounce(applyFilters, 300));
-
-    // Sorting dropdown toggle
-    $('#sortDropdown .dropdown-trigger button').on('click', function (e) {
-        e.stopPropagation();
-        $('#sortDropdown').toggleClass('is-active');
-        $('#filterDropdown').removeClass('is-active');
-    });
-
-    // Filter dropdown toggle
-    $('#filterDropdown .dropdown-trigger button').on('click', function (e) {
-        e.stopPropagation();
-        $('#filterDropdown').toggleClass('is-active');
-        $('#sortDropdown').removeClass('is-active');
-    });
-
-    $(document).on('click', () => {
-        $('#filterDropdown').removeClass('is-active');
-        $('#sortDropdown').removeClass('is-active');
-    });
-
-    // Prevent closing when clicking inside filters or sort menu
-    $('.dropdown-content').on('click', function (e) {
-        e.stopPropagation();
-    });
-
-    $('.sort-option').on('click', function () {
-        currentSort = $(this).data('sort');
-        localStorage.setItem('myfoil_library_sort', currentSort);
-        $('.sort-option').removeClass('is-active has-text-weight-bold');
-        $(this).addClass('is-active has-text-weight-bold');
-        $('#sortDropdown').removeClass('is-active');
-        applyFilters();
-    });
-
-    // Mark current sort as active on load
-    $(document).ready(() => {
-        $(`.sort-option[data-sort="${currentSort}"]`).addClass('is-active has-text-weight-bold');
-    });
-
-    // Modal closers
-    $('.modal-background').on('click', () => {
-        closeModal('gameDetailsModal');
-        closeModal('editMetadataModal');
-    });
-
-
-
-
-    {% endraw %}
-</script>
-
-<script>
-
-    // Initialize empty
-    games = [];
-    window.filteredGames = [];
-
-    // Fetch games from API
-    $(document).ready(() => {
-        // Show loading indicator immediately
-        $('#loadingIndicator').removeClass('is-hidden');
-        $('#libraryContainer').empty();
-
-        // Load ignore preferences first, then fetch library
-        loadIgnorePreferences().then(() => {
-            // Always fetch fresh data on page load to ensure latest games are visible
-            refreshLibrary();
-        });
-
-        // Initialize zoom from localStorage
-        const savedZoom = localStorage.getItem('gridZoom') || 240;
-        $('#gridZoom').val(savedZoom);
-        updateGridZoom(savedZoom);
-
-        // Populated globally outside raw block
-        setView(currentView);
-    });
-
-
-</script>
-
+<script src="/static/js/index.js?v={{ build_version }}"></script>
 {% endblock %}

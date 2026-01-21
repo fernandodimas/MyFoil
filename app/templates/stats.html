@@ -11,19 +11,19 @@
                 <div class="level">
                     <div class="level-left">
                         <div>
-                            <h1 class="title is-2 mb-2" style="font-weight: 800; letter-spacing: -1px;">📊 Dashboard de
-                                Estatísticas</h1>
-                            <p class="subtitle is-6 opacity-60">Visão geral da sua coleção e comparação com o catálogo
-                                global.</p>
+                            <h1 class="title is-2 mb-2" style="font-weight: 800; letter-spacing: -1px;">📊 {{
+                                t('Dashboard de Estatísticas') }}</h1>
+                            <p class="subtitle is-6 opacity-60">{{ t('Visão geral da sua coleção e comparação com o
+                                catálogo global.') }}</p>
                         </div>
                     </div>
                     <div class="level-right">
                         <div class="field">
-                            <label class="label is-small opacity-50">Filtrar por Biblioteca</label>
+                            <label class="label is-small opacity-50">{{ t('Filtrar por Biblioteca') }}</label>
                             <div class="control has-icons-left">
                                 <span class="select is-rounded is-small">
                                     <select id="libraryFilter" onchange="loadStats()">
-                                        <option value="">Todas as Bibliotecas</option>
+                                        <option value="">{{ t('Todas as Bibliotecas') }}</option>
                                     </select>
                                 </span>
                                 <span class="icon is-small is-left">
@@ -38,64 +38,64 @@
             <!-- Stats Cards Row -->
             <div class="column is-3">
                 <div class="card box shadow-sm border-none p-5 h-100">
-                    <p class="heading is-size-7 opacity-50 mb-2">Total da Biblioteca</p>
+                    <p class="heading is-size-7 opacity-50 mb-2">{{ t('Total da Biblioteca') }}</p>
                     <div class="is-flex is-align-items-center mb-3">
                         <span class="icon is-large has-text-primary mr-3">
                             <i class="bi bi-collection-play is-size-3"></i>
                         </span>
                         <div>
                             <p class="title is-3 m-0" id="stat-total-games">--</p>
-                            <p class="is-size-7" id="stat-total-files-top">-- Arquivos</p>
+                            <p class="is-size-7" id="stat-total-files-top">-- {{ t('Arquivos') }}</p>
                         </div>
                     </div>
                     <div class="pt-3 border-top">
                         <p class="is-size-7 opacity-70"><i class="bi bi-hdd mr-1"></i> <span
-                                id="stat-total-size">--</span> em disco</p>
+                                id="stat-total-size">--</span> {{ t('em disco') }}</p>
                     </div>
                 </div>
             </div>
 
             <div class="column is-3">
                 <div class="card box shadow-sm border-none p-5 h-100">
-                    <p class="heading is-size-7 opacity-50 mb-2">Status da Coleção</p>
+                    <p class="heading is-size-7 opacity-50 mb-2">{{ t('Status da Coleção') }}</p>
                     <div class="is-flex is-align-items-center mb-3">
                         <span class="icon is-large has-text-success mr-3">
                             <i class="bi bi-check-circle-fill is-size-3"></i>
                         </span>
                         <div>
                             <p class="title is-3 m-0" id="stat-up-to-date-pct">-- %</p>
-                            <p class="is-size-7" id="stat-up-to-date-count">-- atualizados</p>
+                            <p class="is-size-7" id="stat-up-to-date-count">-- {{ t('atualizados') }}</p>
                         </div>
                     </div>
                     <div class="pt-3 border-top">
                         <p class="is-size-7 opacity-70"><i class="bi bi-clock-history mr-1"></i> <span
-                                id="stat-pending-count">--</span> pendentes</p>
+                                id="stat-pending-count">--</span> {{ t('pendentes') }}</p>
                     </div>
                 </div>
             </div>
 
             <div class="column is-3">
                 <div class="card box shadow-sm border-none p-5 h-100">
-                    <p class="heading is-size-7 opacity-50 mb-2">Cobertura TitleDB</p>
+                    <p class="heading is-size-7 opacity-50 mb-2">{{ t('Cobertura TitleDB') }}</p>
                     <div class="is-flex is-align-items-center mb-3">
                         <span class="icon is-large has-text-warning mr-3">
                             <i class="bi bi-globe2 is-size-3"></i>
                         </span>
                         <div>
                             <p class="title is-3 m-0" id="stat-coverage-pct">-- %</p>
-                            <p class="is-size-7">Catálogo Global</p>
+                            <p class="is-size-7">{{ t('Catálogo Global') }}</p>
                         </div>
                     </div>
                     <div class="pt-3 border-top">
                         <p class="is-size-7 opacity-70"><i class="bi bi-database mr-1"></i> <span
-                                id="stat-total-available">--</span> títulos</p>
+                                id="stat-total-available">--</span> {{ t('títulos') }}</p>
                     </div>
                 </div>
             </div>
 
             <div class="column is-3">
                 <div class="card box shadow-sm border-none p-5 h-100">
-                    <p class="heading is-size-7 opacity-50 mb-2">Saúde da Identificação</p>
+                    <p class="heading is-size-7 opacity-50 mb-2">{{ t('Saúde da Identificação') }}</p>
                     <div class="is-flex is-align-items-center mb-3">
                         <span class="icon is-large has-text-info mr-3">
                             <i class="bi bi-fingerprint is-size-3"></i>
@@ -107,12 +107,12 @@
                     </div>
                     <div class="pt-3 border-top">
                         <div class="is-flex is-justify-content-between is-align-items-center">
-                            <p class="is-size-7 opacity-70" title="Arquivos não identificados">
+                            <p class="is-size-7 opacity-70" title="{{ t('Arquivos não identificados') }}">
                                 <i class="bi bi-file-earmark-x mr-1"></i> <span id="stat-unidentified-files"
                                     class="has-text-danger">--</span>
                             </p>
-                            <p class="is-size-7 opacity-70" title="Títulos sem nome no Banco de Dados">
-                            <i class="bi bi-question-circle mr-1"></i> <span id="stat-unrecognized-count"
+                            <p class="is-size-7 opacity-70" title="{{ t('Títulos sem nome no Banco de Dados') }}">
+                                <i class="bi bi-question-circle mr-1"></i> <span id="stat-unrecognized-count"
                                     class="has-text-warning">--</span>
                             </p>
                         </div>
@@ -125,25 +125,25 @@
                 <div class="level box py-3 px-5 mb-0 shadow-none border bg-light-soft">
                     <div class="level-item has-text-centered">
                         <div>
-                            <p class="heading opacity-50 m-0">Jogos Base</p>
+                            <p class="heading opacity-50 m-0">{{ t('Jogos Base') }}</p>
                             <p class="title is-5" id="stat-total-bases">--</p>
                         </div>
                     </div>
                     <div class="level-item has-text-centered">
                         <div>
-                            <p class="heading opacity-50 m-0">Updates</p>
+                            <p class="heading opacity-50 m-0">{{ t('Updates') }}</p>
                             <p class="title is-5" id="stat-total-updates">--</p>
                         </div>
                     </div>
                     <div class="level-item has-text-centered">
                         <div>
-                            <p class="heading opacity-50 m-0">DLCs</p>
+                            <p class="heading opacity-50 m-0">{{ t('DLCs') }}</p>
                             <p class="title is-5" id="stat-total-dlcs">--</p>
                         </div>
                     </div>
                     <div class="level-item has-text-centered">
                         <div>
-                            <p class="heading opacity-50 m-0">Fonte TitleDB</p>
+                            <p class="heading opacity-50 m-0">{{ t('Fonte TitleDB') }}</p>
                             <p class="title is-5 is-size-6" id="stat-source-name">--</p>
                         </div>
                     </div>
@@ -155,7 +155,8 @@
                 <div class="card box shadow-sm">
                     <header class="card-header border-none shadow-none">
                         <p class="card-header-title">
-                            <i class="bi bi-pie-chart-fill mr-2 has-text-primary"></i> Distribuição por Gênero
+                            <i class="bi bi-pie-chart-fill mr-2 has-text-primary"></i> {{ t('Distribuição por Gênero')
+                            }}
                         </p>
                     </header>
                     <div class="card-content pt-0">
@@ -171,7 +172,8 @@
                 <div class="card box shadow-sm">
                     <header class="card-header border-none shadow-none">
                         <p class="card-header-title">
-                            <i class="bi bi-clock-history mr-2 has-text-primary"></i> Adicionados Recentemente
+                            <i class="bi bi-clock-history mr-2 has-text-primary"></i> {{ t('Adicionados Recentemente')
+                            }}
                         </p>
                     </header>
                     <div class="card-content pt-0">
@@ -187,135 +189,5 @@
 
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script>
-    $(document).ready(() => {
-        loadStats(true); // Initial load with library list population
-    });
-
-    let genreChart = null;
-
-    function loadStats(initFilter = false) {
-        const libId = $('#libraryFilter').val();
-        const url = `/api/stats/overview${libId ? '?library_id=' + libId : ''}`;
-
-        $.getJSON(url, (data) => {
-            if (initFilter) {
-                populateLibraryFilter(data.libraries);
-            }
-
-            // Fill quick cards
-            $('#stat-total-games').text(data.library.total_titles);
-            $('#stat-total-files-top').text(data.identification.total_files + ' Arquivos');
-            $('#stat-total-size').text(data.library.total_size_formatted);
-
-            // Breakdown
-            $('#stat-total-bases').text(data.library.total_bases);
-            $('#stat-total-updates').text(data.library.total_updates);
-            $('#stat-total-dlcs').text(data.library.total_dlcs);
-
-            $('#stat-up-to-date-pct').text(data.library.completion_rate + '%');
-            $('#stat-up-to-date-count').text(data.library.up_to_date + ' atualizados');
-            $('#stat-pending-count').text(data.library.pending);
-
-            $('#stat-coverage-pct').text(data.titledb.coverage_pct + '%');
-            $('#stat-source-name').text(data.titledb.source_name);
-            $('#stat-total-available').text(data.titledb.total_available.toLocaleString());
-
-            // Identification Stats
-            $('#stat-id-rate').text(data.identification.identified_pct);
-            $('#stat-recognition-pct').text(data.identification.recognition_pct);
-            $('#stat-unidentified-files').text(data.identification.unidentified_count);
-            $('#stat-unrecognized-count').text(data.identification.unrecognized_count);
-
-            // Render Genre Chart
-            renderGenreChart(data.genres);
-
-            // Render Recent Games
-            renderRecentGames(data.recent);
-        });
-    }
-
-    function populateLibraryFilter(libs) {
-        const select = $('#libraryFilter');
-        libs.forEach(lib => {
-            select.append(`<option value="${lib.id}">${lib.path}</option>`);
-        });
-    }
-
-    function renderGenreChart(genreData) {
-        if (genreChart) {
-            genreChart.destroy();
-        }
-
-        const ctx = document.getElementById('genreChart').getContext('2d');
-        const labels = Object.keys(genreData);
-        const values = Object.values(genreData);
-
-        genreChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Jogos por Gênero',
-                    data: values,
-                    backgroundColor: 'rgba(124, 58, 237, 0.7)',
-                    borderColor: '#7c3aed',
-                    borderWidth: 1,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: 'y',
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    x: { grid: { display: false } },
-                    y: { grid: { display: false } }
-                }
-            }
-        });
-    }
-
-    function renderRecentGames(games) {
-        const container = $('#recentGamesList').empty();
-        if (!games.length) {
-            container.append('<div class="column is-12 has-text-centered py-6 opacity-40">Nenhum jogo encontrado.</div>');
-            return;
-        }
-
-        games.forEach(game => {
-            container.append(`
-                <div class="column is-3-tablet is-2-desktop">
-                    <div class="card box p-0 shadow-sm border-none overflow-hidden h-100" style="transition: transform 0.2s;">
-                        <figure class="image is-square">
-                            <img src="${game.iconUrl || '/static/img/no-icon.png'}" style="object-fit: cover;">
-                        </figure>
-                        <div class="p-3">
-                            <p class="is-size-7 has-text-weight-bold line-clamp-2" title="${game.name}">${game.name}</p>
-                            <p class="is-size-7 opacity-50">${game.id}</p>
-                        </div>
-                    </div>
-                </div>
-            `);
-        });
-    }
-</script>
-
-<style>
-    .line-clamp-2 {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .hover-scale:hover {
-        transform: scale(1.02);
-    }
-</style>
+<script src="/static/js/stats.js?v={{ build_version }}"></script>
 {% endblock %}

@@ -1,36 +1,35 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="hero is-fullheight is-light" style="background-color: var(--bulma-background)">
+<section class="hero is-fullheight is-light hero-login">
     <div class="hero-body">
         <div class="container">
             <div class="columns is-centered">
                 <div class="column is-4-desktop is-6-tablet">
                     <div class="card box shadow-2xl p-6">
                         <div class="has-text-centered mb-6">
-                            <div class="is-inline-block p-4 mb-4"
-                                style="background: var(--bulma-primary); border-radius: 1.5rem; box-shadow: 0 10px 20px rgba(124, 58, 237, 0.4)">
-                                <i class="bi bi-box-seam-fill is-size-1" style="color: white"></i>
+                            <div class="is-inline-block p-4 mb-4 login-icon-container">
+                                <i class="bi bi-box-seam-fill is-size-1 has-text-white"></i>
                             </div>
                             <h2 class="title is-2 has-text-weight-black tracking-tighter">MyFoil</h2>
-                            <p class="subtitle is-6 opacity-50">Entrar</p>
+                            <p class="subtitle is-6 opacity-50">{{ t('Entrar') }}</p>
                         </div>
 
                         <form method="POST" action="/login">
                             <div class="field mb-5">
-                                <label class="label">Usuário</label>
+                                <label class="label">{{ t('Usuário') }}</label>
                                 <div class="control has-icons-left">
-                                    <input class="input is-medium" type="text" name="user" placeholder="Usuário"
-                                        required>
+                                    <input class="input is-medium" type="text" name="user"
+                                        placeholder="{{ t('Usuário') }}" required>
                                     <span class="icon is-small is-left"><i class="bi bi-person-fill"></i></span>
                                 </div>
                             </div>
 
                             <div class="field mb-5">
-                                <label class="label">Senha</label>
+                                <label class="label">{{ t('Senha') }}</label>
                                 <div class="control has-icons-left">
-                                    <input class="input is-medium" type="password" name="password" placeholder="Senha"
-                                        required>
+                                    <input class="input is-medium" type="password" name="password"
+                                        placeholder="{{ t('Senha') }}" required>
                                     <span class="icon is-small is-left"><i class="bi bi-lock-fill"></i></span>
                                 </div>
                             </div>
@@ -39,7 +38,7 @@
                                 <div class="control">
                                     <label class="checkbox">
                                         <input type="checkbox" name="remember" id="remember">
-                                        Lembrar-me
+                                        {{ t('Lembrar-me') }}
                                     </label>
                                 </div>
                             </div>
@@ -49,7 +48,7 @@
                             <div class="field">
                                 <button type="submit"
                                     class="button is-primary is-medium is-fullwidth has-text-weight-bold shadow-lg">
-                                    Entrar
+                                    {{ t('Entrar') }}
                                 </button>
                             </div>
                         </form>
@@ -59,18 +58,4 @@
         </div>
     </div>
 </section>
-
-<style>
-    .shadow-2xl {
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
-    }
-
-    [data-theme="dark"] .shadow-2xl {
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
-    }
-
-    .tracking-tighter {
-        letter-spacing: -0.05em;
-    }
-</style>
 {% endblock %}

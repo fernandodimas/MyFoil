@@ -350,6 +350,7 @@ def init_db(app):
                             ("nsuid", "TEXT"),
                             ("is_custom", "BOOLEAN DEFAULT 0"),
                             ("last_updated", "DATETIME"),
+                            ("added_at", "DATETIME"),
                         ]
 
                         modified = False

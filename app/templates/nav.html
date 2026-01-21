@@ -15,20 +15,20 @@
         <div id="navbarMain" class="navbar-menu">
             <div class="navbar-start">
                 <a class="navbar-item {% if title=='Library' %}is-active{% endif %}" href="/">
-                    <i class="bi bi-collection-play mr-2"></i> Biblioteca
+                    <i class="bi bi-collection-play mr-2"></i> {{ t('Biblioteca') }}
                 </a>
 
                 <a class="navbar-item {% if title=='Statistics' %}is-active{% endif %}" href="/stats">
-                    <i class="bi bi-bar-chart mr-2"></i> Estatísticas
+                    <i class="bi bi-bar-chart mr-2"></i> {{ t('Estatísticas') }}
                 </a>
 
                 <a class="navbar-item {% if title=='Wishlist' %}is-active{% endif %}" href="/wishlist">
-                    <i class="bi bi-heart mr-2"></i> Wishlist
+                    <i class="bi bi-heart mr-2"></i> {{ t('Wishlist') }}
                 </a>
 
                 {% if current_user.is_admin or admin_account_created == false %}
                 <a class="navbar-item {% if title=='Settings' %}is-active{% endif %}" href="/settings">
-                    <i class="bi bi-sliders mr-2"></i> Configurações
+                    <i class="bi bi-sliders mr-2"></i> {{ t('Configurações') }}
                 </a>
                 {% endif %}
             </div>
@@ -37,18 +37,19 @@
                 <div class="navbar-item is-hidden" id="processIndicator">
                     <span class="tag is-info is-light is-rounded">
                         <i class="fas fa-spinner fa-pulse mr-2"></i>
-                        <span class="is-size-7 has-text-weight-bold" id="processText">Processando...</span>
+                        <span class="is-size-7 has-text-weight-bold" id="processText">{{ t('Processando...') }}</span>
                     </span>
                 </div>
                 {% if title == 'Library' %}
                 <div class="navbar-item">
                     <div class="control has-icons-right">
                         <input class="input is-rounded is-small" id="navbarSearch" type="text"
-                            placeholder="Buscar jogos..." list="gameTitlesList" oninput="toggleSearchClearBtn()">
+                            placeholder="{{ t('Buscar jogos...') }}" list="gameTitlesList"
+                            oninput="toggleSearchClearBtn()">
                         <span class="icon is-small is-right" id="searchIcon">
                             <i class="bi bi-search"></i>
                         </span>
-                        <span class="icon is-small is-right is-clickable" id="searchClearBtn" 
+                        <span class="icon is-small is-right is-clickable" id="searchClearBtn"
                             style="display: none; pointer-events: auto; cursor: pointer;" onclick="clearSearch()">
                             <i class="bi bi-x"></i>
                         </span>
@@ -60,7 +61,7 @@
                 <div class="navbar-item">
                     <div class="buttons">
                         <button class="button is-ghost is-small" id="themeToggle" onclick="toggleTheme()"
-                            title="Alternar Tema">
+                            title="{{ t('Alternar Tema') }}">
                             <span class="icon">
                                 <i class="bi bi-circle-half"></i>
                             </span>
@@ -68,11 +69,11 @@
 
                         {% if current_user.is_authenticated %}
                         <a href="/logout" class="button is-light is-small">
-                            <strong>Sair</strong>
+                            <strong>{{ t('Sair') }}</strong>
                         </a>
                         {% else %}
                         <a href="/login" class="button is-primary is-small">
-                            <strong>Entrar</strong>
+                            <strong>{{ t('Entrar') }}</strong>
                         </a>
                         {% endif %}
                     </div>
@@ -82,79 +83,4 @@
     </div>
 </nav>
 
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // Get all "navbar-burger" elements
-        const $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
-
-        // Check if there are any navbar burgers
-        if ($navbarBurgers.length > 0) {
-            // Add a click event on each of them
-            $navbarBurgers.forEach(el => {
-                el.addEventListener('click', () => {
-                    // Get the target from the "data-target" attribute
-                    const target = el.dataset.target;
-                    const $target = document.getElementById(target);
-
-                    // Toggle the "is-active" class on both the "navbar-burger" and the "navbar-menu"
-                    el.classList.toggle('is-active');
-                    $target.classList.toggle('is-active');
-                });
-            });
-        }
-    });
-
-
-    // Process Status Polling
-    function checkProcessStatus() {
-        $.getJSON('/api/status', function (data) {
-            const indicator = $('#processIndicator');
-            const text = $('#processText');
-
-            if (data.scanning || data.updating_titledb) {
-                indicator.removeClass('is-hidden');
-                if (data.updating_titledb) {
-                    text.text('Atualizando TitleDB...');
-                } else if (data.scanning) {
-                    text.text('Escaneando Biblioteca...');
-                }
-            } else {
-                indicator.addClass('is-hidden');
-            }
-        });
-    }
-
-    // Check every 10 seconds instead of 3 to reduce API calls
-    setInterval(checkProcessStatus, 10000);
-    // Initial check
-    checkProcessStatus();
-</script>
-
-<style>
-    .navbar.is-fixed-top {
-        border-bottom: 1px solid var(--bulma-border);
-        background-color: var(--bulma-navbar-background-color) !important;
-        z-index: 1000 !important;
-    }
-
-    .shadow-sm {
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    }
-
-    [data-theme="dark"] .shadow-sm {
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
-    }
-
-    .tracking-tighter {
-        letter-spacing: -0.05em;
-    }
-
-    .mr-2 {
-        margin-right: 0.5rem;
-    }
-
-    /* Enhanced navbar brand hover */
-    .navbar-brand .navbar-item:hover {
-        background-color: transparent !important;
-    }
-</style>
+<script src="/static/js/nav.js?v={{ build_version }}"></script>

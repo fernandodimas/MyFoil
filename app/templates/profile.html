@@ -9,8 +9,7 @@
       <div class="column is-4-desktop is-6-tablet">
         <div class="card box shadow-sm">
           <div class="card-content has-text-centered">
-            <div class="is-inline-block p-4 mb-4"
-              style="background: rgba(87,13,248,0.1); border-radius: 50%; width: 96px; height: 96px; display: flex; align-items: center; justify-content: center;">
+            <div class="is-inline-block p-4 mb-4 profile-avatar">
               <span class="is-size-2 has-text-primary has-text-weight-bold">
                 {{ current_user.user[0].upper() if current_user.is_authenticated else '?' }}
               </span>
