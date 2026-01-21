@@ -84,6 +84,8 @@ from datetime import timedelta
 app_settings = {}
 socketio = SocketIO()
 
+import state
+
 # Initialize Limiter
 redis_url = os.environ.get("REDIS_URL")
 if redis_url:
@@ -95,13 +97,8 @@ else:
     limiter = Limiter(key_func=get_remote_address, default_limits=["300 per day", "100 per hour"])
 
 backup_manager = None
-scan_in_progress = False
-scan_lock = threading.Lock()
-is_titledb_update_running = False
-titledb_update_lock = threading.Lock()
 plugin_manager = None
 cloud_manager = None
-watcher = None
 watcher_thread = None
 
 
@@ -109,12 +106,15 @@ watcher_thread = None
 def get_system_status():
     """Get system status values safely"""
     watching = 0
-    if watcher is not None:
-        watching = len(getattr(watcher, "directories", set()))
+    if state.watcher is not None:
+        try:
+            watching = len(getattr(state.watcher, "directories", set()))
+        except:
+            pass
     return {
-        "scanning": scan_in_progress,
-        "updating_titledb": is_titledb_update_running,
-        "watching": watching,
+        "scanning": state.scan_in_progress,
+        "updating_titledb": state.is_titledb_update_running,
+        "watching": watching > 0,
         "libraries": watching,
     }
 
@@ -230,12 +230,11 @@ def on_library_change(events):
 
 def update_titledb_job(force=False):
     """Update TitleDB in background"""
-    global is_titledb_update_running
-    with titledb_update_lock:
-        if is_titledb_update_running:
+    with state.titledb_update_lock:
+        if state.is_titledb_update_running:
             logger.info("TitleDB update already in progress.")
             return False
-        is_titledb_update_running = True
+        state.is_titledb_update_running = True
 
     logger.info("Starting TitleDB update job...")
     try:
@@ -265,15 +264,14 @@ def update_titledb_job(force=False):
         log_activity("titledb_update_failed", details={"error": str(e)})
         return False
     finally:
-        with titledb_update_lock:
-            is_titledb_update_running = False
+        with state.titledb_update_lock:
+            state.is_titledb_update_running = False
 
 
 def scan_library_job():
     """Scan library in background"""
-    global is_titledb_update_running
-    with titledb_update_lock:
-        if is_titledb_update_running:
+    with state.titledb_update_lock:
+        if state.is_titledb_update_running:
             logger.info(
                 "Skipping scheduled library scan: update_titledb job is currently in progress. Rescheduling in 5 minutes."
             )
@@ -287,12 +285,11 @@ def scan_library_job():
             return
 
     logger.info("Starting library scan job...")
-    global scan_in_progress
-    with scan_lock:
-        if scan_in_progress:
+    with state.scan_lock:
+        if state.scan_in_progress:
             logger.info("Skipping library scan: scan already in progress.")
             return
-        scan_in_progress = True
+        state.scan_in_progress = True
     try:
         from metrics import ACTIVE_SCANS
 
@@ -320,8 +317,8 @@ def scan_library_job():
         logger.error(f"Error during library scan job: {e}")
         log_activity("library_scan_failed", details={"error": str(e)})
     finally:
-        with scan_lock:
-            scan_in_progress = False
+        with state.scan_lock:
+            state.scan_in_progress = False
 
 
 def create_automatic_backup():
@@ -338,15 +335,15 @@ def create_automatic_backup():
 
 def init_internal(app):
     """Initialize internal components"""
-    global watcher, watcher_thread
+    global watcher_thread
     logger.info("Initializing File Watcher...")
-    watcher = Watcher(on_library_change)
-    watcher_thread = threading.Thread(target=watcher.run)
+    state.watcher = Watcher(on_library_change)
+    watcher_thread = threading.Thread(target=state.watcher.run)
     watcher_thread.daemon = True
     watcher_thread.start()
 
     library_paths = app_settings.get("library", {}).get("paths", [])
-    init_libraries(app, watcher, library_paths)
+    init_libraries(app, state.watcher, library_paths)
 
     # Initialize job scheduler
     from jobs.scheduler import JobScheduler

@@ -53,7 +53,6 @@
     "Shop settings saved": "Shop settings saved",
     "Auto-use latest": "Auto-use latest",
     "Save TitleDB settings": "Save TitleDB settings",
-    "Save": "Save",
     "Automatically use the source with the most recent data": "Automatically use the source with the most recent data",
     "Refresh remote dates": "Refresh remote dates",
     "Status": "Status",
@@ -165,6 +164,11 @@
     "Wishlist": "Wishlist",
     "Removed from Wishlist": "Removed from Wishlist",
     "Added to Wishlist": "Added to Wishlist",
+    "Monitoring": "Monitoring",
+    "Not monitoring": "Not monitoring",
+    "libraries": "libraries",
+    "library": "library",
+    "No libraries configured": "No libraries configured",
     "Total on Disk": "Total on Disk",
     "Custom Tags": "Custom Tags"
 }

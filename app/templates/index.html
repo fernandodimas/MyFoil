@@ -6,8 +6,8 @@
 <div class="container is-fluid px-5 mt-5 pb-6">
 
     <!-- Controls Row -->
-    <div class="box p-2 mb-4 shadow-sm border-none bg-glass" style="position: relative; z-index: 20;">
-        <div class="is-flex is-flex-wrap-wrap is-align-items-center gap-2 px-1 py-1">
+    <div class="box p-3 mb-4 shadow-sm border-none bg-glass" style="position: relative; z-index: 20;">
+        <div class="is-flex is-flex-wrap-wrap is-align-items-center gap-3 px-1">
 
             <!-- Left Group: Primary Filters -->
             <div class="is-flex gap-2 is-justify-content-center-mobile is-flex-grow-1-mobile">
@@ -122,13 +122,16 @@
                         step="10" value="240" oninput="updateGridZoom(this.value)">
                 </div>
 
-                <div class="buttons has-addons m-0" id="viewToggleButtons">
-                    <button class="button is-small p-2" onclick="setView('card')" id="btnViewCard"
-                        title="{{ t('Grade') }}"><i class="bi bi-grid-fill"></i></button>
-                    <button class="button is-small p-2" onclick="setView('icon')" id="btnViewIcon"
-                        title="{{ t('Ícones') }}"><i class="bi bi-image"></i></button>
-                    <button class="button is-small p-2" onclick="setView('list')" id="btnViewList"
-                        title="{{ t('Lista') }}"><i class="bi bi-list-ul"></i></button>
+                <div class="buttons has-addons m-0 view-toggle" id="viewToggleButtons">
+                    <button class="button is-small" onclick="setView('card')" id="btnViewCard"
+                        title="{{ t('Grade') }}"><span class="icon is-small"><i
+                                class="bi bi-grid-fill"></i></span></button>
+                    <button class="button is-small" onclick="setView('icon')" id="btnViewIcon"
+                        title="{{ t('Ícones') }}"><span class="icon is-small"><i
+                                class="bi bi-image"></i></span></button>
+                    <button class="button is-small" onclick="setView('list')" id="btnViewList"
+                        title="{{ t('Lista') }}"><span class="icon is-small"><i
+                                class="bi bi-list-ul"></i></span></button>
                 </div>
             </div>
 
@@ -139,8 +142,8 @@
     </div>
 
     <!-- Library Content -->
-    <div class="box bg-transparent shadow-none border-none">
-        <div id="libraryContainer" class="columns is-multiline is-variable is-3 mt-2">
+    <div class="box bg-transparent shadow-none border-none p-0">
+        <div id="libraryContainer" class="mt-2">
             <!-- Dynamic content injected via JS -->
         </div>
     </div>

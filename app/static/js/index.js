@@ -182,9 +182,9 @@ function renderCardView(items) {
 
         const card = $(`
             <div class="grid-item" data-index="${index}" data-game-id="${safeId}" tabindex="0" role="button" aria-label="${safeName}" onclick="focusAndOpenGame('${safeId}')">
-                <div class="card game-card is-paddingless is-shadowless">
-                    <div class="card-image position-relative overflow-hidden">
-                        <figure class="image is-16by9">
+                <div class="card game-card is-paddingless">
+                    <div class="card-image">
+                        <figure class="image is-16by9 bg-light-soft">
                             <img src="/static/img/no-icon.png" 
                                  data-src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" 
                                  alt="${safeName}" 
@@ -193,23 +193,22 @@ function renderCardView(items) {
                                  style="object-fit: cover; opacity: 0; transition: opacity 0.3s;">
                         </figure>
                     </div>
-                    <div class="card-content p-3">
-                        <div class="is-flex is-justify-content-between is-align-items-start is-flex-wrap-wrap mb-2" style="gap: 4px;">
+                    <div class="card-content">
+                        <div class="is-flex is-justify-content-between is-align-items-center mb-1">
                             <span class="font-mono is-size-7 opacity-40">${safeId}</span>
-                            <span class="font-mono is-size-7 has-text-weight-bold" style="margin-left: auto;">v${game.display_version}</span>
+                            <span class="font-mono is-size-7 has-text-weight-bold">v${game.display_version}</span>
                         </div>
                         
-                        <p class="is-size-6 has-text-weight-bold mb-3 truncate" title="${safeName}">${safeName}</p>
+                        <h3 class="game-title title is-6 has-text-weight-bold mb-3 line-clamp-2" title="${safeName}">${safeName}</h3>
                         
-                        <div class="is-flex is-justify-content-between is-align-items-center">
+                        <div class="is-flex is-justify-content-between is-align-items-center mt-auto pt-2">
                             <div class="is-flex is-align-items-center gap-1">
                                 <span class="status-dot ${statusDotClass}"></span>
-                                <span class="is-size-7 opacity-70 font-mono" title="${t('Tamanho em disco')}">${game.size_formatted || '--'}</span>
+                                <span class="is-size-7 opacity-70 font-mono">${game.size_formatted || '--'}</span>
                             </div>
-                            <div class="is-flex gap-1 is-justify-content-end" style="margin-left: auto;">
-                                ${game.has_non_ignored_updates ? `<span class="tag tag-update has-text-weight-bold">${t('UPDATE')}</span>` : ''}
-                                ${game.has_non_ignored_dlcs ? `<span class="tag tag-dlc has-text-weight-bold">${t('DLC')}</span>` : ''}
-                                ${game.has_redundant_updates ? `<span class="tag tag-redundant has-text-weight-bold" title="${t('Updates redundantes detectados')}">${t('X-UPD')}</span>` : ''}
+                            <div class="is-flex gap-1">
+                                ${game.has_non_ignored_updates ? `<span class="tag tag-update has-text-weight-bold is-small">${t('UPDATE')}</span>` : ''}
+                                ${game.has_non_ignored_dlcs ? `<span class="tag tag-dlc has-text-weight-bold is-small">${t('DLC')}</span>` : ''}
                             </div>
                         </div>
                     </div>

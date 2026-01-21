@@ -116,13 +116,13 @@ def scan_library_api():
     success = True
     errors = []
 
-    import app
+    import state
 
-    with app.scan_lock:
-        if app.scan_in_progress:
+    with state.scan_lock:
+        if state.scan_in_progress:
             logger.info("Skipping scan_library_api call: Scan already in progress")
             return jsonify({"success": False, "errors": []})
-        app.scan_in_progress = True
+        state.scan_in_progress = True
 
     try:
         if CELERY_ENABLED:
@@ -156,8 +156,8 @@ def scan_library_api():
         logger.error(f"Error during library scan: {e}")
     finally:
         if not CELERY_ENABLED:
-            with app.scan_lock:
-                app.scan_in_progress = False
+            with state.scan_lock:
+                state.scan_in_progress = False
     resp = {"success": success, "errors": errors}
     return jsonify(resp)
 
@@ -402,20 +402,20 @@ def search_titledb_api():
 @system_bp.route("/status")
 def process_status_api():
     """Status do sistema"""
-    # Get status from app module safely (avoid circular import)
-    from app import scan_in_progress, is_titledb_update_running, watcher
+    # Get status from state module safely (avoid circular import)
+    import state
 
     watching = 0
-    if watcher is not None:
+    if state.watcher is not None:
         try:
-            watching = len(getattr(watcher, "directories", set()))
+            watching = len(getattr(state.watcher, "directories", set()))
         except:
             pass
 
     return jsonify(
         {
-            "scanning": scan_in_progress,
-            "updating_titledb": is_titledb_update_running,
+            "scanning": state.scan_in_progress,
+            "updating_titledb": state.is_titledb_update_running,
             "watching": watching > 0,
             "libraries": watching,
         }

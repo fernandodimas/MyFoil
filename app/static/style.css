@@ -187,6 +187,15 @@ body {
 
 .navbar-item, .navbar-link {
     color: var(--bulma-navbar-item-color) !important;
+    display: flex;
+    align-items: center;
+}
+
+.navbar-item.is-active {
+    background-color: var(--bulma-primary) !important;
+    color: #ffffff !important;
+    border-radius: 8px;
+    margin: 4px 2px;
 }
 
 .navbar-item:hover, .navbar-link:hover {
@@ -1176,9 +1185,22 @@ p.game-description {
     display: flex;
     flex-direction: column;
     height: 100%;
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+    border: 1px solid var(--card-border) !important;
     background-color: var(--card-bg) !important;
+    border-radius: 12px !important;
+    overflow: hidden;
+}
+
+.game-card .card-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem !important;
+}
+
+.game-card .game-title {
+    margin-bottom: auto !important;
 }
 
 .game-card:hover {
@@ -1211,12 +1233,20 @@ p.game-description {
 #libraryContainer {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(var(--card-width, 240px), 1fr));
-    gap: 1.25rem;
-    overflow-x: hidden;
+    gap: 1.5rem;
+    width: 100%;
+    margin-top: 1rem;
+    align-items: stretch;
 }
 
 #libraryContainer.is-list-view {
     display: block;
+}
+
+.grid-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* Fix flexbox/grid overflow issues */
 }
 
 .dlc-tag {
@@ -1331,10 +1361,37 @@ p.game-description {
     transform: scale(1.02);
 }
 
-.shadow-2xl {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+/* Slider and View Toggle alignment */
+.view-toggle .button {
+    width: 36px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-[data-theme="dark"] .shadow-2xl {
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+#gridZoom {
+    cursor: pointer;
+    vertical-align: middle;
 }
+
+input[type=range].slider.is-small {
+    padding: 0;
+    margin: 0;
+}
+
+.font-mono {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Roboto Mono', monospace;
+}
+
+/* Status dots */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.bg-orange { background-color: #f59e0b; }
+.bg-green { background-color: #10b981; }
+.bg-gray { background-color: #94a3b8; }

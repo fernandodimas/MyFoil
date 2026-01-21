@@ -174,24 +174,46 @@ function checkWatchdogStatus() {
     $.getJSON("/api/status", (status) => {
         const banner = $('#watchdogStatusBanner');
         const text = $('#watchdogStatusText');
+        const headerStatus = $('#watchdogStatus');
+
         if (status && status.watching !== undefined) {
             banner.removeClass('is-info is-warning is-danger').addClass(status.watching ? 'is-success' : 'is-warning');
-            text.html(`<span class="icon mr-2"><i class="bi ${status.watching ? 'bi-broadcast' : 'bi-pause-circle'}"></i></span>
+            headerStatus.find('.icon i').removeClass('bi-check-circle bi-pause-circle').addClass(status.watching ? 'bi-check-circle' : 'bi-pause-circle');
+            headerStatus.find('span:last-child').text(`Watchdog: ${status.watching ? t("Monitoring") : t("Not monitoring")}`);
+
+            const icon = status.watching ? 'bi-broadcast' : 'bi-pause-circle';
+            const count = status.libraries || 0;
+            const libText = count === 1 ? t("library") : t("libraries");
+
+            text.html(`<span class="icon mr-1"><i class="bi ${icon}"></i></span>
+                <span class="icon mr-2"><i class="bi ${icon}"></i></span>
                 Watchdog: ${status.watching ? t("Monitoring") : t("Not monitoring")} | 
-                ${status.libraries || 0} ${t("libraries")}`);
+                ${count} ${libText}`);
         } else {
             $.getJSON("/api/settings/library/paths", (paths) => {
                 const hasPaths = paths.paths && paths.paths.length > 0;
                 banner.removeClass('is-info is-warning is-danger').addClass(hasPaths ? 'is-success' : 'is-warning');
-                text.html(`<span class="icon mr-2"><i class="bi ${hasPaths ? 'bi-broadcast' : 'bi-pause-circle'}"></i></span>
+                headerStatus.find('span:last-child').text(`Watchdog: ${hasPaths ? t("Monitoring") : t("No libraries configured")}`);
+
+                const icon = hasPaths ? 'bi-broadcast' : 'bi-pause-circle';
+                text.html(`<span class="icon mr-1"><i class="bi ${icon}"></i></span>
+                    <span class="icon mr-2"><i class="bi ${icon}"></i></span>
                     Watchdog: ${hasPaths ? t("Monitoring") : t("No libraries configured")}`);
             });
         }
     }).fail(() => {
         $.getJSON("/api/settings/library/paths", (paths) => {
             const hasPaths = paths.paths && paths.paths.length > 0;
-            $('#watchdogStatusBanner').removeClass('is-info is-warning is-danger').addClass(hasPaths ? 'is-success' : 'is-warning');
-            $('#watchdogStatusText').html(`<span class="icon mr-2"><i class="bi ${hasPaths ? 'bi-broadcast' : 'bi-pause-circle'}"></i></span>
+            const banner = $('#watchdogStatusBanner');
+            const text = $('#watchdogStatusText');
+            const headerStatus = $('#watchdogStatus');
+
+            banner.removeClass('is-info is-warning is-danger').addClass(hasPaths ? 'is-success' : 'is-warning');
+            headerStatus.find('span:last-child').text(`Watchdog: ${hasPaths ? t("Monitoring") : t("No libraries configured")}`);
+
+            const icon = hasPaths ? 'bi-broadcast' : 'bi-pause-circle';
+            text.html(`<span class="icon mr-1"><i class="bi ${icon}"></i></span>
+                <span class="icon mr-2"><i class="bi ${icon}"></i></span>
                 Watchdog: ${hasPaths ? t("Monitoring") : t("No libraries configured")}`);
         });
     });

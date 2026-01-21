@@ -19,14 +19,15 @@ def update_titledb_job(app=None, force=False):
     Returns:
         bool: True if update was performed, False otherwise
     """
-    from app import is_titledb_update_running, titledb_update_lock, load_settings, log_activity
+    import state
+    from app import load_settings, log_activity
     from app import add_missing_apps_to_db, update_titles, generate_library
     
-    with titledb_update_lock:
-        if is_titledb_update_running:
+    with state.titledb_update_lock:
+        if state.is_titledb_update_running:
             logger.info("TitleDB update already in progress.")
             return False
-        is_titledb_update_running = True
+        state.is_titledb_update_running = True
 
     logger.info("Starting TitleDB update job...")
     try:
@@ -54,8 +55,8 @@ def update_titledb_job(app=None, force=False):
             pass
         return False
     finally:
-        with titledb_update_lock:
-            is_titledb_update_running = False
+        with state.titledb_update_lock:
+            state.is_titledb_update_running = False
 
 
 def scan_library_job(app=None):
@@ -67,13 +68,13 @@ def scan_library_job(app=None):
     Returns:
         None
     """
-    from app import is_titledb_update_running, titledb_update_lock, scan_in_progress, scan_lock
+    import state
     from app import scan_library, post_library_change, log_activity
     from metrics import ACTIVE_SCANS
     from settings import CELERY_ENABLED
     
-    with titledb_update_lock:
-        if is_titledb_update_running:
+    with state.titledb_update_lock:
+        if state.is_titledb_update_running:
             logger.info("Skipping scheduled library scan: update_titledb job is currently in progress.")
             if app and hasattr(app, 'scheduler'):
                 app.scheduler.add_job(
@@ -85,11 +86,11 @@ def scan_library_job(app=None):
             return
 
     logger.info("Starting library scan job...")
-    with scan_lock:
-        if scan_in_progress:
+    with state.scan_lock:
+        if state.scan_in_progress:
             logger.info('Skipping library scan: scan already in progress.')
             return
-        scan_in_progress = True
+        state.scan_in_progress = True
     
     try:
         with ACTIVE_SCANS.track_inprogress():
@@ -123,8 +124,8 @@ def scan_library_job(app=None):
         except:
             pass
     finally:
-        with scan_lock:
-            scan_in_progress = False
+        with state.scan_lock:
+            state.scan_in_progress = False
 
 
 def create_backup_job(app=None):
