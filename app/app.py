@@ -205,6 +205,11 @@ def on_library_change(events):
                     for f_path in new_files:
                         identify_file_async.delay(f_path)
                     logger.info(f"Queued async identification for {len(new_files)} files in {library_path}")
+                else:
+                    from library import identify_library_files
+
+                    logger.info(f"Identifying {len(new_files)} new files in {library_path}")
+                    identify_library_files(library_path)
 
     if not CELERY_ENABLED:
         post_library_change()
@@ -287,7 +292,13 @@ def scan_library_job():
                 scan_all_libraries_async.delay()
                 logger.info("Scheduled library scan queued to Celery.")
             else:
-                scan_library()
+                from library import scan_library_path, identify_library_files, get_libraries
+
+                libraries = get_libraries()
+                for lib in libraries:
+                    logger.info(f"Scanning library: {lib.path}")
+                    scan_library_path(lib.path)
+                    identify_library_files(lib.path)
                 post_library_change()
         log_activity("library_scan_completed")
         logger.info("Library scan job completed.")

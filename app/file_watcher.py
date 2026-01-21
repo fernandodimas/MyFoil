@@ -156,7 +156,11 @@ class Handler(FileSystemEventHandler):
 
     def on_any_event(self, event):
         logger.debug(f"Watchdog event detected: {event.event_type} - {event.src_path}")
+        found = False
         for directory in self.directories:
             if event.src_path.startswith(directory):
                 self.collect_event(event, directory)
+                found = True
                 break
+        if not found:
+            logger.debug(f"Event src_path {event.src_path} doesn't match any monitored directory: {self.directories}")

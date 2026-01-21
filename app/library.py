@@ -151,15 +151,22 @@ def init_libraries(app, watcher, paths):
                 remove_library_complete(app, watcher, path)
 
         # add libraries and start watchdog
+        logger.info(f"Initializing libraries with paths: {paths}")
         for path in paths:
+            if not os.path.exists(path):
+                logger.warning(f"Library path {path} does not exist, skipping")
+                continue
+
             # Check if library already exists in database
             existing_library = Libraries.query.filter_by(path=path).first()
             if not existing_library:
                 # add library paths to watchdog if necessary
+                logger.info(f"Adding new library to watchdog: {path}")
                 watcher.add_directory(path)
                 add_library(path)
             else:
                 # Ensure watchdog is monitoring existing library
+                logger.info(f"Adding existing library to watchdog: {path}")
                 watcher.add_directory(path)
 
 
