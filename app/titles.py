@@ -373,7 +373,7 @@ def getDirsAndFiles(path):
             dirs, files = getDirsAndFiles(fullPath)
             allDirs += dirs
             allFiles += files
-        elif fullPath.split(".")[-1] in ALLOWED_EXTENSIONS:
+        elif "." + fullPath.split(".")[-1].lower() in ALLOWED_EXTENSIONS:
             allFiles.append(fullPath)
     return allDirs, allFiles
 
