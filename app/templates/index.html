@@ -398,6 +398,7 @@
     function loadIgnorePreferences() {
         return $.getJSON('/api/wishlist/ignore', (data) => {
             ignorePreferences = data || {};
+            console.log('Ignore preferences loaded:', ignorePreferences);
         }).fail(() => {
             console.warn('Failed to load ignore preferences');
             ignorePreferences = {};
@@ -1115,14 +1116,16 @@
     window.filteredGames = [];
 
     // Fetch games from API
-    // Fetch games from API
     $(document).ready(() => {
         // Show loading indicator immediately
         $('#loadingIndicator').removeClass('is-hidden');
         $('#libraryContainer').empty();
         
-        // Always fetch fresh data on page load to ensure latest games are visible
-        refreshLibrary();
+        // Load ignore preferences first, then fetch library
+        loadIgnorePreferences().then(() => {
+            // Always fetch fresh data on page load to ensure latest games are visible
+            refreshLibrary();
+        });
 
         // Initialize zoom from localStorage
         const savedZoom = localStorage.getItem('gridZoom') || 240;
