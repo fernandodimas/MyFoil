@@ -592,31 +592,37 @@ def get_shop_files():
     shop_files = []
     results = Files.query.options(db.joinedload(Files.apps).joinedload(Apps.title)).all()
 
-    for file in results:
-        if file.identified:
-            # Get the first app associated with this file using the many-to-many relationship
-            app = file.apps[0] if file.apps else None
+    logger.debug(f"get_shop_files: Found {len(results)} total files")
 
-            if app:
-                if file.multicontent or file.extension.startswith("x"):
-                    title_id = app.title.title_id
-                    final_filename = f"[{title_id}].{file.extension}"
-                else:
-                    final_filename = f"[{app.app_id}][v{app.app_version}].{file.extension}"
-            else:
-                final_filename = file.filename.replace(f".{file.extension}", "") + " (unidentified)." + file.extension
+    for file in results:
+        if not file.identified:
+            logger.debug(f"File {file.id} ({file.filename}) is not identified, skipping")
+            continue
+        if not file.apps:
+            logger.debug(f"File {file.id} ({file.filename}) has no apps, skipping")
+            continue
+
+        app = file.apps[0]
+        if not app or not app.title:
+            logger.debug(f"File {file.id} ({file.filename}) has no app/title, skipping")
+            continue
+
+        if file.multicontent or file.extension.startswith("x"):
+            title_id = app.title.title_id
+            final_filename = f"[{title_id}].{file.extension}"
         else:
-            final_filename = file.filename.replace(f".{file.extension}", "") + " (unidentified)." + file.extension
+            final_filename = f"[{app.app_id}][v{app.app_version}].{file.extension}"
 
         shop_files.append(
             {
                 "id": file.id,
                 "filename": final_filename,
                 "size": file.size,
-                "title_id": app.title.title_id if app else None,
+                "title_id": app.title.title_id,
             }
         )
 
+    logger.info(f"get_shop_files: Returning {len(shop_files)} shop files")
     return shop_files
 
 

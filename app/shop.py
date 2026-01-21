@@ -8,7 +8,7 @@ import random
 import json
 
 # https://github.com/blawar/tinfoil/blob/master/docs/files/public.key 1160174fa2d7589831f74d149bc403711f3991e4
-TINFOIL_PUBLIC_KEY = '''-----BEGIN PUBLIC KEY-----
+TINFOIL_PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvPdrJigQ0rZAy+jla7hS
 jwen8gkF0gjtl+lZGY59KatNd9Kj2gfY7dTMM+5M2tU4Wr3nk8KWr5qKm3hzo/2C
 Gbc55im3tlRl6yuFxWQ+c/I2SM5L3xp6eiLUcumMsEo0B7ELmtnHTGCCNAIzTFzV
@@ -16,41 +16,39 @@ Gbc55im3tlRl6yuFxWQ+c/I2SM5L3xp6eiLUcumMsEo0B7ELmtnHTGCCNAIzTFzV
 INFy4vISmf6L1TgAryJ8l2K4y8QbymyLeMsABdlEI3yRHAm78PSezU57XtQpHW5I
 aupup8Es6bcDZQKkRsbOeR9T74tkj+k44QrjZo8xpX9tlJAKEEmwDlyAg0O5CLX3
 CQIDAQAB
------END PUBLIC KEY-----'''
+-----END PUBLIC KEY-----"""
 
 import titles as titles_lib
+
 
 def gen_shop_files(db):
     shop_files = []
     shop_titles = {}
     files = get_shop_files()
-    
+
     # Ensure TitleDB is loaded for metadata
     titles_lib.load_titledb()
-    
+
     for file in files:
-        shop_files.append({
-            "url": f'/api/get_game/{file["id"]}#{file["filename"]}',
-            'size': file["size"]
-        })
-        
+        shop_files.append({"url": f"/api/get_game/{file['id']}#{file['filename']}", "size": file["size"]})
+
         tid = file.get("title_id")
         if tid and tid not in shop_titles:
             info = titles_lib.get_game_info(tid)
-            if info and not info.get('name', '').startswith('Unknown'):
-                shop_titles[tid] = {
-                    "id": tid,
-                    "name": info.get("name")
-                }
-                
+            if info and not info.get("name", "").startswith("Unknown"):
+                shop_titles[tid] = {"id": tid, "name": info.get("name")}
+
     # Convert dict to list for Tinfoil compatibility
     titles_list = list(shop_titles.values())
+
+    logger.info(f"Generated shop files: {len(shop_files)} files, {len(titles_list)} titles")
     return shop_files, titles_list
 
+
 def encrypt_shop(shop):
-    input = json.dumps(shop).encode('utf-8')
+    input = json.dumps(shop).encode("utf-8")
     # random 128-bit AES key (16 bytes), used later for symmetric encryption (AES)
-    aesKey = random.randint(0,0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF).to_bytes(0x10, 'big')
+    aesKey = random.randint(0, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF).to_bytes(0x10, "big")
     # zstandard compression
     flag = 0xFD
     cctx = zstd.ZstdCompressor(level=22)
@@ -59,13 +57,13 @@ def encrypt_shop(shop):
 
     # Encrypt the AES key with RSA, PKCS1_OAEP padding scheme
     pubKey = RSA.importKey(TINFOIL_PUBLIC_KEY)
-    cipher = PKCS1_OAEP.new(pubKey, hashAlgo = SHA256, label=b'')
+    cipher = PKCS1_OAEP.new(pubKey, hashAlgo=SHA256, label=b"")
     # Now the AES key can only be decrypted with Tinfoil private key
     sessionKey = cipher.encrypt(aesKey)
 
     # Encrypting the Data with AES
     cipher = AES.new(aesKey, AES.MODE_ECB)
-    buf = cipher.encrypt(buf + (b'\x00' * (0x10 - (sz % 0x10))))
+    buf = cipher.encrypt(buf + (b"\x00" * (0x10 - (sz % 0x10))))
 
-    binary_data = b'TINFOIL' + flag.to_bytes(1, byteorder='little') + sessionKey + sz.to_bytes(8, 'little') + buf
+    binary_data = b"TINFOIL" + flag.to_bytes(1, byteorder="little") + sessionKey + sz.to_bytes(8, "little") + buf
     return binary_data
