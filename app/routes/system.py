@@ -402,10 +402,24 @@ def search_titledb_api():
 @system_bp.route("/status")
 def process_status_api():
     """Status do sistema"""
-    from app import get_system_status
+    # Get status from app module safely (avoid circular import)
+    from app import scan_in_progress, is_titledb_update_running, watcher
 
-    status = get_system_status()
-    return jsonify(status)
+    watching = 0
+    if watcher is not None:
+        try:
+            watching = len(getattr(watcher, "directories", set()))
+        except:
+            pass
+
+    return jsonify(
+        {
+            "scanning": scan_in_progress,
+            "updating_titledb": is_titledb_update_running,
+            "watching": watching > 0,
+            "libraries": watching,
+        }
+    )
 
 
 @system_bp.post("/settings/titledb/update")
