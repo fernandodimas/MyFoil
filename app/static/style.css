@@ -545,12 +545,12 @@ p.game-description {
     }
     #gameDetailsModal .modal-card-body {
         padding: 0.75rem !important;
-        width: 98% !important;
+        width: 100% !important;
         margin: 0 auto !important;
     }
     #gameDetailsModal .modal-card-head,
     #gameDetailsModal .modal-card-foot {
-        width: 98% !important;
+        width: 100% !important;
         margin: 0 auto !important;
     }
     
@@ -568,12 +568,12 @@ p.game-description {
         transform: none !important;
     }
     #dlcDetailsModal .modal-card-body {
-        width: 98% !important;
+        width: 100% !important;
         margin: 0 auto !important;
     }
     #dlcDetailsModal .modal-card-head,
     #dlcDetailsModal .modal-card-foot {
-        width: 98% !important;
+        width: 100% !important;
         margin: 0 auto !important;
     }
     
@@ -591,12 +591,12 @@ p.game-description {
         transform: none !important;
     }
     #editMetadataModal .modal-card-body {
-        width: 98% !important;
+        width: 100% !important;
         margin: 0 auto !important;
     }
     #editMetadataModal .modal-card-head,
     #editMetadataModal .modal-card-foot {
-        width: 98% !important;
+        width: 100% !important;
         margin: 0 auto !important;
     }
     

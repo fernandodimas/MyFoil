@@ -149,7 +149,7 @@
                                                 <div class="file has-name is-fullwidth">
                                                     <label class="file-label">
                                                         <input class="file-input" type="file" id="consoleKeysInput"
-                                                            name="file" accept=".keys,.txt">
+                                                            name="file" accept=".keys,.txt" required>
                                                         <span class="file-cta">
                                                             <span class="file-icon"><i class="bi bi-upload"></i></span>
                                                             <span class="file-label">Escolher arquivo...</span>
@@ -216,7 +216,9 @@
                                                 <div class="field">
                                                     <label class="label is-small">{{ t('Username') }}</label>
                                                     <div class="control">
-                                                        <input class="input" type="text" id="inputNewUser">
+                                                        <input class="input" type="text" id="inputNewUser"
+                                                            placeholder="Ex: admin" pattern="^[a-zA-Z0-9_-]{3,20}$"
+                                                            title="3-20 caracteres (letras, números, _ ou -)" required>
                                                     </div>
                                                 </div>
                                             </div>
@@ -224,7 +226,8 @@
                                                 <div class="field">
                                                     <label class="label is-small">{{ t('Password') }}</label>
                                                     <div class="control">
-                                                        <input class="input" type="password" id="inputNewUserPassword">
+                                                        <input class="input" type="password" id="inputNewUserPassword"
+                                                            minlength="6" required>
                                                     </div>
                                                 </div>
                                             </div>
@@ -274,11 +277,12 @@
                             </header>
                             <div class="card-content pt-0">
                                 <!-- Watchdog status indicator -->
-                                <div class="notification is-light is-info is-small py-2 px-3 mb-4" id="watchdogStatusBanner">
+                                <div class="notification is-light is-info is-small py-2 px-3 mb-4"
+                                    id="watchdogStatusBanner">
                                     <span class="icon mr-2"><i class="bi bi-broadcast"></i></span>
                                     <span id="watchdogStatusText">{{ t('Checking watchdog status...') }}</span>
                                 </div>
-                                
+
                                 <!-- Estatísticas removidas conforme solicitação -->
                                 <div class="table-container mb-5">
                                     <table class="table is-fullwidth" id="pathsTable">
@@ -589,13 +593,17 @@
                                             <div class="column is-6">
                                                 <div class="field">
                                                     <label class="label is-small">{{ t('Name') }}</label>
-                                                    <input class="input is-small" type="text" id="inputSourceName">
+                                                    <input class="input is-small" type="text" id="inputSourceName"
+                                                        maxlength="50" required placeholder="Ex: My Custom Source">
                                                 </div>
                                             </div>
                                             <div class="column is-6">
                                                 <div class="field">
                                                     <label class="label is-small">{{ t('URL') }}</label>
-                                                    <input class="input is-small" type="text" id="inputSourceUrl">
+                                                    <input class="input is-small" type="url" id="inputSourceUrl"
+                                                        pattern="https?://.+"
+                                                        title="Deve começar com http:// ou https://" required
+                                                        placeholder="https://example.com/titledb.json">
                                                 </div>
                                             </div>
                                             <div class="column is-6">
@@ -1377,7 +1385,7 @@
                         }
 
                         /* ===== CORREÇÕES DE FORMATAÇÃO ===== */
-                        
+
                         /* Container Principal - Padding Otimizado */
                         .settings-container {
                             padding: 1rem !important;
@@ -1388,7 +1396,7 @@
                             .settings-container {
                                 padding: 0.5rem !important;
                             }
-                            
+
                             .menu.is-sticky {
                                 position: relative !important;
                                 top: 0 !important;
@@ -1403,7 +1411,7 @@
                         }
 
                         /* Card Content - Padding Adequado */
-                        .card-header + .card-content {
+                        .card-header+.card-content {
                             padding-top: 1rem !important;
                         }
 

@@ -61,14 +61,19 @@
                             <a class="dropdown-item is-size-7 sort-option" data-sort="name-asc">A-Z (Nome)</a>
                             <a class="dropdown-item is-size-7 sort-option" data-sort="name-desc">Z-A (Nome)</a>
                             <hr class="dropdown-divider">
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-desc">Lançamento (Novo)</a>
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-asc">Lançamento (Antigo)</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-desc">Lançamento
+                                (Novo)</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-asc">Lançamento
+                                (Antigo)</a>
                             <hr class="dropdown-divider">
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-desc">Adicionado Recentemente</a>
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-asc">Adicionado Antigamente</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-desc">Adicionado
+                                Recentemente</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-asc">Adicionado
+                                Antigamente</a>
                             <hr class="dropdown-divider">
                             <a class="dropdown-item is-size-7 sort-option" data-sort="id-asc">Title ID (Crescente)</a>
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="status-desc">Status de Atualização</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="status-desc">Status de
+                                Atualização</a>
                             <hr class="dropdown-divider">
                             <a class="dropdown-item is-size-7 sort-option" data-sort="size-desc">Tamanho (Maior)</a>
                             <a class="dropdown-item is-size-7 sort-option" data-sort="size-asc">Tamanho (Menor)</a>
@@ -92,7 +97,8 @@
                     </button>
                 </div>
 
-                <button id="clearFiltersBtn" class="button is-small is-outlined is-danger" onclick="clearFilters()" title="Limpar Filtros">
+                <button id="clearFiltersBtn" class="button is-small is-outlined is-danger" onclick="clearFilters()"
+                    title="Limpar Filtros">
                     <span class="icon is-small"><i class="bi bi-x"></i></span>
                 </button>
             </div>
@@ -124,7 +130,7 @@
                 <span class="is-size-7 opacity-50" id="totalItemsCountMobile">-- itens</span>
             </div>
         </div>
-        </div>
+    </div>
 
     <!-- Library Content -->
     <div class="box bg-transparent shadow-none border-none">
@@ -363,6 +369,7 @@
     #clearFiltersBtn {
         display: none;
     }
+
     #clearFiltersBtn.has-active {
         display: inline-flex;
     }
@@ -371,12 +378,16 @@
     .icon.is-right.is-clickable {
         cursor: pointer;
     }
+
     .icon.is-right.is-clickable:hover {
         color: var(--bulma-primary);
     }
-    #searchClearBtn, #searchIcon {
+
+    #searchClearBtn,
+    #searchIcon {
         pointer-events: none;
     }
+
     #searchClearBtn.is-clickable {
         pointer-events: auto;
     }
@@ -398,9 +409,9 @@
     function loadIgnorePreferences() {
         return $.getJSON('/api/wishlist/ignore', (data) => {
             ignorePreferences = data || {};
-            console.log('Ignore preferences loaded:', ignorePreferences);
+            debugLog('Ignore preferences loaded:', ignorePreferences);
         }).fail(() => {
-            console.warn('Failed to load ignore preferences');
+            debugWarn('Failed to load ignore preferences');
             ignorePreferences = {};
         });
     }
@@ -473,13 +484,13 @@
         const container = $('#libraryContainer');
         const paged = filteredGames;
         const totalItems = paged.length;
-        
+
         // Clear container and reset scroll
         container.empty();
-        
+
         // Show item count
         $('#totalItemsCount, #totalItemsCountMobile').text(`${totalItems} Jogos`);
-        
+
         // Handle list view width
         if (currentView === 'list') {
             container.addClass('is-list-view');
@@ -494,11 +505,11 @@
 
     function refreshLibrary() {
         console.log("Refreshing library data...");
-        
+
         // Show loading indicator
         $('#loadingIndicator').removeClass('is-hidden');
         $('#libraryContainer').empty();
-        
+
         $.getJSON('/api/library', function (data) {
             // API now returns {items: [...], pagination: {...}}
             games = (data && data.items) ? data.items : (Array.isArray(data) ? data : []);
@@ -508,7 +519,7 @@
 
             // Hide loading indicator
             $('#loadingIndicator').addClass('is-hidden');
-            
+
             // Reset and apply filters
             applyFilters();
             showToast(t('Library updated!'), 'success');
@@ -521,22 +532,29 @@
     function renderCardView(items) {
         items.forEach((game, index) => {
             const statusDotClass = game.status_color === 'orange' ? 'bg-orange' : (game.status_color === 'green' ? 'bg-green' : 'bg-gray');
-            
+            const safeName = escapeHtml(game.name);
+            const safeId = escapeHtml(game.id);
+
             const card = $(`
-                <div class="grid-item" data-index="${index}" data-game-id="${game.id}" tabindex="0" role="button" aria-label="${game.name}" onclick="focusAndOpenGame('${game.id}')">
+                <div class="grid-item" data-index="${index}" data-game-id="${safeId}" tabindex="0" role="button" aria-label="${safeName}" onclick="focusAndOpenGame('${safeId}')">
                     <div class="card game-card is-paddingless is-shadowless">
                         <div class="card-image position-relative overflow-hidden">
                             <figure class="image is-16by9">
-                                <img src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" style="object-fit: cover;">
+                                <img src="/static/img/no-icon.png" 
+                                     data-src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" 
+                                     alt="${safeName}" 
+                                     loading="lazy"
+                                     class="lazy-image"
+                                     style="object-fit: cover; opacity: 0; transition: opacity 0.3s;">
                             </figure>
                         </div>
                         <div class="card-content p-3">
                             <div class="is-flex is-justify-content-between is-align-items-start is-flex-wrap-wrap mb-2" style="gap: 4px;">
-                                <span class="font-mono is-size-7 opacity-40">${game.id}</span>
+                                <span class="font-mono is-size-7 opacity-40">${safeId}</span>
                                 <span class="font-mono is-size-7 has-text-weight-bold" style="margin-left: auto;">v${game.display_version}</span>
                             </div>
                             
-                            <p class="is-size-6 has-text-weight-bold mb-3 truncate" title="${game.name}">${game.name}</p>
+                            <p class="is-size-6 has-text-weight-bold mb-3 truncate" title="${safeName}">${safeName}</p>
                             
                             <div class="is-flex is-justify-content-between is-align-items-center">
                                 <div class="is-flex is-align-items-center gap-1">
@@ -555,17 +573,28 @@
             `);
             $('#libraryContainer').append(card);
         });
+
+        // Initialize lazy loading
+        observeImages();
     }
 
     function renderIconView(items) {
         items.forEach((game, index) => {
             const statusDotClass = game.status_color === 'orange' ? 'bg-orange' : (game.status_color === 'green' ? 'bg-green' : 'bg-gray');
+            const safeName = escapeHtml(game.name);
+            const safeId = escapeHtml(game.id);
+
             const card = $(`
-                <div class="grid-item" data-index="${index}" data-game-id="${game.id}" tabindex="0" role="button" aria-label="${game.name}" onclick="focusAndOpenGame('${game.id}')" title="${game.name}">
+                <div class="grid-item" data-index="${index}" data-game-id="${safeId}" tabindex="0" role="button" aria-label="${safeName}" onclick="focusAndOpenGame('${safeId}')" title="${safeName}">
                     <div class="card game-card is-paddingless is-shadowless">
                         <div class="card-image">
                             <figure class="image is-square bg-light relative">
-                                <img src="${game.iconUrl || '/static/img/no-icon.png'}" alt="${game.name}" class="p-0" loading="lazy" style="object-fit: cover; width: 100%; height: 100%;">
+                                <img src="/static/img/no-icon.png" 
+                                     data-src="${game.iconUrl || '/static/img/no-icon.png'}" 
+                                     alt="${safeName}" 
+                                     loading="lazy"
+                                     class="lazy-image p-0" 
+                                     style="object-fit: cover; width: 100%; height: 100%; opacity: 0; transition: opacity 0.3s;">
                                 <div class="status-indicator position-absolute" style="bottom: 5px; right: 5px;">
                                     <span class="status-dot ${statusDotClass}"></span>
                                 </div>
@@ -576,6 +605,9 @@
             `);
             $('#libraryContainer').append(card);
         });
+
+        // Initialize lazy loading
+        observeImages();
     }
 
     function renderListView(items) {
@@ -637,7 +669,7 @@
             const gameIgnore = ignorePreferences[g.id] || {};
             const ignoredDlcs = gameIgnore.dlcs || {};
             const ignoredUpdates = gameIgnore.updates || {};
-            
+
             // Calculate has_non_ignored_updates
             // Only show update badge if there are updates available that are NOT ignored
             // AND we don't have all updates (some are missing and not ignored)
@@ -655,7 +687,7 @@
                 hasNonIgnoredUpdates = !allUpdatesIgnored;
             }
             g.has_non_ignored_updates = hasNonIgnoredUpdates;
-            
+
             // Calculate has_non_ignored_dlcs
             let hasNonIgnoredDlcs = false;
             if (g.has_base && g.dlcs && Array.isArray(g.dlcs)) {
@@ -666,7 +698,7 @@
                 });
             }
             g.has_non_ignored_dlcs = hasNonIgnoredDlcs;
-            
+
             // Update status_color based on non-ignored status
             if (!g.has_base) {
                 g.status_color = 'orange';
@@ -737,7 +769,7 @@
             size: g ? String(g.size) : 'null',
             sizeFormatted: g ? g.size_formatted : 'null'
         }));
-        
+
         // Show last 5 to verify ordering
         const last5 = filteredGames.slice(-5).map(g => ({
             name: g ? g.name : 'null',
@@ -746,7 +778,7 @@
         }));
 
         // Show/hide clear filters button based on active filters
-        const hasActiveFilters = query || gender || tag || 
+        const hasActiveFilters = query || gender || tag ||
             $('#btnFilterPendingBase').hasClass('is-primary') ||
             $('#btnFilterPendingUpd').hasClass('is-primary') ||
             $('#btnFilterPendingDlc').hasClass('is-primary');
@@ -764,13 +796,13 @@
         $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
         $('#searchClearBtn').hide();
         $('#searchIcon').show();
-        
+
         // Reset sort to default
         currentSort = 'name-asc';
         localStorage.setItem('myfoil_library_sort', currentSort);
         $('.sort-option').removeClass('is-active has-text-weight-bold');
         $(`.sort-option[data-sort="${currentSort}"]`).addClass('is-active has-text-weight-bold');
-        
+
         applyFilters();
     }
 
@@ -794,12 +826,12 @@
 
     function refreshLibrary() {
         console.log("Refreshing library data...");
-        
+
         // Always fetch fresh data from server on page load
         // Show loading indicator
         $('#loadingIndicator').removeClass('is-hidden');
         $('#libraryContainer').empty();
-        
+
         $.getJSON('/api/library', function (data) {
             // API now returns {items: [...], pagination: {...}}
             games = (data && data.items) ? data.items : (Array.isArray(data) ? data : []);
@@ -810,7 +842,7 @@
 
             // Hide loading indicator
             $('#loadingIndicator').addClass('is-hidden');
-            
+
             // Reset and apply filters
             applyFilters();
             showToast(t('Library updated!'), 'success');
@@ -854,7 +886,7 @@
         isLoadingMore = true;
 
         const currentBatch = filteredGames.slice(scrollOffset, scrollOffset + SCROLL_BATCH_SIZE);
-        
+
         if (currentBatch.length === 0) {
             hasMoreItems = false;
             isLoadingMore = false;
@@ -891,10 +923,10 @@
         hasMoreItems = true;
         isLoadingMore = false;
         $('#libraryContainer').empty();
-        
+
         // Add sentinel element
         $('#libraryContainer').after('<div id="scrollSentinel" style="height: 20px; width: 100%;"></div>');
-        
+
         // Load first batch
         loadMoreItems();
     }
@@ -923,10 +955,10 @@
 
         // Get the game ID from the focused element
         const currentGameId = target.dataset.gameId;
-        
+
         // Find the current index in filteredGames (respects filters and sorting)
         let currentIndex = filteredGames.findIndex(g => g && g.id === currentGameId);
-        
+
         if (currentIndex === -1) {
             // Fallback to DOM order if not found in filteredGames
             const items = Array.from(document.querySelectorAll('#libraryContainer .grid-item, tbody tr'));
@@ -950,7 +982,7 @@
 
         let nextIndex = currentIndex;
 
-        switch(e.key) {
+        switch (e.key) {
             case 'ArrowRight':
                 e.preventDefault();
                 nextIndex = Math.min(currentIndex + 1, totalItems - 1);
@@ -988,10 +1020,10 @@
 
         if (nextIndex !== currentIndex && nextIndex >= 0 && nextIndex < totalItems) {
             const nextGame = filteredGames[nextIndex];
-            
+
             if (nextGame && nextGame.id) {
                 const nextElement = container.querySelector(`[data-game-id="${nextGame.id}"]`);
-                
+
                 if (nextElement) {
                     nextElement.focus();
                     currentlyFocusedIndex = nextIndex;
@@ -1124,7 +1156,7 @@
         // Show loading indicator immediately
         $('#loadingIndicator').removeClass('is-hidden');
         $('#libraryContainer').empty();
-        
+
         // Load ignore preferences first, then fetch library
         loadIgnorePreferences().then(() => {
             // Always fetch fresh data on page load to ensure latest games are visible

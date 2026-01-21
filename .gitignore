@@ -15,3 +15,5 @@ data
 # pyenv
 .python-version*.db
 app/config/*.db
+titles.json
+titles.BR.pt.json
