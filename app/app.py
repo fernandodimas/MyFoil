@@ -108,6 +108,13 @@ cloud_manager = None
 watcher = None
 watcher_thread = None
 
+
+# Helper function to get status (avoids circular import issues)
+def get_system_status():
+    """Get system status values safely"""
+    return {"scanning": scan_in_progress, "updating_titledb": is_titledb_update_running}
+
+
 # Logging configuration
 formatter = ColoredFormatter(
     "[%(asctime)s.%(msecs)03d] %(levelname)s (%(module)s) %(message)s",

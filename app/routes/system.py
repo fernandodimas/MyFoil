@@ -400,9 +400,10 @@ def search_titledb_api():
 @system_bp.route("/status")
 def process_status_api():
     """Status do sistema"""
-    from app import scan_in_progress, is_titledb_update_running
+    from app import get_system_status
 
-    return jsonify({"scanning": scan_in_progress, "updating_titledb": is_titledb_update_running})
+    status = get_system_status()
+    return jsonify(status)
 
 
 @system_bp.post("/settings/titledb/update")
