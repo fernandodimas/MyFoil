@@ -142,8 +142,10 @@ def scan_library_api():
                 libraries = Libraries.query.all()
                 for lib in libraries:
                     scan_library_path(lib.path)
+                    identify_library_files(lib.path)
             else:
                 scan_library_path(path)
+                identify_library_files(path)
             from library import post_library_change
 
             post_library_change()
