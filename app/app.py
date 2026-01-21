@@ -302,10 +302,13 @@ def scan_library_job():
                 from library import scan_library_path, identify_library_files, get_libraries
 
                 libraries = get_libraries()
+                logger.info(f"Found {len(libraries)} libraries to scan")
                 for lib in libraries:
                     logger.info(f"Scanning library: {lib.path}")
                     scan_library_path(lib.path)
+                    logger.info(f"Scan complete for {lib.path}, starting identification")
                     identify_library_files(lib.path)
+                    logger.info(f"Identification complete for {lib.path}")
                 post_library_change()
         log_activity("library_scan_completed")
         logger.info("Library scan job completed.")
