@@ -121,6 +121,7 @@ class Handler(FileSystemEventHandler):
             source_event.src_path.endswith(ext) or (source_event.dest_path and source_event.dest_path.endswith(ext))
             for ext in ALLOWED_EXTENSIONS
         ):
+            logger.debug(f"File {source_event.src_path} doesn't match allowed extensions, skipping")
             return
 
         # Ignore macOS metadata files starting with ._
@@ -131,6 +132,8 @@ class Handler(FileSystemEventHandler):
             dest_filename = os.path.basename(source_event.dest_path)
             if dest_filename.startswith("._"):
                 return
+
+        logger.info(f"Watchdog detected event: {source_event.event_type} - {source_event.src_path}")
 
         library_event = SimpleNamespace(
             type=source_event.event_type,
@@ -145,10 +148,12 @@ class Handler(FileSystemEventHandler):
             library_event.type = "deleted"
 
         if library_event.type == "deleted":
+            logger.info(f"Watchdog: File deleted - {library_event.src_path}")
             self._raw_callback([library_event])
 
         else:
             # Track file on create or modify
+            logger.debug(f"Watchdog: Tracking file for stability - {library_event.src_path}")
             self._track_file(library_event)
             self.debounced_check_final()
 
