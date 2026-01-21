@@ -8,19 +8,15 @@ import os
 import sys
 import logging
 
-
-# Suppress Eventlet and Flask-Limiter warnings
-import warnings
-
+# Suppress Eventlet deprecation warning aggressively
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="eventlet")
+warnings.filterwarnings("ignore", message=".*Eventlet is deprecated.*")
 warnings.filterwarnings("ignore", category=UserWarning, module="flask_limiter")
 
 import eventlet
-
 eventlet.monkey_patch()
 
 import flask.cli
-
 flask.cli.show_server_banner = lambda *args: None
 
 # Core Flask imports
@@ -68,7 +64,7 @@ try:
 
         CELERY_ENABLED = True
     except Exception as redis_error:
-        print(f"Redis not available, disabling Celery: {redis_error}")
+        logging.warning("Redis not available - Async background tasks disabled (Celery)")
         CELERY_ENABLED = False
 except ImportError:
     CELERY_ENABLED = False
