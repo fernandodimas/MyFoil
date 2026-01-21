@@ -639,16 +639,20 @@
             const ignoredUpdates = gameIgnore.updates || {};
             
             // Calculate has_non_ignored_updates
+            // Only show update badge if there are updates available that are NOT ignored
+            // AND we don't have all updates (some are missing and not ignored)
             let hasNonIgnoredUpdates = false;
             if (g.has_base && !g.has_latest_version) {
                 const ownedVersion = parseInt(g.owned_version) || 0;
                 const latestVersion = parseInt(g.latest_version_available) || 0;
+                let allUpdatesIgnored = true;
                 for (let v = ownedVersion + 1; v <= latestVersion; v++) {
                     if (!ignoredUpdates[v.toString()]) {
-                        hasNonIgnoredUpdates = true;
+                        allUpdatesIgnored = false;
                         break;
                     }
                 }
+                hasNonIgnoredUpdates = !allUpdatesIgnored;
             }
             g.has_non_ignored_updates = hasNonIgnoredUpdates;
             
