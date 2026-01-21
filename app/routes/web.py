@@ -31,9 +31,8 @@ def index():
         if request.verified_host is not None:
             shop["referrer"] = f"https://{request.verified_host}"
 
-        files_list, titles_map = gen_shop_files(db)
+        files_list = gen_shop_files(db)
         shop["files"] = files_list
-        shop["titles"] = titles_map
 
         if load_settings()["shop"]["encrypt"]:
             return Response(encrypt_shop(shop), mimetype="application/octet-stream")
@@ -43,7 +42,11 @@ def index():
     user_agent = request.headers.get("User-Agent", "")
     is_tinfoil = "Tinfoil" in user_agent or "NintendoSwitch" in user_agent
 
-    # Tinfoil requests typically don't have Accept header or have specific patterns
+    # Tinfoil headers check (like Ownfoil)
+    from constants import TINFOIL_HEADERS
+
+    has_all_tinfoil_headers = all(header in request.headers for header in TINFOIL_HEADERS)
+
     is_api_request = (
         request.headers.get("Accept") == "application/json"
         or request.headers.get("X-Requested-With") == "XMLHttpRequest"
@@ -51,10 +54,10 @@ def index():
     )
 
     logger.info(
-        f"Request from {request.remote_addr}: UA={user_agent[:50]}..., is_tinfoil={is_tinfoil}, is_api={is_api_request}"
+        f"Request from {request.remote_addr}: UA={user_agent[:50]}..., is_tinfoil={is_tinfoil}, has_tinfoil_headers={has_all_tinfoil_headers}"
     )
 
-    if is_tinfoil or is_api_request:
+    if is_tinfoil or has_all_tinfoil_headers or is_api_request:
         return access_tinfoil_shop()
 
     if not load_settings()["shop"]["public"]:

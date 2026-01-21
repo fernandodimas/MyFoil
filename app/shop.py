@@ -18,31 +18,22 @@ aupup8Es6bcDZQKkRsbOeR9T74tkj+k44QrjZo8xpX9tlJAKEEmwDlyAg0O5CLX3
 CQIDAQAB
 -----END PUBLIC KEY-----"""
 
-import titles as titles_lib
+import logging
+
+logger = logging.getLogger("main")
 
 
 def gen_shop_files(db):
     shop_files = []
-    shop_titles = {}
     files = get_shop_files()
 
-    # Ensure TitleDB is loaded for metadata
-    titles_lib.load_titledb()
+    logger.info(f"gen_shop_files: Processing {len(files)} files from database")
 
     for file in files:
         shop_files.append({"url": f"/api/get_game/{file['id']}#{file['filename']}", "size": file["size"]})
 
-        tid = file.get("title_id")
-        if tid and tid not in shop_titles:
-            info = titles_lib.get_game_info(tid)
-            if info and not info.get("name", "").startswith("Unknown"):
-                shop_titles[tid] = {"id": tid, "name": info.get("name")}
-
-    # Convert dict to list for Tinfoil compatibility
-    titles_list = list(shop_titles.values())
-
-    logger.info(f"Generated shop files: {len(shop_files)} files, {len(titles_list)} titles")
-    return shop_files, titles_list
+    logger.info(f"gen_shop_files: Returning {len(shop_files)} files for Tinfoil shop")
+    return shop_files
 
 
 def encrypt_shop(shop):
