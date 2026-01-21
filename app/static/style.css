@@ -647,3 +647,15 @@ p.game-description {
 .border-success { border-color: var(--success) !important; }
 .border-warning { border-color: var(--warning) !important; }
 .border-danger { border-color: var(--danger) !important; }
+
+/* Footer Consolidado */
+.footer {
+    background-color: var(--bg-soft) !important;
+    border-top: 1px solid var(--border-color);
+    padding: 1rem 0;
+    margin-top: auto;
+}
+
+[data-theme="dark"] .footer {
+    background-color: var(--bg-alt) !important;
+}

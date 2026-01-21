@@ -412,6 +412,7 @@
             debugLog('Ignore preferences loaded:', ignorePreferences);
         }).fail(() => {
             debugWarn('Failed to load ignore preferences');
+            showToast(t('Failed to load ignore preferences'), 'danger');
             ignorePreferences = {};
         });
     }
@@ -419,6 +420,51 @@
 
     // Helper functions
 
+
+    // Lazy Loading Images
+    function observeImages() {
+        if ('IntersectionObserver' in window) {
+            const imageObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        const src = img.getAttribute('data-src');
+                        if (src) {
+                            img.src = src;
+                            img.onload = () => {
+                                img.style.opacity = 1;
+                            };
+                            img.removeAttribute('data-src');
+                        }
+                        observer.unobserve(img);
+                    }
+                });
+            });
+
+            document.querySelectorAll('img.lazy-image').forEach(img => {
+                imageObserver.observe(img);
+            });
+        } else {
+            // Fallback for older browsers
+            document.querySelectorAll('img.lazy-image').forEach(img => {
+                const src = img.getAttribute('data-src');
+                if (src) {
+                    img.src = src;
+                    img.style.opacity = 1;
+                }
+            });
+        }
+    }
+
+    // Debounce Utility
+    function debounce(func, wait) {
+        let timeout;
+        return function (...args) {
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), wait);
+        };
+    }
 
     function initGenders(gamesList) {
         const genders = new Set();
@@ -1093,7 +1139,7 @@
 
     // Event Listeners
     $('.filterInput').on('change', applyFilters);
-    $('#navbarSearch').on('input', applyFilters);
+    $('#navbarSearch').on('input', debounce(applyFilters, 300));
 
     // Sorting dropdown toggle
     $('#sortDropdown .dropdown-trigger button').on('click', function (e) {
