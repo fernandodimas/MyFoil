@@ -231,17 +231,21 @@ def add_files_to_library(library, files):
 def scan_library_path(library_path):
     cleanup_metadata_files(library_path)
     library_id = get_library_id(library_path)
-    logger.info(f"Scanning library path {library_path} ...")
+    logger.info(f"Scanning library path {library_path} (library_id={library_id})...")
     if not os.path.isdir(library_path):
         logger.warning(f"Library path {library_path} does not exists.")
         return
     _, files = titles_lib.getDirsAndFiles(library_path)
+    logger.info(f"Found {len(files)} files on disk in {library_path}")
 
     filepaths_in_library = get_library_file_paths(library_id)
+    logger.info(f"Found {len(filepaths_in_library)} files in database for library_id={library_id}")
 
     # 1. Add new files
     new_files = [f for f in files if f not in filepaths_in_library]
-    add_files_to_library(library_id, new_files)
+    logger.info(f"Found {len(new_files)} new files to add")
+    if new_files:
+        add_files_to_library(library_id, new_files)
 
     # 2. Remove deleted files
     # filepaths_in_library contains all files currently in DB for this lib
@@ -293,8 +297,11 @@ def identify_library_files(library):
     else:
         library_path = library
         library_id = get_library_id(library_path)
+
     files_to_identify = get_files_to_identify(library_id)
     nb_to_identify = len(files_to_identify)
+    logger.info(f"Starting identification for library {library_path}: {nb_to_identify} files to identify")
+
     for n, file in enumerate(files_to_identify):
         try:
             file_id = file.id

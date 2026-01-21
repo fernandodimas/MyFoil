@@ -670,7 +670,9 @@ def get_library_id(library_path):
 
 
 def get_library_file_paths(library_id):
-    return [file.filepath for file in Files.query.filter_by(library_id=library_id).all()]
+    files = Files.query.filter_by(library_id=library_id).all()
+    logger.debug(f"get_library_file_paths: Found {len(files)} files for library_id {library_id}")
+    return [file.filepath for file in files]
 
 
 def set_library_scan_time(library_id, scan_time=None):
