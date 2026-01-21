@@ -9,7 +9,7 @@
 
             <!-- Sidebar Navigation -->
             <div class="column is-3">
-                <aside class="menu is-sticky" style="top: 80px;">
+                <aside class="menu is-sticky">
                     <p class="menu-label has-text-weight-black is-size-5 mb-5 tracking-tighter">
                         <i class="bi bi-sliders2-vertical has-text-primary mr-2"></i> Configurações
                     </p>
@@ -1447,11 +1447,11 @@
                             box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
                         }
 
-                        /* Sticky Sidebar em Telas Grandes */
+                        /* Sticky Sidebar em Telas Grandes - Sem scroll interno */
                         @media screen and (min-width: 1024px) {
                             .is-sticky {
-                                max-height: calc(100vh - 100px);
-                                overflow-y: auto;
+                                position: sticky;
+                                top: 80px;
                             }
                         }
                     </style>
