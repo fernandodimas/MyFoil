@@ -112,7 +112,15 @@ watcher_thread = None
 # Helper function to get status (avoids circular import issues)
 def get_system_status():
     """Get system status values safely"""
-    return {"scanning": scan_in_progress, "updating_titledb": is_titledb_update_running}
+    watching = 0
+    if watcher is not None:
+        watching = len(getattr(watcher, "directories", set()))
+    return {
+        "scanning": scan_in_progress,
+        "updating_titledb": is_titledb_update_running,
+        "watching": watching,
+        "libraries": watching,
+    }
 
 
 # Logging configuration
