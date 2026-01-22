@@ -1008,7 +1008,7 @@ $(document).ready(async () => {
 $('.modal-background').on('click', function () { closeModal($(this).parent().attr('id')); });
 
 // --- External API Settings ---
-function saveAPISettings() {
+window.saveAPISettings = function () {
     const rawg_api_key = $('#rawgApiKey').val();
     const igdb_client_id = $('#igdbClientId').val();
     const igdb_client_secret = $('#igdbClientSecret').val();
@@ -1027,9 +1027,9 @@ function saveAPISettings() {
         },
         error: () => showToast(t('Erro de comunicação'), 'error')
     });
-}
+};
 
-function testRAWGConnection() {
+window.testRAWGConnection = function () {
     const btn = $(event.currentTarget);
     btn.addClass('is-loading');
     $.getJSON('/api/library/search-rawg?q=zelda', (res) => {
@@ -1043,9 +1043,9 @@ function testRAWGConnection() {
         btn.removeClass('is-loading');
         showToast(t('Erro ao testar conexão: ') + (err.responseJSON?.error || t('Erro desconhecido')), 'error');
     });
-}
+};
 
-function testIGDBConnection() {
+window.testIGDBConnection = function () {
     const btn = $(event.currentTarget);
     btn.addClass('is-loading');
     $.getJSON('/api/library/search-igdb?q=zelda', (res) => {
@@ -1061,9 +1061,9 @@ function testIGDBConnection() {
         btn.removeClass('is-loading');
         showToast(t('Erro ao testar conexão: ') + (err.responseJSON?.error || t('Erro desconhecido')), 'error');
     });
-}
+};
 
-function refreshAllMetadata() {
+window.refreshAllMetadata = function () {
     confirmAction({
         title: t('Atualizar Metadados'),
         message: t('Isso buscará notas, tempo de jogo e screenshots para TODOS os itens identificados. Pode levar vários minutos. Deseja continuar?'),
@@ -1081,4 +1081,4 @@ function refreshAllMetadata() {
             });
         }
     });
-}
+};
