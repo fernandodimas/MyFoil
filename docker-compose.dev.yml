@@ -24,8 +24,7 @@ services:
     volumes:
       # DEVELOPMENT MODE: Mount source code for live reload
       - ./app:/app
-      - ./docker/run.sh:/app/run.sh
-      # Data volumes
+      # Data volumes (UPDATE THIS PATH to your actual games directory)
       - /path/to/your/games:/games
       - ./config:/app/config
       - ./data:/app/data
