@@ -1,6 +1,7 @@
 # 📊 Análise Completa do Projeto MyFoil
 **Data da Análise:** 2026-01-22  
-**Build Version:** 20260122_0952  
+**Build Version:** 20260122_1708  
+**Última Atualização:** 2026-01-22 19:46  
 **Autor:** Antigravity AI Assistant
 
 ---
@@ -13,8 +14,8 @@ MyFoil é um fork melhorado do Ownfoil - um gerenciador de biblioteca Nintendo S
 | Categoria | Status | Nota |
 |-----------|--------|------|
 | **Backend (Core)** | 🟢 Excelente | Arquitetura sólida, bem modularizada |
-| **Frontend (UI/UX)** | 🟡 Bom | Funcional mas com problemas de cache |
-| **Infraestrutura Docker** | 🔴 Crítico | Problemas de build cache persistentes |
+| **Frontend (UI/UX)** | 🟢 Excelente | Cache resolvido, APIs funcionando |
+| **Infraestrutura Docker** | 🟢 Excelente | CI/CD com GitHub Actions implementado |
 | **Documentação** | 🟢 Excelente | Bem documentado e organizado |
 | **Testes** | 🟡 Moderado | Cobertura limitada (~15%) |
 | **Segurança** | 🟠 Atenção | Validação de inputs pendente |
@@ -88,100 +89,90 @@ MyFoil é um fork melhorado do Ownfoil - um gerenciador de biblioteca Nintendo S
 - ✅ Cloud Storage (BETA)
 - ✅ Sistema de plugins (BETA)
 
+#### 1.7 Sistema de Rating e Metadados Externos ⭐ NOVO
+**Status:** ✅ Completo  
+**Data Implementação:** 2026-01-22  
+**Arquivos:** `app/services/rating_service.py`, `app/routes/library.py`
+
+- ✅ Integração com RAWG API (ratings, playtime, screenshots)
+- ✅ Integração com IGDB API (Twitch) (ratings agregados, metadados)
+- ✅ Endpoints de teste para APIs (`/api/library/search-rawg`, `/api/library/search-igdb`)
+- ✅ Atualização em massa de metadados
+- ✅ Cache de metadados (30 dias)
+- ✅ Exibição de ratings no modal de detalhes
+- ✅ Badges de Metacritic nos cards da biblioteca
+- ✅ Playtime e gêneros integrados
+
+**Dados Buscados:**
+- Metacritic Score (0-100)
+- RAWG Rating (0-5 estrelas)
+- Playtime médio (horas)
+- Screenshots (até 10 por jogo)
+- Gêneros e tags
+
+#### 1.8 CI/CD e Deploy Automatizado ⭐ NOVO
+**Status:** ✅ Completo  
+**Data Implementação:** 2026-01-22  
+**Arquivos:** `.github/workflows/docker-build.yml`, `docker-compose.ghcr.yml`
+
+- ✅ GitHub Actions workflow para build automático
+- ✅ Publicação automática no GitHub Container Registry (GHCR)
+- ✅ Build triggered a cada push no master
+- ✅ Imagem: `ghcr.io/fernandodimas/myfoil:latest`
+- ✅ Docker compose otimizado para GHCR
+- ✅ Documentação completa de deploy (PORTAINER_GHCR_DEPLOY.md)
+
+**Workflow:**
+1. `git push` → GitHub Actions builda imagem
+2. Publica em GHCR automaticamente
+3. Portainer puxa imagem atualizada
+4. Deploy sem problemas de cache!
+
 ---
 
 ## 🚧 Trabalho Pendente
 
 ### 🔴 Crítico (Bloqueadores)
 
-#### 1. Problema de Cache JavaScript/CSS - ANÁLISE COMPLETA ⚠️
+#### 1. Problema de Cache JavaScript/CSS ✅ RESOLVIDO
 **Prioridade:** CRÍTICA  
-**Status:** EM IMPLEMENTAÇÃO  
-**Data Análise:** 2026-01-22 16:25  
+**Status:** ✅ **RESOLVIDO**  
+**Data Resolução:** 2026-01-22 19:40  
 **Arquivos Afetados:** Todos os arquivos estáticos (JS/CSS)
-
-**Sintomas Observados:**
-- Browser carrega versão antiga de `settings.js` (Version: 1205_FORCE)
-- Build atual mostra: `20260122_1612`
-- Funções `testRAWGConnection`, `testIGDBConnection`, `saveAPISettings` não definidas
-- Erro: `ReferenceError: testRAWGConnection is not defined`
-- Limpeza de cache do browser (Shift+F5) não resolve
-- Service workers desconectados, problema persiste
-
-**Causas Raiz Identificadas:**
-
-1. **Docker Image Layer Caching** (PRINCIPAL)
-   ```dockerfile
-   # Dockerfile linha 32
-   COPY ./app /app  # ❌ Cached como single layer
-   ```
-   - Docker reusa layer mesmo após mudanças no git
-   - Rebuild sem `--no-cache` não atualiza arquivos
-
-2. **Ausência de Cache-Control Headers**
-   ```python
-   # app/app.py - Sem headers para static files
-   # Apenas /api/library/icon tem Cache-Control
-   ```
-   - Flask serve static files com cache padrão agressivo
-   - Browsers podem cachear indefinidamente
-
-3. **Query Parameter Ineficaz**
-   ```html
-   <script src="/static/js/settings_v2026.js?v={{ build_version }}"></script>
-   ```
-   - Parâmetro `?v=` ignorado por caches agressivos
-   - ETags e Last-Modified prevalecem
 
 **Soluções Implementadas:**
 
-✅ **Fix 1: Renomeação de Arquivo (Immediate)**
+✅ **Fix 1: Renomeação de Arquivo**
 ```bash
-# Força bypass de todos os caches
 mv app/static/js/settings_v2026.js app/static/js/settings_bundled.js
-# Atualizado em settings.html linha 1300
 ```
 
-🔄 **Fix 2: Cache-Control Headers (Em implementação)**
+✅ **Fix 2: Cache-Control Headers**
 ```python
-# app/app.py - Adicionar após criação do app
+# app/app.py - Implementado
 @app.after_request
 def add_cache_control_headers(response):
     if request.path.startswith('/static/'):
         if request.path.endswith(('.js', '.css')):
             response.headers['Cache-Control'] = 'no-cache, must-revalidate'
-            response.headers['Pragma'] = 'no-cache'
-            response.headers['Expires'] = '0'
-        elif request.path.endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg')):
-            response.headers['Cache-Control'] = 'public, max-age=3600'
-    return response
 ```
 
-📋 **Fix 3: Docker Development Mode (Planejado)**
-```yaml
-# docker-compose.dev.yml (NOVO)
-services:
-  myfoil:
-    volumes:
-      - ./app:/app  # Live reload - sem rebuild
-    environment:
-      - FLASK_ENV=development
-      - FLASK_DEBUG=1
-```
+✅ **Fix 3: GitHub Actions CI/CD**
+- Build automático a cada push
+- Publicação em GHCR
+- Sem problemas de cache Docker
 
-**Próximos Passos:**
-1. ✅ Renomear arquivo JS (FEITO)
-2. � Implementar Cache-Control headers (AGORA)
-3. 📋 Criar docker-compose.dev.yml
-4. 📋 Adicionar .dockerignore
-5. 📋 Multi-stage Dockerfile
+✅ **Fix 4: Documentação Completa**
+- `PORTAINER_GHCR_DEPLOY.md` - Guia de deploy
+- `CACHE_FIXED.md` - Confirmação de resolução
+- `METADATA_GUIDE.md` - Guia de metadados
 
-**Validação:**
-- [ ] Console mostra: `MyFoil: settings.js loaded (Version: BUNDLED_FIX)`
-- [ ] Build version match: `20260122_XXXX`
-- [ ] Funções definidas: `typeof window.testRAWGConnection === 'function'`
-- [ ] Hard refresh funciona
-- [ ] Incognito mode funciona
+**Validação Confirmada:**
+- ✅ Console mostra: `MyFoil: settings.js loaded (Version: BUNDLED_FIX)`
+- ✅ Build version: `20260122_1708`
+- ✅ Funções definidas corretamente
+- ✅ APIs RAWG e IGDB testadas com sucesso
+- ✅ Sem ReferenceErrors
 
 #### 2. Infraestrutura Async (Celery/Redis)
 **Prioridade:** Alta  
