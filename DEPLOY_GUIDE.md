@@ -11,24 +11,44 @@ Erro: `exec: "/app/run.sh": is a directory: permission denied`
 
 ## ✅ Solução: Rebuild via Portainer
 
-### Passo 1: Parar e Remover a Stack
+### Passo 1: Atualizar Timestamp no docker-compose.yml
+
+**IMPORTANTE:** O Portainer só faz rebuild se detectar mudanças no arquivo.
+
+1. Abra o `docker-compose.yml` no editor
+2. Encontre as linhas com `BUILD_DATE`:
+   ```yaml
+   args:
+     - BUILD_DATE=20260122_1644  # ← Esta linha
+   ```
+3. **Mude o timestamp** para a data/hora atual:
+   ```yaml
+   args:
+     - BUILD_DATE=20260122_1700  # ← Novo timestamp
+   ```
+4. Faça isso em **DOIS lugares** (serviço `myfoil` e `worker`)
+5. Salve o arquivo
+
+### Passo 2: Atualizar a Stack no Portainer
 
 1. Acesse Portainer
 2. Vá em **Stacks** → Selecione sua stack `MyFoil`
-3. Clique em **Stop** (botão vermelho)
-4. Depois clique em **Remove** (delete)
-5. ✅ Confirme a remoção
+3. Clique em **Editor**
+4. Cole o conteúdo atualizado do `docker-compose.yml`
+5. **IMPORTANTE:** Na seção de opções:
+   - ✅ Marque **"Re-pull and redeploy"**
+   - ✅ Marque **"Prune services"**
+6. Clique em **Update the stack**
 
-### Passo 2: Remover Imagens Antigas
+**O que acontece:**
+- Portainer detecta mudança no `BUILD_DATE`
+- Cria nova imagem: `myfoil-local:20260122_1700`
+- Remove containers antigos
+- Inicia com a nova imagem
 
-1. Vá em **Images** (menu lateral)
-2. Procure por `myfoil-local:latest`
-3. Selecione a imagem
-4. Clique em **Remove** 
-5. ✅ Marque "Force removal" se aparecer
-6. Confirme
+### Alternativa: Remover Stack Completamente
 
-### Passo 3: Recriar a Stack
+Se preferir começar do zero:
 
 1. Vá em **Stacks** → **Add stack**
 2. Nome: `MyFoil` (ou o nome que você usava)

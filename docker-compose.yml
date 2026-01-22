@@ -16,7 +16,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: myfoil-local:latest
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+        # Force rebuild by changing this timestamp when deploying
+        - BUILD_DATE=20260122_1644
+    image: myfoil-local:20260122_1644
     restart: unless-stopped
     depends_on:
       redis:
@@ -43,7 +47,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: myfoil-local:latest
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+        - BUILD_DATE=20260122_1644
+    image: myfoil-local:20260122_1644
     restart: unless-stopped
     command: celery -A celery_app.celery worker --loglevel=info --concurrency=2
     depends_on:
