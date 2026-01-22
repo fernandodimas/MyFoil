@@ -884,6 +884,7 @@ function renderFileList(tbody, files, showPath) {
     });
 }
 
+// Fix: Explicit window scope usage
 $(document).on('input', '#fileSearchInput', window.debounce(renderFilesExplorer, 300));
 $(document).on('change', '#fileTypeFilter, #fileStatusFilter', renderFilesExplorer);
 
