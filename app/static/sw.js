@@ -1,4 +1,4 @@
-const CACHE_NAME = 'myfoil-v1.0.0';
+const CACHE_NAME = 'myfoil-v20260122_1411';
 const RUNTIME_CACHE = 'myfoil-runtime';
 
 // Assets to cache on install
@@ -75,20 +75,18 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Static assets - cache first, network as fallback
+    // Static assets - Network First, then Cache
     event.respondWith(
-        caches.match(request)
-            .then((cached) => {
-                if (cached) {
-                    return cached;
-                }
-                return fetch(request).then((response) => {
-                    const responseClone = response.clone();
-                    caches.open(RUNTIME_CACHE).then((cache) => {
-                        cache.put(request, responseClone);
-                    });
-                    return response;
+        fetch(request)
+            .then((response) => {
+                const responseClone = response.clone();
+                caches.open(RUNTIME_CACHE).then((cache) => {
+                    cache.put(request, responseClone);
                 });
+                return response;
+            })
+            .catch(() => {
+                return caches.match(request);
             })
     );
 });
