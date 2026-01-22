@@ -60,8 +60,14 @@ class TitleDBSource:
                     repo = parts[4]
                     branch = parts[5].rstrip("/")
 
+                    # Keep track if we hit rate limits to stop trying files/branches immediately
+                    self._rate_limit_hit = False
+
                     # Try to get commit info for the file
                     def _get_github_date(fname, br):
+                        if getattr(self, "_rate_limit_hit", False):
+                            return None
+
                         api_url = f"https://api.github.com/repos/{user}/{repo}/commits?path={fname}&sha={br}&per_page=1"
                         headers = {"User-Agent": "MyFoil-App", "Accept": "application/vnd.github.v3+json"}
                         try:
@@ -72,7 +78,10 @@ class TitleDBSource:
                                     commit_date = data[0]["commit"]["committer"]["date"]
                                     return datetime.fromisoformat(commit_date.replace("Z", "+00:00"))
                             elif resp.status_code == 403:
-                                logger.warning(f"GitHub API rate limited for {self.name}")
+                                if not getattr(self, "_rate_limit_hit", False):
+                                    logger.warning(f"GitHub API rate limited for {self.name} - aborting further checks.")
+                                    self._rate_limit_hit = True
+                                return None
                         except Exception as e:
                             logger.debug(f"GitHub API error for {fname} on {br}: {e}")
                         return None
@@ -82,12 +91,16 @@ class TitleDBSource:
                         d = _get_github_date(fname, branch)
                         if d:
                             return d
+                        if getattr(self, "_rate_limit_hit", False):
+                            return None
 
                     # Try generic titles.json
                     if "titles.json" not in filenames:
                         d = _get_github_date("titles.json", branch)
                         if d:
                             return d
+                        if getattr(self, "_rate_limit_hit", False):
+                            return None
 
                     # Fallback branch check
                     alt_branch = "master" if branch == "main" else "main"
@@ -95,21 +108,29 @@ class TitleDBSource:
                         d = _get_github_date(fname, alt_branch)
                         if d:
                             return d
+                        if getattr(self, "_rate_limit_hit", False):
+                            return None
 
             # Fallback to standard HEAD request for each filename
             for fname in filenames:
                 url = self.get_file_url(fname)
-                response = requests.head(url, timeout=5)
-                if response.status_code == 200:
-                    if "Last-Modified" in response.headers:
-                        return datetime.strptime(response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S %Z")
+                try:
+                    response = requests.head(url, timeout=5)
+                    if response.status_code == 200:
+                        if "Last-Modified" in response.headers:
+                            return datetime.strptime(response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S %Z")
+                except:
+                    pass
 
             # Final attempt: try generic titles.json
             if "titles.json" not in filenames:
                 url_generic = self.get_file_url("titles.json")
-                response = requests.head(url_generic, timeout=5)
-                if response.status_code == 200 and "Last-Modified" in response.headers:
-                    return datetime.strptime(response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S %Z")
+                try:
+                    response = requests.head(url_generic, timeout=5)
+                    if response.status_code == 200 and "Last-Modified" in response.headers:
+                        return datetime.strptime(response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S %Z")
+                except:
+                    pass
 
         except Exception as e:
             logger.debug(f"Error fetching remote date for {self.name}: {e}")
