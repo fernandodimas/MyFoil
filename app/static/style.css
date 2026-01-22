@@ -55,6 +55,7 @@
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     
     --gradient-overlay: linear-gradient(to top, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.4) 50%, transparent);
+    --card-width: 240px;
 }
 
 [data-theme="dark"] {
@@ -1231,9 +1232,8 @@ p.game-description {
 }
 
 #libraryContainer {
-    --card-width: 240px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(var(--card-width), 1fr));
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(var(--card-width, 240px), 1fr)) !important;
     gap: 1.5rem;
     width: 100%;
     margin-top: 1rem;
@@ -1241,13 +1241,21 @@ p.game-description {
 }
 
 #libraryContainer.is-list-view {
-    display: block;
+    display: block !important;
 }
 
 .grid-item {
     display: flex;
     flex-direction: column;
-    min-width: 0; /* Fix flexbox/grid overflow issues */
+    min-width: 0;
+    max-width: 100%; /* Prevent it from expanding indefinitely if something is wrong */
+    transition: width 0.2s ease; /* Smooth out zoom if possible */
+}
+
+/* Ensure images don't get too tall in giant cards if auto-fill fails */
+.grid-item .image.is-16by9 {
+    max-height: 400px;
+    overflow: hidden;
 }
 
 .dlc-tag {

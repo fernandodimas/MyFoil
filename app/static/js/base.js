@@ -77,8 +77,32 @@ function toggleTheme() {
     localStorage.setItem('theme', newTheme);
 }
 
+/**
+ * Update Grid Zoom for the library cards
+ * @param {string|number} val 
+ */
+window.updateGridZoom = function (val) {
+    const zoomVal = parseInt(val);
+    if (isNaN(zoomVal)) return;
+
+    // Set variable on root so it can be used anywhere
+    document.documentElement.style.setProperty('--card-width', `${zoomVal}px`);
+
+    // Force update on container if it exists
+    const container = document.getElementById('libraryContainer');
+    if (container) {
+        container.style.setProperty('--card-width', `${zoomVal}px`);
+    }
+
+    localStorage.setItem('gridZoom', zoomVal);
+};
+
 // Global Initialization
 document.addEventListener('DOMContentLoaded', function () {
+    // Apply saved zoom immediately
+    const savedZoom = localStorage.getItem('gridZoom') || 240;
+    window.updateGridZoom(savedZoom);
+
     // Apply saved theme immediately
     const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
     document.documentElement.setAttribute('data-theme', savedTheme);

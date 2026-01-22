@@ -17,7 +17,8 @@ flask-restx
 structlog
 prometheus-client
 flask-socketio
-eventlet
+gevent
+gevent-websocket
 google-auth
 google-auth-oauthlib
 google-auth-httplib2

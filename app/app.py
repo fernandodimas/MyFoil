@@ -8,13 +8,11 @@ import os
 import sys
 import logging
 
-# Suppress Eventlet deprecation warning aggressively
-warnings.filterwarnings("ignore", category=DeprecationWarning, module="eventlet")
-warnings.filterwarnings("ignore", message=".*Eventlet is deprecated.*")
+# Suppress warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="flask_limiter")
 
-import eventlet
-eventlet.monkey_patch()
+from gevent import monkey
+monkey.patch_all()
 
 import flask.cli
 flask.cli.show_server_banner = lambda *args: None
@@ -61,11 +59,16 @@ try:
     r = redis.from_url(redis_url)
     try:
         r.ping()
-
         CELERY_ENABLED = True
+        logging.info("Redis connection established - Async background tasks enabled (Celery)")
     except Exception as redis_error:
-        logging.warning("Redis not available - Async background tasks disabled (Celery)")
-        CELERY_ENABLED = False
+        # Check if environment expects Redis
+        if os.environ.get("CELERY_REQUIRED", "false").lower() == "true":
+            logging.error(f"Redis required but not reachable: {redis_error}")
+            CELERY_ENABLED = False
+        else:
+            logging.info("Redis not available - Async background tasks disabled (Celery)")
+            CELERY_ENABLED = False
 except ImportError:
     CELERY_ENABLED = False
 
@@ -459,7 +462,7 @@ def create_app():
     init_metrics(app)
 
     # Initialize SocketIO
-    socketio.init_app(app, cors_allowed_origins="*", async_mode="eventlet", engineio_logger=False, logger=False)
+    socketio.init_app(app, cors_allowed_origins="*", async_mode="gevent", engineio_logger=False, logger=False)
 
     # SocketIO event handlers
     @socketio.on("connect")
