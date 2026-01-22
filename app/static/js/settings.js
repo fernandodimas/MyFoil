@@ -1,4 +1,5 @@
-console.log('MyFoil: settings.js loaded');
+console.log('MyFoil: settings.js loaded (Version: 1205_FORCE)');
+window.DEBUG_MODE && console.log('Checking window.debounce:', typeof window.debounce);
 let allUsernames = [];
 
 // Helper functions
