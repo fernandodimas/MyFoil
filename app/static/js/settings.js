@@ -886,8 +886,16 @@ function renderFileList(tbody, files, showPath) {
     });
 }
 
-// Fix: Explicit window scope usage
-$(document).on('input', '#fileSearchInput', window.debounce(renderFilesExplorer, 300));
+// Local fallback for debounce to avoid cache/loading issues
+const _debounce = (func, wait) => {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+};
+
+$(document).on('input', '#fileSearchInput', _debounce(renderFilesExplorer, 300));
 $(document).on('change', '#fileTypeFilter, #fileStatusFilter', renderFilesExplorer);
 
 function fillWebhooksList() {

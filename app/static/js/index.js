@@ -56,7 +56,14 @@ function observeImages() {
     }
 }
 
-// window.debounce is defined in base.js for global use
+// Local fallback for debounce to avoid cache/loading issues
+const _debounce = (func, wait) => {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+};
 
 function initGenders(gamesList) {
     const genders = new Set();
@@ -577,7 +584,7 @@ $(document).ready(() => {
     });
 
     $('.filterInput').on('change', applyFilters);
-    $('#navbarSearch').on('input', window.debounce(() => {
+    $('#navbarSearch').on('input', _debounce(() => {
         applyFilters();
         toggleSearchClearBtn();
     }, 300));
