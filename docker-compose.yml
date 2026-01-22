@@ -4,7 +4,6 @@ services:
   myfoil:
     container_name: myfoil
     build: .
-    image: myfoil/myfoil:latest
     restart: unless-stopped
     environment:
       - PUID=1000

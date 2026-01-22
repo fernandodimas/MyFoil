@@ -25,7 +25,7 @@ MyFoil is an enhanced fork of Ownfoil with **significantly faster and more relia
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/myfoil
+git clone https://github.com/fernandodimas/myfoil
 cd myfoil
 
 # Install dependencies
