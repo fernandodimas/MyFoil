@@ -7,6 +7,82 @@ const getInputVal = (id) => $(`#${id}`).val();
 const getCheckboxStatus = (id) => $(`#${id}`).is(":checked");
 // openModal and closeModal are defined in modals_shared.html (included globally)
 
+// --- External API Settings ---
+window.saveAPISettings = function () {
+    const rawg_api_key = $('#rawgApiKey').val();
+    const igdb_client_id = $('#igdbClientId').val();
+    const igdb_client_secret = $('#igdbClientSecret').val();
+    $.ajax({
+        url: '/api/settings/apis',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            rawg_api_key,
+            igdb_client_id,
+            igdb_client_secret
+        }),
+        success: (res) => {
+            if (res.success) showToast(t('Configurações de API salvas'));
+            else showToast(t('Erro ao salvar configurações'), 'error');
+        },
+        error: () => showToast(t('Erro de comunicação'), 'error')
+    });
+};
+
+window.testRAWGConnection = function () {
+    const btn = $(event.currentTarget);
+    btn.addClass('is-loading');
+    $.getJSON('/api/library/search-rawg?q=zelda', (res) => {
+        btn.removeClass('is-loading');
+        if (res && res.name) {
+            showToast(t('Conexão OK! Encontrado: ') + res.name);
+        } else {
+            showToast(t('Nenhum resultado encontrado. Verifique sua chave.'), 'warning');
+        }
+    }).fail((err) => {
+        btn.removeClass('is-loading');
+        showToast(t('Erro ao testar conexão: ') + (err.responseJSON?.error || t('Erro desconhecido')), 'error');
+    });
+};
+
+window.testIGDBConnection = function () {
+    const btn = $(event.currentTarget);
+    btn.addClass('is-loading');
+    $.getJSON('/api/library/search-igdb?q=zelda', (res) => {
+        btn.removeClass('is-loading');
+        if (Array.isArray(res) && res.length > 0) {
+            showToast(t('Conexão OK! Encontrado: ') + res[0].name);
+        } else if (res && res.name) {
+            showToast(t('Conexão OK! Encontrado: ') + res.name);
+        } else {
+            showToast(t('Nenhum resultado encontrado. Verifique seu ID/Secret.'), 'warning');
+        }
+    }).fail((err) => {
+        btn.removeClass('is-loading');
+        showToast(t('Erro ao testar conexão: ') + (err.responseJSON?.error || t('Erro desconhecido')), 'error');
+    });
+};
+
+window.refreshAllMetadata = function () {
+    confirmAction({
+        title: t('Atualizar Metadados'),
+        message: t('Isso buscará notas, tempo de jogo e screenshots para TODOS os itens identificados. Pode levar vários minutos. Deseja continuar?'),
+        confirmText: t('Atualizar Todos'),
+        confirmClass: 'is-info',
+        onConfirm: () => {
+            const btn = $('#btnRefreshAllMetadata');
+            btn.addClass('is-loading');
+            $.post('/api/library/metadata/refresh-all', (res) => {
+                showToast(t('Atualização em massa iniciada em segundo plano.'));
+                setTimeout(() => btn.removeClass('is-loading'), 3000);
+            }).fail(() => {
+                btn.removeClass('is-loading');
+                showToast(t('Erro ao iniciar atualização'), 'error');
+            });
+        }
+    });
+};
+
 function createTag() {
     const name = $('#tagNameInput').val();
     const color = $('#tagColorInput').val();
@@ -997,7 +1073,7 @@ $(document).ready(async () => {
         if (set['apis/igdb_client_id']) $('#igdbClientId').val(set['apis/igdb_client_id']);
         if (set['apis/igdb_client_secret']) $('#igdbClientSecret').val(set['apis/igdb_client_secret']);
     } catch (e) {
-        debugError("Failed to load critical settings:", e);
+        console.error("Failed to load critical settings:", e);
         showToast(t('Failed to load settings from server'), 'error');
     } finally {
         $('#settingsLoading').addClass('is-hidden');
@@ -1006,79 +1082,3 @@ $(document).ready(async () => {
 });
 
 $('.modal-background').on('click', function () { closeModal($(this).parent().attr('id')); });
-
-// --- External API Settings ---
-window.saveAPISettings = function () {
-    const rawg_api_key = $('#rawgApiKey').val();
-    const igdb_client_id = $('#igdbClientId').val();
-    const igdb_client_secret = $('#igdbClientSecret').val();
-    $.ajax({
-        url: '/api/settings/apis',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({
-            rawg_api_key,
-            igdb_client_id,
-            igdb_client_secret
-        }),
-        success: (res) => {
-            if (res.success) showToast(t('Configurações de API salvas'));
-            else showToast(t('Erro ao salvar configurações'), 'error');
-        },
-        error: () => showToast(t('Erro de comunicação'), 'error')
-    });
-};
-
-window.testRAWGConnection = function () {
-    const btn = $(event.currentTarget);
-    btn.addClass('is-loading');
-    $.getJSON('/api/library/search-rawg?q=zelda', (res) => {
-        btn.removeClass('is-loading');
-        if (res && res.name) {
-            showToast(t('Conexão OK! Encontrado: ') + res.name);
-        } else {
-            showToast(t('Nenhum resultado encontrado. Verifique sua chave.'), 'warning');
-        }
-    }).fail((err) => {
-        btn.removeClass('is-loading');
-        showToast(t('Erro ao testar conexão: ') + (err.responseJSON?.error || t('Erro desconhecido')), 'error');
-    });
-};
-
-window.testIGDBConnection = function () {
-    const btn = $(event.currentTarget);
-    btn.addClass('is-loading');
-    $.getJSON('/api/library/search-igdb?q=zelda', (res) => {
-        btn.removeClass('is-loading');
-        if (Array.isArray(res) && res.length > 0) {
-            showToast(t('Conexão OK! Encontrado: ') + res[0].name);
-        } else if (res && res.name) {
-            showToast(t('Conexão OK! Encontrado: ') + res.name);
-        } else {
-            showToast(t('Nenhum resultado encontrado. Verifique seu ID/Secret.'), 'warning');
-        }
-    }).fail((err) => {
-        btn.removeClass('is-loading');
-        showToast(t('Erro ao testar conexão: ') + (err.responseJSON?.error || t('Erro desconhecido')), 'error');
-    });
-};
-
-window.refreshAllMetadata = function () {
-    confirmAction({
-        title: t('Atualizar Metadados'),
-        message: t('Isso buscará notas, tempo de jogo e screenshots para TODOS os itens identificados. Pode levar vários minutos. Deseja continuar?'),
-        confirmText: t('Atualizar Todos'),
-        confirmClass: 'is-info',
-        onConfirm: () => {
-            const btn = $('#btnRefreshAllMetadata');
-            btn.addClass('is-loading');
-            $.post('/api/library/metadata/refresh-all', (res) => {
-                showToast(t('Atualização em massa iniciada em segundo plano.'));
-                setTimeout(() => btn.removeClass('is-loading'), 3000);
-            }).fail(() => {
-                btn.removeClass('is-loading');
-                showToast(t('Erro ao iniciar atualização'), 'error');
-            });
-        }
-    });
-};
