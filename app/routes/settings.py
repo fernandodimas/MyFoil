@@ -569,10 +569,15 @@ def apis_settings_api():
 
     if "rawg_api_key" in data:
         settings["apis"]["rawg_api_key"] = data["rawg_api_key"]
+    
+    if "igdb_client_id" in data:
+        settings["apis"]["igdb_client_id"] = data["igdb_client_id"]
+    
+    if "igdb_client_secret" in data:
+        settings["apis"]["igdb_client_secret"] = data["igdb_client_secret"]
 
     with open(CONFIG_FILE, "w") as yaml_file:
         import yaml
-
         yaml.dump(settings, yaml_file)
 
     reload_conf()

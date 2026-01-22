@@ -942,6 +942,52 @@
                                     </div>
                                 </div>
 
+                                <!-- IGDB API -->
+                                <div class="box is-shadowless border p-4 mb-4"
+                                    style="border-left: 5px solid #6441a5 !important;">
+                                    <div class="columns is-vcentered">
+                                        <div class="column">
+                                            <h4 class="title is-6 mb-2">
+                                                <i class="bi bi-twitch mr-2" style="color: #6441a5;"></i>
+                                                IGDB API (Twitch)
+                                            </h4>
+                                            <p class="is-size-7 opacity-70 mb-3">
+                                                Uma das bases de dados mais completas. Requer Client ID e Secret.
+                                            </p>
+                                            <div class="columns">
+                                                <div class="column">
+                                                    <div class="field">
+                                                        <label class="label is-small">Client ID</label>
+                                                        <div class="control">
+                                                            <input class="input is-small" type="text" id="igdbClientId"
+                                                                placeholder="Client ID do Twitch Dev Portal">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="column">
+                                                    <div class="field">
+                                                        <label class="label is-small">Client Secret</label>
+                                                        <div class="control">
+                                                            <input class="input is-small" type="password"
+                                                                id="igdbClientSecret" placeholder="Client Secret">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <p class="help is-size-7">
+                                                Obtenha em: <a href="https://dev.twitch.tv/console" target="_blank"
+                                                    class="has-text-link">Twitch Developer Portal</a>
+                                            </p>
+                                        </div>
+                                        <div class="column is-narrow">
+                                            <button class="button is-small is-primary is-light"
+                                                onclick="testIGDBConnection()">
+                                                <i class="bi bi-check-circle mr-1"></i> Testar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- Bulk Actions -->
                                 <div class="notification is-ghost border p-4"
                                     style="border-left: 5px solid var(--color-info) !important;">

@@ -830,3 +830,28 @@ def search_rawg_api():
         return jsonify(result or {})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@library_bp.route("/library/search-igdb", methods=["GET"])
+@access_required("admin")
+def search_igdb_api():
+    """Search IGDB API directly (for testing/manual matching)"""
+    query = request.args.get("q")
+    if not query:
+        return jsonify({"error": "Query parameter 'q' required"}), 400
+
+    from services.rating_service import IGDBClient
+
+    settings = load_settings()
+    client_id = settings.get("apis", {}).get("igdb_client_id")
+    client_secret = settings.get("apis", {}).get("igdb_client_secret")
+
+    if not client_id or not client_secret:
+        return jsonify({"error": "IGDB credentials not configured"}), 500
+
+    client = IGDBClient(client_id, client_secret)
+    try:
+        result = client.search_game(query)
+        return jsonify(result or [])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

@@ -4,7 +4,7 @@ This document serves as the central hub for the MyFoil project status, outlining
 
 ---
 
-## ✅ Completed Tasks (Detailed Index)
+### ✅ Completed Tasks (Detailed Index)
 
 The following core components have been successfully implemented, tested, and integrated.
 
@@ -32,15 +32,17 @@ The following core components have been successfully implemented, tested, and in
 ### 4. Documentation
 - [x] **README Updates**: Updated `README.md` to reflect new features (Multi-source, API usage, JSON downloads).
 
-### 5. Game Metadata & Ratings (RAWG Integration)
+### 5. Game Metadata & Ratings (RAWG & IGDB Integration)
+- [x] **Multi-Provider Support**: Integrated both RAWG and IGDB for robust metadata fetching.
 - [x] **New Database Fields**: Added support for Metacritic, RAWG ratings, Playtime (story/completionist), and API-sourced genres/screenshots in the `Titles` table.
 - [x] **Auto-Migration**: Implemented schema evolution logic in `app/db.py` to seamlessly update existing SQLite databases.
-- [x] **Rating Service**: Developed `app/services/rating_service.py` with rate-limiting and normalized data handling.
-- [x] **Async Processing**: Integrated metadata fetching into Celery tasks for bulk library updates without performance degradation.
+- [x] **Rating Service**: Developed `app/services/rating_service.py` with rate-limiting, OAuth2 (IGDB), and normalized data handling.
+- [x] **Async Processing & Scheduling**: Integrated metadata fetching into Celery tasks and added a weekly background refresh job.
+- [x] **Docker Infrastructure**: Updated `docker-compose.yml` with Redis and Celery worker for scalable background processing.
 - [x] **UI Enhancements**:
   - Integrated ratings and playtime badges in Library Grid and List views.
-  - Enhanced Game Details modal with rich stats and localized eShop links.
-  - Added "External APIs" tab in Settings to manage RAWG API keys.
+  - Enhanced Game Details modal with rich stats, screenshots carousel, and manual refresh button.
+  - Added "External APIs" tab in Settings to manage RAWG and IGDB credentials.
 
 ---
 
@@ -50,47 +52,34 @@ The following tasks are pending and prioritized by urgency/impact.
 
 ### 🔴 High Priority (Critical for Release)
 
-#### 1. Docker Production & Async Setup (Celery/Redis)
-The current `docker-compose.yml` defines the web app but lacks the necessary worker infrastructure for the async tasks defined in `app.py` (Celery).
-- **Task**: Update `docker-compose.yml` to include:
-  - `redis` service (Broker).
-  - `worker` service (Celery worker process for specific queues).
-- **Task**: Verify `Dockerfile` builds successfully with the current `requirements.txt`.
-- **Reason**: Without this, library scans on large libraries will time out or block the main thread.
-
-#### 2. Frontend Validation (UI/UX)
+#### 1. Frontend Validation (UI/UX)
 While the API and Translations are ready, the actual interaction in the browser needs verification to ensure the JavaScript correctly talks to the new endpoints.
-- **Task**: Verify "Drag and Drop" or "Up/Down" arrows for source reordering in `settings.html`.
-- **Task**: Test the "Add Custom Source" modal handling (Success/Error states).
-- **Task**: Verify the "Remote Date" column properly updates via auto-refresh logic.
+- [ ] **Task**: Verify "Drag and Drop" or "Up/Down" arrows for source reordering in `settings.html`.
+- [ ] **Task**: Test the "Add Custom Source" modal handling (Success/Error states).
+- [ ] **Task**: Verify the "Remote Date" column properly updates via auto-refresh logic.
+- [ ] **Task**: Test IGDB connection in settings UI.
 
 ### 🟡 Medium Priority (Optimization & Cleanup)
 
-#### 3. Codebase Cleanup
+#### 2. Codebase Cleanup
 Several files appear to be remnants of refactoring or backup processes and should be removed to keep the repository clean.
-- **Target Files to Delete**:
-  - `app/app_new.py` (Redundant if merged to `app.py`).
-  - `app/app.py.backup` (Old backup).
-  - `app/fix_indent.py`, `app/fix_alerts.py` (One-off scripts).
-  - `test_titledb_sources.py` (After final verification, or move to `tests/`).
+- [x] **Cleanup executed**: Redundant files removed from `app/`.
 
-#### 4. Legacy ZIP Removal Plan
+#### 3. Legacy ZIP Removal Plan
 Now that direct JSON downloads are implemented and faster, we should plan to eventually phase out the `unzip-http` dependency if it proves unstable, keeping it only as a fast-path fallback.
-
-#### 5. Additional Metadata Providers (IGDB)
-- **Task**: Implement IGDB as an alternative/fallback provider for metadata.
-- **Reason**: Redundancy in case RAWG limits are reached or data is missing.
 
 ### 🟢 Low Priority (Polish)
 
-#### 5. Documentation Finalization
-- **Task**: Remove "Coming Soon" from the Docker section in `README.md` once the build is verified.
-- **Task**: Add screenshots of the new TitleDB Settings panel to the README.
+#### 4. Documentation Finalization
+- [ ] **Task**: Remove "Coming Soon" from the Docker section in `README.md` once the build is verified.
+- [ ] **Task**: Add screenshots of the new Settings panels (TitleDB and APIs) to the README.
+- [ ] **Task**: Document the API integration features.
 
 ---
 
 ## 🛠 Suggested Next Steps for Developer
 
-1.  **Execute Cleanup**: Delete the temporary/backup files identified above.
-2.  **Fix Docker Compose**: Define the Redis/Celery services to ensure the background jobs (Library Scan, TitleDB Update) work scalably.
-3.  **Manual UI Test**: Boot the app and verify the TitleDB Settings page.
+1.  **Manual UI Test**: Boot the app and verify the "External APIs" section in Settings.
+2.  **Verify Tasks**: Check Celery logs to ensure metadata fetching is working correctly for multiple games.
+3.  **Final Documentation**: Update README.md with the new screenshots.
+

@@ -1,6 +1,16 @@
 version: "3.8"
 
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: myfoil-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   myfoil:
     container_name: myfoil
     build:
@@ -8,10 +18,14 @@ services:
       dockerfile: Dockerfile
     image: myfoil-local:latest
     restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=UTC
+      - REDIS_URL=redis://redis:6379/0
     volumes:
       - /path/to/your/games:/games
       - ./config:/app/config
@@ -23,3 +37,26 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+
+  worker:
+    container_name: myfoil-worker
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: myfoil-local:latest
+    restart: unless-stopped
+    command: celery -A celery_app.celery worker --loglevel=info --concurrency=2
+    depends_on:
+      redis:
+        condition: service_healthy
+      myfoil:
+        condition: service_started
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - /path/to/your/games:/games
+      - ./config:/app/config
+      - ./data:/app/data

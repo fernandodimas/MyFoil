@@ -50,7 +50,7 @@ from jobs.scheduler import JobScheduler
 # Optional Celery for async tasks
 try:
     from celery_app import celery
-    from tasks import scan_library_async, identify_file_async
+    from tasks import scan_library_async, identify_file_async, fetch_metadata_for_all_games_async
 
     # Test Redis connection before enabling Celery
     import redis
@@ -407,6 +407,15 @@ def init_internal(app):
             interval=timedelta(hours=24),
             run_first=False,
         )
+
+        # Weekly metadata refresh for existing games
+        if CELERY_ENABLED:
+            app.scheduler.add_job(
+                job_id="metadata_refresh",
+                func=lambda: fetch_metadata_for_all_games_async.delay(),
+                interval=timedelta(days=7),
+                run_first=False,
+            )
 
         app.scheduler.add_job(
             job_id="daily_backup",

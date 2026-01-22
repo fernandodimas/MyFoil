@@ -994,6 +994,8 @@ $(document).ready(async () => {
         $('#encryptShopCheck').prop('checked', set['shop/encrypt']);
         if (set['shop/motd']) $('#motdTextArea').val(set['shop/motd']);
         if (set['apis/rawg_api_key']) $('#rawgApiKey').val(set['apis/rawg_api_key']);
+        if (set['apis/igdb_client_id']) $('#igdbClientId').val(set['apis/igdb_client_id']);
+        if (set['apis/igdb_client_secret']) $('#igdbClientSecret').val(set['apis/igdb_client_secret']);
     } catch (e) {
         debugError("Failed to load critical settings:", e);
         showToast(t('Failed to load settings from server'), 'error');
@@ -1008,11 +1010,17 @@ $('.modal-background').on('click', function () { closeModal($(this).parent().att
 // --- External API Settings ---
 function saveAPISettings() {
     const rawg_api_key = $('#rawgApiKey').val();
+    const igdb_client_id = $('#igdbClientId').val();
+    const igdb_client_secret = $('#igdbClientSecret').val();
     $.ajax({
         url: '/api/settings/apis',
         type: 'POST',
         contentType: 'application/json',
-        data: JSON.stringify({ rawg_api_key }),
+        data: JSON.stringify({
+            rawg_api_key,
+            igdb_client_id,
+            igdb_client_secret
+        }),
         success: (res) => {
             if (res.success) showToast(t('Configurações de API salvas'));
             else showToast(t('Erro ao salvar configurações'), 'error');
@@ -1030,6 +1038,24 @@ function testRAWGConnection() {
             showToast(t('Conexão OK! Encontrado: ') + res.name);
         } else {
             showToast(t('Nenhum resultado encontrado. Verifique sua chave.'), 'warning');
+        }
+    }).fail((err) => {
+        btn.removeClass('is-loading');
+        showToast(t('Erro ao testar conexão: ') + (err.responseJSON?.error || t('Erro desconhecido')), 'error');
+    });
+}
+
+function testIGDBConnection() {
+    const btn = $(event.currentTarget);
+    btn.addClass('is-loading');
+    $.getJSON('/api/library/search-igdb?q=zelda', (res) => {
+        btn.removeClass('is-loading');
+        if (Array.isArray(res) && res.length > 0) {
+            showToast(t('Conexão OK! Encontrado: ') + res[0].name);
+        } else if (res && res.name) {
+            showToast(t('Conexão OK! Encontrado: ') + res.name);
+        } else {
+            showToast(t('Nenhum resultado encontrado. Verifique seu ID/Secret.'), 'warning');
         }
     }).fail((err) => {
         btn.removeClass('is-loading');
