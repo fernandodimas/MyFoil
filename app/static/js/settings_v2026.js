@@ -198,8 +198,7 @@ function checkWatchdogStatus() {
                 headerStatus.find('span:last-child').text(`Watchdog: ${hasPaths ? t("Monitoring") : t("No libraries configured")}`);
 
                 const icon = hasPaths ? 'bi-broadcast' : 'bi-pause-circle';
-                text.html(`<span class="icon mr-1"><i class="bi ${icon}"></i></span>
-                    <span class="icon mr-2"><i class="bi ${icon}"></i></span>
+                text.html(`<span class="icon mr-2"><i class="bi ${icon}"></i></span>
                     Watchdog: ${hasPaths ? t("Monitoring") : t("No libraries configured")}`);
             });
         }
@@ -214,9 +213,7 @@ function checkWatchdogStatus() {
             headerStatus.find('span:last-child').text(`Watchdog: ${hasPaths ? t("Monitoring") : t("No libraries configured")}`);
 
             const icon = hasPaths ? 'bi-broadcast' : 'bi-pause-circle';
-            text.html(`<span class="icon mr-1"><i class="bi ${icon}"></i></span>
-                <span class="icon mr-2"><i class="bi ${icon}"></i></span>
-                Watchdog: ${hasPaths ? t("Monitoring") : t("No libraries configured")}`);
+            text.html(`Watchdog: ${hasPaths ? t("Monitoring") : t("No libraries configured")}`);
         });
     });
 }
