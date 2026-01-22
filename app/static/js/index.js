@@ -56,15 +56,7 @@ function observeImages() {
     }
 }
 
-// Debounce Utility
-function debounce(func, wait) {
-    let timeout;
-    return function (...args) {
-        const context = this;
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(context, args), wait);
-    };
-}
+// window.debounce is defined in base.js for global use
 
 function initGenders(gamesList) {
     const genders = new Set();
@@ -585,7 +577,7 @@ $(document).ready(() => {
     });
 
     $('.filterInput').on('change', applyFilters);
-    $('#navbarSearch').on('input', debounce(() => {
+    $('#navbarSearch').on('input', window.debounce(() => {
         applyFilters();
         toggleSearchClearBtn();
     }, 300));

@@ -1,3 +1,4 @@
+console.log('MyFoil: settings.js loaded');
 let allUsernames = [];
 
 // Helper functions
