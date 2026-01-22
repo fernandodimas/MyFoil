@@ -3,7 +3,10 @@ version: "3.8"
 services:
   myfoil:
     container_name: myfoil
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: myfoil-local:latest
     restart: unless-stopped
     environment:
       - PUID=1000
