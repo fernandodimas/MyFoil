@@ -11,9 +11,11 @@ services:
       - PGID=1000
       - TZ=UTC
     volumes:
-      - /path/to/your/games:/games
+      - ./app:/app
+      - ./docker/run.sh:/app/run.sh
       - ./config:/app/config
       - ./data:/app/data
+      - /path/to/your/games:/games
     ports:
       - "8465:8465"
     healthcheck:
