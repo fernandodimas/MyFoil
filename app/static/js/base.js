@@ -97,6 +97,21 @@ window.updateGridZoom = function (val) {
     localStorage.setItem('gridZoom', zoomVal);
 };
 
+/**
+ * Debounce function to limit the rate at which a function is executed
+ * @param {Function} func 
+ * @param {number} wait 
+ * @returns 
+ */
+window.debounce = function (func, wait) {
+    let timeout;
+    return function (...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), wait);
+    };
+};
+
 // Global Initialization
 document.addEventListener('DOMContentLoaded', function () {
     // Apply saved zoom immediately
@@ -139,20 +154,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    /**
-     * Debounce function to limit the rate at which a function is executed
-     * @param {Function} func 
-     * @param {number} wait 
-     * @returns 
-     */
-    window.debounce = function (func, wait) {
-        let timeout;
-        return function (...args) {
-            const context = this;
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(context, args), wait);
-        };
-    };
+    // WebSocket Global Listener
+    if (typeof io !== 'undefined') {
+        // ... (WebSocket init code remains here or inside DOMContentLoaded is fine, but debounce must be global)
+    }
 
     // Service Worker Registration for PWA
     if ('serviceWorker' in navigator) {
