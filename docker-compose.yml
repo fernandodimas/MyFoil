@@ -24,10 +24,10 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ=UTC
+      - TZ=America/Sao_Paulo
       - REDIS_URL=redis://redis:6379/0
     volumes:
-      - /path/to/your/games:/games
+      - /path/to/your/games:/games  # ⚠️ UPDATE THIS PATH!
       - ./config:/app/config
       - ./data:/app/data
     ports:
@@ -54,9 +54,9 @@ services:
     environment:
       - PUID=1000
       - PGID=1000
-      - TZ=UTC
+      - TZ=America/Sao_Paulo
       - REDIS_URL=redis://redis:6379/0
     volumes:
-      - /path/to/your/games:/games
+      - /path/to/your/games:/games  # ⚠️ UPDATE THIS PATH!
       - ./config:/app/config
       - ./data:/app/data

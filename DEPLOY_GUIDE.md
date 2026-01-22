@@ -1,125 +1,212 @@
-# 🐳 Guia de Deploy - MyFoil
+# 🐳 Guia de Deploy - MyFoil (Portainer)
 
-## ⚠️ IMPORTANTE: Resolver Cache de JavaScript
+## ⚠️ Você está usando Portainer - Passos Específicos
 
-Você está enfrentando o erro: `exec: "/app/run.sh": is a directory: permission denied`
+### Problema Atual
+Erro: `exec: "/app/run.sh": is a directory: permission denied`
 
-**Causa:** O Docker Desktop está usando uma imagem antiga em cache.
+**Causa:** Portainer está usando imagem Docker antiga em cache.
 
 ---
 
-## ✅ Solução: Rebuild Completo
+## ✅ Solução: Rebuild via Portainer
 
-### Opção 1: Via Docker Desktop UI (Recomendado)
+### Passo 1: Parar e Remover a Stack
 
-1. **Pare todos os containers:**
-   - Abra Docker Desktop
-   - Vá em "Containers"
-   - Pare e delete os containers `myfoil`, `myfoil-redis`, `myfoil-worker`
+1. Acesse Portainer
+2. Vá em **Stacks** → Selecione sua stack `MyFoil`
+3. Clique em **Stop** (botão vermelho)
+4. Depois clique em **Remove** (delete)
+5. ✅ Confirme a remoção
 
-2. **Delete a imagem antiga:**
-   - Vá em "Images"
-   - Delete a imagem `myfoil-local:latest`
+### Passo 2: Remover Imagens Antigas
 
-3. **Rebuild sem cache:**
-   - Abra o terminal
-   - Navegue até a pasta do projeto:
-     ```bash
-     cd /Users/fernandosouza/Documents/Projetos/MyFoil
-     ```
-   - Execute:
-     ```bash
-     docker compose build --no-cache
-     docker compose up -d
-     ```
+1. Vá em **Images** (menu lateral)
+2. Procure por `myfoil-local:latest`
+3. Selecione a imagem
+4. Clique em **Remove** 
+5. ✅ Marque "Force removal" se aparecer
+6. Confirme
 
-### Opção 2: Via Terminal (Mais Rápido)
+### Passo 3: Recriar a Stack
+
+1. Vá em **Stacks** → **Add stack**
+2. Nome: `MyFoil` (ou o nome que você usava)
+3. **Build method:** Selecione "Web editor"
+4. Cole o conteúdo do `docker-compose.yml` atualizado (veja abaixo)
+5. **IMPORTANTE:** Na seção "Advanced settings":
+   - ✅ Marque **"Pull latest image versions"**
+   - ✅ Marque **"Re-pull images"** (se disponível)
+6. Clique em **Deploy the stack**
+
+---
+
+## 📝 docker-compose.yml Atualizado
+
+**IMPORTANTE:** Atualize o path dos games na linha 30!
+
+```yaml
+version: "3.8"
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: myfoil-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  myfoil:
+    container_name: myfoil
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: myfoil-local:latest
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Sao_Paulo
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - /SEU/PATH/AQUI:/games  # ⚠️ ATUALIZE ESTE PATH!
+      - ./config:/app/config
+      - ./data:/app/data
+    ports:
+      - "8465:8465"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8465/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  worker:
+    container_name: myfoil-worker
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: myfoil-local:latest
+    restart: unless-stopped
+    command: celery -A celery_app.celery worker --loglevel=info --concurrency=2
+    depends_on:
+      redis:
+        condition: service_healthy
+      myfoil:
+        condition: service_started
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Sao_Paulo
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - /SEU/PATH/AQUI:/games  # ⚠️ ATUALIZE ESTE PATH!
+      - ./config:/app/config
+      - ./data:/app/data
+```
+
+---
+
+## 🔄 Alternativa: Rebuild Sem Remover Stack
+
+Se você **não quer** remover a stack:
+
+1. Na stack do Portainer, clique em **Editor**
+2. No final do arquivo, adicione um comentário com a data:
+   ```yaml
+   # Updated: 2026-01-22 16:40
+   ```
+3. Clique em **Update the stack**
+4. ✅ Marque **"Re-pull and redeploy"**
+5. ✅ Marque **"Prune services"** (remove containers antigos)
+
+**Mas isso NÃO fará rebuild!** Você ainda precisa remover a imagem manualmente (Passo 2 acima).
+
+---
+
+## 🎯 Método Mais Confiável (Via SSH/Terminal)
+
+Se você tem acesso SSH ao servidor do Portainer:
 
 ```bash
-cd /Users/fernandosouza/Documents/Projetos/MyFoil
+# Conecte via SSH ao servidor
+ssh seu-usuario@seu-servidor
 
-# Parar e remover tudo
-docker compose down --volumes --remove-orphans
+# Navegue até a pasta da stack (geralmente em /opt/stacks/MyFoil ou similar)
+cd /opt/stacks/MyFoil
 
-# Remover imagem antiga
+# Pare a stack
+docker compose down
+
+# Remove imagem
 docker rmi myfoil-local:latest
 
 # Rebuild sem cache
 docker compose build --no-cache
 
-# Iniciar
+# Inicie novamente
 docker compose up -d
 ```
+
+Depois volte ao Portainer e a stack aparecerá como "running".
 
 ---
 
 ## 🔍 Verificar se Funcionou
 
-Após o rebuild, verifique:
+### No Portainer:
 
-```bash
-# Ver logs
-docker compose logs -f myfoil
+1. **Stacks** → MyFoil → **Logs**
+2. Procure por:
+   ```
+   Starting MyFoil as UID 1000...
+   Starting Web Application...
+   ```
 
-# Deve aparecer:
-# "Starting MyFoil as UID 1000..."
-# "Starting Web Application..."
-```
+### No Browser:
 
-Abra o browser em `http://localhost:8465` e:
-1. Abra DevTools (F12) → Console
-2. Vá em Settings
-3. Verifique se aparece: `MyFoil: settings.js loaded (Version: BUNDLED_FIX)`
+1. Abra `http://SEU-SERVIDOR:8465/settings`
+2. F12 (DevTools) → Console
+3. Deve aparecer: `MyFoil: settings.js loaded (Version: BUNDLED_FIX)`
 4. Teste os botões das APIs externas
 
 ---
 
-## 🛠️ Modo Desenvolvimento (Opcional)
+## 📋 Checklist
 
-Se você quer **live reload** (mudanças no código sem rebuild):
-
-1. **Atualize o path dos games** em `docker-compose.dev.yml`:
-   ```yaml
-   - /path/to/your/games:/games  # ← Mude para seu path real
-   ```
-
-2. **Use o compose de desenvolvimento:**
-   ```bash
-   docker compose -f docker-compose.dev.yml up
-   ```
-
-**Vantagem:** Qualquer mudança em `app/` reflete imediatamente, sem rebuild.
+- [ ] Stack parada e removida no Portainer
+- [ ] Imagem `myfoil-local:latest` removida
+- [ ] Path dos games atualizado no YAML
+- [ ] Stack recriada com "Pull latest images" marcado
+- [ ] Containers iniciaram (verde no Portainer)
+- [ ] Logs mostram "Starting Web Application..."
+- [ ] Browser mostra `Version: BUNDLED_FIX`
+- [ ] Botões de API funcionam
 
 ---
 
-## 📋 Checklist de Validação
+## 🆘 Troubleshooting Portainer
 
-- [ ] Containers iniciaram sem erros
-- [ ] Console mostra `Version: BUNDLED_FIX`
-- [ ] Build version: `20260122_1631` ou superior
-- [ ] Botões de API funcionam (sem `ReferenceError`)
-- [ ] Settings page carrega corretamente
+### Erro: "Cannot remove image, container is using it"
+- Vá em **Containers** → Remova manualmente os containers `myfoil`, `myfoil-worker`, `myfoil-redis`
+- Depois remova a imagem
 
----
+### Erro: "Build context not found"
+- Certifique-se que o repositório está clonado no servidor
+- O Portainer precisa acessar o `Dockerfile` e pasta `app/`
+- Caminho comum: `/opt/stacks/MyFoil/`
 
-## 🆘 Se Ainda Não Funcionar
-
-1. **Verifique se o path dos games está correto:**
-   - Edite `docker-compose.yml` linha 30
-   - Troque `/path/to/your/games` pelo path real
-
-2. **Verifique logs de erro:**
-   ```bash
-   docker compose logs myfoil | grep -i error
-   ```
-
-3. **Force cleanup completo:**
-   ```bash
-   docker system prune -a --volumes
-   # ⚠️ CUIDADO: Remove TODAS imagens e volumes não usados
-   ```
+### Stack não builda, só puxa imagens
+- Portainer **não faz build automático** via web editor se a imagem já existe
+- **Solução:** Remova a imagem primeiro (Passo 2)
 
 ---
 
-**Última atualização:** 2026-01-22 16:40  
-**Build atual:** 20260122_1631
+**Última atualização:** 2026-01-22 16:41  
+**Build atual:** 20260122_1640  
+**Portainer:** Testado em v2.19+
