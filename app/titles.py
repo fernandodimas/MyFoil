@@ -1180,6 +1180,11 @@ def sync_titles_to_db(force=False):
         logger.warning("sync_titles_to_db: TitleDB not loaded, skipping sync.")
         return
 
+    from flask import has_app_context
+    if not has_app_context():
+        logger.warning("sync_titles_to_db: No app context, skipping sync.")
+        return
+
     logger.info("Syncing TitleDB metadata to database...")
 
     try:

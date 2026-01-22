@@ -244,10 +244,11 @@ def update_titledb_job(force=False):
         current_settings = load_settings()
         import titledb
 
-        titledb.update_titledb(current_settings, force=force)
-
+        # Perform update within app context to allow DB sync during load_titledb
         if "app" in globals():
             with app.app_context():
+                titledb.update_titledb(current_settings, force=force)
+
                 logger.info("Syncing new TitleDB versions to library...")
                 add_missing_apps_to_db()
                 update_titles()
@@ -259,6 +260,9 @@ def update_titledb_job(force=False):
                     identify_library_files(library.path)
                 generate_library(force=True)
                 logger.info("Library cache regenerated after TitleDB update.")
+        else:
+             # Fallback for standalone scripts (won't sync to DB)
+             titledb.update_titledb(current_settings, force=force)
 
         logger.info("TitleDB update job completed.")
         return True
