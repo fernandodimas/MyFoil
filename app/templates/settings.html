@@ -211,52 +211,58 @@
                                         User') }}</h3>
                                     <div class="notification is-ghost border p-5"
                                         style="border-left: 5px solid var(--color-primary) !important;">
-                                        <div class="columns">
-                                            <div class="column">
-                                                <div class="field">
-                                                    <label class="label is-small">{{ t('Username') }}</label>
-                                                    <div class="control">
-                                                        <input class="input" type="text" id="inputNewUser"
-                                                            placeholder="Ex: admin" pattern="^[a-zA-Z0-9_-]{3,20}$"
-                                                            title="3-20 caracteres (letras, números, _ ou -)" required>
+                                        <form onsubmit="event.preventDefault(); submitNewUser();">
+                                            <div class="columns">
+                                                <div class="column">
+                                                    <div class="field">
+                                                        <label class="label is-small">{{ t('Username') }}</label>
+                                                        <div class="control">
+                                                            <input class="input" type="text" id="inputNewUser"
+                                                                placeholder="Ex: admin" pattern="^[a-zA-Z0-9_-]{3,20}$"
+                                                                title="3-20 caracteres (letras, números, _ ou -)"
+                                                                required autocomplete="username">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="column">
+                                                    <div class="field">
+                                                        <label class="label is-small">{{ t('Password') }}</label>
+                                                        <div class="control">
+                                                            <input class="input" type="password"
+                                                                id="inputNewUserPassword" minlength="6" required
+                                                                autocomplete="new-password">
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="column">
-                                                <div class="field">
-                                                    <label class="label is-small">{{ t('Password') }}</label>
-                                                    <div class="control">
-                                                        <input class="input" type="password" id="inputNewUserPassword"
-                                                            minlength="6" required>
-                                                    </div>
+
+                                            <div class="field is-grouped is-grouped-multiline mb-5">
+                                                <div class="control">
+                                                    <label class="checkbox mr-4">
+                                                        <input type="checkbox" id="checkboxNewUserShopAccess" checked>
+                                                        {{
+                                                        t('Shop Access') }}
+                                                    </label>
+                                                </div>
+                                                <div class="control">
+                                                    <label class="checkbox mr-4">
+                                                        <input type="checkbox" id="checkboxNewUserBackupAccess"> {{
+                                                        t('Backup Access') }}
+                                                    </label>
+                                                </div>
+                                                <div class="control">
+                                                    <label class="checkbox">
+                                                        <input type="checkbox" id="checkboxNewUserAdminAccess"> {{
+                                                        t('Admin
+                                                        Access') }}
+                                                    </label>
                                                 </div>
                                             </div>
-                                        </div>
 
-                                        <div class="field is-grouped is-grouped-multiline mb-5">
-                                            <div class="control">
-                                                <label class="checkbox mr-4">
-                                                    <input type="checkbox" id="checkboxNewUserShopAccess" checked> {{
-                                                    t('Shop Access') }}
-                                                </label>
-                                            </div>
-                                            <div class="control">
-                                                <label class="checkbox mr-4">
-                                                    <input type="checkbox" id="checkboxNewUserBackupAccess"> {{
-                                                    t('Backup Access') }}
-                                                </label>
-                                            </div>
-                                            <div class="control">
-                                                <label class="checkbox">
-                                                    <input type="checkbox" id="checkboxNewUserAdminAccess"> {{ t('Admin
-                                                    Access') }}
-                                                </label>
-                                            </div>
-                                        </div>
-
-                                        <button class="button is-primary is-fullwidth-mobile" onclick="submitNewUser()">
-                                            {{ t('Create Account') }}
-                                        </button>
+                                            <button class="button is-primary is-fullwidth-mobile" type="submit">
+                                                {{ t('Create Account') }}
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
                             </div>

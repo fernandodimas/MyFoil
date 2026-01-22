@@ -139,6 +139,21 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    /**
+     * Debounce function to limit the rate at which a function is executed
+     * @param {Function} func 
+     * @param {number} wait 
+     * @returns 
+     */
+    window.debounce = function (func, wait) {
+        let timeout;
+        return function (...args) {
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), wait);
+        };
+    };
+
     // Service Worker Registration for PWA
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/static/sw.js')
