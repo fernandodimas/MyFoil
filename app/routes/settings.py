@@ -555,3 +555,25 @@ def delete_user_api():
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 400
+
+
+@settings_bp.route("/settings/apis", methods=["POST"])
+@access_required("admin")
+def apis_settings_api():
+    """Gerenciar configurações de APIs externas"""
+    data = request.json
+    settings = load_settings()
+
+    if "apis" not in settings:
+        settings["apis"] = {}
+
+    if "rawg_api_key" in data:
+        settings["apis"]["rawg_api_key"] = data["rawg_api_key"]
+
+    with open(CONFIG_FILE, "w") as yaml_file:
+        import yaml
+
+        yaml.dump(settings, yaml_file)
+
+    reload_conf()
+    return jsonify({"success": True})

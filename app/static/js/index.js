@@ -195,6 +195,19 @@ function renderCardView(items) {
                             <span class="font-mono is-size-7 has-text-weight-bold">v${game.display_version}</span>
                         </div>
                         
+                        <div class="is-flex is-align-items-center mb-2">
+                            ${game.metacritic_score ? `
+                                <span class="tag is-small is-light ${game.metacritic_score >= 75 ? 'is-success' : (game.metacritic_score >= 50 ? 'is-warning' : 'is-danger')} mr-1" title="Metacritic">
+                                    <i class="bi bi-trophy-fill mr-1"></i>${game.metacritic_score}
+                                </span>
+                            ` : ''}
+                            ${game.playtime_main ? `
+                                <span class="tag is-small is-light is-info" title="Playtime">
+                                    <i class="bi bi-clock-history mr-1"></i>${game.playtime_main}h
+                                </span>
+                            ` : ''}
+                        </div>
+                        
                         <h3 class="game-title title is-6 has-text-weight-bold mb-3 line-clamp-2" title="${safeName}">${safeName}</h3>
                         
                         <div class="is-flex is-justify-content-between is-align-items-center mt-auto pt-2">
@@ -259,6 +272,7 @@ function renderListView(items) {
                             <th>${t('Título do Jogo')}</th>
                             <th width="140">${t('Title ID')}</th>
                             <th width="80" class="has-text-centered">${t('Versão')}</th>
+                            <th class="is-hidden-mobile" width="80">${t('Ratings')}</th>
                             <th class="is-hidden-mobile" width="100">${t('Tamanho')}</th>
                             <th class="is-hidden-mobile" width="100">${t('Status')}</th>
                         </tr>
@@ -281,6 +295,9 @@ function renderListView(items) {
                 </td>
                 <td class="font-mono is-size-7 is-vcentered">${game.id || '--'}</td>
                 <td class="is-vcentered has-text-centered"><span class="tag is-light is-small">v${game.display_version || '0'}</span></td>
+                <td class="is-hidden-mobile is-vcentered">
+                    ${game.metacritic_score ? `<span class="tag is-small is-light ${game.metacritic_score >= 75 ? 'is-success' : (game.metacritic_score >= 50 ? 'is-warning' : 'is-danger')}" title="Metacritic">${game.metacritic_score}</span>` : '--'}
+                </td>
                 <td class="is-hidden-mobile is-vcentered font-mono is-size-7">${game.size_formatted || '--'}</td>
                 <td class="is-hidden-mobile ${statusColor} has-text-weight-bold is-size-7 is-vcentered">${statusText}</td>
             </tr>

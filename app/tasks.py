@@ -108,3 +108,37 @@ def scan_all_libraries_async():
 
         logger.info("Background task: Full scan completed.")
         return True
+
+
+@celery.task(name="tasks.fetch_metadata_for_game_async")
+def fetch_metadata_for_game_async(title_id):
+    """Fetch metadata for a single game"""
+    with flask_app.app_context():
+        from db import Titles
+        from services.rating_service import update_game_metadata
+
+        game = Titles.query.filter_by(title_id=title_id).first()
+        if not game:
+            logger.error("game_not_found", title_id=title_id)
+            return False
+
+        logger.info("fetching_metadata", title_id=title_id, name=game.name)
+        return update_game_metadata(game, force=False)
+
+
+@celery.task(name="tasks.fetch_metadata_for_all_games_async")
+def fetch_metadata_for_all_games_async():
+    """Background task to fetch metadata for ALL games"""
+    with flask_app.app_context():
+        from db import Titles
+
+        # Only fetch for games that have at least the base game (identified)
+        games = Titles.query.filter(Titles.have_base == True).all()
+
+        logger.info("metadata_batch_started", count=len(games))
+
+        for game in games:
+            # We trigger each one as a separate task to manage them better
+            fetch_metadata_for_game_async.delay(game.title_id)
+
+        return True

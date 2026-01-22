@@ -271,6 +271,15 @@ function showGameDetails(id) {
                                     <span>${t('Wishlist')}</span>
                                 </button>
                             </div>
+
+                            ${game.owned ? `
+                            <div class="mt-2">
+                                <button class="button is-fullwidth is-small is-ghost opacity-70" onclick="refreshSingleGameMetadata('${escapeHtml(game.id)}')">
+                                    <i class="bi bi-arrow-repeat mr-1"></i> ${t('Atualizar Ratings')}
+                                </button>
+                            </div>
+                            ` : ''}
+
                             <div class="edit-section">
                                 <button class="button is-fullwidth is-small is-ghost has-text-grey" 
                                         onclick="editGameMetadata('${escapeHtml(game.id)}')"
@@ -285,6 +294,41 @@ function showGameDetails(id) {
                         <div class="mb-6">
                             <h2 class="title is-3 mb-4" style="font-weight: 800; letter-spacing: -0.5px;">${escapeHtml(game.name)}</h2>
                             <p class="is-size-7 font-mono opacity-50 mb-4">${escapeHtml(game.id)}</p>
+                            
+                            <!-- Ratings & Stats Section -->
+                            ${(game.metacritic_score || game.rawg_rating || game.playtime_main) ? `
+                                <div class="box is-shadowless border p-4 mb-5 bg-light-soft" style="border-radius: 12px; border-left: 4px solid var(--color-primary) !important;">
+                                    <div class="columns is-mobile is-vcentered">
+                                        ${game.metacritic_score ? `
+                                            <div class="column has-text-centered">
+                                                <p class="is-size-7 heading mb-1 opacity-50">Metacritic</p>
+                                                <div class="${game.metacritic_score >= 75 ? 'has-text-success' : (game.metacritic_score >= 50 ? 'has-text-warning' : 'has-text-danger')}">
+                                                    <span class="is-size-4 has-text-weight-black">${game.metacritic_score}</span>
+                                                </div>
+                                            </div>
+                                        ` : ''}
+                                        ${game.rawg_rating ? `
+                                            <div class="column has-text-centered">
+                                                <p class="is-size-7 heading mb-1 opacity-50">RAWG</p>
+                                                <div class="has-text-info">
+                                                    <span class="is-size-4 has-text-weight-black">${game.rawg_rating.toFixed(1)}</span>
+                                                    <span class="is-size-7 opacity-50">/ 5</span>
+                                                </div>
+                                            </div>
+                                        ` : ''}
+                                        ${game.playtime_main ? `
+                                            <div class="column has-text-centered">
+                                                <p class="is-size-7 heading mb-1 opacity-50">Playtime</p>
+                                                <div class="has-text-primary">
+                                                    <span class="is-size-4 has-text-weight-black">${game.playtime_main}</span>
+                                                    <span class="is-size-7">h</span>
+                                                </div>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            ` : ''}
+
                             <div class="content is-size-6 opacity-80" style="line-height: 1.7;">
                                 ${game.description || t('No description available')}
                             </div>
@@ -303,11 +347,14 @@ function showGameDetails(id) {
                             <p class="heading has-text-weight-bold mb-3">${t('Screenshots')}</p>
                             <div class="swiper swiper-screenshots" id="gameScreenshotsSwiper">
                                 <div class="swiper-wrapper">
-                                    ${game.screenshots.map((url, idx) => `
+                                    ${game.screenshots.map((s, idx) => {
+            const url = typeof s === 'string' ? s : s.url;
+            return `
                                         <div class="swiper-slide" style="width: auto;">
                                             <img src="${escapeHtml(url)}" alt="Screenshot ${idx + 1}" loading="lazy" onclick="openScreenshotModal('${escapeHtml(url)}')" style="cursor: pointer; width: 320px; height: 180px; object-fit: cover; border-radius: 8px; display: block;">
                                         </div>
-                                    `).join('')}
+                                    `;
+        }).join('')}
                                 </div>
                                 <div class="swiper-pagination"></div>
                                 <div class="swiper-button-prev"></div>
@@ -800,3 +847,19 @@ $(document).on('shown.bs.modal', '#gameDetailsModal', function () {
         viewport.scrollLeft = 0;
     }
 });
+
+function refreshSingleGameMetadata(titleId) {
+    const btn = $(event.currentTarget);
+    btn.addClass('is-loading');
+    $.post(`/api/library/metadata/refresh/${titleId}`, (res) => {
+        showToast(t('Atualização de metadados iniciada em background.'));
+        // Wait a few seconds then reload modal to show new data
+        setTimeout(() => {
+            btn.removeClass('is-loading');
+            showGameDetails(titleId);
+        }, 5000);
+    }).fail(() => {
+        btn.removeClass('is-loading');
+        showToast(t('Erro ao solicitar atualização'), 'error');
+    });
+}

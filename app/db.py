@@ -123,6 +123,28 @@ class Titles(db.Model):
     is_custom = db.Column(db.Boolean, default=False)  # True if edited by user
     added_at = db.Column(db.DateTime)  # When game was first added to library
 
+    # === RATINGS E REVIEWS ===
+    metacritic_score = db.Column(db.Integer)  # 0-100
+    user_rating = db.Column(db.Float)  # 0.0-5.0
+    rawg_rating = db.Column(db.Float)  # 0.0-5.0
+    rating_count = db.Column(db.Integer)  # Número de avaliações
+
+    # === TEMPO DE JOGO ===
+    playtime_main = db.Column(db.Integer)  # Horas (story principal)
+    playtime_extra = db.Column(db.Integer)  # Main + extras
+    playtime_completionist = db.Column(db.Integer)  # 100%
+
+    # === METADADOS ADICIONAIS ===
+    genres_json = db.Column(db.JSON)  # ["Action", "Adventure"]
+    tags_json = db.Column(db.JSON)  # ["Open World", "RPG"]
+    screenshots_json = db.Column(db.JSON)  # [{"url": "...", "source": "rawg"}]
+
+    # === API TRACKING ===
+    rawg_id = db.Column(db.Integer)  # ID no RAWG
+    igdb_id = db.Column(db.Integer)  # ID no IGDB
+    api_last_update = db.Column(db.DateTime)  # Quando foi atualizado
+    api_source = db.Column(db.String(20))  # "rawg" | "igdb" | "manual"
+
     tags = db.relationship("Tag", secondary="title_tag", backref=db.backref("titles", lazy="dynamic"))
 
 
@@ -351,6 +373,20 @@ def init_db(app):
                             ("is_custom", "BOOLEAN DEFAULT 0"),
                             ("last_updated", "DATETIME"),
                             ("added_at", "DATETIME"),
+                            ("metacritic_score", "INTEGER"),
+                            ("user_rating", "FLOAT"),
+                            ("rawg_rating", "FLOAT"),
+                            ("rating_count", "INTEGER"),
+                            ("playtime_main", "INTEGER"),
+                            ("playtime_extra", "INTEGER"),
+                            ("playtime_completionist", "INTEGER"),
+                            ("genres_json", "TEXT"),
+                            ("tags_json", "TEXT"),
+                            ("screenshots_json", "TEXT"),
+                            ("rawg_id", "INTEGER"),
+                            ("igdb_id", "INTEGER"),
+                            ("api_last_update", "DATETIME"),
+                            ("api_source", "VARCHAR(20)"),
                         ]
 
                         modified = False

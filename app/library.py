@@ -797,6 +797,38 @@ def get_game_info_item(tid, title_data):
 
     game["size"] = total_size
     game["size_formatted"] = format_size_py(total_size)
+
+    # === NEW RATINGS & METADATA ===
+    game["metacritic_score"] = title_data.get("metacritic_score")
+    game["rawg_rating"] = title_data.get("rawg_rating")
+    game["rating_count"] = title_data.get("rating_count")
+    game["playtime_main"] = title_data.get("playtime_main")
+
+    # API Genres and Tags
+    api_genres = title_data.get("genres_json") or []
+    if api_genres:
+        # Merge with existing categories if not already present
+        existing_cats = set(game.get("category", []))
+        for g in api_genres:
+            if g not in existing_cats:
+                game.setdefault("category", []).append(g)
+
+    api_tags = title_data.get("tags_json") or []
+    if api_tags:
+        # Merge with existing tags
+        existing_tags = set(game.get("tags", []))
+        for t in api_tags:
+            if t not in existing_tags:
+                game.setdefault("tags", []).append(t)
+
+    # API Screenshots
+    api_screenshots = title_data.get("screenshots_json") or []
+    if api_screenshots:
+        existing_urls = set(s.get("url") for s in game.get("screenshots", []))
+        for s in api_screenshots:
+            if s.get("url") not in existing_urls:
+                game.setdefault("screenshots", []).append(s)
+
     update_apps = [a for a in all_title_apps if a["app_type"] == APP_TYPE_UPD]
     version_release_dates = {v["version"]: v["release_date"] for v in available_versions}
 

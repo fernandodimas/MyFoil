@@ -37,6 +37,8 @@
                         <li><a data-target="Plugins"><i class="bi bi-patch-check mr-2"></i> Plugins <span
                                     class="tag is-warning is-light is-size-9 ml-1"
                                     style="font-size: 0.6rem;">BETA</span></a></li>
+                        <li><a data-target="APIs"><i class="bi bi-cloud-arrow-down-fill mr-2"></i> APIs Externas</a>
+                        </li>
                         <li><a data-target="Help"><i class="bi bi-question-circle mr-2"></i> Ajuda</a></li>
                     </ul>
                 </aside>
@@ -285,7 +287,6 @@
                                 <!-- Watchdog status indicator -->
                                 <div class="notification is-light is-info is-small py-2 px-3 mb-4"
                                     id="watchdogStatusBanner">
-                                    <span class="icon mr-2"><i class="bi bi-broadcast"></i></span>
                                     <span id="watchdogStatusText">{{ t('Checking watchdog status...') }}</span>
                                 </div>
 
@@ -891,6 +892,80 @@
                     </section>
 
                     <!-- Plugins Section -->
+
+                    <!-- APIs Section -->
+                    <section id="section-APIs" class="settings-section is-hidden">
+                        <div class="card box shadow-sm">
+                            <header class="card-header border-none shadow-none">
+                                <p class="card-header-title has-text-primary">
+                                    <i class="bi bi-cloud-arrow-down mr-2"></i> APIs Externas
+                                </p>
+                            </header>
+                            <div class="card-content pt-0">
+                                <p class="is-size-7 mb-4 opacity-70">
+                                    Configure chaves de API para buscar avaliações, ratings e metadados
+                                    adicionais de serviços externos.
+                                </p>
+
+                                <!-- RAWG API -->
+                                <div class="box is-shadowless border p-4 mb-4"
+                                    style="border-left: 5px solid var(--color-primary) !important;">
+                                    <div class="columns is-vcentered">
+                                        <div class="column">
+                                            <h4 class="title is-6 mb-2">
+                                                <i class="bi bi-star-fill has-text-warning mr-2"></i>
+                                                RAWG API
+                                            </h4>
+                                            <p class="is-size-7 opacity-70 mb-3">
+                                                Fornece ratings (Metacritic, usuários), screenshots,
+                                                gêneros e tempo de jogo estimado.
+                                            </p>
+                                            <div class="field">
+                                                <label class="label is-small">API Key</label>
+                                                <div class="control">
+                                                    <input class="input is-small" type="password" id="rawgApiKey"
+                                                        placeholder="Obtenha em: https://rawg.io/apidocs">
+                                                </div>
+                                                <p class="help is-size-7">
+                                                    Limite: 20,000 requests/mês (gratuito)
+                                                    <a href="https://rawg.io/apidocs" target="_blank"
+                                                        class="has-text-link">Criar conta</a>
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="column is-narrow">
+                                            <button class="button is-small is-primary is-light"
+                                                onclick="testRAWGConnection()">
+                                                <i class="bi bi-check-circle mr-1"></i> Testar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Bulk Actions -->
+                                <div class="notification is-ghost border p-4"
+                                    style="border-left: 5px solid var(--color-info) !important;">
+                                    <h4 class="title is-6 mb-3">Ações em Massa</h4>
+                                    <div class="buttons">
+                                        <button class="button is-info is-light" id="btnRefreshAllMetadata"
+                                            onclick="refreshAllMetadata()">
+                                            <i class="bi bi-arrow-repeat mr-2"></i>
+                                            Atualizar Metadados de Todos os Jogos
+                                        </button>
+                                    </div>
+                                    <p class="help is-size-7 opacity-70">
+                                        ⚠️ Isso buscará notas e tempo de jogo para todos os itens identificados. Pode
+                                        levar tempo.
+                                    </p>
+                                </div>
+
+                                <button class="button is-primary mt-4" onclick="saveAPISettings()">
+                                    <i class="bi bi-check-lg mr-1"></i> Salvar Configurações
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
                     <!-- Help Section -->
                     <section id="section-Help" class="settings-section is-hidden">
                         <div class="card box shadow-sm">

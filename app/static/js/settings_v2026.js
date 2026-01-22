@@ -992,7 +992,8 @@ $(document).ready(async () => {
         $('#publicShopCheck').prop('checked', set['shop/public']);
         $('#publicProfileCheck').prop('checked', set['shop/public_profile']);
         $('#encryptShopCheck').prop('checked', set['shop/encrypt']);
-        $('#motdTextArea').val(set['shop/motd']);
+        if (set['shop/motd']) $('#motdTextArea').val(set['shop/motd']);
+        if (set['apis/rawg_api_key']) $('#rawgApiKey').val(set['apis/rawg_api_key']);
     } catch (e) {
         debugError("Failed to load critical settings:", e);
         showToast(t('Failed to load settings from server'), 'error');
@@ -1003,3 +1004,55 @@ $(document).ready(async () => {
 });
 
 $('.modal-background').on('click', function () { closeModal($(this).parent().attr('id')); });
+
+// --- External API Settings ---
+function saveAPISettings() {
+    const rawg_api_key = $('#rawgApiKey').val();
+    $.ajax({
+        url: '/api/settings/apis',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ rawg_api_key }),
+        success: (res) => {
+            if (res.success) showToast(t('Configurações de API salvas'));
+            else showToast(t('Erro ao salvar configurações'), 'error');
+        },
+        error: () => showToast(t('Erro de comunicação'), 'error')
+    });
+}
+
+function testRAWGConnection() {
+    const btn = $(event.currentTarget);
+    btn.addClass('is-loading');
+    $.getJSON('/api/library/search-rawg?q=zelda', (res) => {
+        btn.removeClass('is-loading');
+        if (res && res.name) {
+            showToast(t('Conexão OK! Encontrado: ') + res.name);
+        } else {
+            showToast(t('Nenhum resultado encontrado. Verifique sua chave.'), 'warning');
+        }
+    }).fail((err) => {
+        btn.removeClass('is-loading');
+        showToast(t('Erro ao testar conexão: ') + (err.responseJSON?.error || t('Erro desconhecido')), 'error');
+    });
+}
+
+function refreshAllMetadata() {
+    confirmAction({
+        title: t('Atualizar Metadados'),
+        message: t('Isso buscará notas, tempo de jogo e screenshots para TODOS os itens identificados. Pode levar vários minutos. Deseja continuar?'),
+        confirmText: t('Atualizar Todos'),
+        confirmClass: 'is-info',
+        onConfirm: () => {
+            const btn = $('#btnRefreshAllMetadata');
+            btn.addClass('is-loading');
+            $.post('/api/library/metadata/refresh-all', (res) => {
+                showToast(t('Atualização em massa iniciada em segundo plano.'));
+                setTimeout(() => btn.removeClass('is-loading'), 3000);
+            }).fail(() => {
+                btn.removeClass('is-loading');
+                showToast(t('Erro ao iniciar atualização'), 'error');
+            });
+        }
+    });
+}

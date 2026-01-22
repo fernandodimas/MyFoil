@@ -646,6 +646,25 @@ def app_info_api(id):
     result["app_id"] = tid
     result["title_id"] = tid
 
+    # Ratings & Stats from Title object
+    if title_obj:
+        result["metacritic_score"] = title_obj.metacritic_score
+        result["rawg_rating"] = title_obj.rawg_rating
+        result["rating_count"] = title_obj.rating_count
+        result["playtime_main"] = title_obj.playtime_main
+        # API Genres/Tags if available
+        if title_obj.genres_json:
+            result["category"] = list(set((result.get("category") or []) + (title_obj.genres_json or [])))
+        if title_obj.tags_json:
+            result["tags"] = list(set((result.get("tags") or []) + (title_obj.tags_json or [])))
+        # Screenshots
+        if title_obj.screenshots_json:
+            existing_ss = set(s if isinstance(s, str) else s.get("url") for s in result.get("screenshots", []))
+            for ss in title_obj.screenshots_json:
+                url = ss if isinstance(ss, str) else ss.get("url")
+                if url not in existing_ss:
+                    result.setdefault("screenshots", []).append(ss)
+
     # Include added_at for display in modal
     result["added_at"] = title_obj.added_at.isoformat() if title_obj and title_obj.added_at else None
 
@@ -760,3 +779,54 @@ def delete_tag_api(tag_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
+
+@library_bp.route("/library/metadata/refresh/<title_id>", methods=["POST"])
+@access_required("shop")
+def refresh_game_metadata(title_id):
+    """Manually refresh metadata for a specific game"""
+    from tasks import fetch_metadata_for_game_async
+
+    game = Titles.query.filter_by(title_id=title_id).first()
+    if not game:
+        return jsonify({"error": "Game not found"}), 404
+
+    # Queue async task
+    fetch_metadata_for_game_async.delay(title_id)
+
+    return jsonify({"message": "Metadata refresh queued", "title_id": title_id})
+
+
+@library_bp.route("/library/metadata/refresh-all", methods=["POST"])
+@access_required("admin")
+def refresh_all_metadata():
+    """Refresh metadata for all games (admin only)"""
+    from tasks import fetch_metadata_for_all_games_async
+
+    fetch_metadata_for_all_games_async.delay()
+
+    return jsonify({"message": "Metadata refresh queued for all games"})
+
+
+@library_bp.route("/library/search-rawg", methods=["GET"])
+@access_required("admin")
+def search_rawg_api():
+    """Search RAWG API directly (for testing/manual matching)"""
+    query = request.args.get("q")
+    if not query:
+        return jsonify({"error": "Query parameter 'q' required"}), 400
+
+    from services.rating_service import RAWGClient
+
+    settings = load_settings()
+    api_key = settings.get("apis", {}).get("rawg_api_key")
+
+    if not api_key:
+        return jsonify({"error": "RAWG API key not configured"}), 500
+
+    client = RAWGClient(api_key)
+    try:
+        result = client.search_game(query)
+        return jsonify(result or {})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

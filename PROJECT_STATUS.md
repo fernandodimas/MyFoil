@@ -32,6 +32,16 @@ The following core components have been successfully implemented, tested, and in
 ### 4. Documentation
 - [x] **README Updates**: Updated `README.md` to reflect new features (Multi-source, API usage, JSON downloads).
 
+### 5. Game Metadata & Ratings (RAWG Integration)
+- [x] **New Database Fields**: Added support for Metacritic, RAWG ratings, Playtime (story/completionist), and API-sourced genres/screenshots in the `Titles` table.
+- [x] **Auto-Migration**: Implemented schema evolution logic in `app/db.py` to seamlessly update existing SQLite databases.
+- [x] **Rating Service**: Developed `app/services/rating_service.py` with rate-limiting and normalized data handling.
+- [x] **Async Processing**: Integrated metadata fetching into Celery tasks for bulk library updates without performance degradation.
+- [x] **UI Enhancements**:
+  - Integrated ratings and playtime badges in Library Grid and List views.
+  - Enhanced Game Details modal with rich stats and localized eShop links.
+  - Added "External APIs" tab in Settings to manage RAWG API keys.
+
 ---
 
 ## 🚧 Pending Tasks (Prioritized Roadmap)
@@ -66,6 +76,10 @@ Several files appear to be remnants of refactoring or backup processes and shoul
 
 #### 4. Legacy ZIP Removal Plan
 Now that direct JSON downloads are implemented and faster, we should plan to eventually phase out the `unzip-http` dependency if it proves unstable, keeping it only as a fast-path fallback.
+
+#### 5. Additional Metadata Providers (IGDB)
+- **Task**: Implement IGDB as an alternative/fallback provider for metadata.
+- **Reason**: Redundancy in case RAWG limits are reached or data is missing.
 
 ### 🟢 Low Priority (Polish)
 
