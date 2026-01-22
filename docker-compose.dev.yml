@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: myfoil-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  myfoil:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: myfoil-dev
+    restart: unless-stopped
+    ports:
+      - "8465:8465"
+    volumes:
+      # DEVELOPMENT MODE: Mount source code for live reload
+      - ./app:/app
+      - ./docker/run.sh:/app/run.sh
+      # Data volumes
+      - /path/to/your/games:/games
+      - ./config:/app/config
+      - ./data:/app/data
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - CONFIG_FILE=/app/config/config.json
+      - MYFOIL_DB=sqlite:////app/data/myfoil.db
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8465/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: myfoil-celery-dev
+    restart: unless-stopped
+    command: celery -A celery_app.celery worker --loglevel=info
+    volumes:
+      # Same volumes as main app
+      - ./app:/app
+      - /path/to/your/games:/games
+      - ./config:/app/config
+      - ./data:/app/data
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CONFIG_FILE=/app/config/config.json
+      - MYFOIL_DB=sqlite:////app/data/myfoil.db
+      - CELERY_REQUIRED=true
+    depends_on:
+      redis:
+        condition: service_healthy

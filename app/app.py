@@ -477,6 +477,31 @@ def create_app():
     # Initialize SocketIO
     socketio.init_app(app, cors_allowed_origins="*", async_mode="gevent", engineio_logger=False, logger=False)
 
+    # Add Cache-Control headers for static files
+    @app.after_request
+    def add_cache_control_headers(response):
+        """
+        Prevent aggressive caching of static assets to avoid stale JS/CSS issues.
+        
+        Strategy:
+        - JS/CSS: Force revalidation on every request (no-cache)
+        - Images/Fonts: Allow 1 hour browser cache (performance)
+        - API responses: No caching (already handled per-endpoint)
+        """
+        from flask import request
+        
+        if request.path.startswith('/static/'):
+            # Force revalidation for JS/CSS to prevent stale code
+            if request.path.endswith(('.js', '.css')):
+                response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+                response.headers['Pragma'] = 'no-cache'
+                response.headers['Expires'] = '0'
+            # Allow reasonable caching for images/fonts (performance)
+            elif request.path.endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.woff', '.woff2', '.ttf', '.eot')):
+                response.headers['Cache-Control'] = 'public, max-age=3600'
+        
+        return response
+
     # SocketIO event handlers
     @socketio.on("connect")
     def handle_connect():

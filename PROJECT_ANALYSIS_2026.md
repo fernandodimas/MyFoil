@@ -94,43 +94,94 @@ MyFoil é um fork melhorado do Ownfoil - um gerenciador de biblioteca Nintendo S
 
 ### 🔴 Crítico (Bloqueadores)
 
-#### 1. Problema de Cache do Docker ⚠️
-**Prioridade:** Crítica  
-**Status:** Ativo  
-**Arquivos Afetados:** Todos os arquivos JavaScript/CSS
+#### 1. Problema de Cache JavaScript/CSS - ANÁLISE COMPLETA ⚠️
+**Prioridade:** CRÍTICA  
+**Status:** EM IMPLEMENTAÇÃO  
+**Data Análise:** 2026-01-22 16:25  
+**Arquivos Afetados:** Todos os arquivos estáticos (JS/CSS)
 
-**Problema:**
-- Docker está servindo arquivos JavaScript antigos mesmo após rebuild
-- `settings.js` retornando código pré-Build 0921
-- `?v=` query string atualiza mas conteúdo não
-- Causando `ReferenceError: debounce is not defined`
+**Sintomas Observados:**
+- Browser carrega versão antiga de `settings.js` (Version: 1205_FORCE)
+- Build atual mostra: `20260122_1612`
+- Funções `testRAWGConnection`, `testIGDBConnection`, `saveAPISettings` não definidas
+- Erro: `ReferenceError: testRAWGConnection is not defined`
+- Limpeza de cache do browser (Shift+F5) não resolve
+- Service workers desconectados, problema persiste
 
-**Causa Raiz:**
-```yaml
-# docker-compose.yml atual
-volumes:
-  - /path/to/your/games:/games
-  - ./config:/app/config
-  - ./data:/app/data
-  # ❌ NÃO monta ./app - arquivos copiados em build-time
-```
+**Causas Raiz Identificadas:**
 
-**Solução Imediata:**
+1. **Docker Image Layer Caching** (PRINCIPAL)
+   ```dockerfile
+   # Dockerfile linha 32
+   COPY ./app /app  # ❌ Cached como single layer
+   ```
+   - Docker reusa layer mesmo após mudanças no git
+   - Rebuild sem `--no-cache` não atualiza arquivos
+
+2. **Ausência de Cache-Control Headers**
+   ```python
+   # app/app.py - Sem headers para static files
+   # Apenas /api/library/icon tem Cache-Control
+   ```
+   - Flask serve static files com cache padrão agressivo
+   - Browsers podem cachear indefinidamente
+
+3. **Query Parameter Ineficaz**
+   ```html
+   <script src="/static/js/settings_v2026.js?v={{ build_version }}"></script>
+   ```
+   - Parâmetro `?v=` ignorado por caches agressivos
+   - ETags e Last-Modified prevalecem
+
+**Soluções Implementadas:**
+
+✅ **Fix 1: Renomeação de Arquivo (Immediate)**
 ```bash
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
+# Força bypass de todos os caches
+mv app/static/js/settings_v2026.js app/static/js/settings_bundled.js
+# Atualizado em settings.html linha 1300
 ```
 
-**Solução Permanente (Desenvolvimento):**
-```yaml
-volumes:
-  - /path/to/your/games:/games
-  - ./config:/app/config
-  - ./data:/app/data
-  - ./app:/app  # 🔧 Mount source code
-  - ./docker/run.sh:/app/run.sh  # Preserve entrypoint
+🔄 **Fix 2: Cache-Control Headers (Em implementação)**
+```python
+# app/app.py - Adicionar após criação do app
+@app.after_request
+def add_cache_control_headers(response):
+    if request.path.startswith('/static/'):
+        if request.path.endswith(('.js', '.css')):
+            response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        elif request.path.endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg')):
+            response.headers['Cache-Control'] = 'public, max-age=3600'
+    return response
 ```
+
+📋 **Fix 3: Docker Development Mode (Planejado)**
+```yaml
+# docker-compose.dev.yml (NOVO)
+services:
+  myfoil:
+    volumes:
+      - ./app:/app  # Live reload - sem rebuild
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+```
+
+**Próximos Passos:**
+1. ✅ Renomear arquivo JS (FEITO)
+2. � Implementar Cache-Control headers (AGORA)
+3. 📋 Criar docker-compose.dev.yml
+4. 📋 Adicionar .dockerignore
+5. 📋 Multi-stage Dockerfile
+
+**Validação:**
+- [ ] Console mostra: `MyFoil: settings.js loaded (Version: BUNDLED_FIX)`
+- [ ] Build version match: `20260122_XXXX`
+- [ ] Funções definidas: `typeof window.testRAWGConnection === 'function'`
+- [ ] Hard refresh funciona
+- [ ] Incognito mode funciona
 
 #### 2. Infraestrutura Async (Celery/Redis)
 **Prioridade:** Alta  
