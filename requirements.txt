@@ -1,3 +1,4 @@
+packaging
 croniter
 flask
 Flask-Login
@@ -24,4 +25,3 @@ google-auth-oauthlib
 google-auth-httplib2
 google-api-python-client
 dropbox
-packaging
