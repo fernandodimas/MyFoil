@@ -71,7 +71,7 @@ def get_titles_count():
 # Database cache functions for TitleDB
 def load_titledb_from_db():
     """Load TitleDB data from database cache if available and valid."""
-    global _titles_db, _versions_db, _cnmts_db, _titledb_cache_timestamp, _titles_db_loaded
+    global _titles_db, _versions_db, _cnmts_db, _dlc_map, _titledb_cache_timestamp, _titles_db_loaded
 
     try:
         from db import db, TitleDBCache, TitleDBVersions, TitleDBDLCs
@@ -103,8 +103,9 @@ def load_titledb_from_db():
                 _versions_db[tid] = {}
             _versions_db[tid][str(entry.version)] = entry.release_date
 
-        # Load DLCs from cache and build index
+        # Load DLCs from cache and build index + REVERSE MAP
         _cnmts_db = {}
+        _dlc_map = {}
         cached_dlcs = TitleDBDLCs.query.all()
         for entry in cached_dlcs:
             base_tid = entry.base_title_id.lower()
@@ -117,6 +118,8 @@ def load_titledb_from_db():
                 "titleType": 130,  # DLC type
                 "otherApplicationId": base_tid,
             }
+            # Populate reverse map
+            _dlc_map[dlc_app_id] = base_tid
 
         _titles_db_loaded = True
         _titledb_cache_timestamp = time.time()
@@ -422,11 +425,12 @@ def get_file_info(filepath):
 def identify_appId(app_id):
     app_id = app_id.lower()
 
-    global _cnmts_db
+    global _cnmts_db, _dlc_map
     if _cnmts_db is None:
         logger.error("cnmts_db is not loaded. Call load_titledb first.")
         return None, None
 
+    # Strategy 1: Direct lookup in cnmts_db (usually keyed by Base Title ID)
     if app_id in _cnmts_db:
         app_id_keys = list(_cnmts_db[app_id].keys())
         if len(app_id_keys):
@@ -458,6 +462,15 @@ def identify_appId(app_id):
             else:
                 app_type = APP_TYPE_DLC
                 title_id = get_title_id_from_app_id(app_id, app_type)
+    
+    # Strategy 2: Reverse DLC Map lookup (if we are dealing with a DLC ID)
+    elif _dlc_map and app_id.upper() in _dlc_map:
+        base_id = _dlc_map[app_id.upper()]
+        title_id = base_id.upper()
+        app_type = APP_TYPE_DLC
+        # logger.debug(f"Identified DLC {app_id} -> Base {title_id} using reverse map")
+    
+    # Strategy 3: Fallback heuristic
     else:
         logger.warning(f"{app_id} not in cnmts_db, fallback to default identification.")
         if app_id.endswith("000"):
