@@ -884,7 +884,7 @@ function renderFileList(tbody, files, showPath) {
     });
 }
 
-$(document).on('input', '#fileSearchInput', debounce(renderFilesExplorer, 300));
+$(document).on('input', '#fileSearchInput', window.debounce(renderFilesExplorer, 300));
 $(document).on('change', '#fileTypeFilter, #fileStatusFilter', renderFilesExplorer);
 
 function fillWebhooksList() {
