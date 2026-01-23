@@ -190,14 +190,14 @@ function renderCardView(items) {
                         </figure>
                     </div>
                     <div class="card-content">
-                        <div class="is-flex is-justify-content-between is-align-items-center mb-1">
+                        <div class="is-flex is-justify-content-between is-align-items-center mb-1" style="width: 100%;">
                             <span class="font-mono is-size-7 opacity-40">${safeId}</span>
                             <span class="font-mono is-size-7 has-text-weight-bold">v${game.display_version}</span>
                         </div>
                         
                         <h3 class="game-title title is-6 has-text-weight-bold mb-3 line-clamp-2" title="${safeName}">${safeName}</h3>
                         
-                        <div class="is-flex is-justify-content-between is-align-items-center mt-auto pt-2">
+                        <div class="is-flex is-justify-content-between is-align-items-center mt-auto pt-2" style="width: 100%;">
                             <div class="is-flex is-align-items-center gap-1">
                                 <span class="status-dot ${statusDotClass}"></span>
                                 <span class="is-size-7 opacity-70 font-mono">${game.size_formatted || '--'}</span>
