@@ -97,7 +97,8 @@ socketio = SocketIO(
     logger=True,
     engineio_logger=True,
     ping_timeout=60,
-    ping_interval=25
+    ping_interval=25,
+    message_queue=os.environ.get("REDIS_URL")  # Essential: Allows Celery workers to emit to Web clients
 )
 
 import state
