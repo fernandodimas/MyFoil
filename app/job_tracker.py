@@ -10,6 +10,9 @@ import copy
 import json
 import os
 import redis
+import logging
+
+logger = logging.getLogger('main')
 
 class JobStatus(Enum):
     PENDING = "pending"
