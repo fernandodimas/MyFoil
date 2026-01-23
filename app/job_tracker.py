@@ -90,30 +90,38 @@ class JobTracker:
         self._local_history = []
         self._emitter = None
         self.redis = None
+        self._last_emit_time = {} # Rate limiting per job
         
         self._connect_redis()
     
     def _connect_redis(self):
         """Attempt to connect to Redis with retries"""
         try:
-            # Re-check URL in case it changed
             url = os.environ.get("REDIS_URL", self.redis_url)
-            self.redis = redis.from_url(url, socket_timeout=5)
+            # Use a longer timeout for the initial connection
+            self.redis = redis.from_url(url, socket_timeout=10, socket_connect_timeout=10)
             self.redis.ping()
             self.use_redis = True
-            print(f"JobTracker: Connected to Redis at {url}")
+            logger.info(f"JobTracker: Connected to Redis at {url}")
             # Auto-cleanup stale jobs on initialization
             self._cleanup_stale_jobs()
             return True
         except Exception as e:
-            print(f"JobTracker: Redis connection failed ({self.redis_url}). Using memory. {e}")
+            # Check if we are in an environment that REQUIRES redis
+            if os.environ.get("REDIS_URL"):
+                logger.error(f"JobTracker: Redis connection failed despite REDIS_URL being set. Task tracking will be local and invisible to other processes! Error: {e}")
+            else:
+                logger.warning(f"JobTracker: Redis not available. {e}")
             self.use_redis = False
             return False
 
     def check_connection(self):
         """Ensure connection is still alive, try to reconnect if not"""
         if not self.use_redis:
-            return self._connect_redis()
+            if os.environ.get("REDIS_URL"):
+                return self._connect_redis()
+            return False
+            
         try:
             self.redis.ping()
             return True
@@ -124,14 +132,26 @@ class JobTracker:
         """Set a function to emit socket updates. Emitter should take (event_name, data)"""
         self._emitter = emitter_func
 
-    def _emit_update(self):
-        """Helper to emit job status update to all clients"""
-        if self._emitter:
-            try:
-                self._emitter('job_update', self.get_status())
-            except Exception as e:
-                # Silently catch socket errors in workers
-                pass
+    def _emit_update(self, job_id: str = None, force: bool = False):
+        """Helper to emit job status update to all clients with rate limiting"""
+        if not self._emitter:
+            return
+
+        import time
+        now = time.time()
+        
+        # Rate limit: 1 update per 0.5 seconds per job, unless forced
+        if job_id and not force:
+            last_time = self._last_emit_time.get(job_id, 0)
+            if now - last_time < 0.5:
+                return
+            self._last_emit_time[job_id] = now
+
+        try:
+            self._emitter('job_update', self.get_status())
+        except Exception as e:
+            # Silently catch socket errors in workers
+            pass
 
     def _cleanup_stale_jobs(self, max_age_seconds: int = 3600):
         """Clean up jobs stuck in RUNNING state for more than max_age_seconds"""
@@ -149,7 +169,6 @@ class JobTracker:
                 
                 job = self.get_job(jid)
                 if job and job.status == JobStatus.RUNNING:
-                    # More aggressive cleanup for metadata tasks or very old tasks
                     is_stale = False
                     if job.started_at:
                         age = (now - job.started_at).total_seconds()
@@ -166,14 +185,13 @@ class JobTracker:
                         cleaned += 1
             
             if cleaned > 0:
-                print(f"JobTracker: Cleaned up {cleaned} stale job(s)")
-                self._emit_update()
+                logger.info(f"JobTracker: Cleaned up {cleaned} stale job(s)")
+                self._emit_update(force=True)
         except Exception as e:
-            print(f"JobTracker: Error during cleanup: {e}")
+            logger.error(f"JobTracker: Error during cleanup: {e}")
     
     def cleanup_all_active_jobs(self):
         """Manually clear all active jobs (useful for debugging/maintenance)"""
-        # Ensure we are connected before trying to clear
         self.check_connection()
         
         count = 0
@@ -190,20 +208,19 @@ class JobTracker:
                         job.completed_at = datetime.now()
                         self._save_job(job, emit=False)
                 count = len(active_ids)
-                # Also clear the set just in case of inconsistency
                 if count == 0:
                      self.redis.delete("jobs:active")
             except Exception as e:
-                print(f"JobTracker: Error manually cleaning: {e}")
+                logger.error(f"JobTracker: Error manually cleaning: {e}")
         else:
             count = len(self._local_jobs)
             self._local_jobs.clear()
         
-        self._emit_update()
+        self._emit_update(force=True)
         return count
 
     def _save_job(self, job: Job, emit: bool = True):
-        # Always try to use Redis if we have a URL, even if was False before
+        # Always try to use Redis if we have a URL
         if not self.use_redis and os.environ.get("REDIS_URL"):
             self._connect_redis()
 
@@ -220,7 +237,7 @@ class JobTracker:
                     self.redis.lpush("jobs:history", json.dumps(job.to_dict()))
                     self.redis.ltrim("jobs:history", 0, 49)
             except Exception as e:
-                print(f"JobTracker: Failed to save to Redis: {e}")
+                logger.error(f"JobTracker: Failed to save to Redis: {e}")
                 self.use_redis = False
         else:
             self._local_jobs[job.id] = job
@@ -231,10 +248,10 @@ class JobTracker:
                 self._local_history = self._local_history[:50]
         
         if emit:
-            self._emit_update()
+            # Force emit if job completed or failed
+            self._emit_update(job.id, force=(job.status != JobStatus.RUNNING))
 
     def start_job(self, job_id: str, job_type: JobType, message: str = "") -> Job:
-        # Check connection on every new job
         self.check_connection()
         
         job = Job(

@@ -19,7 +19,7 @@ class BackupManager:
         
         try:
             # Backup database
-            db_path = os.path.join(self.data_dir, 'myfoil.db')
+            db_path = os.path.join(self.config_dir, 'myfoil.db')
             if os.path.exists(db_path):
                 backup_db = os.path.join(self.backup_dir, f'myfoil_{timestamp}.db')
                 shutil.copy2(db_path, backup_db)
@@ -27,9 +27,9 @@ class BackupManager:
                 backup_created = True
             
             # Backup settings
-            settings_path = os.path.join(self.config_dir, 'settings.json')
+            settings_path = os.path.join(self.config_dir, 'settings.yaml')
             if os.path.exists(settings_path):
-                backup_settings = os.path.join(self.backup_dir, f'settings_{timestamp}.json')
+                backup_settings = os.path.join(self.backup_dir, f'settings_{timestamp}.yaml')
                 shutil.copy2(settings_path, backup_settings)
                 logger.info(f"Settings backup created: {backup_settings}")
                 backup_created = True
@@ -68,9 +68,9 @@ class BackupManager:
                 if not os.path.isfile(filepath):
                     continue
                     
-                if filename.startswith('myfoil_') and filename.endswith('.db'):
+                elif filename.startswith('myfoil_') and filename.endswith('.db'):
                     backup_files['db'].append(filepath)
-                elif filename.startswith('settings_') and filename.endswith('.json'):
+                elif filename.startswith('settings_') and filename.endswith('.yaml'):
                     backup_files['settings'].append(filepath)
                 elif filename.startswith('keys_') and filename.endswith('.txt'):
                     backup_files['keys'].append(filepath)
@@ -133,9 +133,9 @@ class BackupManager:
             
             # Determine target path based on backup type
             if backup_filename.startswith('myfoil_') and backup_filename.endswith('.db'):
-                target_path = os.path.join(self.data_dir, 'myfoil.db')
-            elif backup_filename.startswith('settings_') and backup_filename.endswith('.json'):
-                target_path = os.path.join(self.config_dir, 'settings.json')
+                target_path = os.path.join(self.config_dir, 'myfoil.db')
+            elif backup_filename.startswith('settings_') and backup_filename.endswith('.yaml'):
+                target_path = os.path.join(self.config_dir, 'settings.yaml')
             elif backup_filename.startswith('keys_') and backup_filename.endswith('.txt'):
                 target_path = os.path.join(self.config_dir, 'keys.txt')
             else:
