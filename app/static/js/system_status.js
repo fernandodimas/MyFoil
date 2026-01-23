@@ -213,3 +213,23 @@ function closeStatusModal() {
 function refreshJobStatus() {
     if (statusManager) statusManager.fetchStatus();
 }
+
+async function clearAllJobs() {
+    if (!confirm('Are you sure you want to clear all active operations? This won\'t stop the background processes but will remove them from the UI tracking.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/system/jobs/cleanup', { method: 'POST' });
+        if (response.ok) {
+            if (statusManager) statusManager.fetchStatus();
+            alert('Active operations cleared from tracking.');
+        } else {
+            console.error('Failed to clear jobs');
+            alert('Failed to clear operations.');
+        }
+    } catch (error) {
+        console.error('Error clearing jobs:', error);
+        alert('Error communicating with server.');
+    }
+}

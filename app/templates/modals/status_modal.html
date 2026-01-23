@@ -7,12 +7,12 @@
             </p>
             <button class="delete" aria-label="close" onclick="closeStatusModal()"></button>
         </header>
-        
+
         <section class="modal-card-body">
             <!-- Active Jobs -->
             <div class="mb-5">
                 <h5 class="title is-6 mb-3 has-text-weight-bold">
-                    <i class="bi bi-hourglass-split mr-2 has-text-info"></i> 
+                    <i class="bi bi-hourglass-split mr-2 has-text-info"></i>
                     Active Operations
                 </h5>
                 <div id="activeJobsList">
@@ -22,13 +22,13 @@
                     </p>
                 </div>
             </div>
-            
+
             <hr class="dropdown-divider">
 
             <!-- History -->
             <div class="mt-4">
                 <h5 class="title is-6 mb-3 has-text-weight-bold">
-                    <i class="bi bi-clock-history mr-2 has-text-grey"></i> 
+                    <i class="bi bi-clock-history mr-2 has-text-grey"></i>
                     Recent Activity
                 </h5>
                 <div id="jobHistoryList" style="max-height: 300px; overflow-y: auto;">
@@ -36,8 +36,11 @@
                 </div>
             </div>
         </section>
-        
+
         <footer class="modal-card-foot is-justify-content-flex-end">
+            <button class="button is-small is-danger is-light mr-auto" onclick="clearAllJobs()">
+                <i class="bi bi-trash mr-1"></i> Clear All
+            </button>
             <button class="button is-small" onclick="refreshJobStatus()">
                 <i class="bi bi-arrow-clockwise mr-1"></i> Refresh
             </button>

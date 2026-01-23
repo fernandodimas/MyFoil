@@ -342,12 +342,12 @@ def update_titledb(app_settings: Dict, force: bool = False) -> bool:
         True if all files updated successfully, False otherwise
     """
     from job_tracker import job_tracker, JobType
-    from app import socketio
+    from socket_helper import get_socketio_emitter
     import time
+    job_tracker.set_emitter(get_socketio_emitter())
     
     job_id = f"titledb_{int(time.time())}"
     job_tracker.start_job(job_id, JobType.TITLEDB_UPDATE, "Updating TitleDB")
-    socketio.emit('job_update', job_tracker.get_status())
 
     try:
         logger.info("Updating TitleDB...")

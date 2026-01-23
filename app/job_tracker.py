@@ -89,16 +89,37 @@ class JobTracker:
         self._local_jobs = {}
         self._local_history = []
         self._emitter = None
+        self.redis = None
         
+        self._connect_redis()
+    
+    def _connect_redis(self):
+        """Attempt to connect to Redis with retries"""
         try:
-            self.redis = redis.from_url(self.redis_url)
+            # Re-check URL in case it changed
+            url = os.environ.get("REDIS_URL", self.redis_url)
+            self.redis = redis.from_url(url, socket_timeout=5)
             self.redis.ping()
             self.use_redis = True
+            print(f"JobTracker: Connected to Redis at {url}")
             # Auto-cleanup stale jobs on initialization
             self._cleanup_stale_jobs()
+            return True
         except Exception as e:
-            print(f"JobTracker: Redis not available, using memory. {e}")
-    
+            print(f"JobTracker: Redis connection failed ({self.redis_url}). Using memory. {e}")
+            self.use_redis = False
+            return False
+
+    def check_connection(self):
+        """Ensure connection is still alive, try to reconnect if not"""
+        if not self.use_redis:
+            return self._connect_redis()
+        try:
+            self.redis.ping()
+            return True
+        except:
+            return self._connect_redis()
+
     def set_emitter(self, emitter_func):
         """Set a function to emit socket updates. Emitter should take (event_name, data)"""
         self._emitter = emitter_func
@@ -109,7 +130,8 @@ class JobTracker:
             try:
                 self._emitter('job_update', self.get_status())
             except Exception as e:
-                print(f"JobTracker: Failed to emit update: {e}")
+                # Silently catch socket errors in workers
+                pass
 
     def _cleanup_stale_jobs(self, max_age_seconds: int = 3600):
         """Clean up jobs stuck in RUNNING state for more than max_age_seconds"""
@@ -127,17 +149,16 @@ class JobTracker:
                 
                 job = self.get_job(jid)
                 if job and job.status == JobStatus.RUNNING:
-                    # Check if job is stale
+                    # More aggressive cleanup for metadata tasks or very old tasks
                     is_stale = False
                     if job.started_at:
                         age = (now - job.started_at).total_seconds()
                         if age > max_age_seconds:
                             is_stale = True
                     else:
-                        is_stale = True # No start date? Cleanup.
+                        is_stale = True 
                         
                     if is_stale:
-                        # Mark as cancelled/error
                         job.status = JobStatus.CANCELLED
                         job.error = "Job timed out or orphaned"
                         job.completed_at = now
@@ -152,19 +173,28 @@ class JobTracker:
     
     def cleanup_all_active_jobs(self):
         """Manually clear all active jobs (useful for debugging/maintenance)"""
+        # Ensure we are connected before trying to clear
+        self.check_connection()
+        
         count = 0
         if self.use_redis:
-            active_ids = list(self.redis.smembers("jobs:active"))
-            for jid in active_ids:
-                if isinstance(jid, bytes):
-                    jid = jid.decode()
-                job = self.get_job(jid)
-                if job:
-                    job.status = JobStatus.CANCELLED
-                    job.error = "Manually cleared"
-                    job.completed_at = datetime.now()
-                    self._save_job(job, emit=False)
-            count = len(active_ids)
+            try:
+                active_ids = list(self.redis.smembers("jobs:active"))
+                for jid in active_ids:
+                    if isinstance(jid, bytes):
+                        jid = jid.decode()
+                    job = self.get_job(jid)
+                    if job:
+                        job.status = JobStatus.CANCELLED
+                        job.error = "Manually cleared"
+                        job.completed_at = datetime.now()
+                        self._save_job(job, emit=False)
+                count = len(active_ids)
+                # Also clear the set just in case of inconsistency
+                if count == 0:
+                     self.redis.delete("jobs:active")
+            except Exception as e:
+                print(f"JobTracker: Error manually cleaning: {e}")
         else:
             count = len(self._local_jobs)
             self._local_jobs.clear()
@@ -173,20 +203,25 @@ class JobTracker:
         return count
 
     def _save_job(self, job: Job, emit: bool = True):
+        # Always try to use Redis if we have a URL, even if was False before
+        if not self.use_redis and os.environ.get("REDIS_URL"):
+            self._connect_redis()
+
         if self.use_redis:
-            # Expire job key after 1 hour (active) or 24 hours (history) to auto-cleanup
-            key = f"job:{job.id}"
-            expiry = 3600 if job.status == JobStatus.RUNNING else 86400
-            self.redis.set(key, json.dumps(job.to_dict()), ex=expiry)
-            
-            # Add to active set
-            if job.status == JobStatus.RUNNING:
-                self.redis.sadd("jobs:active", job.id)
-            else:
-                self.redis.srem("jobs:active", job.id)
-                # Add to history list (trim to 50)
-                self.redis.lpush("jobs:history", json.dumps(job.to_dict()))
-                self.redis.ltrim("jobs:history", 0, 49)
+            try:
+                key = f"job:{job.id}"
+                expiry = 3600 if job.status == JobStatus.RUNNING else 86400
+                self.redis.set(key, json.dumps(job.to_dict()), ex=expiry)
+                
+                if job.status == JobStatus.RUNNING:
+                    self.redis.sadd("jobs:active", job.id)
+                else:
+                    self.redis.srem("jobs:active", job.id)
+                    self.redis.lpush("jobs:history", json.dumps(job.to_dict()))
+                    self.redis.ltrim("jobs:history", 0, 49)
+            except Exception as e:
+                print(f"JobTracker: Failed to save to Redis: {e}")
+                self.use_redis = False
         else:
             self._local_jobs[job.id] = job
             if job.status != JobStatus.RUNNING:
@@ -199,6 +234,9 @@ class JobTracker:
             self._emit_update()
 
     def start_job(self, job_id: str, job_type: JobType, message: str = "") -> Job:
+        # Check connection on every new job
+        self.check_connection()
+        
         job = Job(
             id=job_id,
             type=job_type,

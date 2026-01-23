@@ -530,10 +530,11 @@ def delete_webhook_api(id):
 @access_required("admin")
 def create_backup_api():
     """Criar backup manual"""
-    from app import backup_manager, socketio
+    from app import backup_manager
     from job_tracker import job_tracker, JobType
+    from socket_helper import get_socketio_emitter
     import time
-    job_tracker.set_emitter(socketio.emit)
+    job_tracker.set_emitter(get_socketio_emitter())
 
     if not backup_manager:
         return jsonify({"success": False, "error": "Backup manager not initialized"}), 500
@@ -571,10 +572,11 @@ def list_backups_api():
 @access_required("admin")
 def restore_backup_api():
     """Restaurar backup"""
-    from app import backup_manager, socketio
+    from app import backup_manager
     from job_tracker import job_tracker, JobType
+    from socket_helper import get_socketio_emitter
     import time
-    job_tracker.set_emitter(socketio.emit)
+    job_tracker.set_emitter(get_socketio_emitter())
 
     if not backup_manager:
         return jsonify({"success": False, "error": "Backup manager not initialized"}), 500
@@ -798,8 +800,8 @@ def cancel_job(job_id):
 def cleanup_jobs():
     """Limpa todos os jobs ativos (útil para manutenção)"""
     from job_tracker import job_tracker, JobType
-    from app import socketio
-    job_tracker.set_emitter(socketio.emit)
+    from socket_helper import get_socketio_emitter
+    job_tracker.set_emitter(get_socketio_emitter())
     
     count = job_tracker.cleanup_all_active_jobs()
     return jsonify({"success": True, "cleaned": count, "message": f"Cleared {count} active job(s)"})

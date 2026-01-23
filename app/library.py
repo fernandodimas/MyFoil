@@ -304,17 +304,16 @@ def identify_library_files(library):
 
     # Job tracking
     from job_tracker import job_tracker, JobType
-    from app import socketio
+    from socket_helper import get_socketio_emitter
     import time
+    job_tracker.set_emitter(get_socketio_emitter())
     
     job_id = f"identify_{library_id}_{int(time.time())}"
     job_tracker.start_job(job_id, JobType.FILE_IDENTIFICATION, f"Identifying files in {os.path.basename(library_path)}")
     job_tracker.update_progress(job_id, 0, current=0, total=nb_to_identify)
-    socketio.emit('job_update', job_tracker.get_status())
     
     if nb_to_identify == 0:
         job_tracker.complete_job(job_id, "No files to identify")
-        socketio.emit('job_update', job_tracker.get_status())
 
     try:
         for n, file in enumerate(files_to_identify):
@@ -338,8 +337,6 @@ def identify_library_files(library):
                 # Update job progress
                 progress = int(((n + 1) / nb_to_identify) * 100)
                 job_tracker.update_progress(job_id, progress, current=n+1, total=nb_to_identify, message=f"Identifying {filename}")
-                if n % 5 == 0: # Emit every 5 files
-                     socketio.emit('job_update', job_tracker.get_status())
                 
                 with IDENTIFICATION_DURATION.time():
                     identification, success, file_contents, error = titles_lib.identify_file(filepath)

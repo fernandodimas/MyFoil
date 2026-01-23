@@ -29,8 +29,8 @@ def scan_library_async(library_path):
         from db import remove_missing_files_from_db
         from job_tracker import job_tracker, JobType
         import time
-        from app import socketio
-        job_tracker.set_emitter(socketio.emit)
+        from socket_helper import get_socketio_emitter
+        job_tracker.set_emitter(get_socketio_emitter())
         
         job_id = f"scan_{int(time.time())}"
         job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, f"Scanning {library_path}")
@@ -75,8 +75,8 @@ def identify_file_async(filepath):
         from db import remove_missing_files_from_db
         from job_tracker import job_tracker, JobType
         import time
-        from app import socketio
-        job_tracker.set_emitter(socketio.emit)
+        from socket_helper import get_socketio_emitter
+        job_tracker.set_emitter(get_socketio_emitter())
         
         job_id = f"id_{int(time.time())}"
         job_tracker.start_job(job_id, JobType.FILE_IDENTIFICATION, f"Identifying new file")
@@ -117,8 +117,8 @@ def scan_all_libraries_async():
         from db import remove_missing_files_from_db, get_libraries
         from job_tracker import job_tracker, JobType
         import time
-        from app import socketio
-        job_tracker.set_emitter(socketio.emit)
+        from socket_helper import get_socketio_emitter
+        job_tracker.set_emitter(get_socketio_emitter())
 
         job_id = f"scan_all_{int(time.time())}"
         job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, "Scanning all libraries")
@@ -178,12 +178,12 @@ def fetch_metadata_for_all_games_async():
         from db import Titles
         from services.rating_service import update_game_metadata
         from job_tracker import job_tracker, JobType, JobStatus
-        from app import socketio
         import time
+        from socket_helper import get_socketio_emitter
+        job_tracker.set_emitter(get_socketio_emitter())
 
         job_id = f"metadata_{int(time.time())}"
         job_tracker.start_job(job_id, JobType.METADATA_FETCH, "Fetching metadata for all games")
-        socketio.emit('job_update', job_tracker.get_status())
         
         try:
             # Only fetch for games that have at least the base game (identified)
@@ -193,7 +193,6 @@ def fetch_metadata_for_all_games_async():
 
             if total == 0:
                 job_tracker.complete_job(job_id, "No games to update")
-                socketio.emit('job_update', job_tracker.get_status())
                 return True
             
             job_tracker.update_progress(job_id, 0, current=0, total=total)
@@ -207,16 +206,11 @@ def fetch_metadata_for_all_games_async():
 
                 progress = int(((i + 1) / total) * 100)
                 job_tracker.update_progress(job_id, progress, current=i+1, total=total, message=f"Updated {game.name}")
-                
-                if i % 5 == 0:
-                    socketio.emit('job_update', job_tracker.get_status())
 
             job_tracker.complete_job(job_id, f"Finished updating {total} games")
-            socketio.emit('job_update', job_tracker.get_status())
             return True
             
         except Exception as e:
             job_tracker.fail_job(job_id, str(e))
-            socketio.emit('job_update', job_tracker.get_status())
             logger.error(f"Error in metadata batch: {e}")
             return False

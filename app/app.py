@@ -104,7 +104,8 @@ socketio = SocketIO(
 # Import state to allow job tracking
 import state
 from job_tracker import job_tracker
-job_tracker.set_emitter(socketio.emit)
+from socket_helper import get_socketio_emitter
+job_tracker.set_emitter(get_socketio_emitter())
 
 # Initialize Limiter
 redis_url = os.environ.get("REDIS_URL")
