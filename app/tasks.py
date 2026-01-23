@@ -185,7 +185,7 @@ def fetch_metadata_for_game_async(title_id):
     """Fetch metadata for a single game"""
     with flask_app.app_context():
         from db import Titles
-        from services.rating_service import update_game_metadata
+        from app_services.rating_service import update_game_metadata
 
         game = Titles.query.filter_by(title_id=title_id).first()
         if not game:
@@ -201,7 +201,7 @@ def fetch_metadata_for_all_games_async():
     """Background task to fetch metadata for ALL games"""
     with flask_app.app_context():
         from db import Titles
-        from services.rating_service import update_game_metadata
+        from app_services.rating_service import update_game_metadata
         from job_tracker import job_tracker, JobType, JobStatus
         from socket_helper import get_socketio_emitter
         import time

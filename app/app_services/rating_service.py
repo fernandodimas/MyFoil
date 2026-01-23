@@ -171,6 +171,38 @@ class IGDBClient:
             logger.error(f"IGDB search error for '{title}': {e}")
             raise RatingAPIException(f"IGDB search failed: {e}")
 
+    def get_upcoming_games(self, limit: int = 20) -> list:
+        """Fetch upcoming Nintendo Switch games"""
+        token = self._get_access_token()
+        headers = {
+            "Client-ID": self.client_id,
+            "Authorization": f"Bearer {token}"
+        }
+        
+        # platform 130 = Nintendo Switch
+        # first_release_date > now (represented as epoch timestamp)
+        now = int(time.time())
+        query = (
+            f'fields name, first_release_date, cover.url, summary, genres.name, aggregated_rating, screenshots.url; '
+            f'where platforms = (130) & first_release_date > {now}; '
+            f'sort first_release_date asc; '
+            f'limit {limit};'
+        )
+        
+        try:
+            response = self.session.post(
+                f"{self.base_url}/games",
+                headers=headers,
+                data=query,
+                timeout=10
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"IGDB fetching upcoming games failed: {e}")
+            raise RatingAPIException(f"IGDB upcoming failed: {e}")
+
+
 
 def fetch_game_metadata(title_name: str, title_id: str = None) -> Optional[Dict[str, Any]]:
     """

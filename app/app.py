@@ -43,6 +43,7 @@ from routes.settings import settings_bp
 from routes.system import system_bp, system_web_bp
 from routes.web import web_bp
 from routes.wishlist import wishlist_bp
+from routes.upcoming import upcoming_bp
 
 # Jobs
 from jobs.scheduler import JobScheduler
@@ -485,6 +486,13 @@ def create_app():
     app.register_blueprint(settings_bp)
     app.register_blueprint(system_bp)
     app.register_blueprint(wishlist_bp)
+    app.register_blueprint(upcoming_bp)
+
+    @app.route("/upcoming")
+    @access_required("shop")
+    def upcoming_page():
+        """Upcoming games page"""
+        return render_template("upcoming.html", title="Upcoming")
 
     # Initialize REST API
     api_bp = Blueprint("api", __name__, url_prefix="/api")

@@ -816,7 +816,7 @@ def search_rawg_api():
     if not query:
         return jsonify({"error": "Query parameter 'q' required"}), 400
 
-    from services.rating_service import RAWGClient
+    from app_services.rating_service import RAWGClient
 
     settings = load_settings()
     api_key = settings.get("apis", {}).get("rawg_api_key")
@@ -840,7 +840,7 @@ def search_igdb_api():
     if not query:
         return jsonify({"error": "Query parameter 'q' required"}), 400
 
-    from services.rating_service import IGDBClient
+    from app_services.rating_service import IGDBClient
 
     settings = load_settings()
     client_id = settings.get("apis", {}).get("igdb_client_id")

@@ -26,6 +26,10 @@
                     <i class="bi bi-heart mr-2"></i> {{ t('Wishlist') }}
                 </a>
 
+                <a class="navbar-item {% if title=='Upcoming' %}is-active{% endif %}" href="/upcoming">
+                    <i class="bi bi-calendar-event mr-2"></i> {{ t('Próximos') }}
+                </a>
+
                 {% if current_user.is_admin or admin_account_created == false %}
                 <a class="navbar-item {% if title=='Settings' %}is-active{% endif %}" href="/settings">
                     <i class="bi bi-sliders mr-2"></i> {{ t('Configurações') }}
