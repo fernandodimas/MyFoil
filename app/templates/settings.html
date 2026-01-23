@@ -921,18 +921,20 @@
                                                 Fornece ratings (Metacritic, usuários), screenshots,
                                                 gêneros e tempo de jogo estimado.
                                             </p>
-                                            <div class="field">
-                                                <label class="label is-small">API Key</label>
-                                                <div class="control">
-                                                    <input class="input is-small" type="password" id="rawgApiKey"
-                                                        placeholder="Obtenha em: https://rawg.io/apidocs">
+                                            <form onsubmit="return false;">
+                                                <div class="field">
+                                                    <label class="label is-small">API Key</label>
+                                                    <div class="control">
+                                                        <input class="input is-small" type="password" id="rawgApiKey"
+                                                            placeholder="Obtenha em: https://rawg.io/apidocs">
+                                                    </div>
+                                                    <p class="help is-size-7">
+                                                        Limite: 20,000 requests/mês (gratuito)
+                                                        <a href="https://rawg.io/apidocs" target="_blank"
+                                                            class="has-text-link">Criar conta</a>
+                                                    </p>
                                                 </div>
-                                                <p class="help is-size-7">
-                                                    Limite: 20,000 requests/mês (gratuito)
-                                                    <a href="https://rawg.io/apidocs" target="_blank"
-                                                        class="has-text-link">Criar conta</a>
-                                                </p>
-                                            </div>
+                                            </form>
                                         </div>
                                         <div class="column is-narrow">
                                             <button class="button is-small is-primary is-light"
@@ -955,26 +957,28 @@
                                             <p class="is-size-7 opacity-70 mb-3">
                                                 Uma das bases de dados mais completas. Requer Client ID e Secret.
                                             </p>
-                                            <div class="columns">
-                                                <div class="column">
-                                                    <div class="field">
-                                                        <label class="label is-small">Client ID</label>
-                                                        <div class="control">
-                                                            <input class="input is-small" type="text" id="igdbClientId"
-                                                                placeholder="Client ID do Twitch Dev Portal">
+                                            <form onsubmit="return false;">
+                                                <div class="columns">
+                                                    <div class="column">
+                                                        <div class="field">
+                                                            <label class="label is-small">Client ID</label>
+                                                            <div class="control">
+                                                                <input class="input is-small" type="text" id="igdbClientId"
+                                                                    placeholder="Client ID do Twitch Dev Portal">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="column">
+                                                        <div class="field">
+                                                            <label class="label is-small">Client Secret</label>
+                                                            <div class="control">
+                                                                <input class="input is-small" type="password"
+                                                                    id="igdbClientSecret" placeholder="Client Secret">
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div class="column">
-                                                    <div class="field">
-                                                        <label class="label is-small">Client Secret</label>
-                                                        <div class="control">
-                                                            <input class="input is-small" type="password"
-                                                                id="igdbClientSecret" placeholder="Client Secret">
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            </form>
                                             <p class="help is-size-7">
                                                 Obtenha em: <a href="https://dev.twitch.tv/console" target="_blank"
                                                     class="has-text-link">Twitch Developer Portal</a>
