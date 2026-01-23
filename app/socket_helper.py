@@ -34,18 +34,16 @@ def get_socketio_emitter():
             client = SocketIO(message_queue=redis_url, socketio_path='socket.io')
             
             def broadcast_emit(event, data, *args, **kwargs):
-                """Wrapper that ensures broadcast=True for worker->web communication"""
-                # Force broadcast and ensure we're using the default namespace
-                kwargs['broadcast'] = True
+                # Ensure we're using the default namespace
                 kwargs['namespace'] = '/'  # EXPLICIT namespace
                 
                 import sys
                 pid = os.getpid()
-                logger.info(f"[SocketIO PID:{pid}] 📤 Emitting event '{event}' with broadcast=True, namespace='/', data={type(data).__name__}")
+                logger.info(f"[SocketIO PID:{pid}] 📤 Emitting event '{event}' to namespace='/', data={type(data).__name__}")
                 
                 try:
                     client.emit(event, data, *args, **kwargs)
-                    logger.info(f"[SocketIO PID:{pid}] ✅ Successfully emitted '{event}' (broadcast=True, namespace='/')")
+                    logger.info(f"[SocketIO PID:{pid}] ✅ Successfully emitted '{event}' (namespace='/')")
                 except Exception as e:
                     logger.error(f"[SocketIO PID:{pid}] ❌ Emit failed for '{event}': {e}", exc_info=True)
             
