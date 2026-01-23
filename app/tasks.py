@@ -27,29 +27,45 @@ def scan_library_async(library_path):
     """Full library scan in background"""
     with flask_app.app_context():
         from db import remove_missing_files_from_db
+        from job_tracker import job_tracker, JobType
+        import time
+        from app import socketio
+        job_tracker.set_emitter(socketio.emit)
+        
+        job_id = f"scan_{int(time.time())}"
+        job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, f"Scanning {library_path}")
 
-        logger.info("background_scan_started", library_path=library_path)
+        try:
+            logger.info("background_scan_started", library_path=library_path)
 
-        # 1. Cleanup missing files first
-        remove_missing_files_from_db()
+            # 1. Cleanup missing files first
+            job_tracker.update_progress(job_id, 10, message="Cleaning up missing files...")
+            remove_missing_files_from_db()
 
-        # 2. Scan for new files
-        scan_library_path(library_path)
+            # 2. Scan for new files
+            job_tracker.update_progress(job_id, 30, message="Scanning folders...")
+            scan_library_path(library_path)
 
-        # 3. Identify new/unidentified files
-        identify_library_files(library_path)
+            # 3. Identify new/unidentified files
+            job_tracker.update_progress(job_id, 60, message="Identifying files...")
+            identify_library_files(library_path)
 
-        # 4. Update title statuses and regenerate cache
-        update_titles()
-        generate_library(force=True)
+            # 4. Update title statuses and regenerate cache
+            job_tracker.update_progress(job_id, 90, message="Refreshing library...")
+            update_titles()
+            generate_library(force=True)
 
-        # Notificar via socketio
-        from library import trigger_library_update_notification
+            # Notify via socketio
+            from library import trigger_library_update_notification
+            trigger_library_update_notification()
 
-        trigger_library_update_notification()
-
-        logger.info("background_scan_completed", library_path=library_path)
-        return True
+            job_tracker.complete_job(job_id, "Scan completed")
+            logger.info("background_scan_completed", library_path=library_path)
+            return True
+        except Exception as e:
+            job_tracker.fail_job(job_id, str(e))
+            logger.error(f"Error in scan_library_async: {e}")
+            return False
 
 
 @celery.task(name="tasks.identify_file_async")
@@ -57,28 +73,41 @@ def identify_file_async(filepath):
     """Identify a single file in background (e.g. from watchdog)"""
     with flask_app.app_context():
         from db import remove_missing_files_from_db
+        from job_tracker import job_tracker, JobType
+        import time
+        from app import socketio
+        job_tracker.set_emitter(socketio.emit)
+        
+        job_id = f"id_{int(time.time())}"
+        job_tracker.start_job(job_id, JobType.FILE_IDENTIFICATION, f"Identifying new file")
 
-        logger.info("background_identification_started", triggered_by=filepath)
+        try:
+            logger.info("background_identification_started", triggered_by=filepath)
 
-        # For simple file changes, we can just run the global cleanup and identification
-        remove_missing_files_from_db()
+            # For simple file changes, we can just run the global cleanup and identification
+            job_tracker.update_progress(job_id, 20, message="Checking for changes...")
+            remove_missing_files_from_db()
 
-        from library import Libraries
+            from library import Libraries
+            libraries = Libraries.query.all()
+            for i, lib in enumerate(libraries):
+                job_tracker.update_progress(job_id, 40 + (i*10), message=f"Identifying in {lib.path}")
+                identify_library_files(lib.path)
 
-        libraries = Libraries.query.all()
-        for lib in libraries:
-            identify_library_files(lib.path)
+            # Atualizar títulos e gerar biblioteca (equivalente a post_library_change)
+            job_tracker.update_progress(job_id, 90, message="Refreshing library...")
+            update_titles()
+            generate_library(force=True)
 
-        # Atualizar títulos e gerar biblioteca (equivalente a post_library_change)
-        update_titles()
-        generate_library(force=True)
+            # Notificar via socketio
+            from library import trigger_library_update_notification
+            trigger_library_update_notification()
 
-        # Notificar via socketio
-        from library import trigger_library_update_notification
-
-        trigger_library_update_notification()
-
-        return True
+            job_tracker.complete_job(job_id, "File identification done")
+            return True
+        except Exception as e:
+            job_tracker.fail_job(job_id, str(e))
+            return False
 
 
 @celery.task(name="tasks.scan_all_libraries_async")
@@ -86,28 +115,44 @@ def scan_all_libraries_async():
     """Full library scan for all configured paths in background"""
     with flask_app.app_context():
         from db import remove_missing_files_from_db, get_libraries
+        from job_tracker import job_tracker, JobType
+        import time
+        from app import socketio
+        job_tracker.set_emitter(socketio.emit)
 
-        logger.info("Background task: Starting full library scan for all paths")
+        job_id = f"scan_all_{int(time.time())}"
+        job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, "Scanning all libraries")
 
-        remove_missing_files_from_db()
+        try:
+            logger.info("Background task: Starting full library scan for all paths")
 
-        libraries = get_libraries()
-        for lib in libraries:
-            logger.info("scanning_path", path=lib.path)
-            scan_library_path(lib.path)
-            identify_library_files(lib.path)
+            job_tracker.update_progress(job_id, 10, message="Cleaning up missing files...")
+            remove_missing_files_from_db()
 
-        # Atualizar títulos e gerar biblioteca
-        update_titles()
-        generate_library(force=True)
+            libraries = get_libraries()
+            total = len(libraries)
+            for i, lib in enumerate(libraries):
+                msg = f"Scanning {lib.path}"
+                job_tracker.update_progress(job_id, 20 + int((i/total)*60), message=msg)
+                logger.info("scanning_path", path=lib.path)
+                scan_library_path(lib.path)
+                identify_library_files(lib.path)
 
-        # Notificar via socketio
-        from library import trigger_library_update_notification
+            # Atualizar títulos e gerar biblioteca
+            job_tracker.update_progress(job_id, 90, message="Refreshing library...")
+            update_titles()
+            generate_library(force=True)
 
-        trigger_library_update_notification()
+            # Notificar via socketio
+            from library import trigger_library_update_notification
+            trigger_library_update_notification()
 
-        logger.info("Background task: Full scan completed.")
-        return True
+            job_tracker.complete_job(job_id, "Full scan completed")
+            logger.info("Background task: Full scan completed.")
+            return True
+        except Exception as e:
+            job_tracker.fail_job(job_id, str(e))
+            return False
 
 
 @celery.task(name="tasks.fetch_metadata_for_game_async")

@@ -2,7 +2,7 @@
 System Routes - Endpoints relacionados ao sistema (stats, backups, etc.)
 """
 
-from flask import Blueprint, render_template, request, jsonify, Response
+from flask import Blueprint, render_template, request, jsonify, Response, send_from_directory
 from flask_login import current_user
 from db import *
 from settings import load_settings
@@ -530,16 +530,28 @@ def delete_webhook_api(id):
 @access_required("admin")
 def create_backup_api():
     """Criar backup manual"""
-    from app import backup_manager
+    from app import backup_manager, socketio
+    from job_tracker import job_tracker, JobType
+    import time
+    job_tracker.set_emitter(socketio.emit)
 
     if not backup_manager:
         return jsonify({"success": False, "error": "Backup manager not initialized"}), 500
 
-    success, timestamp = backup_manager.create_backup()
-    if success:
-        return jsonify({"success": True, "timestamp": timestamp, "message": "Backup created successfully"})
-    else:
-        return jsonify({"success": False, "error": "Backup failed"}), 500
+    job_id = f"backup_{int(time.time())}"
+    job_tracker.start_job(job_id, JobType.BACKUP, "Creating manual backup")
+
+    try:
+        success, timestamp = backup_manager.create_backup()
+        if success:
+            job_tracker.complete_job(job_id, f"Backup created: {timestamp}")
+            return jsonify({"success": True, "timestamp": timestamp, "message": "Backup created successfully"})
+        else:
+            job_tracker.fail_job(job_id, "Backup creation failed")
+            return jsonify({"success": False, "error": "Backup failed"}), 500
+    except Exception as e:
+        job_tracker.fail_job(job_id, str(e))
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @system_bp.get("/backup/list")
@@ -559,7 +571,10 @@ def list_backups_api():
 @access_required("admin")
 def restore_backup_api():
     """Restaurar backup"""
-    from app import backup_manager
+    from app import backup_manager, socketio
+    from job_tracker import job_tracker, JobType
+    import time
+    job_tracker.set_emitter(socketio.emit)
 
     if not backup_manager:
         return jsonify({"success": False, "error": "Backup manager not initialized"}), 500
@@ -570,11 +585,50 @@ def restore_backup_api():
     if not filename:
         return jsonify({"success": False, "error": "Filename required"}), 400
 
-    success = app.backup_manager.restore_backup(filename)
+    job_id = f"restore_{int(time.time())}"
+    job_tracker.start_job(job_id, JobType.BACKUP, f"Restoring {filename}")
+
+    try:
+        success = backup_manager.restore_backup(filename)
+        if success:
+            job_tracker.complete_job(job_id, "Restore successful. Restart recommended.")
+            return jsonify({"success": True, "message": f"Restored from {filename}. Please restart the application."})
+        else:
+            job_tracker.fail_job(job_id, "Restore failed")
+            return jsonify({"success": False, "error": "Restore failed"}), 500
+    except Exception as e:
+        job_tracker.fail_job(job_id, str(e))
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@system_bp.route("/backup/download/<filename>")
+@access_required("admin")
+def download_backup_api(filename):
+    """Download a backup file"""
+    from app import backup_manager
+
+    if not backup_manager:
+        return jsonify({"success": False, "error": "Backup manager not initialized"}), 500
+
+    return send_from_directory(
+        backup_manager.backup_dir, filename, as_attachment=True, download_name=filename
+    )
+
+
+@system_bp.delete("/backup/<filename>")
+@access_required("admin")
+def delete_backup_api(filename):
+    """Delete a backup file"""
+    from app import backup_manager
+
+    if not backup_manager:
+        return jsonify({"success": False, "error": "Backup manager not initialized"}), 500
+
+    success = backup_manager.delete_backup(filename)
     if success:
-        return jsonify({"success": True, "message": f"Restored from {filename}. Please restart the application."})
+        return jsonify({"success": True, "message": "Backup deleted successfully"})
     else:
-        return jsonify({"success": False, "error": "Restore failed"}), 500
+        return jsonify({"success": False, "error": "Delete failed"}), 500
 
 
 @system_bp.route("/activity", methods=["GET"])
@@ -743,6 +797,9 @@ def cancel_job(job_id):
 @access_required("admin")
 def cleanup_jobs():
     """Limpa todos os jobs ativos (útil para manutenção)"""
-    from job_tracker import job_tracker
+    from job_tracker import job_tracker, JobType
+    from app import socketio
+    job_tracker.set_emitter(socketio.emit)
+    
     count = job_tracker.cleanup_all_active_jobs()
     return jsonify({"success": True, "cleaned": count, "message": f"Cleared {count} active job(s)"})

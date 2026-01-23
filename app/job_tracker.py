@@ -88,6 +88,7 @@ class JobTracker:
         self.use_redis = False
         self._local_jobs = {}
         self._local_history = []
+        self._emitter = None
         
         try:
             self.redis = redis.from_url(self.redis_url)
@@ -98,6 +99,18 @@ class JobTracker:
         except Exception as e:
             print(f"JobTracker: Redis not available, using memory. {e}")
     
+    def set_emitter(self, emitter_func):
+        """Set a function to emit socket updates. Emitter should take (event_name, data)"""
+        self._emitter = emitter_func
+
+    def _emit_update(self):
+        """Helper to emit job status update to all clients"""
+        if self._emitter:
+            try:
+                self._emitter('job_update', self.get_status())
+            except Exception as e:
+                print(f"JobTracker: Failed to emit update: {e}")
+
     def _cleanup_stale_jobs(self, max_age_seconds: int = 3600):
         """Clean up jobs stuck in RUNNING state for more than max_age_seconds"""
         if not self.use_redis:
@@ -115,23 +128,31 @@ class JobTracker:
                 job = self.get_job(jid)
                 if job and job.status == JobStatus.RUNNING:
                     # Check if job is stale
+                    is_stale = False
                     if job.started_at:
                         age = (now - job.started_at).total_seconds()
                         if age > max_age_seconds:
-                            # Mark as cancelled/error
-                            job.status = JobStatus.CANCELLED
-                            job.error = f"Job timed out after {int(age/60)} minutes"
-                            job.completed_at = now
-                            self._save_job(job)
-                            cleaned += 1
+                            is_stale = True
+                    else:
+                        is_stale = True # No start date? Cleanup.
+                        
+                    if is_stale:
+                        # Mark as cancelled/error
+                        job.status = JobStatus.CANCELLED
+                        job.error = "Job timed out or orphaned"
+                        job.completed_at = now
+                        self._save_job(job, emit=False)
+                        cleaned += 1
             
             if cleaned > 0:
                 print(f"JobTracker: Cleaned up {cleaned} stale job(s)")
+                self._emit_update()
         except Exception as e:
             print(f"JobTracker: Error during cleanup: {e}")
     
     def cleanup_all_active_jobs(self):
         """Manually clear all active jobs (useful for debugging/maintenance)"""
+        count = 0
         if self.use_redis:
             active_ids = list(self.redis.smembers("jobs:active"))
             for jid in active_ids:
@@ -142,18 +163,22 @@ class JobTracker:
                     job.status = JobStatus.CANCELLED
                     job.error = "Manually cleared"
                     job.completed_at = datetime.now()
-                    self._save_job(job)
-            return len(active_ids)
+                    self._save_job(job, emit=False)
+            count = len(active_ids)
         else:
             count = len(self._local_jobs)
             self._local_jobs.clear()
-            return count
+        
+        self._emit_update()
+        return count
 
-    def _save_job(self, job: Job):
+    def _save_job(self, job: Job, emit: bool = True):
         if self.use_redis:
-            # Expire job key after 1 hour to auto-cleanup
+            # Expire job key after 1 hour (active) or 24 hours (history) to auto-cleanup
             key = f"job:{job.id}"
-            self.redis.set(key, json.dumps(job.to_dict()), ex=3600)
+            expiry = 3600 if job.status == JobStatus.RUNNING else 86400
+            self.redis.set(key, json.dumps(job.to_dict()), ex=expiry)
+            
             # Add to active set
             if job.status == JobStatus.RUNNING:
                 self.redis.sadd("jobs:active", job.id)
@@ -169,6 +194,9 @@ class JobTracker:
                     del self._local_jobs[job.id]
                 self._local_history.insert(0, job)
                 self._local_history = self._local_history[:50]
+        
+        if emit:
+            self._emit_update()
 
     def start_job(self, job_id: str, job_type: JobType, message: str = "") -> Job:
         job = Job(

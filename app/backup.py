@@ -156,3 +156,18 @@ class BackupManager:
         except Exception as e:
             logger.error(f"Restore failed: {e}")
             return False
+
+    def delete_backup(self, filename):
+        """Delete a specific backup file"""
+        try:
+            filepath = os.path.join(self.backup_dir, filename)
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                logger.info(f"Backup deleted: {filename}")
+                return True
+            else:
+                logger.error(f"Backup file not found for deletion: {filename}")
+                return False
+        except Exception as e:
+            logger.error(f"Failed to delete backup {filename}: {e}")
+            return False

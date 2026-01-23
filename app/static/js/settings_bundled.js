@@ -1030,11 +1030,105 @@ function runRenamingJob() {
     confirmAction({ title: t('Renomeação em Massa'), message: t('Isso irá renomear fisicamente os arquivos no seu disco. Tem certeza?'), confirmText: t('Iniciar Renomeação'), confirmClass: 'is-warning', onConfirm: () => { saveRenamingSettings(); $.post('/api/renaming/run', (r) => { if (r.success) showToast(t('Job de renomeação iniciado em segundo plano.')); }); } });
 }
 
+// --- Backup Management ---
+function fillBackupsTable() {
+    $.getJSON('/api/backup/list', (res) => {
+        if (!res.success) return;
+        const tbody = $('#backupsTable tbody').empty();
+        res.backups.forEach(b => {
+            const date = b.created.replace('T', ' ').split('.')[0];
+            const size = (b.size / 1024 / 1024).toFixed(2) + ' MB';
+            let typeColor = 'is-info';
+            if (b.type === 'settings') typeColor = 'is-warning';
+            if (b.type === 'keys') typeColor = 'is-success';
+
+            tbody.append(`
+                <tr>
+                    <td class="font-mono is-size-7">${b.filename}</td>
+                    <td><span class="tag ${typeColor} is-light">${b.type}</span></td>
+                    <td>${size}</td>
+                    <td>${date}</td>
+                    <td class="has-text-right">
+                        <div class="buttons is-right">
+                            <a href="/api/backup/download/${b.filename}" class="button is-small is-ghost" title="Download">
+                                <i class="bi bi-download"></i>
+                            </a>
+                            <button class="button is-small is-warning is-light" onclick="restoreBackup('${b.filename}')" title="Restaurar">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                            <button class="button is-small is-danger is-light" onclick="deleteBackup('${b.filename}')" title="Excluir">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `);
+        });
+    });
+}
+
+function createManualBackup() {
+    const btn = $('#btnCreateBackup');
+    btn.addClass('is-loading');
+    $.post('/api/backup/create', (res) => {
+        btn.removeClass('is-loading');
+        if (res.success) {
+            showToast(t('Backup criado com sucesso!'));
+            fillBackupsTable();
+        } else {
+            showToast(t('Erro ao criar backup'), 'error');
+        }
+    });
+}
+
+function restoreBackup(filename) {
+    confirmAction({
+        title: t('Restaurar Backup'),
+        message: t('ATENÇÃO: Isso irá substituir o arquivo atual pelo conteúdo do backup. O sistema pode precisar ser reiniciado. Deseja continuar?'),
+        confirmText: t('Restaurar Agora'),
+        confirmClass: 'is-danger',
+        onConfirm: () => {
+            $.ajax({
+                url: '/api/backup/restore',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ filename }),
+                success: (res) => {
+                    if (res.success) showToast(res.message, 'success');
+                    else showToast(t('Erro na restauração'), 'error');
+                }
+            });
+        }
+    });
+}
+
+function deleteBackup(filename) {
+    confirmAction({
+        title: t('Excluir Backup'),
+        message: t('Tem certeza que deseja remover permanentemente este arquivo de backup?'),
+        confirmText: t('Excluir'),
+        confirmClass: 'is-danger',
+        onConfirm: () => {
+            $.ajax({
+                url: `/api/backup/${filename}`,
+                type: 'DELETE',
+                success: (res) => {
+                    if (res.success) {
+                        showToast(t('Backup excluído'));
+                        fillBackupsTable();
+                    }
+                }
+            });
+        }
+    });
+}
+
 $(document).ready(async () => {
     const lastTab = sessionStorage.getItem('lastSettingsTab') || 'General';
     $(`#settingsNav a[data-target="${lastTab}"]`).click();
 
     $('a[data-target="Renaming"]').click(() => loadRenamingSettings());
+    $('a[data-target="Backups"]').click(() => fillBackupsTable());
 
     fillUserTable();
     fillLibraryTable();
@@ -1046,6 +1140,7 @@ $(document).ready(async () => {
     fillWebhooksList();
     fillPluginsList();
     fillCloudStatus();
+    fillBackupsTable();
 
     try {
         const [reg, lang, set] = await Promise.all([

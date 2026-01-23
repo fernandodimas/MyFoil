@@ -28,6 +28,7 @@
                                 Erros/Identificação</a></li>
                         <li><a data-target="Tags"><i class="bi bi-tags-fill mr-2"></i> Tags</a></li>
                         <li><a data-target="Activity"><i class="bi bi-clock-history mr-2"></i> Atividade</a></li>
+                        <li><a data-target="Backups"><i class="bi bi-shield-check mr-2"></i> Backups</a></li>
                         <li><a data-target="Webhooks"><i class="bi bi-plug-fill mr-2"></i> Webhooks <span
                                     class="tag is-warning is-light is-size-9 ml-1"
                                     style="font-size: 0.6rem;">BETA</span></a></li>
@@ -1196,6 +1197,42 @@
                                     style="border-left: 5px solid var(--color-info) !important;">
                                     <i class="bi bi-info-circle mr-2"></i> Para instalar novos plugins, adicione-os na
                                     pasta <code>app/plugins/</code>.
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Backups Section -->
+                    <section id="section-Backups" class="settings-section is-hidden">
+                        <div class="card box shadow-sm">
+                            <header class="card-header border-none shadow-none">
+                                <p class="card-header-title has-text-primary">
+                                    <i class="bi bi-shield-check mr-2"></i> Gerenciamento de Backups
+                                </p>
+                                <div class="card-header-icon pt-4 pr-5">
+                                    <button class="button is-small is-primary" onclick="createManualBackup()" id="btnCreateBackup">
+                                        <i class="bi bi-plus-lg mr-1"></i> Criar Backup
+                                    </button>
+                                </div>
+                            </header>
+                            <div class="card-content pt-0">
+                                <p class="is-size-7 mb-4 opacity-70">Gerencie os backups do banco de dados e configurações. Os backups são armazenados localmente na pasta de configuração.</p>
+                                
+                                <div class="table-container">
+                                    <table class="table is-fullwidth is-hoverable" id="backupsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Arquivo</th>
+                                                <th>Tipo</th>
+                                                <th>Tamanho</th>
+                                                <th>Data de Criação</th>
+                                                <th class="has-text-right">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Preenchido via JS -->
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>

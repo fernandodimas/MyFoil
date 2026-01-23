@@ -101,7 +101,10 @@ socketio = SocketIO(
     message_queue=os.environ.get("REDIS_URL")  # Essential: Allows Celery workers to emit to Web clients
 )
 
+# Import state to allow job tracking
 import state
+from job_tracker import job_tracker
+job_tracker.set_emitter(socketio.emit)
 
 # Initialize Limiter
 redis_url = os.environ.get("REDIS_URL")
