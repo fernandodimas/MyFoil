@@ -21,17 +21,8 @@ def create_app_context():
 
 flask_app = create_app_context()
 
-# Initialize JobTracker emitter AFTER app context is created
-# This avoids circular import issues during worker startup
-from job_tracker import job_tracker
-from socket_helper import get_socketio_emitter
-
-try:
-    emitter = get_socketio_emitter()
-    job_tracker.set_emitter(emitter)
-    logger.info("Worker: JobTracker emitter initialized successfully")
-except Exception as e:
-    logger.error(f"Worker: Failed to initialize JobTracker emitter: {e}", exc_info=True)
+# NOTE: Emitter is configured INSIDE each task to ensure fresh connection
+# This matches the pattern used by TitleDB/Backup which work correctly
 
 
 @celery.task(name="tasks.scan_library_async")
@@ -39,8 +30,12 @@ def scan_library_async(library_path):
     """Full library scan in background"""
     with flask_app.app_context():
         from db import remove_missing_files_from_db
-        from job_tracker import JobType
+        from job_tracker import job_tracker, JobType
+        from socket_helper import get_socketio_emitter
         import time
+        
+        # Recreate emitter fresh for THIS task execution
+        job_tracker.set_emitter(get_socketio_emitter())
         
         job_id = f"scan_{int(time.time())}"
         job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, f"Scanning {library_path}")
@@ -83,8 +78,12 @@ def identify_file_async(filepath):
     """Identify a single file in background (e.g. from watchdog)"""
     with flask_app.app_context():
         from db import remove_missing_files_from_db
-        from job_tracker import JobType
+        from job_tracker import job_tracker, JobType
+        from socket_helper import get_socketio_emitter
         import time
+        
+        # Recreate emitter fresh for THIS task execution
+        job_tracker.set_emitter(get_socketio_emitter())
         
         job_id = f"id_{int(time.time())}"
         job_tracker.start_job(job_id, JobType.FILE_IDENTIFICATION, f"Identifying new file")
@@ -123,8 +122,12 @@ def scan_all_libraries_async():
     """Full library scan for all configured paths in background"""
     with flask_app.app_context():
         from db import remove_missing_files_from_db, get_libraries
-        from job_tracker import JobType
+        from job_tracker import job_tracker, JobType
+        from socket_helper import get_socketio_emitter
         import time
+
+        # Recreate emitter fresh for THIS task execution
+        job_tracker.set_emitter(get_socketio_emitter())
 
         job_id = f"scan_all_{int(time.time())}"
         job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, "Scanning all libraries")
@@ -183,8 +186,12 @@ def fetch_metadata_for_all_games_async():
     with flask_app.app_context():
         from db import Titles
         from services.rating_service import update_game_metadata
-        from job_tracker import JobType, JobStatus
+        from job_tracker import job_tracker, JobType, JobStatus
+        from socket_helper import get_socketio_emitter
         import time
+
+        # Recreate emitter fresh for THIS task execution
+        job_tracker.set_emitter(get_socketio_emitter())
 
         job_id = f"metadata_{int(time.time())}"
         job_tracker.start_job(job_id, JobType.METADATA_FETCH, "Fetching metadata for all games")
