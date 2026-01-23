@@ -227,7 +227,11 @@ def on_library_change(events):
                 delete_file_by_filepath(event.src_path)
 
             elif event.type == "modified":
+                logger.info(f"Modified file detected: {event.src_path}")
                 add_files_to_library(event.directory, [event.src_path])
+                # Also treat modified as a potential identification trigger
+                # especially if it was tracked by watchdog until stable
+                created_events.append(event)
 
         if created_events:
             directories = list(set(e.directory for e in created_events))

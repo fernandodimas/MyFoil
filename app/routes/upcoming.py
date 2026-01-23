@@ -66,7 +66,8 @@ def get_upcoming():
         
     try:
         igdb = IGDBClient(igdb_id, igdb_secret)
-        games = igdb.get_upcoming_games(limit=50)
+        days_ahead = settings.get("apis", {}).get("upcoming_days_ahead", 30)
+        games = igdb.get_upcoming_games(days_ahead=days_ahead, limit=50)
         
         # Normalize/Format data if needed
         for game in games:

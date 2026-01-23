@@ -303,6 +303,7 @@ def init_rest_api(app):
                 "total_dlcs": Apps.query.filter_by(app_type=APP_TYPE_DLC, owned=True).count(),
                 "total_updates": Apps.query.filter_by(app_type=APP_TYPE_UPD, owned=True).count(),
                 "unidentified_files": Files.query.filter(Files.app_id == None).count(),
+                "metadata_games": Titles.query.filter(Titles.api_last_update != None).count(),
             }
 
     @ns_system.route("/health")

@@ -1231,7 +1231,7 @@ p.game-description {
     transform: scale(1.02);
 }
 
-#libraryContainer {
+#libraryContainer, #upcomingContainer {
     display: grid !important;
     grid-template-columns: repeat(auto-fill, minmax(var(--card-width, 240px), 1fr)) !important;
     gap: 1.5rem;
@@ -1240,7 +1240,7 @@ p.game-description {
     align-items: stretch;
 }
 
-#libraryContainer.is-list-view {
+#libraryContainer.is-list-view, #upcomingContainer.is-list-view {
     display: block !important;
 }
 

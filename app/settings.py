@@ -37,7 +37,16 @@ def load_settings(force=False):
     if os.path.exists(CONFIG_FILE):
         logger.debug(f"Reading configuration file: {CONFIG_FILE}")
         with open(CONFIG_FILE, "r") as yaml_file:
-            settings = yaml.safe_load(yaml_file)
+            settings = yaml.safe_load(yaml_file) or {}
+
+        # Deep merge with defaults to ensure new keys (like apis) are present
+        merged_settings = DEFAULT_SETTINGS.copy()
+        for section, values in settings.items():
+            if isinstance(values, dict) and section in merged_settings and isinstance(merged_settings[section], dict):
+                merged_settings[section].update(values)
+            else:
+                merged_settings[section] = values
+        settings = merged_settings
 
         valid_keys = load_keys()
         settings["titles"]["valid_keys"] = valid_keys

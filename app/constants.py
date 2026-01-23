@@ -26,7 +26,7 @@ TITLEDB_DEFAULT_FILES = [
 
 MYFOIL_DB = "sqlite:///" + DB_FILE
 
-BUILD_VERSION = '20260123_1438'
+BUILD_VERSION = '20260123_1714'
 
 DEFAULT_SETTINGS = {
     "library": {
@@ -54,6 +54,12 @@ DEFAULT_SETTINGS = {
         "clientCertKey": "-----BEGIN PRIVATE KEY-----",
         "host": "",
         "hauth": "",
+    },
+    "apis": {
+        "rawg_api_key": "",
+        "igdb_client_id": "",
+        "igdb_client_secret": "",
+        "upcoming_days_ahead": 30,
     },
 }
 

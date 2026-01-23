@@ -575,6 +575,9 @@ def apis_settings_api():
     
     if "igdb_client_secret" in data:
         settings["apis"]["igdb_client_secret"] = data["igdb_client_secret"]
+    
+    if "upcoming_days_ahead" in data:
+        settings["apis"]["upcoming_days_ahead"] = int(data["upcoming_days_ahead"])
 
     with open(CONFIG_FILE, "w") as yaml_file:
         import yaml

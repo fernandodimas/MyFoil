@@ -963,7 +963,8 @@
                                                         <div class="field">
                                                             <label class="label is-small">Client ID</label>
                                                             <div class="control">
-                                                                <input class="input is-small" type="text" id="igdbClientId"
+                                                                <input class="input is-small" type="text"
+                                                                    id="igdbClientId"
                                                                     placeholder="Client ID do Twitch Dev Portal">
                                                             </div>
                                                         </div>
@@ -989,6 +990,39 @@
                                                 onclick="testIGDBConnection()">
                                                 <i class="bi bi-check-circle mr-1"></i> Testar
                                             </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Global API Settings -->
+                                <div class="box is-shadowless border p-4 mb-4"
+                                    style="border-left: 4px solid var(--color-primary) !important;">
+                                    <h4 class="title is-6 mb-3">Configurações Globais de Metadados</h4>
+                                    <div class="field">
+                                        <label class="label is-small">Próximos Lançamentos (Dias à frente)</label>
+                                        <div class="control" style="max-width: 200px;">
+                                            <input class="input is-small" type="number" id="upcomingDaysAhead" min="1"
+                                                max="365" placeholder="30">
+                                        </div>
+                                        <p class="help">Define quantos dias à frente buscar na página de "Próximos".</p>
+                                    </div>
+                                </div>
+
+                                <!-- Metadata Stats -->
+                                <div class="box is-shadowless border p-4 mb-4 bg-light-soft">
+                                    <h4 class="title is-6 mb-3">Estatísticas de Metadados</h4>
+                                    <div class="columns is-mobile has-text-centered">
+                                        <div class="column">
+                                            <p class="heading is-size-7 opacity-50">Jogos com Dados</p>
+                                            <p class="title is-4 has-text-primary" id="statMetadataGames">--</p>
+                                        </div>
+                                        <div class="column">
+                                            <p class="heading is-size-7 opacity-50">API RAWG</p>
+                                            <span class="tag is-success is-light" id="statusRAWG">Ativa</span>
+                                        </div>
+                                        <div class="column">
+                                            <p class="heading is-size-7 opacity-50">API IGDB</p>
+                                            <span class="tag is-success is-light" id="statusIGDB">Ativa</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1214,14 +1248,16 @@
                                     <i class="bi bi-shield-check mr-2"></i> Gerenciamento de Backups
                                 </p>
                                 <div class="card-header-icon pt-4 pr-5">
-                                    <button class="button is-small is-primary" onclick="createManualBackup()" id="btnCreateBackup">
+                                    <button class="button is-small is-primary" onclick="createManualBackup()"
+                                        id="btnCreateBackup">
                                         <i class="bi bi-plus-lg mr-1"></i> Criar Backup
                                     </button>
                                 </div>
                             </header>
                             <div class="card-content pt-0">
-                                <p class="is-size-7 mb-4 opacity-70">Gerencie os backups do banco de dados e configurações. Os backups são armazenados localmente na pasta de configuração.</p>
-                                
+                                <p class="is-size-7 mb-4 opacity-70">Gerencie os backups do banco de dados e
+                                    configurações. Os backups são armazenados localmente na pasta de configuração.</p>
+
                                 <div class="table-container">
                                     <table class="table is-fullwidth is-hoverable" id="backupsTable">
                                         <thead>

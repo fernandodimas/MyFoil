@@ -868,24 +868,24 @@ def get_game_info(title_id):
         if info:
             res = {
                 "name": info.get("name") or "Unknown Title",
-                "bannerUrl": info.get("bannerUrl") or "",
-                "iconUrl": info.get("iconUrl") or "",
+                "bannerUrl": info.get("bannerUrl") or info.get("banner_url") or "",
+                "iconUrl": info.get("iconUrl") or info.get("icon_url") or "",
                 "id": info.get("id") or title_id,
                 "category": info.get("category", [])
                 if isinstance(info.get("category"), list)
                 else [info.get("category")]
                 if info.get("category")
                 else [],
-                "release_date": format_release_date(info.get("releaseDate")),
+                "release_date": format_release_date(info.get("releaseDate") or info.get("release_date")),
                 "size": info.get("size") or 0,
                 "publisher": info.get("publisher") or "Nintendo",
                 "description": info.get("description") or "",
-                "nsuid": info.get("nsuid") or "",
+                "nsuid": info.get("nsuid") or info.get("nsuId") or "",
                 "screenshots": info.get("screenshots", []),
             }
 
-            # DLC/Update Icon Fallback: If icon is missing, try to inherit from base game
-            if (not res["iconUrl"] or res["iconUrl"] == "") and not search_id.endswith("000"):
+            # DLC/Update Icon Fallback: Only if icon is strictly missing
+            if not res["iconUrl"] and not search_id.endswith("000"):
                 possible_base_ids = [search_id[:-3] + "000"]
                 try:
                     # For DLCs, the base ID is often (DLC_PREFIX - 1) + 000
@@ -907,7 +907,7 @@ def get_game_info(title_id):
                         break
 
             # Fallback: Use Banner as Icon if Icon is still missing
-            if (not res["iconUrl"] or res["iconUrl"] == "") and res["bannerUrl"]:
+            if not res["iconUrl"] and res["bannerUrl"]:
                 res["iconUrl"] = res["bannerUrl"]
 
             return res

@@ -171,8 +171,8 @@ class IGDBClient:
             logger.error(f"IGDB search error for '{title}': {e}")
             raise RatingAPIException(f"IGDB search failed: {e}")
 
-    def get_upcoming_games(self, limit: int = 20) -> list:
-        """Fetch upcoming Nintendo Switch games"""
+    def get_upcoming_games(self, days_ahead: int = 30, limit: int = 50) -> list:
+        """Fetch upcoming Nintendo Switch games within a certain timeframe"""
         token = self._get_access_token()
         headers = {
             "Client-ID": self.client_id,
@@ -180,11 +180,13 @@ class IGDBClient:
         }
         
         # platform 130 = Nintendo Switch
-        # first_release_date > now (represented as epoch timestamp)
+        # first_release_date > now & first_release_date < now + days_ahead
         now = int(time.time())
+        future = now + (days_ahead * 86400)
+        
         query = (
             f'fields name, first_release_date, cover.url, summary, genres.name, aggregated_rating, screenshots.url; '
-            f'where platforms = (130) & first_release_date > {now}; '
+            f'where platforms = (130) & first_release_date > {now} & first_release_date < {future}; '
             f'sort first_release_date asc; '
             f'limit {limit};'
         )
@@ -322,5 +324,13 @@ def update_game_metadata(game_obj, force: bool = False):
     game_obj.api_last_update = metadata.get("api_last_update")
     
     db.session.commit()
+    
+    # Invalidate library cache so changes appear on dashboard
+    try:
+        from library import invalidate_library_cache
+        invalidate_library_cache()
+    except Exception as e:
+        logger.warning(f"Failed to invalidate library cache: {e}")
+
     logger.info(f"Updated metadata for {game_obj.name}")
     return True

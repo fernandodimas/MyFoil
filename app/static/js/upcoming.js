@@ -132,16 +132,16 @@ function renderUpcoming() {
 }
 
 function renderCardView(games, container) {
-    games.forEach(game => {
+    games.forEach((game, index) => {
         const genres = (game.genres || []).map(g => `<span class="tag is-dark is-light is-size-7 mr-1 mb-1">${g.name}</span>`).join('');
 
         const card = document.createElement('div');
         card.className = 'grid-item';
         card.innerHTML = `
-            <div class="card box p-0 shadow-sm border-none bg-glass upcoming-card h-100 is-flex is-flex-direction-column">
+            <div class="card box p-0 shadow-sm border-none bg-glass upcoming-card h-100 is-flex is-flex-direction-column" onclick="showUpcomingDetails(${index})">
                 <div class="card-image">
-                    <figure class="image is-3by4 bg-light-soft">
-                        <img src="${game.cover_url}" alt="${game.name}" style="object-fit: cover;">
+                    <figure class="image is-square bg-light-soft">
+                        <img src="${game.cover_url}" alt="${game.name}">
                     </figure>
                     <div class="date-badge">
                         <i class="bi bi-calendar-check mr-1"></i> ${game.release_date_formatted}
@@ -149,17 +149,11 @@ function renderCardView(games, container) {
                 </div>
                 <div class="card-content p-4 is-flex is-flex-direction-column is-flex-grow-1">
                     <h3 class="title is-6 mb-2 has-text-weight-bold line-clamp-2" title="${game.name}">${game.name}</h3>
-                    <div class="mb-3">
-                        ${genres}
-                    </div>
-                    <p class="summary-text opacity-70 mb-4 line-clamp-3">
-                        ${game.summary || 'Sem resumo disponível.'}
-                    </p>
-                    <div class="mt-auto pt-3 border-top border-opacity-10 is-flex is-justify-content-space-between is-align-items-center">
-                        <button class="button is-small is-primary is-ghost p-0" onclick="window.open('https://www.google.com/search?q=Nintendo+Switch+${encodeURIComponent(game.name)}', '_blank')">
-                            <i class="bi bi-info-circle mr-1"></i> Detalhes
-                        </button>
-                        <button class="button is-small is-light" onclick="addToWishlistByName('${game.name}')" title="Adicionar à Wishlist">
+                    <div class="is-flex is-justify-content-space-between is-align-items-center mt-auto pt-2">
+                        <div class="tags line-clamp-1 mb-0 pb-0" style="height: 24px;">
+                            ${genres}
+                        </div>
+                        <button class="button is-small is-light" onclick="event.stopPropagation(); addToWishlistByName('${game.name}')" title="Adicionar à Wishlist">
                             <i class="bi bi-heart"></i>
                         </button>
                     </div>
@@ -171,13 +165,13 @@ function renderCardView(games, container) {
 }
 
 function renderIconView(games, container) {
-    games.forEach(game => {
+    games.forEach((game, index) => {
         const card = document.createElement('div');
         card.className = 'grid-item';
         card.innerHTML = `
-            <div class="card shadow-sm border-none bg-glass h-100" style="border-radius: 12px; overflow: hidden; position: relative;" title="${game.name}">
+            <div class="card shadow-sm border-none bg-glass h-100 upcoming-card" style="border-radius: 12px; overflow: hidden; position: relative;" title="${game.name}" onclick="showUpcomingDetails(${index})">
                 <figure class="image is-square bg-light-soft">
-                    <img src="${game.cover_url}" alt="${game.name}" style="object-fit: cover; cursor: pointer; height: 100%; width: 100%;" onclick="addToWishlistByName('${game.name}')">
+                    <img src="${game.cover_url}" alt="${game.name}" style="object-fit: cover; height: 100%; width: 100%; border-radius: 0;">
                 </figure>
                 <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; padding: 2px 5px; font-size: 0.65rem; text-align: center;">
                     ${game.release_date_formatted}
@@ -192,16 +186,15 @@ function renderListView(games, container) {
     const tableContainer = document.createElement('div');
     tableContainer.className = 'box is-paddingless shadow-sm overflow-hidden border-none bg-glass';
 
-    let rows = games.map(game => `
-        <tr class="list-view-row" onclick="addToWishlistByName('${game.name}')">
+    let rows = games.map((game, index) => `
+        <tr class="list-view-row" onclick="showUpcomingDetails(${index})">
             <td width="60" class="p-2"><img src="${game.cover_url}" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;"></td>
             <td class="is-vcentered">
                 <strong>${game.name}</strong>
-                <p class="is-size-7 opacity-70 line-clamp-1">${game.summary || ''}</p>
             </td>
             <td class="is-vcentered has-text-centered font-mono is-size-7">${game.release_date_formatted}</td>
             <td class="is-vcentered has-text-right p-3">
-                <button class="button is-small is-primary is-light" onclick="event.stopPropagation(); addToWishlistByName('${game.name}')">
+                <button class="button is-small is-light" onclick="event.stopPropagation(); addToWishlistByName('${game.name}')">
                     <i class="bi bi-heart mr-1"></i> Wishlist
                 </button>
             </td>
@@ -224,6 +217,71 @@ function renderListView(games, container) {
         </table>
     `;
     container.appendChild(tableContainer);
+}
+
+function showUpcomingDetails(index) {
+    const game = filteredGames[index];
+    if (!game) return;
+
+    $('#upModalTitle').text(game.name);
+    const bgUrl = game.screenshots && game.screenshots.length > 0 ? `https:${game.screenshots[0].url.replace('t_thumb', 't_1080p')}` : game.cover_url;
+
+    let content = `
+        <div class="modal-banner-container" style="position: relative; height: 200px; overflow: hidden; background: #000;">
+            <img src="${bgUrl}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 50%; background: linear-gradient(transparent, var(--bulma-modal-card-body-background-color));"></div>
+        </div>
+        <div class="px-6 pb-6">
+            <div class="columns">
+                <div class="column is-4">
+                    <figure class="image is-square shadow-lg" style="margin-top: -80px; position: relative; z-index: 10; border-radius: 12px; overflow: hidden; border: 4px solid var(--bulma-modal-card-body-background-color);">
+                        <img src="${game.cover_url}" style="height: 100%; width: 100%; object-fit: cover;">
+                    </figure>
+                    <div class="mt-4 box is-shadowless border bg-light-soft">
+                        <p class="heading mb-1 opacity-50">Lançamento</p>
+                        <p class="is-size-6 has-text-weight-bold mb-3">${game.release_date_formatted}</p>
+                        
+                        <p class="heading mb-1 opacity-50">Gêneros</p>
+                        <div class="tags">
+                            ${(game.genres || []).map(g => `<span class="tag is-small">${g.name}</span>`).join('')}
+                        </div>
+                        
+                        <hr class="my-4 opacity-10">
+                        
+                        <button class="button is-primary is-fullwidth" onclick="addToWishlistByName('${game.name}')">
+                            <i class="bi bi-heart-fill mr-1"></i> Wishlist
+                        </button>
+                    </div>
+                </div>
+                <div class="column is-8">
+                    <h3 class="title is-3 mb-2" style="margin-top: 10px;">${game.name}</h3>
+                    <p class="subtitle is-6 opacity-60 mb-5">${game.involved_companies?.[0]?.company?.name || ''}</p>
+                    
+                    <div class="content opacity-80" style="font-size: 0.95rem; line-height: 1.6;">
+                        ${game.summary || 'Sem descrição disponível.'}
+                    </div>
+                    
+                    ${game.screenshots && game.screenshots.length > 0 ? `
+                        <div class="mt-5">
+                            <p class="heading mb-3">Screenshots</p>
+                            <div class="columns is-multiline is-mobile">
+                                ${game.screenshots.slice(0, 4).map(s => `
+                                    <div class="column is-half">
+                                        <figure class="image is-16by9 overflow-hidden" style="border-radius: 8px;">
+                                            <img src="https:${s.url.replace('t_thumb', 't_cover_big')}" style="object-fit: cover;">
+                                        </figure>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+
+    $('#upModalContent').html(content);
+    openModal('upcomingDetailsModal');
 }
 
 function addToWishlistByName(name) {

@@ -133,7 +133,39 @@
     #upcomingContainer.is-list-view {
         display: block;
     }
+
+    /* Force 1:1 ratio for cards too */
+    .upcoming-card .image {
+        aspect-ratio: 1 / 1;
+        overflow: hidden;
+    }
+
+    .upcoming-card .image img {
+        height: 100%;
+        width: 100%;
+        object-fit: cover;
+    }
+
+    .upcoming-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+        cursor: pointer;
+    }
 </style>
+
+<!-- Game Info Modal for Upcoming -->
+<div class="modal" id="upcomingDetailsModal">
+    <div class="modal-background" onclick="closeModal('upcomingDetailsModal')"></div>
+    <div class="modal-card modal-card-large">
+        <header class="modal-card-head border-none">
+            <p class="modal-card-title has-text-weight-bold" id="upModalTitle">Detalhes</p>
+            <button class="delete" aria-label="close" onclick="closeModal('upcomingDetailsModal')"></button>
+        </header>
+        <section class="modal-card-body p-0" id="upModalContent">
+            <!-- Content Injected via JS -->
+        </section>
+    </div>
+</div>
 
 <script src="/static/js/upcoming.js?v={{ build_version }}"></script>
 {% endblock %}

@@ -12,6 +12,7 @@ window.saveAPISettings = function () {
     const rawg_api_key = $('#rawgApiKey').val();
     const igdb_client_id = $('#igdbClientId').val();
     const igdb_client_secret = $('#igdbClientSecret').val();
+    const upcoming_days_ahead = $('#upcomingDaysAhead').val();
     $.ajax({
         url: '/api/settings/apis',
         type: 'POST',
@@ -19,13 +20,35 @@ window.saveAPISettings = function () {
         data: JSON.stringify({
             rawg_api_key,
             igdb_client_id,
-            igdb_client_secret
+            igdb_client_secret,
+            upcoming_days_ahead
         }),
         success: (res) => {
-            if (res.success) showToast(t('Configurações de API salvas'));
+            if (res.success) {
+                showToast(t('Configurações de API salvas'));
+                if (typeof fillMetadataStats === 'function') fillMetadataStats();
+            }
             else showToast(t('Erro ao salvar configurações'), 'error');
         },
         error: () => showToast(t('Erro de comunicação'), 'error')
+    });
+};
+
+window.fillMetadataStats = function () {
+    $.getJSON('/api/stats', (stats) => {
+        $('#statMetadataGames').text(stats.metadata_games || 0);
+        // RAWG status
+        if ($('#rawgApiKey').val()) {
+            $('#statusRAWG').removeClass('is-danger').addClass('is-success').text(t('Ativa'));
+        } else {
+            $('#statusRAWG').removeClass('is-success').addClass('is-danger').text(t('Inativa'));
+        }
+        // IGDB status
+        if ($('#igdbClientId').val() && $('#igdbClientSecret').val()) {
+            $('#statusIGDB').removeClass('is-danger').addClass('is-success').text(t('Ativa'));
+        } else {
+            $('#statusIGDB').removeClass('is-success').addClass('is-danger').text(t('Inativa'));
+        }
     });
 };
 
@@ -1167,6 +1190,8 @@ $(document).ready(async () => {
         if (set['apis/rawg_api_key']) $('#rawgApiKey').val(set['apis/rawg_api_key']);
         if (set['apis/igdb_client_id']) $('#igdbClientId').val(set['apis/igdb_client_id']);
         if (set['apis/igdb_client_secret']) $('#igdbClientSecret').val(set['apis/igdb_client_secret']);
+        if (set['apis/upcoming_days_ahead']) $('#upcomingDaysAhead').val(set['apis/upcoming_days_ahead']);
+        if (typeof fillMetadataStats === 'function') fillMetadataStats();
     } catch (e) {
         console.error("Failed to load critical settings:", e);
         showToast(t('Failed to load settings from server'), 'error');
