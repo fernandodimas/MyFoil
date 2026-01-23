@@ -317,115 +317,114 @@ def identify_library_files(library):
         socketio.emit('job_update', job_tracker.get_status())
 
     try:
+        for n, file in enumerate(files_to_identify):
+            try:
+                file_id = file.id
+                filepath = file.filepath
+                filename = file.filename
 
-    for n, file in enumerate(files_to_identify):
-        try:
-            file_id = file.id
-            filepath = file.filepath
-            filename = file.filename
-
-            if not os.path.exists(filepath):
-                logger.warning(
-                    f"Identifying file ({n + 1}/{nb_to_identify}): {filename} no longer exists, clearing from database."
-                )
-                # Use helper to ensure ownership is updated
-                remove_file_from_apps(file_id)
-                Files.query.filter_by(id=file_id).delete(synchronize_session=False)
-                db.session.flush()  # Otimização: usar flush ao invés de commit imediato
-                continue
-
-            logger.info(f"Identifying file ({n + 1}/{nb_to_identify}): {filename}")
-            
-            # Update job progress
-            progress = int(((n + 1) / nb_to_identify) * 100)
-            job_tracker.update_progress(job_id, progress, current=n+1, total=nb_to_identify, message=f"Identifying {filename}")
-            if n % 5 == 0: # Emit every 5 files
-                 socketio.emit('job_update', job_tracker.get_status())
-            
-            with IDENTIFICATION_DURATION.time():
-                identification, success, file_contents, error = titles_lib.identify_file(filepath)
-
-            if success and file_contents and not error:
-                # Increment metrics
-                FILES_IDENTIFIED.labels(
-                    app_type="multiple" if len(file_contents) > 1 else file_contents[0]["type"]
-                ).inc()
-                # find all unique Titles ID to add to the Titles db
-                title_ids = list(dict.fromkeys([c["title_id"] for c in file_contents]))
-
-                for title_id in title_ids:
-                    add_title_id_in_db(title_id)
-
-                nb_content = 0
-                for file_content in file_contents:
-                    logger.info(
-                        f"Identifying file ({n + 1}/{nb_to_identify}) - Found content Title ID: {file_content['title_id']} App ID : {file_content['app_id']} Title Type: {file_content['type']} Version: {file_content['version']}"
+                if not os.path.exists(filepath):
+                    logger.warning(
+                        f"Identifying file ({n + 1}/{nb_to_identify}): {filename} no longer exists, clearing from database."
                     )
-                    # now add the content to Apps
-                    title_id_in_db = get_title_id_db_id(file_content["title_id"])
+                    # Use helper to ensure ownership is updated
+                    remove_file_from_apps(file_id)
+                    Files.query.filter_by(id=file_id).delete(synchronize_session=False)
+                    db.session.flush()  # Otimização: usar flush ao invés de commit imediato
+                    continue
 
-                    # Check if app already exists
-                    existing_app = get_app_by_id_and_version(file_content["app_id"], file_content["version"])
+                logger.info(f"Identifying file ({n + 1}/{nb_to_identify}): {filename}")
+                
+                # Update job progress
+                progress = int(((n + 1) / nb_to_identify) * 100)
+                job_tracker.update_progress(job_id, progress, current=n+1, total=nb_to_identify, message=f"Identifying {filename}")
+                if n % 5 == 0: # Emit every 5 files
+                     socketio.emit('job_update', job_tracker.get_status())
+                
+                with IDENTIFICATION_DURATION.time():
+                    identification, success, file_contents, error = titles_lib.identify_file(filepath)
 
-                    if existing_app:
-                        # Add file to existing app using many-to-many relationship
-                        add_file_to_app(file_content["app_id"], file_content["version"], file_id)
-                    else:
-                        # Create new app entry and add file using many-to-many relationship
-                        new_app = Apps(
-                            app_id=file_content["app_id"],
-                            app_version=file_content["version"],
-                            app_type=file_content["type"],
-                            owned=True,
-                            title_id=title_id_in_db,
+                if success and file_contents and not error:
+                    # Increment metrics
+                    FILES_IDENTIFIED.labels(
+                        app_type="multiple" if len(file_contents) > 1 else file_contents[0]["type"]
+                    ).inc()
+                    # find all unique Titles ID to add to the Titles db
+                    title_ids = list(dict.fromkeys([c["title_id"] for c in file_contents]))
+
+                    for title_id in title_ids:
+                        add_title_id_in_db(title_id)
+
+                    nb_content = 0
+                    for file_content in file_contents:
+                        logger.info(
+                            f"Identifying file ({n + 1}/{nb_to_identify}) - Found content Title ID: {file_content['title_id']} App ID : {file_content['app_id']} Title Type: {file_content['type']} Version: {file_content['version']}"
                         )
-                        db.session.add(new_app)
-                        db.session.flush()  # Flush to get the app ID
+                        # now add the content to Apps
+                        title_id_in_db = get_title_id_db_id(file_content["title_id"])
 
-                        # Add the file to the new app
-                        file_obj = get_file_from_db(file_id)
-                        if file_obj:
-                            new_app.files.append(file_obj)
+                        # Check if app already exists
+                        existing_app = get_app_by_id_and_version(file_content["app_id"], file_content["version"])
 
-                    nb_content += 1
+                        if existing_app:
+                            # Add file to existing app using many-to-many relationship
+                            add_file_to_app(file_content["app_id"], file_content["version"], file_id)
+                        else:
+                            # Create new app entry and add file using many-to-many relationship
+                            new_app = Apps(
+                                app_id=file_content["app_id"],
+                                app_version=file_content["version"],
+                                app_type=file_content["type"],
+                                owned=True,
+                                title_id=title_id_in_db,
+                            )
+                            db.session.add(new_app)
+                            db.session.flush()  # Flush to get the app ID
 
-                if nb_content > 1:
-                    file.multicontent = True
-                file.nb_content = nb_content
-                file.identified = True
-            else:
-                logger.warning(f"Error identifying file {filename}: {error}")
-                file.identification_error = error
+                            # Add the file to the new app
+                            file_obj = get_file_from_db(file_id)
+                            if file_obj:
+                                new_app.files.append(file_obj)
+
+                        nb_content += 1
+
+                    if nb_content > 1:
+                        file.multicontent = True
+                    file.nb_content = nb_content
+                    file.identified = True
+                else:
+                    logger.warning(f"Error identifying file {filename}: {error}")
+                    file.identification_error = error
+                    file.identified = False
+
+                file.identification_type = identification
+
+                # Update TitleDB version timestamp after successful identification
+                current_titledb_ts = titles_lib.get_titledb_cache_timestamp()
+                if current_titledb_ts:
+                    file.titledb_version = str(current_titledb_ts)
+
+            except Exception as e:
+                logger.warning(f"Error identifying file {filename}: {e}")
+                file.identification_error = str(e)
                 file.identified = False
 
-            file.identification_type = identification
+            # and finally update the File with identification info
+            file.identification_attempts += 1
+            file.last_attempt = datetime.datetime.now()
 
-            # Update TitleDB version timestamp after successful identification
-            current_titledb_ts = titles_lib.get_titledb_cache_timestamp()
-            if current_titledb_ts:
-                file.titledb_version = str(current_titledb_ts)
+            # Otimização: Usar flush() a cada 50 arquivos para liberar memória sem commit completo
+            # Commit apenas a cada 100 arquivos para reduzir overhead de transações
+            if (n + 1) % 50 == 0:
+                db.session.flush()  # Libera memória sem commit completo
+            if (n + 1) % 100 == 0:
+                db.session.commit()  # Commit completo a cada 100 arquivos
 
-        except Exception as e:
-            logger.warning(f"Error identifying file {filename}: {e}")
-            file.identification_error = str(e)
-            file.identified = False
+        # Final commit
+        db.session.commit()
 
-        # and finally update the File with identification info
-        file.identification_attempts += 1
-        file.last_attempt = datetime.datetime.now()
-
-        # Otimização: Usar flush() a cada 50 arquivos para liberar memória sem commit completo
-        # Commit apenas a cada 100 arquivos para reduzir overhead de transações
-        if (n + 1) % 50 == 0:
-            db.session.flush()  # Libera memória sem commit completo
-        if (n + 1) % 100 == 0:
-            db.session.commit()  # Commit completo a cada 100 arquivos
-
-    # Final commit
-    db.session.commit()
-
-    job_tracker.complete_job(job_id, f"Identified {nb_to_identify} files")
-    socketio.emit('job_update', job_tracker.get_status())
+        job_tracker.complete_job(job_id, f"Identified {nb_to_identify} files")
+        socketio.emit('job_update', job_tracker.get_status())
     
     except Exception as e:
         logger.exception(f"Error identifying files: {e}")
