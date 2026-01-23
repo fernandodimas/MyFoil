@@ -119,17 +119,25 @@ class JobTracker:
             return False
 
     def check_connection(self):
-        """Ensure connection is still alive, try to reconnect if not"""
-        if not self.use_redis:
-            if os.environ.get("REDIS_URL"):
-                return self._connect_redis()
-            return False
+        """Ensure connection is alive, reconnect if needed - aggressive reconnection strategy"""
+        # Always try to connect if Redis URL is available but not currently connected
+        if not self.use_redis and os.environ.get("REDIS_URL"):
+            logger.info("JobTracker: Redis URL available but not connected, attempting connection...")
+            success = self._connect_redis()
+            if success:
+                logger.info("JobTracker: Successfully connected to Redis on check")
+            return success
             
-        try:
-            self.redis.ping()
-            return True
-        except:
-            return self._connect_redis()
+        # If we think we're connected, verify with ping
+        if self.use_redis:
+            try:
+                self.redis.ping()
+                return True
+            except Exception as e:
+                logger.warning(f"JobTracker: Redis ping failed ({e}), attempting reconnection...")
+                return self._connect_redis()
+        
+        return False
 
     def set_emitter(self, emitter_func):
         """Set a function to emit socket updates. Emitter should take (event_name, data)"""
@@ -138,6 +146,7 @@ class JobTracker:
     def _emit_update(self, job_id: str = None, force: bool = False):
         """Helper to emit job status update to all clients with rate limiting"""
         if not self._emitter:
+            logger.debug("JobTracker: No emitter configured, skipping emit")
             return
 
         import time
@@ -147,14 +156,16 @@ class JobTracker:
         if job_id and not force:
             last_time = self._last_emit_time.get(job_id, 0)
             if now - last_time < 0.5:
+                logger.debug(f"JobTracker: Rate-limited emit for job {job_id}")
                 return
             self._last_emit_time[job_id] = now
 
         try:
-            self._emitter('job_update', self.get_status())
+            status = self.get_status()
+            self._emitter('job_update', status)
+            logger.debug(f"JobTracker: Emitted job_update - {len(status.get('active', []))} active, {len(status.get('history', []))} history")
         except Exception as e:
-            # Silently catch socket errors in workers
-            pass
+            logger.error(f"JobTracker: Failed to emit job update: {e}", exc_info=True)
 
     def _cleanup_stale_jobs(self, max_age_seconds: int = 3600):
         """Clean up jobs stuck in RUNNING state for more than max_age_seconds"""
