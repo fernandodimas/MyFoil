@@ -85,7 +85,9 @@ from datetime import timedelta
 
 # Global variables
 app_settings = {}
-socketio = SocketIO()
+app_settings = {}
+# Initialize SocketIO with broad CORS support for proxy compatibility
+socketio = SocketIO(cors_allowed_origins="*", async_mode='gevent')
 
 import state
 
