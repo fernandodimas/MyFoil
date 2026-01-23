@@ -93,8 +93,61 @@ class JobTracker:
             self.redis = redis.from_url(self.redis_url)
             self.redis.ping()
             self.use_redis = True
+            # Auto-cleanup stale jobs on initialization
+            self._cleanup_stale_jobs()
         except Exception as e:
             print(f"JobTracker: Redis not available, using memory. {e}")
+    
+    def _cleanup_stale_jobs(self, max_age_seconds: int = 3600):
+        """Clean up jobs stuck in RUNNING state for more than max_age_seconds"""
+        if not self.use_redis:
+            return
+        
+        try:
+            active_ids = self.redis.smembers("jobs:active")
+            now = datetime.now()
+            cleaned = 0
+            
+            for jid in active_ids:
+                if isinstance(jid, bytes):
+                    jid = jid.decode()
+                
+                job = self.get_job(jid)
+                if job and job.status == JobStatus.RUNNING:
+                    # Check if job is stale
+                    if job.started_at:
+                        age = (now - job.started_at).total_seconds()
+                        if age > max_age_seconds:
+                            # Mark as cancelled/error
+                            job.status = JobStatus.CANCELLED
+                            job.error = f"Job timed out after {int(age/60)} minutes"
+                            job.completed_at = now
+                            self._save_job(job)
+                            cleaned += 1
+            
+            if cleaned > 0:
+                print(f"JobTracker: Cleaned up {cleaned} stale job(s)")
+        except Exception as e:
+            print(f"JobTracker: Error during cleanup: {e}")
+    
+    def cleanup_all_active_jobs(self):
+        """Manually clear all active jobs (useful for debugging/maintenance)"""
+        if self.use_redis:
+            active_ids = list(self.redis.smembers("jobs:active"))
+            for jid in active_ids:
+                if isinstance(jid, bytes):
+                    jid = jid.decode()
+                job = self.get_job(jid)
+                if job:
+                    job.status = JobStatus.CANCELLED
+                    job.error = "Manually cleared"
+                    job.completed_at = datetime.now()
+                    self._save_job(job)
+            return len(active_ids)
+        else:
+            count = len(self._local_jobs)
+            self._local_jobs.clear()
+            return count
 
     def _save_job(self, job: Job):
         if self.use_redis:

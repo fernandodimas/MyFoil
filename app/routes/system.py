@@ -737,3 +737,12 @@ def cancel_job(job_id):
     # from job_tracker import job_tracker
     # TODO: Implement job cancellation logic (rendering the thread/process stop)
     return jsonify({"success": True})
+
+
+@system_bp.route("/system/jobs/cleanup", methods=["POST"])
+@access_required("admin")
+def cleanup_jobs():
+    """Limpa todos os jobs ativos (útil para manutenção)"""
+    from job_tracker import job_tracker
+    count = job_tracker.cleanup_all_active_jobs()
+    return jsonify({"success": True, "cleaned": count, "message": f"Cleared {count} active job(s)"})
