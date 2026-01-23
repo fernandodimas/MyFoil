@@ -298,6 +298,7 @@ class JobTracker:
             self._save_job(job)
             
     def get_job(self, job_id: str) -> Optional[Job]:
+        self.check_connection()
         if self.use_redis:
             data = self.redis.get(f"job:{job_id}")
             if data:
@@ -306,6 +307,7 @@ class JobTracker:
         return self._local_jobs.get(job_id)
 
     def get_status(self) -> dict:
+        self.check_connection()
         if self.use_redis:
             active_ids = self.redis.smembers("jobs:active")
             active_jobs = []
