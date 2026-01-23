@@ -92,6 +92,18 @@ def system_info_api():
     )
 
 
+@system_bp.route("/stats")
+@access_required("shop")
+def get_stats():
+    """Retorna estatísticas gerais para o painel"""
+    # Contagem de jogos com metadados enriquecidos
+    metadata_games = Titles.query.filter(
+        (Titles.metacritic_score.isnot(None)) | (Titles.rawg_rating.isnot(None))
+    ).count()
+
+    return jsonify({"metadata_games": metadata_games})
+
+
 @system_bp.route("/set_language/<lang>", methods=["POST"])
 def set_language(lang):
     """Definir idioma da interface"""

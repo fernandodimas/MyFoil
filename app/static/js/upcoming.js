@@ -149,10 +149,7 @@ function renderCardView(games, container) {
                 </div>
                 <div class="card-content p-4 is-flex is-flex-direction-column is-flex-grow-1">
                     <h3 class="title is-6 mb-2 has-text-weight-bold line-clamp-2" title="${game.name}">${game.name}</h3>
-                    <div class="is-flex is-justify-content-space-between is-align-items-center mt-auto pt-2">
-                        <div class="tags line-clamp-1 mb-0 pb-0" style="height: 24px;">
-                            ${genres}
-                        </div>
+                    <div class="is-flex is-justify-content-end is-align-items-center mt-auto pt-2">
                         <button class="button is-small is-light" onclick="event.stopPropagation(); addToWishlistByName('${game.name}')" title="Adicionar à Wishlist">
                             <i class="bi bi-heart"></i>
                         </button>

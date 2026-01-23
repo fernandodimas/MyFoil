@@ -190,8 +190,7 @@ function renderCardView(items) {
                         </figure>
                     </div>
                     <div class="card-content">
-                        <div class="is-flex is-justify-content-between is-align-items-center mb-1">
-                            <span class="font-mono is-size-7 opacity-40">${safeId}</span>
+                        <div class="is-flex is-justify-content-end is-align-items-center mb-1">
                             <span class="font-mono is-size-7 has-text-weight-bold">v${game.display_version}</span>
                         </div>
                         
@@ -215,7 +214,7 @@ function renderCardView(items) {
                                 <span class="status-dot ${statusDotClass}"></span>
                                 <span class="is-size-7 opacity-70 font-mono">${game.size_formatted || '--'}</span>
                             </div>
-                            <div class="is-flex gap-1">
+                            <div class="is-flex gap-1 is-justify-content-end">
                                 ${game.has_non_ignored_updates ? `<span class="tag tag-update has-text-weight-bold is-small">${t('UPDATE')}</span>` : ''}
                                 ${game.has_non_ignored_dlcs ? `<span class="tag tag-dlc has-text-weight-bold is-small">${t('DLC')}</span>` : ''}
                             </div>
@@ -228,6 +227,15 @@ function renderCardView(items) {
     });
 
     observeImages();
+}
+
+// Socket listener for library updates
+if (typeof socket !== 'undefined' || (statusManager && statusManager.socket)) {
+    const s = socket || statusManager.socket;
+    s.on('library_updated', () => {
+        console.log('🔄 Library update event received from socket');
+        refreshLibrary();
+    });
 }
 
 function renderIconView(items) {

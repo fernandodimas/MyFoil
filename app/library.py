@@ -196,20 +196,32 @@ def add_files_to_library(library, files):
                 logger.error(f"Failed to get info for file: {file} - file will be skipped.")
                 continue
 
-            new_file = Files(
-                filepath=filepath,
-                library_id=library_id,
-                folder=file_info["filedir"],
-                filename=file_info["filename"],
-                extension=file_info["extension"],
-                size=file_info["size"],
-            )
-            db.session.add(new_file)
+            # Check if file already exists
+            existing_file = Files.query.filter_by(filepath=filepath).first()
+            if existing_file:
+                logger.info(f"File already exists in DB, updating info/status: {file}")
+                # Update size and force re-identification
+                existing_file.size = file_info["size"]
+                existing_file.identified = False
+                
+                # Otimização: se o arquivo já existia, talvez queiramos manter o titledb_version antigo até identificá-lo novamente?
+                # Sim, deixamos o worker de identificação atualizar isso.
+            else:
+                new_file = Files(
+                    filepath=filepath,
+                    library_id=library_id,
+                    folder=file_info["filedir"],
+                    filename=file_info["filename"],
+                    extension=file_info["extension"],
+                    size=file_info["size"],
+                )
+                db.session.add(new_file)
+            
             # Otimização: Usar flush() ao invés de commit imediato para logs
             db.session.flush()
 
             log_activity(
-                "file_added",
+                "file_added" if not existing_file else "file_updated",
                 title_id=file_info.get("titleId"),
                 details={"filename": file_info["filename"], "size": file_info["size"]},
             )
@@ -342,6 +354,9 @@ def identify_library_files(library):
                     identification, success, file_contents, error = titles_lib.identify_file(filepath)
 
                 if success and file_contents and not error:
+                    # Clear old associations before adding new ones
+                    remove_file_from_apps(file_id)
+
                     # Increment metrics
                     FILES_IDENTIFIED.labels(
                         app_type="multiple" if len(file_contents) > 1 else file_contents[0]["type"]
@@ -854,9 +869,17 @@ def get_game_info_item(tid, title_data):
     # API Screenshots
     api_screenshots = title_data.get("screenshots_json") or []
     if api_screenshots:
-        existing_urls = set(s.get("url") for s in game.get("screenshots", []))
+        # Normalize existing screenshots to URLs for comparison
+        existing_urls = set()
+        for s in game.get("screenshots", []):
+            if isinstance(s, dict):
+                existing_urls.add(s.get("url"))
+            elif isinstance(s, str):
+                existing_urls.add(s)
+
         for s in api_screenshots:
-            if s.get("url") not in existing_urls:
+            s_url = s.get("url") if isinstance(s, dict) else s
+            if s_url and s_url not in existing_urls:
                 game.setdefault("screenshots", []).append(s)
 
     update_apps = [a for a in all_title_apps if a["app_type"] == APP_TYPE_UPD]
@@ -972,6 +995,9 @@ def post_library_change():
 
         # Regenerate library cache
         generate_library(force=True)
+
+        # Notify frontend
+        trigger_library_update_notification()
 
         logger.info("Library cache regenerated after library change")
     except Exception as e:
