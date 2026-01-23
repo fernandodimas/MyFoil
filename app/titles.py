@@ -809,6 +809,10 @@ def get_game_info(title_id):
 
     global _titles_db
 
+    if title_id is None:
+        logger.error("get_game_info called with title_id=None")
+        return None
+
     search_id = str(title_id).upper()
 
     # 1. Try to get from database first (including custom edits)
@@ -942,11 +946,12 @@ def get_game_info(title_id):
         raise Exception(f"ID {search_id} not found in database")
     except Exception as e:
         logger.debug(f"Identification failed for {title_id}: {e}")
+        safe_id = str(title_id).upper() if title_id else "UNKNOWN"
         return {
             "name": f"Unknown ({title_id})",
             "bannerUrl": "",
             "iconUrl": "",
-            "id": title_id.upper(),
+            "id": safe_id,
             "category": [],
             "release_date": "",
             "size": 0,

@@ -724,7 +724,11 @@ def get_all_titles():
 
 def get_all_titles_with_apps():
     """Get all titles with apps and files pre-loaded to avoid N+1 queries during library generation"""
-    titles = Titles.query.options(joinedload(Titles.apps).joinedload(Apps.files), joinedload(Titles.tags)).all()
+    titles = (
+        Titles.query.filter(Titles.title_id.isnot(None))
+        .options(joinedload(Titles.apps).joinedload(Apps.files), joinedload(Titles.tags))
+        .all()
+    )
 
     results = []
     for t in titles:
