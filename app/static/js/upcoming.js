@@ -25,7 +25,7 @@ function initControls() {
     if (gridZoom) {
         gridZoom.addEventListener('input', function () {
             if (typeof updateGridZoom === 'function') {
-                updateGridZoom(this.val || this.value);
+                updateGridZoom(this.value);
             }
         });
 
@@ -66,18 +66,18 @@ async function loadUpcomingGames() {
         const response = await fetch('/api/upcoming');
         const data = await response.json();
 
-        loading.classList.add('is-hidden');
+        if (loading) loading.classList.add('is-hidden');
 
         if (response.status === 400) {
-            apiMessage.classList.remove('is-hidden');
-            apiMessageText.innerText = data.message || 'Erro ao configurar API.';
+            if (apiMessage) apiMessage.classList.remove('is-hidden');
+            if (apiMessageText) apiMessageText.innerText = data.message || 'Erro ao configurar API.';
             return;
         }
 
         allGames = data.games || [];
 
         if (allGames.length === 0) {
-            empty.classList.remove('is-hidden');
+            if (empty) empty.classList.remove('is-hidden');
             return;
         }
 
@@ -132,15 +132,12 @@ function renderUpcoming() {
 }
 
 function renderCardView(games, container) {
-    const grid = document.createElement('div');
-    grid.className = 'columns is-multiline';
-
     games.forEach(game => {
         const genres = (game.genres || []).map(g => `<span class="tag is-dark is-light is-size-7 mr-1 mb-1">${g.name}</span>`).join('');
 
-        const col = document.createElement('div');
-        col.className = 'column is-3-desktop is-4-tablet is-6-mobile';
-        col.innerHTML = `
+        const card = document.createElement('div');
+        card.className = 'grid-item';
+        card.innerHTML = `
             <div class="card box p-0 shadow-sm border-none bg-glass upcoming-card h-100 is-flex is-flex-direction-column">
                 <div class="card-image">
                     <figure class="image is-3by4 bg-light-soft">
@@ -169,31 +166,26 @@ function renderCardView(games, container) {
                 </div>
             </div>
         `;
-        grid.appendChild(col);
+        container.appendChild(card);
     });
-    container.appendChild(grid);
 }
 
 function renderIconView(games, container) {
-    const grid = document.createElement('div');
-    grid.className = 'columns is-multiline is-mobile px-2';
-
     games.forEach(game => {
-        const col = document.createElement('div');
-        col.className = 'column is-2-desktop is-3-tablet is-4-mobile p-2';
-        col.innerHTML = `
+        const card = document.createElement('div');
+        card.className = 'grid-item';
+        card.innerHTML = `
             <div class="card shadow-sm border-none bg-glass h-100" style="border-radius: 12px; overflow: hidden; position: relative;" title="${game.name}">
-                <figure class="image is-square">
-                    <img src="${game.cover_url}" alt="${game.name}" style="object-fit: cover; cursor: pointer;" onclick="addToWishlistByName('${game.name}')">
+                <figure class="image is-square bg-light-soft">
+                    <img src="${game.cover_url}" alt="${game.name}" style="object-fit: cover; cursor: pointer; height: 100%; width: 100%;" onclick="addToWishlistByName('${game.name}')">
                 </figure>
                 <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; padding: 2px 5px; font-size: 0.65rem; text-align: center;">
                     ${game.release_date_formatted}
                 </div>
             </div>
         `;
-        grid.appendChild(col);
+        container.appendChild(card);
     });
-    container.appendChild(grid);
 }
 
 function renderListView(games, container) {
