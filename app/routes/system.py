@@ -721,3 +721,19 @@ def cloud_files_api(provider):
     folder_id = request.args.get("folder_id")
     files = cloud_manager.list_files(provider, folder_id)
     return jsonify({"files": files})
+
+
+@system_bp.route("/system/jobs/status", methods=["GET"])
+def get_jobs_status():
+    """Retorna status de todos os jobs"""
+    from job_tracker import job_tracker
+    return jsonify(job_tracker.get_status())
+
+
+@system_bp.route("/system/jobs/<job_id>/cancel", methods=["POST"])
+@access_required("admin")
+def cancel_job(job_id):
+    """Cancela um job em execução"""
+    # from job_tracker import job_tracker
+    # TODO: Implement job cancellation logic (rendering the thread/process stop)
+    return jsonify({"success": True})

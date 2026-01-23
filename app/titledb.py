@@ -333,36 +333,57 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
 def update_titledb(app_settings: Dict, force: bool = False) -> bool:
     """
     Main entry point for updating TitleDB
-
+    
     Args:
         app_settings: Application settings dictionary
         force: Force update even if files are recent
-
+        
     Returns:
         True if all files updated successfully, False otherwise
     """
-    logger.info("Updating TitleDB...")
+    from job_tracker import job_tracker, JobType
+    from app import socketio
+    import time
+    
+    job_id = f"titledb_{int(time.time())}"
+    job_tracker.start_job(job_id, JobType.TITLEDB_UPDATE, "Updating TitleDB")
+    socketio.emit('job_update', job_tracker.get_status())
 
-    # Ensure TitleDB directory exists
-    os.makedirs(TITLEDB_DIR, exist_ok=True)
+    try:
+        logger.info("Updating TitleDB...")
 
-    # Update all files
-    results = update_titledb_files(app_settings, force=force)
+        # Ensure TitleDB directory exists
+        os.makedirs(TITLEDB_DIR, exist_ok=True)
 
-    # Check results
-    success_count = sum(1 for v in results.values() if v)
-    total_count = len(results)
+        # Update all files
+        job_tracker.update_progress(job_id, 10, message="Downloading files...")
+        results = update_titledb_files(app_settings, force=force)
 
-    if success_count > 0:
-        import titles
+        # Check results
+        success_count = sum(1 for v in results.values() if v)
+        total_count = len(results)
 
-        titles.load_titledb(force=True)
+        if success_count > 0:
+            job_tracker.update_progress(job_id, 90, message="Reloading database...")
+            import titles
 
-    if success_count == total_count:
-        logger.info(f"TitleDB update completed successfully ({success_count}/{total_count} files)")
-        return True
-    else:
-        logger.warning(f"TitleDB update completed with errors ({success_count}/{total_count} files succeeded)")
+            titles.load_titledb(force=True)
+
+        if success_count == total_count:
+            job_tracker.complete_job(job_id, f"Updated {success_count}/{total_count} files")
+            socketio.emit('job_update', job_tracker.get_status())
+            logger.info(f"TitleDB update completed successfully ({success_count}/{total_count} files)")
+            return True
+        else:
+            msg = f"Partial update: {success_count}/{total_count}"
+            job_tracker.complete_job(job_id, msg)
+            socketio.emit('job_update', job_tracker.get_status())
+            logger.warning(f"TitleDB update completed with errors ({success_count}/{total_count} files succeeded)")
+            return False
+            
+    except Exception as e:
+        job_tracker.fail_job(job_id, str(e))
+        socketio.emit('job_update', job_tracker.get_status())
         return False
 
 

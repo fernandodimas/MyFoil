@@ -131,14 +131,47 @@ def fetch_metadata_for_all_games_async():
     """Background task to fetch metadata for ALL games"""
     with flask_app.app_context():
         from db import Titles
+        from services.rating_service import update_game_metadata
+        from job_tracker import job_tracker, JobType, JobStatus
+        from app import socketio
+        import time
 
-        # Only fetch for games that have at least the base game (identified)
-        games = Titles.query.filter(Titles.have_base == True).all()
+        job_id = f"metadata_{int(time.time())}"
+        job_tracker.start_job(job_id, JobType.METADATA_FETCH, "Fetching metadata for all games")
+        socketio.emit('job_update', job_tracker.get_status())
+        
+        try:
+            # Only fetch for games that have at least the base game (identified)
+            games = Titles.query.filter(Titles.have_base == True).all()
+            total = len(games)
+            logger.info("metadata_batch_started", count=total)
 
-        logger.info("metadata_batch_started", count=len(games))
+            if total == 0:
+                job_tracker.complete_job(job_id, "No games to update")
+                socketio.emit('job_update', job_tracker.get_status())
+                return True
+            
+            job_tracker.update_progress(job_id, 0, current=0, total=total)
+            
+            for i, game in enumerate(games):
+                # We run synchronously here to track progress of the batch
+                try:
+                    update_game_metadata(game, force=False)
+                except Exception as ex:
+                    logger.error(f"Error updating {game.name}: {ex}")
 
-        for game in games:
-            # We trigger each one as a separate task to manage them better
-            fetch_metadata_for_game_async.delay(game.title_id)
+                progress = int(((i + 1) / total) * 100)
+                job_tracker.update_progress(job_id, progress, current=i+1, total=total, message=f"Updated {game.name}")
+                
+                if i % 5 == 0:
+                    socketio.emit('job_update', job_tracker.get_status())
 
-        return True
+            job_tracker.complete_job(job_id, f"Finished updating {total} games")
+            socketio.emit('job_update', job_tracker.get_status())
+            return True
+            
+        except Exception as e:
+            job_tracker.fail_job(job_id, str(e))
+            socketio.emit('job_update', job_tracker.get_status())
+            logger.error(f"Error in metadata batch: {e}")
+            return False

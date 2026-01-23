@@ -56,6 +56,7 @@
         document.documentElement.setAttribute('data-theme', savedTheme);
     </script>
     <script src="{{ url_for('static', filename='js/base.js') }}?v={{ build_version }}"></script>
+    <script src="{{ url_for('static', filename='js/system_status.js') }}?v={{ build_version }}"></script>
 </head>
 
 <body>
@@ -86,6 +87,7 @@
     <div id="toastContainer"></div>
 
     {% include 'modals_shared.html' %}
+    {% include 'modals/status_modal.html' %}
 </body>
 
 </html>

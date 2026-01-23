@@ -29,7 +29,10 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
+# Copy application code
 COPY ./app /app
+
+# Copy run script specifically from docker folder
 COPY ./docker/run.sh /app/run.sh
 RUN chmod +x /app/run.sh
 

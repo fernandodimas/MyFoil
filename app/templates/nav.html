@@ -34,11 +34,21 @@
             </div>
 
             <div class="navbar-end">
-                <div class="navbar-item is-hidden" id="processIndicator">
-                    <span class="tag is-info is-light is-rounded">
-                        <i class="fas fa-spinner fa-pulse mr-2"></i>
-                        <span class="is-size-7 has-text-weight-bold" id="processText">{{ t('Processando...') }}</span>
-                    </span>
+                <!-- Status Indicator -->
+                <div class="navbar-item px-2" id="systemStatusIndicator">
+                    <div class="status-badge is-clickable" onclick="openStatusModal()">
+                        <div class="is-flex is-align-items-center">
+                            <span class="icon mr-2" id="statusIcon">
+                                <i class="bi bi-check-circle has-text-success"></i>
+                            </span>
+                            <span class="is-size-7 has-text-weight-bold" id="statusText">System Idle</span>
+                        </div>
+                        <!-- Progress bar (hidden when idle) -->
+                        <div class="progress-container is-hidden" id="statusProgress">
+                            <progress class="progress is-small is-primary" value="0" max="100"
+                                id="progressBar">0%</progress>
+                        </div>
+                    </div>
                 </div>
                 {% if title == 'Library' %}
                 <div class="navbar-item">

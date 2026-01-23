@@ -1,0 +1,192 @@
+// System Status Manager
+class SystemStatusManager {
+    constructor() {
+        // Assume socket.io is already loaded as 'socket' global or we init it
+        // Check if global socket exists, otherwise init
+        if (typeof socket === 'undefined') {
+            this.socket = io();
+        } else {
+            this.socket = socket;
+        }
+
+        this.currentStatus = null;
+        this.init();
+    }
+
+    init() {
+        // Listen for job updates via WebSocket
+        this.socket.on('job_update', (status) => {
+            this.updateStatus(status);
+        });
+
+        // Initial load
+        this.fetchStatus();
+
+        // Poll every 5 seconds as fallback (and to keep UI fresh if socket misses)
+        setInterval(() => this.fetchStatus(), 5000);
+    }
+
+    async fetchStatus() {
+        try {
+            const response = await fetch('/api/system/jobs/status');
+            if (response.ok) {
+                const status = await response.json();
+                this.updateStatus(status);
+            }
+        } catch (error) {
+            console.error('Failed to fetch job status:', error);
+        }
+    }
+
+    updateStatus(status) {
+        this.currentStatus = status;
+        this.updateIndicator(status);
+        this.updateModal(status);
+    }
+
+    updateIndicator(status) {
+        const indicator = document.getElementById('systemStatusIndicator');
+        const icon = document.getElementById('statusIcon');
+        const text = document.getElementById('statusText');
+        const progressContainer = document.getElementById('statusProgress');
+        const progressBar = document.getElementById('progressBar');
+
+        if (!indicator) return;
+
+        if (status.has_active && status.active.length > 0) {
+            // Show active job
+            const job = status.active[0]; // Primary job
+
+            icon.innerHTML = '<i class="bi bi-arrow-repeat spin has-text-info"></i>';
+            text.textContent = this.getJobLabel(job);
+
+            progressContainer.classList.remove('is-hidden');
+            progressBar.value = job.progress;
+            // progressBar.textContent = `${job.progress}%`; // HTML5 progress doesn't show text content usually
+
+            indicator.classList.add('is-active');
+        } else {
+            // Idle state
+            icon.innerHTML = '<i class="bi bi-check-circle has-text-success"></i>';
+            text.textContent = 'System Idle';
+            progressContainer.classList.add('is-hidden');
+            indicator.classList.remove('is-active');
+        }
+    }
+
+    updateModal(status) {
+        const activeList = document.getElementById('activeJobsList');
+        const historyList = document.getElementById('jobHistoryList');
+
+        if (!activeList || !historyList) return; // Modal might not be in DOM yet?
+
+        // Update active jobs list
+        if (status.active.length === 0) {
+            activeList.innerHTML = '<p class="has-text-grey-light has-text-centered py-4">No active operations</p>';
+        } else {
+            activeList.innerHTML = status.active.map(job => this.renderActiveJob(job)).join('');
+        }
+
+        // Update history
+        if (status.history.length === 0) {
+            historyList.innerHTML = '<p class="has-text-grey-light has-text-centered py-4">No history available</p>';
+        } else {
+            historyList.innerHTML = status.history.map(job => this.renderHistoryJob(job)).join('');
+        }
+    }
+
+    renderActiveJob(job) {
+        const icon = this.getJobIcon(job.type);
+        const statusColor = job.status === 'error' ? 'danger' : 'info';
+
+        return `
+            <div class="box is-shadowless border mb-3" style="border-left: 4px solid var(--bulma-success) !important; border: 1px solid #dbdbdb;">
+                <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
+                    <div>
+                        <span class="icon-text">
+                            <span class="icon">${icon}</span>
+                            <span class="has-text-weight-bold">${this.getJobLabel(job)}</span>
+                        </span>
+                    </div>
+                    <span class="tag is-${statusColor}">${job.status}</span>
+                </div>
+                
+                <progress class="progress is-${statusColor} is-small mb-2" value="${job.progress}" max="100">${job.progress}%</progress>
+                
+                <div class="is-flex is-justify-content-space-between is-size-7 opacity-70">
+                    <span>${job.message}</span>
+                    <span>${job.current !== null ? job.current : 0} / ${job.total || '?'}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    renderHistoryJob(job) {
+        const icon = this.getJobIcon(job.type);
+        const statusIcon = job.status === 'completed' ? '✅' : '❌';
+        // Handle ISO date string
+        let timeStr = 'Unknown';
+        if (job.completed_at) {
+            timeStr = new Date(job.completed_at).toLocaleTimeString();
+        }
+
+        return `
+            <div class="is-flex is-justify-content-space-between is-align-items-center py-2 border-bottom">
+                <div class="is-flex is-align-items-center">
+                    <span class="mr-2">${statusIcon}</span>
+                    <span class="icon mr-2">${icon}</span>
+                    <span>${this.getJobLabel(job)}</span>
+                </div>
+                <span class="is-size-7 has-text-grey">${timeStr}</span>
+            </div>
+        `;
+    }
+
+    getJobIcon(type) {
+        const icons = {
+            'library_scan': '<i class="bi bi-folder-open has-text-info"></i>',
+            'titledb_update': '<i class="bi bi-cloud-download has-text-primary"></i>',
+            'metadata_fetch': '<i class="bi bi-stars has-text-warning"></i>',
+            'file_identification': '<i class="bi bi-fingerprint has-text-success"></i>',
+            'backup': '<i class="bi bi-shield-check has-text-link"></i>',
+            'cleanup': '<i class="bi bi-trash has-text-danger"></i>',
+        };
+        return icons[type] || '<i class="bi bi-gear"></i>';
+    }
+
+    getJobLabel(job) {
+        const labels = {
+            'library_scan': 'Library Scan',
+            'titledb_update': 'TitleDB Update',
+            'metadata_fetch': 'Metadata Fetch',
+            'file_identification': 'File Identification',
+            'backup': 'Backup',
+            'cleanup': 'Cleanup',
+        };
+        return labels[job.type] || job.type;
+    }
+}
+
+// Initialize
+let statusManager;
+document.addEventListener('DOMContentLoaded', () => {
+    statusManager = new SystemStatusManager();
+});
+
+function openStatusModal() {
+    const modal = document.getElementById('statusModal');
+    if (modal) {
+        modal.classList.add('is-active');
+        // Refresh when opening
+        if (statusManager) statusManager.fetchStatus();
+    }
+}
+
+function closeStatusModal() {
+    const modal = document.getElementById('statusModal');
+    if (modal) modal.classList.remove('is-active');
+}
+
+function refreshJobStatus() {
+    if (statusManager) statusManager.fetchStatus();
+}

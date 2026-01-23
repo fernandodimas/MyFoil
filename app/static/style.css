@@ -1404,3 +1404,50 @@ input[type=range].slider.is-small {
 .bg-orange { background-color: #f59e0b; }
 .bg-green { background-color: #10b981; }
 .bg-gray { background-color: #94a3b8; }
+
+/* System Status Indicator */
+#systemStatusIndicator {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#systemStatusIndicator:hover {
+    background-color: rgba(0, 0, 0, 0.05); /* Works for both themes typically */
+}
+
+#systemStatusIndicator.is-active {
+    background-color: rgba(124, 58, 237, 0.1); /* Primary color low opacity */
+}
+
+.status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.progress-container {
+    margin-top: 0.5rem;
+    width: 200px;
+}
+
+.progress-container .progress {
+    height: 4px;
+    margin-bottom: 0;
+}
+
+/* Spin animation for loading icon */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.spin {
+    animation: spin 2s linear infinite;
+}
+
+/* Job cards */
+.border-bottom {
+    border-bottom: 1px solid var(--border-color);
+}
