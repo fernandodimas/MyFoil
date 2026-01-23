@@ -810,3 +810,46 @@ def cleanup_jobs():
     
     count = job_tracker.cleanup_all_active_jobs()
     return jsonify({"success": True, "cleaned": count, "message": f"Cleared {count} active job(s)"})
+
+
+@system_bp.route("/system/diagnostic", methods=["GET"])
+@access_required("admin")
+def diagnostic_info():
+    """Comprehensive system diagnostic for debugging job tracking issues"""
+    from job_tracker import job_tracker
+    from app import socketio
+    import sys
+    
+    diagnostic = {
+        "process": {
+            "pid": os.getpid(),
+            "argv": sys.argv,
+        },
+        "environment": {
+            "redis_url": os.environ.get("REDIS_URL"),
+            "redis_url_configured": os.environ.get("REDIS_URL") is not None,
+        },
+        "job_tracker": {
+            "redis_connected": job_tracker.use_redis,
+            "redis_url_actual": job_tracker.redis_url,
+            "emitter_configured": job_tracker._emitter is not None,
+        },
+        "socketio": {
+            "initialized": socketio is not None,
+            "message_queue": os.environ.get("REDIS_URL"),
+        },
+        "jobs": job_tracker.get_status(),
+    }
+    
+    # Test Redis connection
+    if job_tracker.use_redis:
+        try:
+            job_tracker.redis.ping()
+            diagnostic["redis_test"] = "✅ PING successful"
+        except Exception as e:
+            diagnostic["redis_test"] = f"❌ PING failed: {str(e)}"
+    else:
+        diagnostic["redis_test"] = "⚠️ Not using Redis"
+    
+    return jsonify(diagnostic)
+

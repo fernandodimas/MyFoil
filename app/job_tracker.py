@@ -87,6 +87,7 @@ class JobTracker:
         return cls._instance
     
     def _init_redis(self):
+        import sys
         self.redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
         self.use_redis = False
         self._local_jobs = {}
@@ -94,6 +95,10 @@ class JobTracker:
         self._emitter = None
         self.redis = None
         self._last_emit_time = {} # Rate limiting per job
+        
+        # Diagnostic: Log process info
+        pid = os.getpid()
+        logger.info(f"[JobTracker PID:{pid}] Initializing with REDIS_URL={self.redis_url}")
         
         self._connect_redis()
     
@@ -141,12 +146,18 @@ class JobTracker:
 
     def set_emitter(self, emitter_func):
         """Set a function to emit socket updates. Emitter should take (event_name, data)"""
+        import sys
+        pid = os.getpid()
         self._emitter = emitter_func
+        logger.info(f"[JobTracker PID:{pid}] Emitter configured: {emitter_func is not None}")
 
     def _emit_update(self, job_id: str = None, force: bool = False):
         """Helper to emit job status update to all clients with rate limiting"""
+        import sys
+        pid = os.getpid()
+        
         if not self._emitter:
-            logger.debug("JobTracker: No emitter configured, skipping emit")
+            logger.warning(f"[JobTracker PID:{pid}] ⚠️ No emitter configured, cannot send updates to UI!")
             return
 
         import time
@@ -156,16 +167,17 @@ class JobTracker:
         if job_id and not force:
             last_time = self._last_emit_time.get(job_id, 0)
             if now - last_time < 0.5:
-                logger.debug(f"JobTracker: Rate-limited emit for job {job_id}")
+                logger.debug(f"[JobTracker PID:{pid}] Rate-limited emit for job {job_id}")
                 return
             self._last_emit_time[job_id] = now
 
         try:
             status = self.get_status()
+            logger.info(f"[JobTracker PID:{pid}] 📡 Calling emitter for 'job_update' event...")
             self._emitter('job_update', status)
-            logger.debug(f"JobTracker: Emitted job_update - {len(status.get('active', []))} active, {len(status.get('history', []))} history")
+            logger.info(f"[JobTracker PID:{pid}] ✅ Successfully emitted job_update - {len(status.get('active', []))} active, {len(status.get('history', []))} in history")
         except Exception as e:
-            logger.error(f"JobTracker: Failed to emit job update: {e}", exc_info=True)
+            logger.error(f"[JobTracker PID:{pid}] ❌ Failed to emit job update: {e}", exc_info=True)
 
     def _cleanup_stale_jobs(self, max_age_seconds: int = 3600):
         """Clean up jobs stuck in RUNNING state for more than max_age_seconds"""
@@ -266,7 +278,11 @@ class JobTracker:
             self._emit_update(job.id, force=(job.status != JobStatus.RUNNING))
 
     def start_job(self, job_id: str, job_type: JobType, message: str = "") -> Job:
+        import sys
+        pid = os.getpid()
         self.check_connection()
+        
+        logger.info(f"[JobTracker PID:{pid}] 🚀 Starting new job: id={job_id}, type={job_type.value}, message={message}")
         
         job = Job(
             id=job_id,
@@ -277,6 +293,7 @@ class JobTracker:
             started_at=datetime.now()
         )
         self._save_job(job)
+        logger.info(f"[JobTracker PID:{pid}] ✅ Job {job_id} started and saved to Redis")
         return job
     
     def update_progress(self, job_id: str, progress: int, current: int = None, total: int = None, message: str = None):

@@ -98,7 +98,9 @@ socketio = SocketIO(
     engineio_logger=True,
     ping_timeout=60,
     ping_interval=25,
-    message_queue=os.environ.get("REDIS_URL")  # Essential: Allows Celery workers to emit to Web clients
+    message_queue=os.environ.get("REDIS_URL"),  # Essential: Allows Celery workers to emit to Web clients
+    # Explicit configuration for pub/sub
+    channel='flask-socketio',  # Ensure consistent channel name
 )
 
 # Import state to allow job tracking
