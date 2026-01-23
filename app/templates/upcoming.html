@@ -5,96 +5,112 @@
 {% block content %}
 {% include 'nav.html' %}
 
-<div class="container is-fluid px-5 pb-6">
-    <div class="section pt-5">
-        <div class="level mb-5">
-            <div class="level-left">
-                <div>
-                    <h1 class="title is-3 has-text-weight-black tracking-tighter">
-                        <span class="has-text-primary"><i class="bi bi-calendar-event mr-2"></i></span>{{ t('Próximos
-                        Lançamentos') }}
-                    </h1>
-                    <p class="subtitle is-6 opacity-70">{{ t('Fique por dentro das novidades do Nintendo Switch') }}</p>
+<div class="container is-fluid px-5 mt-5 pb-6">
+    <!-- Controls Row (Mimic Dashboard) -->
+    <div class="box p-3 mb-4 shadow-sm border-none bg-glass" style="position: relative; z-index: 20;">
+        <div class="is-flex is-flex-wrap-wrap is-align-items-center gap-3 px-1">
+
+            <!-- Left Group: Title -->
+            <div class="is-flex gap-2 is-align-items-center">
+                <h1 class="title is-5 mb-0 has-text-weight-black tracking-tighter">
+                    <span class="has-text-primary"><i class="bi bi-calendar-event mr-2"></i></span>{{ t('Próximos') }}
+                </h1>
+            </div>
+
+            <!-- Middle Group: Search -->
+            <div class="is-flex-grow-1 is-flex gap-2">
+                <div class="control has-icons-left is-flex-grow-1" style="max-width: 300px;">
+                    <input class="input is-small is-rounded" type="text" id="upcomingSearch"
+                        placeholder="{{ t('Buscar lançamentos...') }}">
+                    <span class="icon is-small is-left">
+                        <i class="bi bi-search"></i>
+                    </span>
                 </div>
             </div>
-            <div class="level-right">
-                <div class="field has-addons">
-                    <div class="control">
-                        <span class="button is-static is-small">
-                            <i class="bi bi-info-circle mr-1"></i> Fonte: IGDB
-                        </span>
-                    </div>
+
+            <!-- Right Group: Zoom & View Controls -->
+            <div class="is-flex gap-3 is-align-items-center is-justify-content-center-mobile"
+                style="margin-left: auto;">
+                <div class="is-hidden-mobile mr-2">
+                    <span class="is-size-7 opacity-50 font-mono" id="totalItemsCount">-- itens</span>
+                </div>
+
+                <div class="is-flex is-align-items-center is-hidden-mobile" style="min-width: 100px;">
+                    <i class="bi bi-zoom-in is-size-7 mr-2 opacity-50"></i>
+                    <input id="gridZoom" class="slider is-small is-primary m-0" type="range" min="180" max="400"
+                        step="10" value="240">
+                </div>
+
+                <div class="buttons has-addons m-0 view-toggle" id="viewToggleButtons">
+                    <button class="button is-small" onclick="setView('card')" id="btnViewCard" title="{{ t('Grade') }}">
+                        <span class="icon is-small"><i class="bi bi-grid-fill"></i></span>
+                    </button>
+                    <button class="button is-small" onclick="setView('icon')" id="btnViewIcon"
+                        title="{{ t('Ícones') }}">
+                        <span class="icon is-small"><i class="bi bi-image"></i></span>
+                    </button>
+                    <button class="button is-small" onclick="setView('list')" id="btnViewList" title="{{ t('Lista') }}">
+                        <span class="icon is-small"><i class="bi bi-list-ul"></i></span>
+                    </button>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- API Indicator/Message -->
-        <div id="apiMessage" class="notification is-warning is-light is-hidden mb-5">
-            <button class="delete" onclick="this.parentElement.classList.add('is-hidden')"></button>
-            <div class="is-flex is-align-items-center">
-                <i class="bi bi-exclamation-triangle-fill is-size-4 mr-3"></i>
-                <div>
-                    <p class="has-text-weight-bold">Configuração Necessária</p>
-                    <p id="apiMessageText"></p>
-                    <a href="/settings" class="button is-small is-warning is-inverted mt-2">
-                        <i class="bi bi-gear-fill mr-1"></i> Configurar Agora
-                    </a>
-                </div>
+    <!-- API Message -->
+    <div id="apiMessage" class="notification is-warning is-light is-hidden mb-5 shadow-sm">
+        <button class="delete" onclick="this.parentElement.classList.add('is-hidden')"></button>
+        <div class="is-flex is-align-items-center">
+            <i class="bi bi-exclamation-triangle-fill is-size-4 mr-3"></i>
+            <div>
+                <p class="has-text-weight-bold">Configuração Necessária</p>
+                <p id="apiMessageText"></p>
+                <a href="/settings" class="button is-small is-warning is-inverted mt-2">
+                    <i class="bi bi-gear-fill mr-1"></i> Configurar Agora
+                </a>
             </div>
         </div>
+    </div>
 
-        <div id="upcomingLoading" class="has-text-centered py-6">
-            <div class="is-inline-block p-5 bg-glass shadow-sm" style="border-radius: 50%">
-                <span class="loader is-loading" style="width: 3rem; height: 3rem; border-width: 4px;"></span>
-            </div>
-            <p class="mt-4 opacity-70">{{ t('Buscando lançamentos no IGDB...') }}</p>
-        </div>
+    <!-- Loading Indicator -->
+    <div id="upcomingLoading" class="has-text-centered py-6">
+        <span class="loader is-loading is-inline-block" style="width: 48px; height: 48px; border-width: 4px;"></span>
+        <p class="is-size-6 mt-4 opacity-60">{{ t('Buscando lançamentos no IGDB...') }}</p>
+    </div>
 
-        <!-- Games Grid -->
-        <div id="upcomingGrid" class="columns is-multiline">
-            <!-- Items injected via JS -->
-        </div>
+    <!-- Games Container -->
+    <div id="upcomingContainer" class="mt-2">
+        <!-- Dynamic content injected via JS -->
+    </div>
 
-        <!-- Empty State -->
-        <div id="upcomingEmpty" class="has-text-centered py-6 is-hidden">
-            <div class="card p-6 bg-glass shadow-sm">
-                <i class="bi bi-calendar-x is-size-1 opacity-20 block mb-4"></i>
-                <h3 class="title is-4">{{ t('Nenhum lançamento encontrado') }}</h3>
-                <p class="subtitle is-6 opacity-50">{{ t('Verifique sua conexão ou as chaves de API do IGDB.') }}</p>
-            </div>
+    <!-- Empty State -->
+    <div id="upcomingEmpty" class="has-text-centered py-6 is-hidden">
+        <div class="card p-6 bg-glass shadow-sm">
+            <i class="bi bi-calendar-x is-size-1 opacity-20 block mb-4"></i>
+            <h3 class="title is-4">{{ t('Nenhum lançamento encontrado') }}</h3>
+            <p class="subtitle is-6 opacity-50">{{ t('Verifique sua conexão ou as chaves de API do IGDB.') }}</p>
         </div>
     </div>
 </div>
 
 <style>
-    .upcoming-card {
-        transition: all 0.3s ease;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-
-    .upcoming-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2) !important;
-    }
-
-    .upcoming-card .card-image {
-        position: relative;
-    }
-
     .date-badge {
         position: absolute;
         bottom: 10px;
         right: 10px;
-        background: var(--color-primary);
+        background: var(--primary);
         color: white;
         padding: 4px 10px;
         border-radius: 6px;
         font-size: 0.75rem;
         font-weight: bold;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        z-index: 5;
+    }
+
+    .list-view-row:hover {
+        background-color: var(--bulma-navbar-item-hover-background-color) !important;
+        cursor: pointer;
     }
 
     .summary-text {
@@ -105,6 +121,17 @@
         overflow: hidden;
         font-size: 0.8rem;
         line-height: 1.4;
+    }
+
+    /* Grid layout for cards and icons to support zoom */
+    #upcomingContainer {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(var(--card-width, 240px), 1fr));
+        gap: 1.5rem;
+    }
+
+    #upcomingContainer.is-list-view {
+        display: block;
     }
 </style>
 

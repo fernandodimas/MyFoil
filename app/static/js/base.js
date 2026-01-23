@@ -94,6 +94,10 @@ window.updateGridZoom = function (val) {
     if (container) {
         container.style.setProperty('--card-width', `${zoomVal}px`);
     }
+    const upcomingContainer = document.getElementById('upcomingContainer');
+    if (upcomingContainer) {
+        upcomingContainer.style.setProperty('--card-width', `${zoomVal}px`);
+    }
 
     localStorage.setItem('gridZoom', zoomVal);
 };

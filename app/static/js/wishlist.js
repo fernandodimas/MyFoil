@@ -4,6 +4,17 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     loadWishlist();
+
+    // Check for search parameter to auto-open add modal
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchQuery = urlParams.get('search');
+    if (searchQuery) {
+        setTimeout(() => {
+            openAddToWishlistModal();
+            $('#wishlistSearchInput').val(searchQuery);
+            searchTitleDBForWishlist();
+        }, 500); // Small delay to ensure everything is ready
+    }
 });
 
 function getPriorityLabel(level) {
