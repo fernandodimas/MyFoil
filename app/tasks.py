@@ -6,17 +6,6 @@ import structlog
 
 logger = structlog.get_logger("main")
 
-# Initialize JobTracker emitter once at module level for all worker tasks
-from job_tracker import job_tracker
-from socket_helper import get_socketio_emitter
-
-try:
-    emitter = get_socketio_emitter()
-    job_tracker.set_emitter(emitter)
-    logger.info("Worker: JobTracker emitter initialized at module level")
-except Exception as e:
-    logger.error(f"Worker: Failed to initialize JobTracker emitter: {e}", exc_info=True)
-
 
 def create_app_context():
     """Create a minimal app context for celery tasks"""
@@ -31,6 +20,18 @@ def create_app_context():
 
 
 flask_app = create_app_context()
+
+# Initialize JobTracker emitter AFTER app context is created
+# This avoids circular import issues during worker startup
+from job_tracker import job_tracker
+from socket_helper import get_socketio_emitter
+
+try:
+    emitter = get_socketio_emitter()
+    job_tracker.set_emitter(emitter)
+    logger.info("Worker: JobTracker emitter initialized successfully")
+except Exception as e:
+    logger.error(f"Worker: Failed to initialize JobTracker emitter: {e}", exc_info=True)
 
 
 @celery.task(name="tasks.scan_library_async")
