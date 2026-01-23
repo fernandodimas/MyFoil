@@ -19,6 +19,7 @@ chown -R ${uid}:${gid} /app
 chown -R ${uid}:${gid} /games 2>/dev/null || true
 
 echo "Starting MyFoil as UID ${uid}..."
+export PYTHONPATH=$PYTHONPATH:/app
 
 # Run the application
 # Check if we're running celery (worker mode) or gunicorn (web mode)

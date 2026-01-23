@@ -1,8 +1,17 @@
+import sys
+import os
+import structlog
+
+# Ensure the current directory is in the path for Celery workers
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from celery_app import celery
 from flask import Flask
 from db import db
 from library import scan_library_path, identify_library_files, update_titles, generate_library
-import structlog
+from job_tracker import job_tracker, JobType, JobStatus
+from socket_helper import get_socketio_emitter
+from app_services.rating_service import update_game_metadata
 
 logger = structlog.get_logger("main")
 
@@ -42,9 +51,6 @@ flask_app = create_app_context()
 def scan_library_async(library_path):
     """Full library scan in background"""
     with flask_app.app_context():
-        from db import remove_missing_files_from_db
-        from job_tracker import job_tracker, JobType
-        from socket_helper import get_socketio_emitter
         import time
         
         # Recreate emitter fresh for THIS task execution
@@ -92,8 +98,6 @@ def identify_file_async(filepath):
     """Identify a single file in background (e.g. from watchdog)"""
     with flask_app.app_context():
         from db import remove_missing_files_from_db
-        from job_tracker import job_tracker, JobType
-        from socket_helper import get_socketio_emitter
         import time
         
         # Recreate emitter fresh for THIS task execution
@@ -136,8 +140,6 @@ def scan_all_libraries_async():
     """Full library scan for all configured paths in background"""
     with flask_app.app_context():
         from db import remove_missing_files_from_db, get_libraries
-        from job_tracker import job_tracker, JobType
-        from socket_helper import get_socketio_emitter
         import time
 
         # Recreate emitter fresh for THIS task execution
@@ -185,7 +187,6 @@ def fetch_metadata_for_game_async(title_id):
     """Fetch metadata for a single game"""
     with flask_app.app_context():
         from db import Titles
-        from app_services.rating_service import update_game_metadata
 
         game = Titles.query.filter_by(title_id=title_id).first()
         if not game:
@@ -201,9 +202,6 @@ def fetch_metadata_for_all_games_async():
     """Background task to fetch metadata for ALL games"""
     with flask_app.app_context():
         from db import Titles
-        from app_services.rating_service import update_game_metadata
-        from job_tracker import job_tracker, JobType, JobStatus
-        from socket_helper import get_socketio_emitter
         import time
 
         # Recreate emitter fresh for THIS task execution
