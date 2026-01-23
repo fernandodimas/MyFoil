@@ -25,6 +25,13 @@ if [ "$1" = "worker" ]; then
     echo "Starting Celery Worker..."
     exec sudo -E -u "#${uid}" celery -A app.celery_app.celery worker --loglevel=info
 else
-    echo "Starting Web Application..."
-    exec sudo -E -u "#${uid}" python /app/app.py
+    echo "Starting Web Application with Gunicorn..."
+    exec sudo -E -u "#${uid}" gunicorn \
+        --worker-class geventwebsocket.gunicorn.workers.GeventWebSocketWorker \
+        --workers 1 \
+        --bind 0.0.0.0:8465 \
+        --timeout 120 \
+        --access-logfile - \
+        --error-logfile - \
+        app:app
 fi

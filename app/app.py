@@ -85,9 +85,20 @@ from datetime import timedelta
 
 # Global variables
 app_settings = {}
-app_settings = {}
-# Initialize SocketIO with broad CORS support for proxy compatibility
-socketio = SocketIO(cors_allowed_origins="*", async_mode='gevent')
+
+# Initialize SocketIO with production-ready configuration
+# - cors_allowed_origins="*": Allow connections from any domain (safe for this use case)
+# - async_mode='gevent': Use gevent for async operations (already monkey-patched)
+# - logger=True, engineio_logger=True: Enable detailed logging for debugging
+# - ping_timeout=60, ping_interval=25: Longer timeouts for connections behind proxies
+socketio = SocketIO(
+    cors_allowed_origins="*",
+    async_mode='gevent',
+    logger=True,
+    engineio_logger=True,
+    ping_timeout=60,
+    ping_interval=25
+)
 
 import state
 

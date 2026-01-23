@@ -1,10 +1,33 @@
 // System Status Manager
 class SystemStatusManager {
     constructor() {
-        // Assume socket.io is already loaded as 'socket' global or we init it
-        // Check if global socket exists, otherwise init
+        // Initialize Socket.IO with robust configuration for proxy environments
+        // - transports: ['polling', 'websocket'] - Try polling first (more reliable behind proxies)
+        // - upgrade: true - Allow upgrade to websocket if possible
+        // - reconnection: true - Auto-reconnect on disconnect
+        // - reconnectionAttempts: 5 - Limit reconnection attempts
         if (typeof socket === 'undefined') {
-            this.socket = io();
+            this.socket = io({
+                transports: ['polling', 'websocket'],
+                upgrade: true,
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000,
+                timeout: 20000
+            });
+
+            // Log connection status for debugging
+            this.socket.on('connect', () => {
+                console.log('✅ Socket.IO connected successfully');
+            });
+
+            this.socket.on('connect_error', (error) => {
+                console.warn('⚠️ Socket.IO connection error:', error.message);
+            });
+
+            this.socket.on('disconnect', (reason) => {
+                console.log('🔌 Socket.IO disconnected:', reason);
+            });
         } else {
             this.socket = socket;
         }
