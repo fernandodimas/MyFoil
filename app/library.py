@@ -421,12 +421,12 @@ def identify_library_files(library):
         db.session.commit()
 
         job_tracker.complete_job(job_id, f"Identified {nb_to_identify} files")
-        socketio.emit('job_update', job_tracker.get_status())
+        # No need to emit here - complete_job already emits via configured emitter
     
     except Exception as e:
         logger.exception(f"Error identifying files: {e}")
         job_tracker.fail_job(job_id, str(e))
-        socketio.emit('job_update', job_tracker.get_status())
+        # No need to emit here - fail_job already emits via configured emitter
 
 
 def add_missing_apps_to_db():

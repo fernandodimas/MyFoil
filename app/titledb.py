@@ -371,19 +371,19 @@ def update_titledb(app_settings: Dict, force: bool = False) -> bool:
 
         if success_count == total_count:
             job_tracker.complete_job(job_id, f"Updated {success_count}/{total_count} files")
-            socketio.emit('job_update', job_tracker.get_status())
+            # complete_job already emits via configured emitter
             logger.info(f"TitleDB update completed successfully ({success_count}/{total_count} files)")
             return True
         else:
             msg = f"Partial update: {success_count}/{total_count}"
             job_tracker.complete_job(job_id, msg)
-            socketio.emit('job_update', job_tracker.get_status())
+            # complete_job already emits via configured emitter
             logger.warning(f"TitleDB update completed with errors ({success_count}/{total_count} files succeeded)")
             return False
             
     except Exception as e:
         job_tracker.fail_job(job_id, str(e))
-        socketio.emit('job_update', job_tracker.get_status())
+        # fail_job already emits via configured emitter
         return False
 
 
