@@ -21,9 +21,10 @@ chown -R ${uid}:${gid} /games 2>/dev/null || true
 echo "Starting MyFoil as UID ${uid}..."
 
 # Run the application
-if [ "$1" = "worker" ]; then
+# Check if we're running celery (worker mode) or gunicorn (web mode)
+if [[ "$1" == "celery" ]] || [[ "$*" == *"celery"* ]]; then
     echo "Starting Celery Worker..."
-    exec sudo -E -u "#${uid}" celery -A app.celery_app.celery worker --loglevel=info
+    exec sudo -E -u "#${uid}" "$@"
 else
     echo "Starting Web Application with Gunicorn..."
     exec sudo -E -u "#${uid}" gunicorn \
