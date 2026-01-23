@@ -530,24 +530,28 @@ def update_titles():
         logger.info(f"Removed {titles_removed} titles with no owned apps.")
 
     # Optimized query to fetch titles and their apps in fixed number of queries
-    titles = Titles.query.options(joinedload(Titles.apps)).all()
+    titles = Titles.query.options(joinedload(Titles.apps).joinedload(Apps.files)).all()
     for n, title in enumerate(titles):
         have_base = False
         up_to_date = False
         complete = False
 
         title_id = title.title_id
-        # Use child apps collection instead of a new query
-        title_apps = [to_dict(app) for app in title.apps]
-
-        # Maximum owned version (including base and update) - ONLY count apps with actual files
-        owned_apps_with_files = [a for a in title_apps if a.get("owned") and len(a.get("files_info", [])) > 0]
+        
+        # Filter owned apps that actually have files associated
+        owned_apps_with_files = [a for a in title.apps if a.owned and len(a.files) > 0]
 
         # check have_base - look for owned base apps with actual files
-        owned_base_apps = [app for app in owned_apps_with_files if app.get("app_type") == APP_TYPE_BASE]
+        owned_base_apps = [app for app in owned_apps_with_files if app.app_type == APP_TYPE_BASE]
         have_base = len(owned_base_apps) > 0
 
-        owned_versions = [int(a["app_version"]) for a in owned_apps_with_files]
+        owned_versions = []
+        for a in owned_apps_with_files:
+            try:
+                owned_versions.append(int(a.app_version))
+            except (ValueError, TypeError):
+                continue
+                
         max_owned_version = max(owned_versions) if owned_versions else -1
 
         # Available updates from titledb via versions.json
@@ -558,22 +562,21 @@ def update_titles():
         up_to_date = max_owned_version >= max_available_version
 
         # check complete - latest version of all available DLC are owned
-        available_dlc_apps = [app for app in title_apps if app.get("app_type") == APP_TYPE_DLC]
+        dlc_apps = [app for app in title.apps if app.app_type == APP_TYPE_DLC]
 
-        if not available_dlc_apps:
+        if not dlc_apps:
             # No DLC available, consider complete
             complete = True
         else:
-            # Group DLC by app_id and find latest version for each
-            dlc_by_id = {}
-            for app in available_dlc_apps:
-                app_id = app["app_id"]
-                version = int(app["app_version"])
-                if app_id not in dlc_by_id or version > dlc_by_id[app_id]["version"]:
-                    dlc_by_id[app_id] = {"version": version, "owned": app.get("owned", False)}
-
-            # Check if latest version of each DLC is owned
-            complete = all(dlc_info["owned"] for dlc_info in dlc_by_id.values())
+            # Group DLC by app_id and find latest version for each from TitleDB
+            # Actually, we should check if we OWN the latest version of each DLC that TitleDB knows about
+            # or at least if we own ANY version of each DLC.
+            
+            # Simple approach: if we own at least one file for each DLC app record we have
+            complete = all(any(len(aid.files) > 0 for aid in title.apps if aid.app_id == d.app_id) for d in dlc_apps if d.owned)
+            # Refined: Check if we own the latest version of each DLC known in TitleDB
+            # For now, let's keep it simple: have we all DLCs?
+            complete = all(a.owned and len(a.files) > 0 for a in dlc_apps)
 
         title.have_base = have_base
         title.up_to_date = up_to_date

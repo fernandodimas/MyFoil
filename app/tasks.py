@@ -16,6 +16,19 @@ def create_app_context():
     app.config["SQLALCHEMY_DATABASE_URI"] = MYFOIL_DB
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)
+
+    # Configure SQLite pragmas for worker process
+    from sqlalchemy import event
+    from sqlalchemy.engine import Engine
+
+    @event.listens_for(Engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
     return app
 
 
@@ -35,17 +48,18 @@ def scan_library_async(library_path):
         import time
         
         # Recreate emitter fresh for THIS task execution
+        logger.info("task_execution_started", task="scan_library_async", library_path=library_path)
         job_tracker.set_emitter(get_socketio_emitter())
         
         job_id = f"scan_{int(time.time())}"
+        logger.info("job_tracking_started", job_id=job_id, type="LIBRARY_SCAN")
         job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, f"Scanning {library_path}")
 
         try:
-            logger.info("background_scan_started", library_path=library_path)
-
             # 1. Cleanup missing files first
             job_tracker.update_progress(job_id, 10, message="Cleaning up missing files...")
-            remove_missing_files_from_db()
+            count = remove_missing_files_from_db()
+            logger.info("cleanup_completed", removed=count)
 
             # 2. Scan for new files
             job_tracker.update_progress(job_id, 30, message="Scanning folders...")
@@ -65,11 +79,11 @@ def scan_library_async(library_path):
             trigger_library_update_notification()
 
             job_tracker.complete_job(job_id, "Scan completed")
-            logger.info("background_scan_completed", library_path=library_path)
+            logger.info("task_execution_completed", task="scan_library_async", library_path=library_path)
             return True
         except Exception as e:
+            logger.exception("task_execution_failed", task="scan_library_async", error=str(e))
             job_tracker.fail_job(job_id, str(e))
-            logger.error(f"Error in scan_library_async: {e}")
             return False
 
 
@@ -127,16 +141,17 @@ def scan_all_libraries_async():
         import time
 
         # Recreate emitter fresh for THIS task execution
+        logger.info("task_execution_started", task="scan_all_libraries_async")
         job_tracker.set_emitter(get_socketio_emitter())
 
         job_id = f"scan_all_{int(time.time())}"
+        logger.info("job_tracking_started", job_id=job_id, type="LIBRARY_SCAN")
         job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, "Scanning all libraries")
 
         try:
-            logger.info("Background task: Starting full library scan for all paths")
-
             job_tracker.update_progress(job_id, 10, message="Cleaning up missing files...")
-            remove_missing_files_from_db()
+            count = remove_missing_files_from_db()
+            logger.info("cleanup_completed", removed=count)
 
             libraries = get_libraries()
             total = len(libraries)
@@ -157,9 +172,10 @@ def scan_all_libraries_async():
             trigger_library_update_notification()
 
             job_tracker.complete_job(job_id, "Full scan completed")
-            logger.info("Background task: Full scan completed.")
+            logger.info("task_execution_completed", task="scan_all_libraries_async")
             return True
         except Exception as e:
+            logger.exception("task_execution_failed", task="scan_all_libraries_async", error=str(e))
             job_tracker.fail_job(job_id, str(e))
             return False
 
@@ -191,9 +207,11 @@ def fetch_metadata_for_all_games_async():
         import time
 
         # Recreate emitter fresh for THIS task execution
+        logger.info("task_execution_started", task="fetch_metadata_for_all_games_async")
         job_tracker.set_emitter(get_socketio_emitter())
 
         job_id = f"metadata_{int(time.time())}"
+        logger.info("job_tracking_started", job_id=job_id, type="METADATA_FETCH")
         job_tracker.start_job(job_id, JobType.METADATA_FETCH, "Fetching metadata for all games")
         
         try:
@@ -219,9 +237,10 @@ def fetch_metadata_for_all_games_async():
                 job_tracker.update_progress(job_id, progress, current=i+1, total=total, message=f"Updated {game.name}")
 
             job_tracker.complete_job(job_id, f"Finished updating {total} games")
+            logger.info("task_execution_completed", task="fetch_metadata_for_all_games_async")
             return True
             
         except Exception as e:
+            logger.exception("task_execution_failed", task="fetch_metadata_for_all_games_async", error=str(e))
             job_tracker.fail_job(job_id, str(e))
-            logger.error(f"Error in metadata batch: {e}")
             return False

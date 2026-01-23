@@ -112,17 +112,18 @@ def scan_library_api():
 
     from app import CELERY_ENABLED
     from tasks import scan_library_async, scan_all_libraries_async
+    from job_tracker import job_tracker, JobType, JobStatus
+
+    # Check if a scan is already running via JobTracker
+    status = job_tracker.get_status()
+    active_scans = [j for j in status.get('active', []) if j.get('type') == JobType.LIBRARY_SCAN.value]
+    
+    if active_scans:
+        logger.info("Skipping scan_library_api call: Scan already in progress (tracked by JobTracker)")
+        return jsonify({"success": False, "message": "A scan is already in progress", "errors": []})
 
     success = True
     errors = []
-
-    import state
-
-    with state.scan_lock:
-        if state.scan_in_progress:
-            logger.info("Skipping scan_library_api call: Scan already in progress")
-            return jsonify({"success": False, "errors": []})
-        state.scan_in_progress = True
 
     try:
         if CELERY_ENABLED:
@@ -134,30 +135,34 @@ def scan_library_api():
                 logger.info(f"Triggered asynchronous library scan for: {path}")
             return jsonify({"success": True, "async": True, "errors": []})
         else:
-            from library import scan_library_path, Libraries
-            from db import db
+            # Synchronous mode (local process)
+            import state
+            with state.scan_lock:
+                state.scan_in_progress = True
+            try:
+                from library import scan_library_path, Libraries, identify_library_files
+                from db import db
 
-            if path is None:
-                # Scan all libraries
-                libraries = Libraries.query.all()
-                for lib in libraries:
-                    scan_library_path(lib.path)
-                    identify_library_files(lib.path)
-            else:
-                scan_library_path(path)
-                identify_library_files(path)
-            from library import post_library_change
-
-            post_library_change()
-            return jsonify({"success": True, "async": False, "errors": []})
+                if path is None:
+                    # Scan all libraries
+                    libraries = Libraries.query.all()
+                    for lib in libraries:
+                        scan_library_path(lib.path)
+                        identify_library_files(lib.path)
+                else:
+                    scan_library_path(path)
+                    identify_library_files(path)
+                from library import post_library_change
+                post_library_change()
+                return jsonify({"success": True, "async": False, "errors": []})
+            finally:
+                with state.scan_lock:
+                    state.scan_in_progress = False
     except Exception as e:
         errors.append(str(e))
         success = False
         logger.error(f"Error during library scan: {e}")
-    finally:
-        if not CELERY_ENABLED:
-            with state.scan_lock:
-                state.scan_in_progress = False
+    
     resp = {"success": success, "errors": errors}
     return jsonify(resp)
 

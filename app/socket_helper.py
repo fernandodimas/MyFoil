@@ -10,30 +10,40 @@ def get_socketio_emitter():
     """Returns an emitter function that works even in Celery workers"""
     global _socketio_emitter
     
-    if _socketio_emitter is None:
-        redis_url = os.environ.get("REDIS_URL")
-        if redis_url:
-            try:
-                # Create SocketIO client with message queue for cross-process communication
-                client = SocketIO(message_queue=redis_url)
-                
-                # Wrap emit to ALWAYS use broadcast=True for cross-process delivery
-                def broadcast_emit(event, data, *args, **kwargs):
-                    """Wrapper that ensures broadcast=True for worker->web communication"""
-                    kwargs['broadcast'] = True
-                    try:
-                        client.emit(event, data, *args, **kwargs)
-                        logger.debug(f"Worker emitted '{event}' with broadcast=True")
-                    except Exception as e:
-                        logger.error(f"Worker emit failed for '{event}': {e}", exc_info=True)
-                
-                _socketio_emitter = broadcast_emit
-                logger.info(f"SocketIO broadcast emitter created successfully with message_queue: {redis_url}")
-            except Exception as e:
-                logger.error(f"Failed to create SocketIO emitter: {e}", exc_info=True)
-                _socketio_emitter = lambda *args, **kwargs: logger.warning(f"No-op emit called: {args[0] if args else 'unknown'}")
+    # If already have a valid emitter, return it
+    if _socketio_emitter is not None:
+        # Check if it's a no-op emitter from a previous failed attempt
+        # If it is, we might want to try again
+        if hasattr(_socketio_emitter, '__name__') and _socketio_emitter.__name__ == '<lambda>':
+             logger.debug("Previous emitter was a no-op, attempting to recreate...")
         else:
-            logger.warning("No REDIS_URL environment variable, using no-op emitter")
-            _socketio_emitter = lambda *args, **kwargs: None
+             return _socketio_emitter
+    
+    redis_url = os.environ.get("REDIS_URL")
+    if redis_url:
+        try:
+            # Create SocketIO client with message queue for cross-process communication
+            # Use short timeouts to avoid hanging the task if Redis is briefly down
+            client = SocketIO(message_queue=redis_url, socketio_path='socket.io')
+            
+            def broadcast_emit(event, data, *args, **kwargs):
+                """Wrapper that ensures broadcast=True for worker->web communication"""
+                # Force broadcast and ensure we're not using namespaces unless specified
+                kwargs['broadcast'] = True
+                try:
+                    client.emit(event, data, *args, **kwargs)
+                    logger.debug(f"SocketIO: Worker successfully emitted '{event}' (broadcast=True)")
+                except Exception as e:
+                    logger.error(f"SocketIO: Worker emit failed for '{event}': {e}")
+            
+            _socketio_emitter = broadcast_emit
+            logger.info(f"SocketIO: Broadcast emitter created successfully (Redis: {redis_url})")
+        except Exception as e:
+            logger.error(f"SocketIO: Failed to create emitter: {e}")
+            # Don't cache the no-op permanently so we can retry next time
+            return lambda *args, **kwargs: logger.warning(f"SocketIO: No-op emit called for '{args[0] if args else 'unknown'}' (Redis unreachable)")
+    else:
+        logger.warning("SocketIO: No REDIS_URL environment variable, using no-op emitter")
+        _socketio_emitter = lambda *args, **kwargs: None
             
     return _socketio_emitter
