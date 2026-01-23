@@ -111,11 +111,11 @@ job_tracker.set_emitter(get_socketio_emitter())
 redis_url = os.environ.get("REDIS_URL")
 if redis_url:
     limiter = Limiter(
-        key_func=get_remote_address, storage_uri=redis_url, default_limits=["1000 per day", "500 per hour"]
+        key_func=get_remote_address, storage_uri=redis_url, default_limits=["5000 per day", "2000 per hour"]
     )
 else:
     # Fallback to memory (will warn)
-    limiter = Limiter(key_func=get_remote_address, default_limits=["300 per day", "100 per hour"])
+    limiter = Limiter(key_func=get_remote_address, default_limits=["1000 per day", "500 per hour"])
 
 backup_manager = None
 plugin_manager = None

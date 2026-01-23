@@ -45,8 +45,8 @@ class SystemStatusManager {
         // Initial load
         this.fetchStatus();
 
-        // Poll every 5 seconds as fallback (and to keep UI fresh if socket misses)
-        setInterval(() => this.fetchStatus(), 5000);
+        // Poll every 15 seconds as fallback (and to keep UI fresh if socket misses)
+        setInterval(() => this.fetchStatus(), 15000);
     }
 
     async fetchStatus() {
