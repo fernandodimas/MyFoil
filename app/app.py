@@ -401,8 +401,8 @@ def init_internal(app):
             # ... (moved logic here) ...
             check_initial_scan(app)
 
-    # Start 10 seconds after boot
-    threading.Timer(10.0, delayed_start).start()
+    # Start 3 seconds after boot (enough for Gunicorn heartbeat, faster UX)
+    threading.Timer(3.0, delayed_start).start()
 
     # Initialize job scheduler immediately (it's light)
     from jobs.scheduler import JobScheduler
