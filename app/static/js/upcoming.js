@@ -139,21 +139,19 @@ function renderCardView(games, container) {
         card.className = 'grid-item';
         card.innerHTML = `
             <div class="card box p-0 shadow-sm border-none bg-glass upcoming-card h-100 is-flex is-flex-direction-column" onclick="showUpcomingDetails(${index})">
-                <div class="card-image">
+                <div class="card-image is-relative">
                     <figure class="image is-square bg-light-soft">
                         <img src="${game.cover_url}" alt="${game.name}">
                     </figure>
                     <div class="date-badge">
                         <i class="bi bi-calendar-check mr-1"></i> ${game.release_date_formatted}
                     </div>
+                    <button class="button is-small is-dark is-rounded border-none shadow-sm" style="position: absolute; top: 8px; right: 8px; z-index: 10; opacity: 0.8;" onclick="event.stopPropagation(); addToWishlistByName('${game.name}')" title="Adicionar à Wishlist">
+                        <i class="bi bi-heart"></i>
+                    </button>
                 </div>
                 <div class="card-content p-4 is-flex is-flex-direction-column is-flex-grow-1">
-                    <h3 class="title is-6 mb-2 has-text-weight-bold line-clamp-2" title="${game.name}">${game.name}</h3>
-                    <div class="is-flex is-justify-content-end is-align-items-center mt-auto pt-2">
-                        <button class="button is-small is-light" onclick="event.stopPropagation(); addToWishlistByName('${game.name}')" title="Adicionar à Wishlist">
-                            <i class="bi bi-heart"></i>
-                        </button>
-                    </div>
+                    <h3 class="title is-6 mb-0 has-text-weight-bold line-clamp-2" style="height: 3em; overflow: hidden;" title="${game.name}">${game.name}</h3>
                 </div>
             </div>
         `;

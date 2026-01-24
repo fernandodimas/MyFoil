@@ -192,7 +192,7 @@ function renderCardView(items) {
                     <div class="card-content">
                         <div class="is-flex is-justify-content-between is-align-items-center mb-1" style="width: 100%;">
                             <span class="font-mono is-size-7 opacity-40">${safeId}</span>
-                            <span class="font-mono is-size-7 has-text-weight-bold">v${game.display_version}</span>
+                            <span class="font-mono is-size-7 has-text-weight-bold ml-auto">v${game.display_version}</span>
                         </div>
                         
                         <h3 class="game-title title is-6 has-text-weight-bold mb-3 line-clamp-2" title="${safeName}">${safeName}</h3>
@@ -202,7 +202,7 @@ function renderCardView(items) {
                                 <span class="status-dot ${statusDotClass}"></span>
                                 <span class="is-size-7 opacity-70 font-mono">${game.size_formatted || '--'}</span>
                             </div>
-                            <div class="is-flex gap-1 is-justify-content-end">
+                            <div class="is-flex gap-1 is-justify-content-end ml-auto">
                                 ${game.has_non_ignored_updates ? `<span class="tag tag-update has-text-weight-bold is-small">${t('UPDATE')}</span>` : ''}
                                 ${game.has_non_ignored_dlcs ? `<span class="tag tag-dlc has-text-weight-bold is-small">${t('DLC')}</span>` : ''}
                             </div>
