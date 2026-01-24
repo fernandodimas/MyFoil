@@ -318,6 +318,9 @@ def identify_library_files(library):
     from job_tracker import job_tracker, JobType
     from socket_helper import get_socketio_emitter
     import time
+
+    # Ensure TitleDB is loaded for identification
+    titles_lib.load_titledb()
     job_tracker.set_emitter(get_socketio_emitter())
     
     job_id = f"identify_{library_id}_{int(time.time())}"
