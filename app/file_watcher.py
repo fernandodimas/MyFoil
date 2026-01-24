@@ -150,10 +150,16 @@ class Handler(FileSystemEventHandler):
         if library_event.type == "deleted":
             logger.info(f"Watchdog: File deleted - {library_event.src_path}")
             self._raw_callback([library_event])
+        
+        elif library_event.type == "created":
+            logger.info(f"Watchdog: File created - {library_event.src_path}")
+            # Track file on create for stability
+            self._track_file(library_event)
+            self.debounced_check_final()
 
         else:
             # Track file on create or modify
-            logger.debug(f"Watchdog: Tracking file for stability - {library_event.src_path}")
+            logger.debug(f"Watchdog: Tracking file for stability ({library_event.type}) - {library_event.src_path}")
             self._track_file(library_event)
             self.debounced_check_final()
 

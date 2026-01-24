@@ -181,10 +181,15 @@ def add_files_to_library(library, files):
 
     library_path = get_library_path(library_id)
 
+    files_added = 0
+    files_updated = 0
+    
+    logger.info(f"add_files_to_library called with {nb_to_identify} files")
+
     # Otimização: Agrupar operações e usar flush() ao invés de commit imediato
     for n, filepath in enumerate(files):
         file = filepath.replace(library_path, "")
-        logger.info(f"Getting file info ({n + 1}/{nb_to_identify}): {file}")
+        logger.debug(f"Processing file ({n + 1}/{nb_to_identify}): {file}")  # Changed to debug to reduce noise
 
         try:
             # Validate file before adding to DB
@@ -203,10 +208,12 @@ def add_files_to_library(library, files):
                 # Update size and force re-identification
                 existing_file.size = file_info["size"]
                 existing_file.identified = False
+                files_updated += 1
                 
                 # Otimização: se o arquivo já existia, talvez queiramos manter o titledb_version antigo até identificá-lo novamente?
                 # Sim, deixamos o worker de identificação atualizar isso.
             else:
+                logger.info(f"New file found, adding to DB: {file}")
                 new_file = Files(
                     filepath=filepath,
                     library_id=library_id,
@@ -216,6 +223,7 @@ def add_files_to_library(library, files):
                     size=file_info["size"],
                 )
                 db.session.add(new_file)
+                files_added += 1
             
             # Otimização: Usar flush() ao invés de commit imediato para logs
             db.session.flush()
@@ -238,6 +246,7 @@ def add_files_to_library(library, files):
 
     # Commit final
     db.session.commit()
+    logger.info(f"add_files_to_library complete: {files_added} files added, {files_updated} files updated")
 
 
 def scan_library_path(library_path):
@@ -256,7 +265,10 @@ def scan_library_path(library_path):
     # 1. Add new files
     new_files = [f for f in files if f not in filepaths_in_library]
     logger.info(f"Found {len(new_files)} new files to add")
+    
     if new_files:
+        if len(new_files) > 0:
+            logger.info(f"Adding new files (showing first 5): {new_files[:5]}")
         add_files_to_library(library_id, new_files)
 
     # 2. Remove deleted files
@@ -266,6 +278,9 @@ def scan_library_path(library_path):
 
     if deleted_files:
         logger.info(f"Found {len(deleted_files)} deleted files in library {library_path}. Removing from database...")
+        if len(deleted_files) > 0:
+            logger.info(f"Removing deleted files (showing first 5): {deleted_files[:5]}")
+            
         for filepath in deleted_files:
             try:
                 # Find file object
@@ -281,6 +296,9 @@ def scan_library_path(library_path):
         db.session.commit()
 
     set_library_scan_time(library_id)
+    
+    # Log summary
+    logger.info(f"Scan complete for {library_path}: {len(new_files)} added, {len(deleted_files)} removed")
 
 
 def get_files_to_identify(library_id):
@@ -990,20 +1008,32 @@ def generate_library(force=False):
 def post_library_change():
     """Called after library changes to update titles and regenerate library cache"""
     global _LIBRARY_CACHE
-    _LIBRARY_CACHE = None  # Invalidate cache
-
+    
+    logger.info("Post-library change: updating titles and cache")
+    
     try:
-        # Update titles with new files
+        # 1. Invalidate in-memory cache FIRST
+        with _CACHE_LOCK:
+            _LIBRARY_CACHE = None
+        
+        # 2. Delete disk cache
+        invalidate_library_cache()
+        
+        # 3. Update titles with new files
+        # This is critical for updating 'up_to_date' and 'complete' status flags
+        # which control the badges (UPDATE, DLC) and filters
         update_titles()
-
-        # Regenerate library cache
+        
+        # 4. Regenerate library cache (force=True) to ensure fresh data
         generate_library(force=True)
-
-        # Notify frontend
+        
+        # 5. Notify frontend via WebSocket
         trigger_library_update_notification()
-
-        logger.info("Library cache regenerated after library change")
+        
+        logger.info("Library cache regenerated successfully")
     except Exception as e:
         logger.error(f"Error in post_library_change: {e}")
+        import traceback
+        traceback.print_exc()
 
     titles_lib.unload_titledb()

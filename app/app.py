@@ -209,50 +209,64 @@ def reload_conf():
 def on_library_change(events):
     """Handle library file changes"""
     logger.info(f"Library change detected: {len(events)} events")
+    
     with app.app_context():
-        action_events = [e for e in events if e.type == "created"]
-        other_events = [e for e in events if e.type != "created"]
-
-        for event in other_events:
-            if event.type == "moved":
+        files_added = []
+        files_deleted = []
+        files_modified = []
+        
+        for event in events:
+            if event.type == "created":
+                files_added.append(event.src_path)
+            elif event.type == "deleted":
+                files_deleted.append(event.src_path)
+                delete_file_by_filepath(event.src_path)
+            elif event.type == "modified":
+                logger.info(f"Modified file detected: {event.src_path}")
+                files_modified.append(event.src_path)
+            elif event.type == "moved":
                 if file_exists_in_db(event.src_path):
                     update_file_path(event.directory, event.src_path, event.dest_path)
                 else:
-                    event.src_path = event.dest_path
-                    action_events.append(event)
-
-            elif event.type == "deleted":
-                delete_file_by_filepath(event.src_path)
-
-            elif event.type == "modified":
-                logger.info(f"Modified file detected: {event.src_path}")
-                # Treat modified as a trigger for identification/update
-                action_events.append(event)
-
-        if action_events:
-            directories = list(set(e.directory for e in action_events))
+                    files_added.append(event.dest_path)
+        
+        # Process additions and modifications (which may be new files being written)
+        all_new_files = files_added + files_modified
+        if all_new_files:
+            directories = list(set(e.directory for e in events if e.type in ["created", "modified"]))
+            
             for library_path in directories:
-                files_to_process = [e.src_path for e in action_events if e.directory == library_path]
-                logger.info(f"Processing {len(files_to_process)} files in library: {library_path}")
+                files_to_process = [
+                    f for f in all_new_files 
+                    if f.startswith(library_path)
+                ]
                 
-                # add_files_to_library now handles upsert
-                add_files_to_library(library_path, files_to_process)
-
-                if CELERY_ENABLED:
-                    # To avoid storm of tasks, trigger one identification task per library
-                    from tasks import identify_file_async
-                    identify_file_async.delay(files_to_process[0]) 
-                    logger.info(f"Queued async identification for library {library_path}")
-                else:
-                    from library import identify_library_files
-                    logger.info(f"Identifying files in {library_path}")
-                    identify_library_files(library_path)
-
-    if not CELERY_ENABLED:
-        # post_library_change common logic (update_titles, generate_library, invalidate cache)
-        post_library_change()
-    else:
-        post_library_change()  # For now, still call to update UI state
+                if files_to_process:
+                    logger.info(f"Processing {len(files_to_process)} new/modified files in {library_path}")
+                    
+                    # Add files to DB (this handles upserts/updates)
+                    add_files_to_library(library_path, files_to_process)
+                    
+                    # Identify files
+                    if CELERY_ENABLED:
+                        from tasks import identify_file_async
+                        # Queue identification for each file
+                        for filepath in files_to_process:
+                            identify_file_async.delay(filepath)
+                        logger.info(f"Queued async identification for {len(files_to_process)} files")
+                    else:
+                        from library import identify_library_files
+                        logger.info(f"Identifying files in {library_path}")
+                        identify_library_files(library_path)
+        
+        # CRITICAL: Always call post_library_change to update cache and notifying frontend
+        # This fixes issues where badges/filters wouldn't update after new files were added
+        if files_added or files_deleted or files_modified:
+            logger.info("Invalidating library cache and updating titles after file changes")
+            # If not using Celery, run synchronously. If using Celery, we run it here too to ensure
+            # UI updates for non-identification changes (like deletions), although identification
+            # tasks will also trigger updates.
+            post_library_change()
 
 
 def update_titledb_job(force=False):
