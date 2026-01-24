@@ -162,14 +162,17 @@ def save_titledb_to_db(source_files, app_context=None):
 
         # Deduplicate titles just in case (though dict keys should be unique)
         seen_titles = set()
-        title_entries = []
+        pending_entries = []
+        BATCH_SIZE = 2000
+        
+        # Iterate and save in chunks to keep memory usage low
         for tid, data in _titles_db.items():
             tid_upper = tid.upper()
             if tid_upper in seen_titles:
                 continue
             seen_titles.add(tid_upper)
             
-            title_entries.append(
+            pending_entries.append(
                 TitleDBCache(
                     title_id=tid_upper,
                     data=data,
@@ -178,14 +181,17 @@ def save_titledb_to_db(source_files, app_context=None):
                     updated_at=now,
                 )
             )
-
-        # Batch insert with smaller chunks to avoid memory issues and gigantic queries
-        if title_entries:
-            # Chunk size of 2000
-            for i in range(0, len(title_entries), 2000):
-                chunk = title_entries[i : i + 2000]
-                db.session.bulk_save_objects(chunk)
+            
+            if len(pending_entries) >= BATCH_SIZE:
+                db.session.bulk_save_objects(pending_entries)
                 db.session.commit()
+                pending_entries = [] # Release memory
+
+        # Save remaining entries
+        if pending_entries:
+            db.session.bulk_save_objects(pending_entries)
+            db.session.commit()
+            pending_entries = []
 
         # Batch insert versions
         version_entries = []
@@ -205,13 +211,18 @@ def save_titledb_to_db(source_files, app_context=None):
                     version_entries.append(
                         TitleDBVersions(title_id=tid_upper, version=v_int, release_date=release_date)
                     )
+                    
+                    if len(version_entries) >= BATCH_SIZE * 2: # 4000 items
+                        db.session.bulk_save_objects(version_entries)
+                        db.session.commit()
+                        version_entries = []
                 except (ValueError, TypeError):
                     continue
 
         if version_entries:
-            for i in range(0, len(version_entries), 5000):
-                db.session.bulk_save_objects(version_entries[i : i + 5000])
-                db.session.commit()
+            db.session.bulk_save_objects(version_entries)
+            db.session.commit()
+            version_entries = []
 
         # Batch insert DLCs
         dlc_entries = []
@@ -225,11 +236,16 @@ def save_titledb_to_db(source_files, app_context=None):
                 seen_dlcs.add((base_upper, dlc_upper))
                 
                 dlc_entries.append(TitleDBDLCs(base_title_id=base_upper, dlc_app_id=dlc_upper))
+                
+                if len(dlc_entries) >= BATCH_SIZE * 2:
+                    db.session.bulk_save_objects(dlc_entries)
+                    db.session.commit()
+                    dlc_entries = []
 
         if dlc_entries:
-            for i in range(0, len(dlc_entries), 5000):
-                db.session.bulk_save_objects(dlc_entries[i : i + 5000])
-                db.session.commit()
+            db.session.bulk_save_objects(dlc_entries)
+            db.session.commit()
+            dlc_entries = []
 
         _titledb_cache_timestamp = time.time()  # Use time.time() for cache TTL comparison
         logger.info(
