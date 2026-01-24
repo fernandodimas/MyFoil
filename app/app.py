@@ -382,41 +382,45 @@ def init_internal(app):
     """Initialize internal components"""
     global watcher_thread
     
-    # Delayed initialization to prevent blocking Gunicorn worker boot
-    def delayed_start():
-        logger.info("Starting delayed initialization...")
-        
-        # Load library cache immediately so the UI has something to show
-        # This doesn't strictly need app context if just reading files/updating global var
+    # Staged initialization to prevent CPU spike killing Gunicorn worker
+    def stage1_cache():
+        logger.info("Init Stage 1: Pre-loading Library Cache...")
         try:
             from library import load_library_from_disk, _LIBRARY_CACHE
             saved = load_library_from_disk()
             if saved and "library" in saved:
                 import library
                 library._LIBRARY_CACHE = saved["library"]
-                logger.info(f"Pre-loaded {len(saved['library'])} items from disk cache for immediate UI availability")
+                logger.info(f"Pre-loaded {len(saved['library'])} items from disk cache")
         except Exception as e:
-            logger.warning(f"Could not pre-load library cache: {e}")
+            logger.warning(f"Stage 1 failed: {e}")
+        
+        # Schedule Stage 2
+        threading.Timer(10.0, stage2_watchdog).start()
 
+    def stage2_watchdog():
+        logger.info("Init Stage 2: initializing Watchdog...")
         with app.app_context():
-            # Initialize Watchdog
-            logger.info("Initializing File Watcher...")
             state.watcher = Watcher(on_library_change)
             watcher_thread = threading.Thread(target=state.watcher.run)
             watcher_thread.daemon = True
             watcher_thread.start()
-
+            
+            # Setup paths but don't scan yet
             library_paths = app_settings.get("library", {}).get("paths", [])
             init_libraries(app, state.watcher, library_paths)
-            logger.info(f"Initialized {len(library_paths)} library paths in watchdog")
+            logger.info(f"Initialized {len(library_paths)} library paths")
+        
+        # Schedule Stage 3
+        threading.Timer(15.0, stage3_scan).start()
 
-            # Check for initial scan requirements
+    def stage3_scan():
+        logger.info("Init Stage 3: Checking for updates/scans...")
+        with app.app_context():
             check_initial_scan(app)
 
-    # Start 20 seconds after boot to ensure webserver is fully responsive
-    # and has served initial requests before starting heavy I/O
-    logger.info("Scheduling heavy initialization in 20 seconds...")
-    threading.Timer(20.0, delayed_start).start()
+    # Start Stage 1 after 5 seconds (fast boot)
+    threading.Timer(5.0, stage1_cache).start()
 
     # Initialize job scheduler immediately (it's light)
     from jobs.scheduler import JobScheduler
