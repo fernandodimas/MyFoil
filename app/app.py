@@ -385,17 +385,20 @@ def init_internal(app):
     # Delayed initialization to prevent blocking Gunicorn worker boot
     def delayed_start():
         logger.info("Starting delayed initialization...")
-            # Load library cache immediately so the UI has something to show
-            try:
-                from library import load_library_from_disk, _LIBRARY_CACHE
-                saved = load_library_from_disk()
-                if saved and "library" in saved:
-                    import library
-                    library._LIBRARY_CACHE = saved["library"]
-                    logger.info(f"Pre-loaded {len(saved['library'])} items from disk cache for immediate UI availability")
-            except Exception as e:
-                logger.warning(f"Could not pre-load library cache: {e}")
+        
+        # Load library cache immediately so the UI has something to show
+        # This doesn't strictly need app context if just reading files/updating global var
+        try:
+            from library import load_library_from_disk, _LIBRARY_CACHE
+            saved = load_library_from_disk()
+            if saved and "library" in saved:
+                import library
+                library._LIBRARY_CACHE = saved["library"]
+                logger.info(f"Pre-loaded {len(saved['library'])} items from disk cache for immediate UI availability")
+        except Exception as e:
+            logger.warning(f"Could not pre-load library cache: {e}")
 
+        with app.app_context():
             # Initialize Watchdog
             logger.info("Initializing File Watcher...")
             state.watcher = Watcher(on_library_change)
@@ -408,7 +411,6 @@ def init_internal(app):
             logger.info(f"Initialized {len(library_paths)} library paths in watchdog")
 
             # Check for initial scan requirements
-            # ... (moved logic here) ...
             check_initial_scan(app)
 
     # Start 20 seconds after boot to ensure webserver is fully responsive
