@@ -346,8 +346,20 @@ def robust_json_load(filepath):
         pass
 
     # Try 5: Chunked Recovery (Absolute Last Resort)
-    # If the file is so corrupted it has binary garbage or missing structural chars
-    # we can try to recover individual game objects one by one using Regex.
+    # Only try this if file is small enough (< 10MB) to avoid hanging the process
+    # for massive files (like 50MB+) which causes Gunicorn worker timeouts
+    filesize = len(content)
+    if filesize > 10 * 1024 * 1024:
+        logger.warning(f"File {filepath} is too large ({filesize/1024/1024:.2f} MB) for chunked recovery. Skipping to avoid timeout.")
+        # Rename corrupted file to prevent future crashes
+        try:
+            new_path = filepath + ".corrupted"
+            os.rename(filepath, new_path)
+            logger.error(f"Renamed corrupted file to {new_path}")
+        except:
+            pass
+        return None
+
     logger.warning(f"Whole-file parsing failed for {filepath}. Attempting chunked recovery...")
     try:
         recovered = {}
@@ -373,14 +385,7 @@ def robust_json_load(filepath):
                     obj = json.loads(clean_body, strict=False)
                     recovered[tid] = obj
                 except:
-                    # Partial cleanup for the chunk
-                    try:
-                        # Basic escape fix for the chunk
-                        chunk_sanitized = re.sub(r'\\(?!(["\\/bfnrt]|u[0-9a-fA-F]{4}))', r"\\\\", clean_body)
-                        obj = json.loads(chunk_sanitized, strict=False)
-                        recovered[tid] = obj
-                    except:
-                        continue  # Skip this specific corrupt entry
+                    continue
 
         if len(recovered) > 0:
             logger.info(
@@ -389,6 +394,11 @@ def robust_json_load(filepath):
             return recovered
     except Exception as e:
         logger.error(f"Chunked recovery failed for {filepath}: {e}")
+        # Rename corrupted file
+        try:
+            os.rename(filepath, filepath + ".corrupted")
+        except:
+            pass
 
     return None
 
