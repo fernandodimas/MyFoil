@@ -1011,7 +1011,15 @@ def generate_library(force=False):
     total_size = sum(g.get("size", 0) for g in games_info)
     LIBRARY_SIZE.set(total_size)
 
-    logger.info(f"Generating library done. Found {len(games_info)} games.")
+    logger.info(f"Generating library done. Found {len(games_info)} games used for response.")
+    
+    if len(games_info) == 0:
+        # Diagnostic: Why is it empty?
+        count_files = Files.query.count()
+        count_titles = Titles.query.count()
+        count_apps = Apps.query.count()
+        logger.warning(f"Library is empty! DB Stats: Files={count_files}, Titles={count_titles}, Apps={count_apps}")
+        
     return sorted_library
 
 

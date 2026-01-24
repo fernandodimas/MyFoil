@@ -385,7 +385,17 @@ def init_internal(app):
     # Delayed initialization to prevent blocking Gunicorn worker boot
     def delayed_start():
         logger.info("Starting delayed initialization...")
-        with app.app_context():
+            # Load library cache immediately so the UI has something to show
+            try:
+                from library import load_library_from_disk, _LIBRARY_CACHE
+                saved = load_library_from_disk()
+                if saved and "library" in saved:
+                    import library
+                    library._LIBRARY_CACHE = saved["library"]
+                    logger.info(f"Pre-loaded {len(saved['library'])} items from disk cache for immediate UI availability")
+            except Exception as e:
+                logger.warning(f"Could not pre-load library cache: {e}")
+
             # Initialize Watchdog
             logger.info("Initializing File Watcher...")
             state.watcher = Watcher(on_library_change)
@@ -401,8 +411,10 @@ def init_internal(app):
             # ... (moved logic here) ...
             check_initial_scan(app)
 
-    # Start 3 seconds after boot (enough for Gunicorn heartbeat, faster UX)
-    threading.Timer(3.0, delayed_start).start()
+    # Start 20 seconds after boot to ensure webserver is fully responsive
+    # and has served initial requests before starting heavy I/O
+    logger.info("Scheduling heavy initialization in 20 seconds...")
+    threading.Timer(20.0, delayed_start).start()
 
     # Initialize job scheduler immediately (it's light)
     from jobs.scheduler import JobScheduler
