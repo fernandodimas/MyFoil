@@ -618,6 +618,12 @@ def update_titles():
             # For now, let's keep it simple: have we all DLCs?
             complete = all(a.owned and len(a.files) > 0 for a in dlc_apps)
 
+        if title.up_to_date != up_to_date:
+            logger.info(f"Title {title_id} update status changed: {title.up_to_date} -> {up_to_date}")
+        
+        if title.complete != complete:
+            logger.info(f"Title {title_id} complete status changed: {title.complete} -> {complete}")
+
         title.have_base = have_base
         title.up_to_date = up_to_date
         title.complete = complete
