@@ -150,22 +150,28 @@ def save_titledb_to_db(source_files, app_context=None):
 
         now = datetime.datetime.now()
 
-        # Clear old cache entries
+        # Clear old cache entries - use raw execution for speed and reliability
         try:
-            TitleDBCache.query.delete()
-            TitleDBVersions.query.delete()
-            TitleDBDLCs.query.delete()
+            db.session.execute(db.text("DELETE FROM titledb_cache"))
+            db.session.execute(db.text("DELETE FROM titledb_versions"))
+            db.session.execute(db.text("DELETE FROM titledb_dlcs"))
             db.session.commit()
         except Exception as e:
-            logger.warning(f"Could not clear old cache: {e}")
+            logger.warning(f"Could not clear old cache via delete: {e}")
             db.session.rollback()
 
-        # Batch insert titles
+        # Deduplicate titles just in case (though dict keys should be unique)
+        seen_titles = set()
         title_entries = []
         for tid, data in _titles_db.items():
+            tid_upper = tid.upper()
+            if tid_upper in seen_titles:
+                continue
+            seen_titles.add(tid_upper)
+            
             title_entries.append(
                 TitleDBCache(
-                    title_id=tid,
+                    title_id=tid_upper,
                     data=data,
                     source=source_files.get(tid.lower(), "titles.json"),
                     downloaded_at=now,
@@ -173,33 +179,58 @@ def save_titledb_to_db(source_files, app_context=None):
                 )
             )
 
+        # Batch insert with smaller chunks to avoid memory issues and gigantic queries
         if title_entries:
-            db.session.bulk_save_objects(title_entries)
+            # Chunk size of 2000
+            for i in range(0, len(title_entries), 2000):
+                chunk = title_entries[i : i + 2000]
+                db.session.bulk_save_objects(chunk)
+                db.session.commit()
 
         # Batch insert versions
         version_entries = []
+        # ... logic for versions ...
+        
+        # Deduplicate versions
+        seen_versions = set() # (tid, version)
         for tid, versions in (_versions_db or {}).items():
+            tid_upper = tid.upper()
             for version_str, release_date in versions.items():
                 try:
+                    v_int = int(version_str)
+                    if (tid_upper, v_int) in seen_versions:
+                        continue
+                    seen_versions.add((tid_upper, v_int))
+                    
                     version_entries.append(
-                        TitleDBVersions(title_id=tid, version=int(version_str), release_date=release_date)
+                        TitleDBVersions(title_id=tid_upper, version=v_int, release_date=release_date)
                     )
                 except (ValueError, TypeError):
                     continue
 
         if version_entries:
-            db.session.bulk_save_objects(version_entries)
+            for i in range(0, len(version_entries), 5000):
+                db.session.bulk_save_objects(version_entries[i : i + 5000])
+                db.session.commit()
 
         # Batch insert DLCs
         dlc_entries = []
+        seen_dlcs = set() # (base, dlc)
         for base_tid, dlcs in (_cnmts_db or {}).items():
+            base_upper = base_tid.upper()
             for dlc_app_id in dlcs.keys():
-                dlc_entries.append(TitleDBDLCs(base_title_id=base_tid, dlc_app_id=dlc_app_id))
+                dlc_upper = dlc_app_id.upper()
+                if (base_upper, dlc_upper) in seen_dlcs:
+                    continue
+                seen_dlcs.add((base_upper, dlc_upper))
+                
+                dlc_entries.append(TitleDBDLCs(base_title_id=base_upper, dlc_app_id=dlc_upper))
 
         if dlc_entries:
-            db.session.bulk_save_objects(dlc_entries)
+            for i in range(0, len(dlc_entries), 5000):
+                db.session.bulk_save_objects(dlc_entries[i : i + 5000])
+                db.session.commit()
 
-        db.session.commit()
         _titledb_cache_timestamp = time.time()  # Use time.time() for cache TTL comparison
         logger.info(
             f"TitleDB saved to DB cache: {len(title_entries)} titles, {len(version_entries)} versions, {len(dlc_entries)} DLCs"
@@ -974,6 +1005,9 @@ def get_all_existing_versions(titleid):
 
     if _versions_db is None:
         logger.warning("versions_db is not loaded. Call load_titledb first.")
+        return []
+
+    if not titleid:
         return []
 
     titleid = titleid.lower()

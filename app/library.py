@@ -574,6 +574,10 @@ def update_titles():
 
         title_id = title.title_id
         
+        if not title_id:
+            logger.warning(f"Found Title record with null title_id (ID: {title.id}). Skipping.")
+            continue
+        
         # Filter owned apps that actually have files associated
         owned_apps_with_files = [a for a in title.apps if a.owned and len(a.files) > 0]
 
