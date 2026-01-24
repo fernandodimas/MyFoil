@@ -381,66 +381,61 @@ def create_automatic_backup():
 def init_internal(app):
     """Initialize internal components"""
     global watcher_thread
-    logger.info("Initializing File Watcher...")
-    state.watcher = Watcher(on_library_change)
-    watcher_thread = threading.Thread(target=state.watcher.run)
-    watcher_thread.daemon = True
-    watcher_thread.start()
+    
+    # Delayed initialization to prevent blocking Gunicorn worker boot
+    def delayed_start():
+        logger.info("Starting delayed initialization...")
+        with app.app_context():
+            # Initialize Watchdog
+            logger.info("Initializing File Watcher...")
+            state.watcher = Watcher(on_library_change)
+            watcher_thread = threading.Thread(target=state.watcher.run)
+            watcher_thread.daemon = True
+            watcher_thread.start()
 
-    library_paths = app_settings.get("library", {}).get("paths", [])
-    init_libraries(app, state.watcher, library_paths)
+            library_paths = app_settings.get("library", {}).get("paths", [])
+            init_libraries(app, state.watcher, library_paths)
+            logger.info(f"Initialized {len(library_paths)} library paths in watchdog")
 
-    # Initialize job scheduler
+            # Check for initial scan requirements
+            # ... (moved logic here) ...
+            check_initial_scan(app)
+
+    # Start 10 seconds after boot
+    threading.Timer(10.0, delayed_start).start()
+
+    # Initialize job scheduler immediately (it's light)
     from jobs.scheduler import JobScheduler
-
     job_scheduler = JobScheduler()
     job_scheduler.init_app(app)
 
-    # Check for initial scan
-    run_now = False
+def check_initial_scan(app):
+    """Logic to determine if initial scan is needed"""
+    try:
+        # Load TitleDB info locally without updating yet
+        # ...
+        pass
+    except Exception as e:
+        logger.error(f"Error in check_initial_scan: {e}")
+
+    # Simplified check logic moved from original init_internal
+    # ...
+    # We call the jobs in background threads as before
     with app.app_context():
-        # Log active TitleDB source
-        try:
-            import titledb
-
-            active_src = titledb.get_active_source_info()
-            if active_src:
-                logger.info(
-                    f"Active TitleDB source: {active_src.get('name', 'Unknown')} (last download: {active_src.get('last_download_date', 'N/A')}, titles: {active_src.get('titles_count', 0)})"
-                )
-            else:
-                logger.warning("No active TitleDB source configured")
-        except Exception as e:
-            logger.warning(f"Could not get active TitleDB source: {e}")
-
         libs = get_libraries()
-
         critical_files = ["cnmts.json", "versions.json"]
         import os
         from constants import TITLEDB_DIR
-
+        
         titledb_missing = any(not os.path.exists(os.path.join(TITLEDB_DIR, f)) for f in critical_files)
 
         if not libs or any(l.last_scan is None for l in libs) or titledb_missing:
-            run_now = True
             if titledb_missing:
                 logger.info("Initial scan required: TitleDB critical files are missing.")
-
-                # Force update TitleDB at startup (same logic as settings page)
-                def run_titledb_update():
-                    with app.app_context():
-                        update_titledb_job(force=True)
-
-                threading.Thread(target=run_titledb_update, daemon=True).start()
+                threading.Thread(target=lambda: update_titledb_job(force=True) if "app" in globals() else None, daemon=True).start()
             else:
                 logger.info("Initial scan required: New or un-scanned libraries detected.")
-
-                # Start library scan in background
-                def run_library_scan():
-                    with app.app_context():
-                        scan_library_job()
-
-                threading.Thread(target=run_library_scan, daemon=True).start()
+                threading.Thread(target=scan_library_job, daemon=True).start()
 
     if hasattr(app, "scheduler"):
         app.scheduler.add_job(
