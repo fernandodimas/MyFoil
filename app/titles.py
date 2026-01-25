@@ -160,13 +160,23 @@ def save_titledb_to_db(source_files, app_context=None):
             logger.warning(f"Could not clear old cache via delete: {e}")
             db.session.rollback()
 
+        # Try to import gevent for cooperative multitasking
+        try:
+            import gevent
+        except ImportError:
+            gevent = None
+
         # Deduplicate titles just in case (though dict keys should be unique)
         seen_titles = set()
         pending_entries = []
         BATCH_SIZE = 2000
         
         # Iterate and save in chunks to keep memory usage low
-        for tid, data in _titles_db.items():
+        for i, (tid, data) in enumerate(_titles_db.items()):
+            # Yield to event loop every 50 items to prevent blocking heartbeat
+            if gevent and i % 50 == 0:
+                gevent.sleep(0.001)
+                
             tid_upper = tid.upper()
             if tid_upper in seen_titles:
                 continue
@@ -186,6 +196,10 @@ def save_titledb_to_db(source_files, app_context=None):
                 db.session.bulk_save_objects(pending_entries)
                 db.session.commit()
                 pending_entries = [] # Release memory
+                
+                # Yield after DB commit
+                if gevent:
+                    gevent.sleep(0.01)
 
         # Save remaining entries
         if pending_entries:
@@ -199,7 +213,13 @@ def save_titledb_to_db(source_files, app_context=None):
         
         # Deduplicate versions
         seen_versions = set() # (tid, version)
-        for tid, versions in (_versions_db or {}).items():
+        
+        # Safe iteration with yield
+        version_items = list((_versions_db or {}).items())
+        for i, (tid, versions) in enumerate(version_items):
+            if gevent and i % 50 == 0:
+                gevent.sleep(0.001)
+                
             tid_upper = tid.upper()
             for version_str, release_date in versions.items():
                 try:
@@ -216,6 +236,7 @@ def save_titledb_to_db(source_files, app_context=None):
                         db.session.bulk_save_objects(version_entries)
                         db.session.commit()
                         version_entries = []
+                        if gevent: gevent.sleep(0.01)
                 except (ValueError, TypeError):
                     continue
 
@@ -227,7 +248,12 @@ def save_titledb_to_db(source_files, app_context=None):
         # Batch insert DLCs
         dlc_entries = []
         seen_dlcs = set() # (base, dlc)
-        for base_tid, dlcs in (_cnmts_db or {}).items():
+        
+        cnmts_items = list((_cnmts_db or {}).items())
+        for i, (base_tid, dlcs) in enumerate(cnmts_items):
+            if gevent and i % 50 == 0:
+                gevent.sleep(0.001)
+                
             base_upper = base_tid.upper()
             for dlc_app_id in dlcs.keys():
                 dlc_upper = dlc_app_id.upper()
@@ -241,6 +267,7 @@ def save_titledb_to_db(source_files, app_context=None):
                     db.session.bulk_save_objects(dlc_entries)
                     db.session.commit()
                     dlc_entries = []
+                    if gevent: gevent.sleep(0.01)
 
         if dlc_entries:
             db.session.bulk_save_objects(dlc_entries)
@@ -311,6 +338,13 @@ def robust_json_load(filepath):
         pass
 
     # Try 2: More aggressive sanitization for escape sequences
+    # Performance Guard: Skip expensive regex/sanitization on large files (> 1MB)
+    # to prevent CPU lockup and Gunicorn timeouts
+    filesize = len(content)
+    if filesize > 1 * 1024 * 1024:
+        logger.warning(f"File {filepath} is too large ({filesize/1024/1024:.2f} MB) for aggressive recovery. Skipping to prevent timeout.")
+        return None
+
     logger.warning(f"JSON error in {filepath}, attempting aggressive sanitization...")
     try:
         # Pattern to match a valid escape or a bare backslash
