@@ -657,12 +657,38 @@ def app_info_api(id):
         result["rawg_rating"] = title_obj.rawg_rating
         result["rating_count"] = title_obj.rating_count
         result["playtime_main"] = title_obj.playtime_main
-        # API Genres/Tags if available
+        
+        # Merge enriched metadata from TitleMetadata table
+        remote_meta = TitleMetadata.query.filter_by(title_id=tid).all()
+        for meta in remote_meta:
+            if meta.rating and not result.get("metacritic_score"):
+                result["metacritic_score"] = int(meta.rating)
+            if meta.description and (not result.get("description") or len(meta.description) > len(result.get("description", ""))):
+                result["description"] = meta.description
+            if meta.rating:
+                result["rawg_rating"] = meta.rating / 20.0 # Convert back to 0-5 for UI consistency
+            if meta.rating_count:
+                result["rating_count"] = meta.rating_count
+            
+            # API Genres/Tags
+            if meta.genres:
+                result["category"] = list(set((result.get("category") or []) + (meta.genres or [])))
+            if meta.tags:
+                result["tags"] = list(set((result.get("tags") or []) + (meta.tags or [])))
+            
+            # Screenshots
+            if meta.screenshots:
+                existing_ss = set(s if isinstance(s, str) else s.get("url") for s in result.get("screenshots", []))
+                for ss in meta.screenshots:
+                    url = ss if isinstance(ss, str) else ss.get("url")
+                    if url not in existing_ss:
+                        result.setdefault("screenshots", []).append(ss)
+
+        # Fallback to Title object fields if not updated by TitleMetadata
         if title_obj.genres_json:
             result["category"] = list(set((result.get("category") or []) + (title_obj.genres_json or [])))
         if title_obj.tags_json:
             result["tags"] = list(set((result.get("tags") or []) + (title_obj.tags_json or [])))
-        # Screenshots
         if title_obj.screenshots_json:
             existing_ss = set(s if isinstance(s, str) else s.get("url") for s in result.get("screenshots", []))
             for ss in title_obj.screenshots_json:

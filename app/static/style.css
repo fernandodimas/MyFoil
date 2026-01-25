@@ -771,6 +771,38 @@ p.game-description {
     box-shadow: var(--shadow-sm);
 }
 
+.rating-badge {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.rating-badge i {
+    font-size: 0.7rem;
+    color: #fbbf24; /* Star color */
+}
+
+.rating-badge.high-score { border-left: 3px solid var(--success); }
+.rating-badge.mid-score { border-left: 3px solid var(--warning); }
+.rating-badge.low-score { border-left: 3px solid var(--danger); }
+
+[data-theme="dark"] .rating-badge {
+    background: rgba(15, 23, 42, 0.85);
+}
+
 [data-theme="dark"] .tag {
     color: var(--text-color) !important;
 }

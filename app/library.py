@@ -916,19 +916,41 @@ def get_game_info_item(tid, title_data):
     game["rating_count"] = title_data.get("rating_count")
     game["playtime_main"] = title_data.get("playtime_main")
 
-    # API Genres and Tags
+    # Merge enriched metadata from TitleMetadata table for library cards
+    from db import TitleMetadata
+    remote_meta = TitleMetadata.query.filter_by(title_id=tid).all()
+    for meta in remote_meta:
+        if meta.rating and not game.get("metacritic_score"):
+            game["metacritic_score"] = int(meta.rating)
+        if meta.description and (not game.get("description") or len(meta.description) > len(game.get("description", ""))):
+            game["description"] = meta.description
+        if meta.rating and not game.get("rawg_rating"):
+            game["rawg_rating"] = meta.rating / 20.0
+        
+        # API Genres and Tags
+        if meta.genres:
+            existing_cats = set(game.get("category", []) if isinstance(game.get("category"), list) else [])
+            for g in meta.genres:
+                if g not in existing_cats:
+                    game.setdefault("category", []).append(g)
+
+        if meta.tags:
+            existing_tags = set(game.get("tags", []) if isinstance(game.get("tags"), list) else [])
+            for t in meta.tags:
+                if t not in existing_tags:
+                    game.setdefault("tags", []).append(t)
+
+    # API Genres and Tags from Title Object (fallback/merged)
     api_genres = title_data.get("genres_json") or []
     if api_genres:
-        # Merge with existing categories if not already present
-        existing_cats = set(game.get("category", []))
+        existing_cats = set(game.get("category", []) if isinstance(game.get("category"), list) else [])
         for g in api_genres:
             if g not in existing_cats:
                 game.setdefault("category", []).append(g)
 
     api_tags = title_data.get("tags_json") or []
     if api_tags:
-        # Merge with existing tags
-        existing_tags = set(game.get("tags", []))
+        existing_tags = set(game.get("tags", []) if isinstance(game.get("tags"), list) else [])
         for t in api_tags:
             if t not in existing_tags:
                 game.setdefault("tags", []).append(t)

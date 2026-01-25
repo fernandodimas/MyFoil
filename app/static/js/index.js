@@ -176,11 +176,22 @@ function renderCardView(items) {
         const safeName = escapeHtml(game.name);
         const safeId = escapeHtml(game.id);
 
+        const metacriticScore = game.metacritic_score;
+        let ratingBadge = '';
+        if (metacriticScore) {
+            const scoreClass = metacriticScore >= 75 ? 'high-score' : (metacriticScore >= 50 ? 'mid-score' : 'low-score');
+            ratingBadge = `<div class="rating-badge ${scoreClass}" title="Metacritic: ${metacriticScore}">
+                <i class="bi bi-star-fill"></i>
+                <span>${metacriticScore}</span>
+            </div>`;
+        }
+
         const card = $(`
             <div class="grid-item" data-index="${index}" data-game-id="${safeId}" tabindex="0" role="button" aria-label="${safeName}" onclick="focusAndOpenGame('${safeId}')">
                 <div class="card game-card is-paddingless">
                     <div class="card-image">
                         <figure class="image is-16by9 bg-light-soft">
+                            ${ratingBadge}
                             <img src="/static/img/no-icon.png" 
                                  data-src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" 
                                  alt="${safeName}" 
@@ -232,11 +243,22 @@ function renderIconView(items) {
         const safeName = escapeHtml(game.name);
         const safeId = escapeHtml(game.id);
 
+        const metacriticScore = game.metacritic_score;
+        let ratingBadge = '';
+        if (metacriticScore) {
+            const scoreClass = metacriticScore >= 75 ? 'high-score' : (metacriticScore >= 50 ? 'mid-score' : 'low-score');
+            ratingBadge = `<div class="rating-badge ${scoreClass}" style="top: 0.5rem; right: 0.5rem; padding: 1px 6px; font-size: 0.65rem;" title="Metacritic: ${metacriticScore}">
+                <i class="bi bi-star-fill"></i>
+                <span>${metacriticScore}</span>
+            </div>`;
+        }
+
         const card = $(`
             <div class="grid-item" data-index="${index}" data-game-id="${safeId}" tabindex="0" role="button" aria-label="${safeName}" onclick="focusAndOpenGame('${safeId}')" title="${safeName}">
                 <div class="card game-card is-paddingless is-shadowless">
                     <div class="card-image">
                         <figure class="image is-square bg-light relative">
+                            ${ratingBadge}
                             <img src="/static/img/no-icon.png" 
                                  data-src="${game.iconUrl || '/static/img/no-icon.png'}" 
                                  alt="${safeName}" 

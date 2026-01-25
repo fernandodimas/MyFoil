@@ -330,7 +330,7 @@ function showGameDetails(id) {
                             ` : ''}
 
                             <div class="content is-size-6 opacity-80" style="line-height: 1.7;">
-                                ${game.description || t('No description available')}
+                                ${game.description ? game.description : `<p class="italic opacity-50">${t('No description available')}</p>`}
                             </div>
                         </div>
                         
@@ -348,12 +348,13 @@ function showGameDetails(id) {
                             <div class="swiper swiper-screenshots" id="gameScreenshotsSwiper">
                                 <div class="swiper-wrapper">
                                     ${game.screenshots.map((s, idx) => {
-            const url = typeof s === 'string' ? s : s.url;
+            const url = typeof s === 'string' ? s : (s.url || s.image);
+            if (!url) return '';
             return `
-                                        <div class="swiper-slide" style="width: auto;">
-                                            <img src="${escapeHtml(url)}" alt="Screenshot ${idx + 1}" loading="lazy" onclick="openScreenshotModal('${escapeHtml(url)}')" style="cursor: pointer; width: 320px; height: 180px; object-fit: cover; border-radius: 8px; display: block;">
-                                        </div>
-                                    `;
+                                            <div class="swiper-slide" style="width: auto;">
+                                                <img src="${escapeHtml(url)}" alt="Screenshot ${idx + 1}" loading="lazy" onclick="window.open('${escapeHtml(url)}', '_blank')" style="cursor: pointer; width: 320px; height: 180px; object-fit: cover; border-radius: 8px; display: block;">
+                                            </div>
+                                        `;
         }).join('')}
                                 </div>
                                 <div class="swiper-pagination"></div>
