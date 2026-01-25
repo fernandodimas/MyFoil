@@ -86,9 +86,15 @@ class JobTracker:
                 from db import SystemJob
                 job = SystemJob.query.get(job_id)
                 if job:
-                    self.emitter.emit('job_update', job.to_dict(), namespace='/')
+                    data = job.to_dict()
+                    if hasattr(self.emitter, "emit"):
+                        # standard socketio object
+                        self.emitter.emit("job_update", data, namespace="/")
+                    else:
+                        # functional proxy (from socket_helper.py)
+                        self.emitter("job_update", data)
         except Exception:
-            # Silent fail for emitter, usually means socketio not ready
+            # Silent fail for emitter, usually means socketio not ready or connection issue
             pass
 
     def register_job(self, job_type: str, metadata: Dict[str, Any] = None) -> str:
@@ -149,8 +155,14 @@ class JobTracker:
         except Exception as e:
             logger.error(f"Failed to start job {job_id} in DB: {e}")
     
-    def update_progress(self, job_id: str, percent: int, total: int = None, message: str = ''):
-        """Update job progress in DB"""
+    def update_progress(self, job_id: str, percent: int = 0, total: int = None, message: str = '', current: int = None):
+        """
+        Update job progress in DB.
+        Supports:
+        - update_progress(job_id, percent)
+        - update_progress(job_id, current, total, message)
+        - update_progress(job_id, percent, current=x, total=y)
+        """
         app = self._get_app()
         if not app: return
 
@@ -160,10 +172,11 @@ class JobTracker:
                 job = SystemJob.query.get(job_id)
                 if job:
                     if total is not None:
-                        # Legacy signature: (id, current, total, message)
-                        current = percent
-                        job.progress_percent = round((current / total * 100) if total > 0 else 0, 1)
+                        # Calculation mode: (id, current, total) or (id, percent, current=x, total=y)
+                        current_val = current if current is not None else percent
+                        job.progress_percent = round((current_val / total * 100) if total > 0 else 0, 1)
                     else:
+                        # Direct mode: (id, percent)
                         job.progress_percent = float(percent)
                     
                     if message:
