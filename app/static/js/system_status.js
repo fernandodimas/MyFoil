@@ -39,7 +39,19 @@ class SystemStatusManager {
     init() {
         // Listen for job updates via WebSocket
         this.socket.on('job_update', (status) => {
-            this.updateStatus(status);
+            // Handle single job update by merging into current list
+            if (status && status.id) {
+                const updatedJobs = [...(this.currentJobs || [])];
+                const index = updatedJobs.findIndex(j => j.id === status.id);
+                if (index !== -1) {
+                    updatedJobs[index] = status;
+                } else {
+                    updatedJobs.unshift(status);
+                }
+                this.updateStatus(updatedJobs);
+            } else {
+                this.updateStatus(status);
+            }
         });
 
         // Initial load
@@ -62,11 +74,14 @@ class SystemStatusManager {
     }
 
     updateStatus(jobs) {
-        if (!Array.isArray(jobs)) return;
-        this.currentJobs = jobs;
+        if (!jobs) return;
 
-        const active = jobs.filter(j => j.status === 'running' || j.status === 'scheduled');
-        const history = jobs.filter(j => j.status === 'completed' || j.status === 'failed');
+        // If single job object provided, convert to array (legacy fallback)
+        const jobsArray = Array.isArray(jobs) ? jobs : [jobs];
+        this.currentJobs = jobsArray;
+
+        const active = jobsArray.filter(j => j.status === 'running' || j.status === 'scheduled');
+        const history = jobsArray.filter(j => j.status === 'completed' || j.status === 'failed');
 
         const status = {
             has_active: active.length > 0,

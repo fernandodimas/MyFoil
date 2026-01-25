@@ -36,148 +36,251 @@ class JobState:
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 class JobTracker:
-    """Singleton to track system jobs with real-time updates via SocketIO"""
+    """Singleton to track system jobs with database persistence for cross-process support"""
     
     def __init__(self):
-        self.jobs: Dict[str, JobState] = {}
-        self.lock = threading.Lock()
         self.emitter = None
+        self.app = None
     
+    def init_app(self, app):
+        """Initialize with Flask app instance"""
+        self.app = app
+        logger.debug("JobTracker initialized with app")
+
     def set_emitter(self, emitter):
         """Set the SocketIO emitter for real-time updates"""
         self.emitter = emitter
         logger.debug("JobTracker emitter set")
 
+    def _get_app(self):
+        # 1. Stored app instance
+        if self.app:
+            return self.app
+            
+        # 2. current_app (if inside request/app context)
+        try:
+            from flask import current_app
+            if current_app:
+                return current_app
+        except:
+            pass
+        
+        # 3. Last resort fallback (rare)
+        try:
+            import app as main_app
+            return main_app.app
+        except:
+            return None
+
     def _emit_update(self, job_id: str):
         """Emit job update to all connected clients"""
-        if self.emitter and job_id in self.jobs:
-            try:
-                job = self.jobs[job_id]
-                self.emitter.emit('job_update', {
-                    'id': job.job_id,
-                    'type': job.job_type,
-                    'status': job.status,
-                    'progress': job.progress
-                }, namespace='/')
-            except Exception as e:
-                logger.warning(f"Failed to emit job update: {e}")
+        if not self.emitter:
+            return
+
+        try:
+            app = self._get_app()
+            if not app:
+                return
+
+            with app.app_context():
+                from db import SystemJob
+                job = SystemJob.query.get(job_id)
+                if job:
+                    self.emitter.emit('job_update', job.to_dict(), namespace='/')
+        except Exception:
+            # Silent fail for emitter, usually means socketio not ready
+            pass
 
     def register_job(self, job_type: str, metadata: Dict[str, Any] = None) -> str:
-        """Register a new job and return the job_id"""
+        """Register a new job in DB and return the job_id"""
         job_id = f"{job_type}_{uuid.uuid4().hex[:8]}"
         
-        with self.lock:
-            job = JobState(
-                job_id=job_id,
-                job_type=job_type,
-                status=JobStatus.SCHEDULED,
-                metadata=metadata or {}
-            )
-            self.jobs[job_id] = job
-        
-        logger.debug(f"Registered job: {job_id} ({job_type})")
-        self._emit_update(job_id)
+        app = self._get_app()
+        if not app:
+            logger.error("Could not register job: No app context")
+            return job_id
+
+        try:
+            with app.app_context():
+                from db import db, SystemJob
+                job = SystemJob(
+                    job_id=job_id,
+                    job_type=job_type,
+                    status=JobStatus.SCHEDULED,
+                    metadata_json=metadata or {}
+                )
+                db.session.add(job)
+                db.session.commit()
+            
+            logger.info(f"Registered job: {job_id} ({job_type})")
+            self._emit_update(job_id)
+        except Exception as e:
+            logger.error(f"Failed to register job in DB: {e}")
+            
         return job_id
     
     def start_job(self, job_id: str, job_type: str = None, message: str = ''):
-        """
-        Mark job as started. 
-        Supports legacy call signature: start_job(id, type, msg)
-        """
-        with self.lock:
-            if job_id not in self.jobs and job_type:
-                # Legacy support: if job wasn't registered, create it now
-                self.jobs[job_id] = JobState(
-                    job_id=job_id,
-                    job_type=job_type,
-                    status=JobStatus.RUNNING,
-                    started_at=datetime.now(),
-                    progress={'percent': 0, 'message': message}
-                )
-            elif job_id in self.jobs:
-                self.jobs[job_id].status = JobStatus.RUNNING
-                self.jobs[job_id].started_at = datetime.now()
-                if message:
-                    self.jobs[job_id].progress['message'] = message
-                logger.debug(f"Started job: {job_id}")
-        self._emit_update(job_id)
+        """Mark job as started in DB"""
+        app = self._get_app()
+        if not app: return
+
+        try:
+            with app.app_context():
+                from db import db, SystemJob
+                job = SystemJob.query.get(job_id)
+                
+                if not job and job_type:
+                    # Legacy support/Implicit registration
+                    job = SystemJob(
+                        job_id=job_id,
+                        job_type=job_type,
+                        metadata_json={}
+                    )
+                    db.session.add(job)
+                
+                if job:
+                    job.status = JobStatus.RUNNING
+                    job.started_at = datetime.now()
+                    job.progress_message = message
+                    db.session.commit()
+                    logger.info(f"Started job: {job_id}")
+            
+            self._emit_update(job_id)
+        except Exception as e:
+            logger.error(f"Failed to start job {job_id} in DB: {e}")
     
     def update_progress(self, job_id: str, percent: int, total: int = None, message: str = ''):
-        """
-        Update job progress.
-        Supports:
-        - update_progress(job_id, percent)
-        - update_progress(job_id, current, total, message)
-        """
-        with self.lock:
-            if job_id in self.jobs:
-                job = self.jobs[job_id]
-                if total is not None:
-                    # Legacy signature: (id, current, total, message)
-                    current = percent
-                    job.progress = {
-                        'current': current,
-                        'total': total,
-                        'message': message,
-                        'percent': round((current / total * 100) if total > 0 else 0, 1)
-                    }
-                else:
-                    # New signature: (id, percent)
-                    job.progress['percent'] = percent
+        """Update job progress in DB"""
+        app = self._get_app()
+        if not app: return
+
+        try:
+            with app.app_context():
+                from db import db, SystemJob
+                job = SystemJob.query.get(job_id)
+                if job:
+                    if total is not None:
+                        # Legacy signature: (id, current, total, message)
+                        current = percent
+                        job.progress_percent = round((current / total * 100) if total > 0 else 0, 1)
+                    else:
+                        job.progress_percent = float(percent)
+                    
                     if message:
-                        job.progress['message'] = message
-        self._emit_update(job_id)
+                        job.progress_message = message
+                    
+                    db.session.commit()
+            
+            self._emit_update(job_id)
+        except Exception as e:
+            logger.error(f"Failed to update job progress for {job_id}: {e}")
     
     def complete_job(self, job_id: str, result: Any = None):
-        """Mark job as completed"""
-        with self.lock:
-            if job_id in self.jobs:
-                job = self.jobs[job_id]
-                job.status = JobStatus.COMPLETED
-                job.completed_at = datetime.now()
-                if isinstance(result, dict):
-                    job.result = result
-                else:
-                    job.result = {'message': str(result)}
-                logger.debug(f"Completed job: {job_id}")
-        self._emit_update(job_id)
+        """Mark job as completed in DB"""
+        app = self._get_app()
+        if not app: return
+
+        try:
+            with app.app_context():
+                from db import db, SystemJob
+                job = SystemJob.query.get(job_id)
+                if job:
+                    job.status = JobStatus.COMPLETED
+                    job.completed_at = datetime.now()
+                    if isinstance(result, dict):
+                        job.result_json = result
+                    else:
+                        job.result_json = {'message': str(result)}
+                    db.session.commit()
+                    logger.info(f"Completed job: {job_id}")
+            
+            self._emit_update(job_id)
+        except Exception as e:
+            logger.error(f"Failed to complete job {job_id}: {e}")
     
     def fail_job(self, job_id: str, error: str):
-        """Mark job as failed"""
-        with self.lock:
-            if job_id in self.jobs:
-                job = self.jobs[job_id]
-                job.status = JobStatus.FAILED
-                job.completed_at = datetime.now()
-                job.error = error
-                logger.error(f"Failed job: {job_id} - Error: {error}")
-        self._emit_update(job_id)
+        """Mark job as failed in DB"""
+        app = self._get_app()
+        if not app: return
+
+        try:
+            with app.app_context():
+                from db import db, SystemJob
+                job = SystemJob.query.get(job_id)
+                if job:
+                    job.status = JobStatus.FAILED
+                    job.completed_at = datetime.now()
+                    job.error = error
+                    db.session.commit()
+                    logger.error(f"Failed job: {job_id} - {error}")
+            
+            self._emit_update(job_id)
+        except Exception as e:
+            logger.error(f"Failed to fail job {job_id}: {e}")
     
-    def get_all_jobs(self) -> List[JobState]:
-        """Return all jobs"""
-        with self.lock:
-            return list(self.jobs.values())
+    def get_all_jobs(self) -> List[Dict]:
+        """Return all jobs from DB"""
+        app = self._get_app()
+        if not app: return []
+
+        try:
+            with app.app_context():
+                from db import SystemJob
+                # Get last 24h jobs or all active ones
+                cutoff = datetime.now() - timedelta(hours=24)
+                jobs = SystemJob.query.filter(
+                    (SystemJob.status.in_([JobStatus.SCHEDULED, JobStatus.RUNNING])) |
+                    (SystemJob.completed_at > cutoff)
+                ).order_by(SystemJob.started_at.desc()).all()
+                return [j.to_dict() for j in jobs]
+        except Exception as e:
+            logger.error(f"Failed to fetch jobs from DB: {e}")
+            return []
     
-    def get_active_jobs(self) -> List[JobState]:
-        """Return only active jobs"""
-        with self.lock:
-            return [j for j in self.jobs.values() if j.status in [JobStatus.SCHEDULED, JobStatus.RUNNING]]
+    def get_active_jobs(self) -> List[Dict]:
+        """Return only active jobs from DB"""
+        app = self._get_app()
+        if not app: return []
+
+        try:
+            with app.app_context():
+                from db import SystemJob
+                jobs = SystemJob.query.filter(SystemJob.status.in_([JobStatus.SCHEDULED, JobStatus.RUNNING])).all()
+                return [j.to_dict() for j in jobs]
+        except Exception as e:
+            logger.error(f"Failed to fetch active jobs from DB: {e}")
+            return []
     
-    def get_job(self, job_id: str) -> Optional[JobState]:
-        """Return a specific job"""
-        with self.lock:
-            return self.jobs.get(job_id)
+    def get_job(self, job_id: str) -> Optional[Dict]:
+        """Return a specific job from DB"""
+        app = self._get_app()
+        if not app: return None
+
+        try:
+            with app.app_context():
+                from db import SystemJob
+                job = SystemJob.query.get(job_id)
+                return job.to_dict() if job else None
+        except Exception as e:
+            logger.error(f"Failed to fetch job {job_id} from DB: {e}")
+            return None
     
     def cleanup_old_jobs(self, max_age_hours: int = 24):
-        """Remove completed/failed jobs older than max_age_hours"""
-        with self.lock:
-            cutoff = datetime.now() - timedelta(hours=max_age_hours)
-            self.jobs = {
-                jid: job for jid, job in self.jobs.items()
-                if job.status in [JobStatus.SCHEDULED, JobStatus.RUNNING] or 
-                   (job.completed_at and job.completed_at > cutoff)
-            }
-            logger.debug("Cleaned up old jobs from tracker")
+        """Remove completed/failed jobs older than max_age_hours from DB"""
+        app = self._get_app()
+        if not app: return
+
+        try:
+            with app.app_context():
+                from db import db, SystemJob
+                cutoff = datetime.now() - timedelta(hours=max_age_hours)
+                SystemJob.query.filter(
+                    (SystemJob.status.in_([JobStatus.COMPLETED, JobStatus.FAILED])) &
+                    (SystemJob.completed_at < cutoff)
+                ).delete()
+                db.session.commit()
+        except Exception as e:
+            logger.error(f"Failed to cleanup jobs in DB: {e}")
 
 # Global singleton
 job_tracker = JobTracker()

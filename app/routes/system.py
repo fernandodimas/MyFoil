@@ -126,7 +126,7 @@ def scan_library_api():
     from tasks import scan_library_async, scan_all_libraries_async
     from job_tracker import job_tracker
     active_jobs = job_tracker.get_active_jobs()
-    active_scans = [j for j in active_jobs if j.job_type in ['library_scan', 'aggregate_scan']]
+    active_scans = [j for j in active_jobs if j.get('type') in ['library_scan', 'aggregate_scan']]
     
     if active_scans:
         logger.info("Skipping scan_library_api call: Scan already in progress")
@@ -798,27 +798,12 @@ def cloud_files_api(provider):
 def get_all_jobs_api():
     """Retorna status de todos os jobs recentes"""
     from job_tracker import job_tracker
+    
+    # job_tracker now returns list of dicts from DB
     jobs = job_tracker.get_all_jobs()
     
-    # Sort by start time desc
-    jobs_sorted = sorted(jobs, key=lambda j: j.started_at or datetime.datetime.min, reverse=True)
-    
     return jsonify({
-        'jobs': [
-            {
-                'id': j.job_id,
-                'type': j.job_type,
-                'status': j.status,
-                'started_at': j.started_at.isoformat() if j.started_at else None,
-                'completed_at': j.completed_at.isoformat() if j.completed_at else None,
-                'progress': j.progress,
-                'result': j.result,
-                'error': j.error,
-                'metadata': j.metadata,
-                'duration': (j.completed_at - j.started_at).total_seconds() if j.completed_at and j.started_at else None
-            }
-            for j in jobs_sorted[:50] # Top 50 recent
-        ]
+        'jobs': jobs # Now already in dict format with to_dict()
     })
 
 

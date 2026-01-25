@@ -351,6 +351,43 @@ class MetadataFetchLog(db.Model):
     
     error_message = db.Column(db.Text)
 
+class SystemJob(db.Model):
+    """Persistent tracking for system background jobs (Shared between Flask/Celery)"""
+    __tablename__ = 'system_jobs'
+    
+    job_id = db.Column(db.String(50), primary_key=True)
+    job_type = db.Column(db.String(50), nullable=False)
+    status = db.Column(db.String(20), nullable=False) # 'scheduled', 'running', 'completed', 'failed'
+    
+    # Progress
+    progress_percent = db.Column(db.Float, default=0.0)
+    progress_message = db.Column(db.String(255))
+    
+    # Data
+    result_json = db.Column(db.JSON)
+    metadata_json = db.Column(db.JSON)
+    error = db.Column(db.Text)
+    
+    # Timestamps
+    started_at = db.Column(db.DateTime, default=datetime.datetime.now)
+    completed_at = db.Column(db.DateTime)
+    
+    def to_dict(self):
+        return {
+            'id': self.job_id,
+            'type': self.job_type,
+            'status': self.status,
+            'progress': {
+                'percent': self.progress_percent,
+                'message': self.progress_message
+            },
+            'result': self.result_json,
+            'metadata': self.metadata_json,
+            'error': self.error,
+            'started_at': self.started_at.isoformat() if self.started_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None
+        }
+
 
 class ActivityLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -407,6 +444,49 @@ def init_db(app):
                     engine = db.engine
                     with engine.connect() as conn:
                         inspector = inspect(engine)
+
+                        # Check for system_jobs table
+                        if not inspector.has_table("system_jobs"):
+                            logger.info("Creating system_jobs table...")
+                            conn.execute(text("""
+                                CREATE TABLE IF NOT EXISTS system_jobs (
+                                    job_id VARCHAR(50) NOT NULL PRIMARY KEY,
+                                    job_type VARCHAR(50) NOT NULL,
+                                    status VARCHAR(20) NOT NULL,
+                                    progress_percent FLOAT DEFAULT 0.0,
+                                    progress_message VARCHAR(255),
+                                    result_json JSON,
+                                    metadata_json JSON,
+                                    error TEXT,
+                                    started_at DATETIME,
+                                    completed_at DATETIME
+                                )
+                            """))
+                            conn.commit()
+
+                        # Check for title_metadata table
+                        if not inspector.has_table("title_metadata"):
+                            logger.info("Creating title_metadata table...")
+                            conn.execute(text("""
+                                CREATE TABLE IF NOT EXISTS title_metadata (
+                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                    title_id VARCHAR(16) NOT NULL,
+                                    description TEXT,
+                                    rating FLOAT,
+                                    rating_count INTEGER,
+                                    genres JSON,
+                                    tags JSON,
+                                    release_date DATE,
+                                    cover_url VARCHAR(512),
+                                    banner_url VARCHAR(512),
+                                    screenshots JSON,
+                                    source VARCHAR(50),
+                                    source_id VARCHAR(100),
+                                    fetched_at DATETIME,
+                                    updated_at DATETIME
+                                )
+                            """))
+                            conn.commit()
 
                         # Check titles table columns
                         existing_columns = [c["name"] for c in inspector.get_columns("titles")]

@@ -38,6 +38,10 @@ def create_app_context():
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
 
+    # Initialize job tracker for worker
+    from job_tracker import job_tracker
+    job_tracker.init_app(app)
+
     return app
 
 

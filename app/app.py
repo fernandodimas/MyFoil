@@ -610,6 +610,10 @@ def create_app():
         init_db(app)
         init_users(app)
 
+        # Initialize job tracker with app context
+        from job_tracker import job_tracker
+        job_tracker.init_app(app)
+
         # Initialize file watcher and libraries
         init_internal(app)
 
