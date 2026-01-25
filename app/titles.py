@@ -74,7 +74,7 @@ def load_titledb_from_db():
     global _titles_db, _versions_db, _cnmts_db, _dlc_map, _titledb_cache_timestamp, _titles_db_loaded
 
     try:
-        from db import db, TitleDBCache, TitleDBVersions, TitleDBDLCs
+        from db import TitleDBCache, TitleDBVersions, TitleDBDLCs
 
         # Check if cache tables exist
         try:

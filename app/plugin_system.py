@@ -57,7 +57,6 @@ class PluginManager:
                         spec.loader.exec_module(module)
                         
                         # Find classes that inherit from MyFoilPlugin
-                        found_in_module = False
                         for attr_name in dir(module):
                             attr = getattr(module, attr_name)
                             if isinstance(attr, type) and issubclass(attr, MyFoilPlugin) and attr != MyFoilPlugin:
@@ -82,7 +81,6 @@ class PluginManager:
                                 else:
                                     logger.info(f"Plugin {item} is disabled, skipping load.")
                                 
-                                found_in_module = True
                                 break # Only one plugin class per main.py supported for now
                     except Exception as e:
                         logger.error(f"Failed to load plugin {item}: {e}")

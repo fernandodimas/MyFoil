@@ -48,7 +48,6 @@ def get_file_metadata(file_id):
     title_info = get_game_info(title_entry.title_id) if title_entry else {}
     
     # Determine Region (heuristic based on title info or filename)
-    region = "Unknown"
     # Try to extract region from existing filename if standard pattern
     # Or just use "World" if unknown
     

@@ -6,8 +6,6 @@ Revises: a1b2c3d4e5f7
 """
 
 from alembic import op
-import sqlalchemy as sa
-from sqlalchemy import Column, Integer, String, DateTime, JSON
 
 # revision identifiers, used by Alembic.
 revision = "b2c3d4e5f8a1"

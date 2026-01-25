@@ -112,7 +112,7 @@ class IGDBClient:
             return IGDBClient._access_token
             
         try:
-            auth_url = f"https://id.twitch.tv/oauth2/token"
+            auth_url = "https://id.twitch.tv/oauth2/token"
             params = {
                 "client_id": self.client_id,
                 "client_secret": self.client_secret,

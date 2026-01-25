@@ -8,7 +8,6 @@ _socketio_emitter = None
 
 def get_socketio_emitter():
     """Returns an emitter function that works even in Celery workers"""
-    import sys
     global _socketio_emitter
     
     pid = os.getpid()
@@ -37,7 +36,6 @@ def get_socketio_emitter():
                 # Ensure we're using the default namespace
                 kwargs['namespace'] = '/'  # EXPLICIT namespace
                 
-                import sys
                 pid = os.getpid()
                 logger.info(f"[SocketIO PID:{pid}] 📤 Emitting event '{event}' to namespace='/', data={type(data).__name__}")
                 
@@ -55,6 +53,7 @@ def get_socketio_emitter():
             return lambda *args, **kwargs: logger.warning(f"[SocketIO PID:{pid}] No-op emit called for '{args[0] if args else 'unknown'}' (Redis unreachable)")
     else:
         logger.warning(f"[SocketIO PID:{pid}] ⚠️ No REDIS_URL environment variable, using no-op emitter")
-        _socketio_emitter = lambda *args, **kwargs: None
+        def _socketio_emitter(*args, **kwargs):
+            return None
             
     return _socketio_emitter

@@ -169,7 +169,7 @@ def combined_update_and_scan_job(app=None):
     logger.info("Starting combined TitleDB update and library scan...")
     
     # Update TitleDB first
-    update_result = update_titledb_job(app=app)
+    update_titledb_job(app=app)
     
     # Then scan library
     scan_library_job(app=app)

@@ -38,7 +38,7 @@ class LibraryService:
             )
 
             # Query otimizada para Apps usando join direto
-            apps_query = Apps.query.join(app_files).join(Files).filter(Files.library_id == library_id)
+            Apps.query.join(app_files).join(Files).filter(Files.library_id == library_id)
         else:
             # Query otimizada sem filtro de library
             file_stats = db.session.query(
@@ -47,7 +47,6 @@ class LibraryService:
                 func.sum(case((Files.identified == False, 1), else_=0)).label("unidentified_files"),
             ).first()
 
-            apps_query = Apps.query
 
         # Extrair resultados da query otimizada
         total_files = file_stats.total_files or 0
@@ -104,11 +103,10 @@ class LibraryService:
         total_owned_bases = owned_apps_stats.total_bases or 0
         total_owned_updates = owned_apps_stats.total_updates or 0
         total_owned_dlcs = owned_apps_stats.total_dlcs or 0
-        total_owned_distinct_titles = owned_apps_stats.distinct_titles or 0
 
         # 5. Outros cálculos
-        all_titles_count = Titles.query.count()
-        titles_db_count = titles.get_titles_count()
+        Titles.query.count()
+        titles.get_titles_count()
 
         lib_data = load_library_from_disk()
         if not lib_data:
@@ -186,7 +184,6 @@ class LibraryService:
         tid = title_id.upper()
         title_obj = Titles.query.filter_by(title_id=tid).first()
 
-        is_dlc_request = False
         if not title_obj and str(title_id).isdigit():
             app_obj = db.session.get(Apps, int(title_id))
             if app_obj:
@@ -198,7 +195,7 @@ class LibraryService:
             base_tid, app_type = titles_lib.identify_appId(tid)
             if base_tid and tid != base_tid:
                 if app_type == APP_TYPE_DLC:
-                    is_dlc_request = True
+                    pass
                 else:
                     tid = base_tid
                     title_obj = Titles.query.filter_by(title_id=tid).first()

@@ -1,7 +1,7 @@
 import requests
 import logging
-from datetime import datetime, date
-from typing import Dict, List, Optional, Any
+from datetime import datetime
+from typing import Dict, Optional, Any
 from db import db, TitleMetadata, MetadataFetchLog, Titles
 from job_tracker import job_tracker
 import os

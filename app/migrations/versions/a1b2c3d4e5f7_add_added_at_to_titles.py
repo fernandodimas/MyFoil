@@ -6,9 +6,7 @@ Revises: a1b2c3d4e5f6
 """
 
 from alembic import op
-import sqlalchemy as sa
 from sqlalchemy import Column, DateTime
-from sqlalchemy.orm import sessionmaker
 
 # revision identifiers, used by Alembic.
 revision = "a1b2c3d4e5f7"

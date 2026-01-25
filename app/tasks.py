@@ -9,7 +9,7 @@ from celery_app import celery
 from flask import Flask
 from db import db
 from library import scan_library_path, identify_library_files, update_titles, generate_library
-from job_tracker import job_tracker, JobType, JobStatus
+from job_tracker import job_tracker, JobType
 from socket_helper import get_socketio_emitter
 from app_services.rating_service import update_game_metadata
 
@@ -108,7 +108,7 @@ def identify_file_async(filepath):
         job_tracker.set_emitter(get_socketio_emitter())
         
         job_id = f"id_{int(time.time())}"
-        job_tracker.start_job(job_id, JobType.FILE_IDENTIFICATION, f"Identifying new file")
+        job_tracker.start_job(job_id, JobType.FILE_IDENTIFICATION, "Identifying new file")
 
         try:
             logger.info("background_identification_started", triggered_by=filepath)

@@ -2,6 +2,11 @@ __pycache__
 config
 data
 
+# Python cache
+*.pyc
+*.py[cod]
+*$py.class
+
 # venv
 /bin
 /venv
@@ -15,5 +20,19 @@ data
 # pyenv
 .python-version*.db
 app/config/*.db
+*.db
+*.sqlite
+*.sqlite3
+
+# TitleDB JSON
 titles.json
 titles.BR.pt.json
+
+# Development scripts
+reproduce_issue.py
+check_db.py
+debug_watcher.py
+get_library_path.py
+
+# Grep output
+grep_results.txt

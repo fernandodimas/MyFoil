@@ -61,7 +61,7 @@ def init_rest_api(app):
         },
     )
 
-    file_model = api.model(
+    api.model(
         "File",
         {
             "id": fields.Integer(description="File unique ID"),
@@ -137,7 +137,7 @@ def init_rest_api(app):
         },
     )
 
-    stats_model = api.model(
+    api.model(
         "Stats",
         {
             "total_files": fields.Integer(description="Total files in library"),
@@ -150,7 +150,7 @@ def init_rest_api(app):
         },
     )
 
-    scan_status_model = api.model(
+    api.model(
         "ScanStatus",
         {
             "is_scanning": fields.Boolean(description="Is a scan currently running"),
@@ -162,7 +162,7 @@ def init_rest_api(app):
         },
     )
 
-    error_model = api.model(
+    api.model(
         "Error",
         {
             "error": fields.Boolean(description="Error occurred"),
@@ -302,8 +302,8 @@ def init_rest_api(app):
                 "total_games": Apps.query.filter_by(app_type=APP_TYPE_BASE, owned=True).count(),
                 "total_dlcs": Apps.query.filter_by(app_type=APP_TYPE_DLC, owned=True).count(),
                 "total_updates": Apps.query.filter_by(app_type=APP_TYPE_UPD, owned=True).count(),
-                "unidentified_files": Files.query.filter(Files.app_id == None).count(),
-                "metadata_games": Titles.query.filter(Titles.api_last_update != None).count(),
+                "unidentified_files": Files.query.filter(Files.app_id is None).count(),
+                "metadata_games": Titles.query.filter(Titles.api_last_update is not None).count(),
             }
 
     @ns_system.route("/health")

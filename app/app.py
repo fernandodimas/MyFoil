@@ -404,7 +404,7 @@ def init_internal(app):
     def stage1_cache():
         logger.info("Init Stage 1: Pre-loading Library Cache...")
         try:
-            from library import load_library_from_disk, _LIBRARY_CACHE
+            from library import load_library_from_disk
             saved = load_library_from_disk()
             if saved and "library" in saved:
                 import library

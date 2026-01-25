@@ -275,7 +275,6 @@ def search_library_api():
 @access_required("shop")
 def get_stats_overview():
     """Estatísticas detalhadas da biblioteca com filtros - Otimizado"""
-    import titles
     import library
 
     library_id = request.args.get("library_id", type=int)
@@ -298,7 +297,7 @@ def get_stats_overview():
         )
 
         # Query otimizada para Apps usando join direto
-        apps_query = Apps.query.join(app_files).join(Files).filter(Files.library_id == library_id)
+        Apps.query.join(app_files).join(Files).filter(Files.library_id == library_id)
     else:
         # Query otimizada sem filtro de library
         file_stats = db.session.query(
@@ -307,7 +306,6 @@ def get_stats_overview():
             func.sum(case((Files.identified == False, 1), else_=0)).label("unidentified_files"),
         ).first()
 
-        apps_query = Apps.query
 
     # Extrair resultados da query otimizada
     total_files = file_stats.total_files or 0
@@ -365,7 +363,6 @@ def get_stats_overview():
     total_owned_bases = owned_apps_stats.total_bases or 0
     total_owned_updates = owned_apps_stats.total_updates or 0
     total_owned_dlcs = owned_apps_stats.total_dlcs or 0
-    total_owned_distinct_titles = owned_apps_stats.distinct_titles or 0
 
     # 5. Up-to-date Logic (Requires Title level check)
     # This is more complex to filter strictly by library if a title bridges libraries,
@@ -474,7 +471,6 @@ def app_info_api(id):
             tid = app_obj.title.title_id
             title_obj = app_obj.title
 
-    is_dlc_request = False
     if not title_obj:
         # Maybe it's a DLC app_id, try to find base TitleID
         titles.load_titledb()  # Ensure loaded
@@ -484,7 +480,7 @@ def app_info_api(id):
             # For the main game modal, we usually want the base_tid.
             # But let's check if we should stay on this ID
             if app_type == APP_TYPE_DLC:
-                is_dlc_request = True
+                pass
             else:
                 tid = base_tid
                 title_obj = Titles.query.filter_by(title_id=tid).first()

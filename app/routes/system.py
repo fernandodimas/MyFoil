@@ -151,7 +151,6 @@ def scan_library_api():
                 state.scan_in_progress = True
             try:
                 from library import scan_library_path, Libraries, identify_library_files
-                from db import db
 
                 if path is None:
                     # Scan all libraries

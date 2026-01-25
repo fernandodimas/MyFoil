@@ -750,7 +750,7 @@ def get_filename_identified_files_needing_reidentification(library_id, current_t
         return []
     return (
         Files.query.filter(Files.library_id == library_id, Files.identification_type == "filename")
-        .filter(db.or_(Files.titledb_version == None, Files.titledb_version < str(ts_float)))
+        .filter(db.or_(Files.titledb_version is None, Files.titledb_version < str(ts_float)))
         .all()
     )
 

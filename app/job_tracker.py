@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
-import threading
 import uuid
 import logging
 

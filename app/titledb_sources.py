@@ -191,7 +191,7 @@ class TitleDBSourceManager:
                     self.sources = [TitleDBSource.from_dict(s) for s in data]
 
                 # Migration: Remove defunct sources and add new defaults
-                config_urls = [s.base_url for s in self.sources]
+                [s.base_url for s in self.sources]
                 defunct_urls = [
                     "https://raw.githubusercontent.com/Big-On-The-Bottle/titledb/main",
                     "https://raw.githubusercontent.com/julesontheroad/titledb/master",
