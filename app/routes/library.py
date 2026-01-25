@@ -401,16 +401,19 @@ def get_stats_overview():
         for c in cats:
             genre_dist[c] = genre_dist.get(c, 0) + 1
 
-    # Recognition Logic (Check if the TitleID exists in TitleDB and has a name)
-    # Titles are considered unrecognized if their name starts with "Unknown" or if they are purely generic
-    recognized_games = len([g for g in filtered_games if g.get("name") and not g.get("name", "").startswith("Unknown")])
-    recognition_rate = round((recognized_games / total_owned * 100), 1) if total_owned > 0 else 0
-
-    # Coverage: percentage of library games that have TitleDB metadata
-    games_with_titledb = len(
-        [g for g in filtered_games if g.get("name") and not g.get("name", "").startswith("Unknown")]
-    )
-    coverage_pct = round((games_with_titledb / total_owned * 100), 2) if total_owned > 0 else 0
+    # Coverage Logic: compare owned bases vs total available in TitleDB
+    # We define "available" as any entry in TitleDBCache that ends with 000 (standard base TitleID rule)
+    total_available_titledb = TitleDBCache.query.filter(TitleDBCache.title_id.like('%000')).count()
+    
+    # Recognized games are games we have that exist in TitleDB
+    games_with_metadata = len([g for g in filtered_games if g.get("name") and not g.get("name", "").startswith("Unknown")])
+    
+    # Coverage relative to what we HAVE (metadata quality)
+    metadata_coverage_pct = round((games_with_metadata / total_owned * 100), 1) if total_owned > 0 else 0
+    
+    # Global coverage (Discovery): what percentage of the full library do we own?
+    # Consider only base games for a fair comparison
+    global_coverage_pct = round((total_owned_bases / total_available_titledb * 100), 2) if total_available_titledb > 0 else 0
 
     app_settings = load_settings()
     keys_valid = app_settings.get("titles", {}).get("valid_keys", False)
@@ -435,8 +438,10 @@ def get_stats_overview():
                 "completion_rate": round((up_to_date / total_owned * 100), 1) if total_owned > 0 else 0,
             },
             "titledb": {
-                "total_available": games_with_titledb,
-                "coverage_pct": coverage_pct,
+                "total_available": total_available_titledb,
+                "games_with_metadata": games_with_metadata,
+                "coverage_pct": global_coverage_pct,
+                "metadata_quality_pct": metadata_coverage_pct,
                 "source_name": source_name,
             },
             "identification": {

@@ -124,14 +124,12 @@ def scan_library_api():
 
     from app import CELERY_ENABLED
     from tasks import scan_library_async, scan_all_libraries_async
-    from job_tracker import job_tracker, JobType, JobStatus
-
-    # Check if a scan is already running via JobTracker
-    status = job_tracker.get_status()
-    active_scans = [j for j in status.get('active', []) if j.get('type') == JobType.LIBRARY_SCAN.value]
+    from job_tracker import job_tracker
+    active_jobs = job_tracker.get_active_jobs()
+    active_scans = [j for j in active_jobs if j.job_type in ['library_scan', 'aggregate_scan']]
     
     if active_scans:
-        logger.info("Skipping scan_library_api call: Scan already in progress (tracked by JobTracker)")
+        logger.info("Skipping scan_library_api call: Scan already in progress")
         return jsonify({"success": False, "message": "A scan is already in progress", "errors": []})
 
     success = True
@@ -796,11 +794,68 @@ def cloud_files_api(provider):
     return jsonify({"files": files})
 
 
-@system_bp.route("/system/jobs/status", methods=["GET"])
-def get_jobs_status():
-    """Retorna status de todos os jobs"""
+@system_bp.route("/system/jobs", methods=["GET"])
+def get_all_jobs_api():
+    """Retorna status de todos os jobs recentes"""
     from job_tracker import job_tracker
-    return jsonify(job_tracker.get_status())
+    jobs = job_tracker.get_all_jobs()
+    
+    # Sort by start time desc
+    jobs_sorted = sorted(jobs, key=lambda j: j.started_at or datetime.datetime.min, reverse=True)
+    
+    return jsonify({
+        'jobs': [
+            {
+                'id': j.job_id,
+                'type': j.job_type,
+                'status': j.status,
+                'started_at': j.started_at.isoformat() if j.started_at else None,
+                'completed_at': j.completed_at.isoformat() if j.completed_at else None,
+                'progress': j.progress,
+                'result': j.result,
+                'error': j.error,
+                'metadata': j.metadata,
+                'duration': (j.completed_at - j.started_at).total_seconds() if j.completed_at and j.started_at else None
+            }
+            for j in jobs_sorted[:50] # Top 50 recent
+        ]
+    })
+
+
+@system_bp.route("/system/metadata/fetch", methods=["POST"])
+@access_required("admin")
+def trigger_metadata_fetch():
+    """Trigger manual metadata fetch for all games"""
+    from metadata_service import metadata_fetcher
+    import threading
+    
+    data = request.json or {}
+    force = data.get('force', False)
+    
+    thread = threading.Thread(target=lambda: metadata_fetcher.fetch_all_metadata(force=force))
+    thread.daemon = True
+    thread.start()
+    
+    return jsonify({'success': True, 'message': 'Metadata fetch started in background'})
+
+
+@system_bp.route("/system/metadata/status", methods=["GET"])
+def get_metadata_status():
+    """Get summarized status of metadata fetch service"""
+    from db import MetadataFetchLog
+    last_fetch = MetadataFetchLog.query.order_by(MetadataFetchLog.started_at.desc()).first()
+    
+    return jsonify({
+        'has_run': last_fetch is not None,
+        'last_fetch': {
+            'started_at': last_fetch.started_at.isoformat() if last_fetch else None,
+            'completed_at': last_fetch.completed_at.isoformat() if last_fetch and last_fetch.completed_at else None,
+            'status': last_fetch.status if last_fetch else None,
+            'processed': last_fetch.titles_processed if last_fetch else 0,
+            'updated': last_fetch.titles_updated if last_fetch else 0,
+            'failed': last_fetch.titles_failed if last_fetch else 0
+        } if last_fetch else None
+    })
 
 
 @system_bp.route("/system/jobs/<job_id>/cancel", methods=["POST"])
@@ -814,14 +869,11 @@ def cancel_job(job_id):
 
 @system_bp.route("/system/jobs/cleanup", methods=["POST"])
 @access_required("admin")
-def cleanup_jobs():
-    """Limpa todos os jobs ativos (útil para manutenção)"""
-    from job_tracker import job_tracker, JobType
-    from socket_helper import get_socketio_emitter
-    job_tracker.set_emitter(get_socketio_emitter())
-    
-    count = job_tracker.cleanup_all_active_jobs()
-    return jsonify({"success": True, "cleaned": count, "message": f"Cleared {count} active job(s)"})
+def cleanup_jobs_api():
+    """Limpa jobs antigos (>24h) ou todos os jobs completados"""
+    from job_tracker import job_tracker
+    job_tracker.cleanup_old_jobs(max_age_hours=24)
+    return jsonify({"success": True, "message": "Job history cleaned up"})
 
 
 @system_bp.route("/system/diagnostic", methods=["GET"])

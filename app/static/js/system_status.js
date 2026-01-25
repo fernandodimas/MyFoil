@@ -51,18 +51,29 @@ class SystemStatusManager {
 
     async fetchStatus() {
         try {
-            const response = await fetch('/api/system/jobs/status');
+            const response = await fetch('/api/system/jobs');
             if (response.ok) {
-                const status = await response.json();
-                this.updateStatus(status);
+                const data = await response.json();
+                this.updateStatus(data.jobs);
             }
         } catch (error) {
-            console.error('Failed to fetch job status:', error);
+            console.error('Failed to fetch jobs:', error);
         }
     }
 
-    updateStatus(status) {
-        this.currentStatus = status;
+    updateStatus(jobs) {
+        if (!Array.isArray(jobs)) return;
+        this.currentJobs = jobs;
+
+        const active = jobs.filter(j => j.status === 'running' || j.status === 'scheduled');
+        const history = jobs.filter(j => j.status === 'completed' || j.status === 'failed');
+
+        const status = {
+            has_active: active.length > 0,
+            active: active,
+            history: history
+        };
+
         this.updateIndicator(status);
         this.updateModal(status);
     }
@@ -83,9 +94,12 @@ class SystemStatusManager {
             icon.innerHTML = '<i class="bi bi-arrow-repeat spin has-text-info"></i>';
             text.textContent = this.getJobLabel(job);
 
-            progressContainer.classList.remove('is-hidden');
-            progressBar.value = job.progress;
-            // progressBar.textContent = `${job.progress}%`; // HTML5 progress doesn't show text content usually
+            if (job.progress && job.progress.percent) {
+                progressContainer.classList.remove('is-hidden');
+                progressBar.value = job.progress.percent;
+            } else {
+                progressContainer.classList.add('is-hidden');
+            }
 
             indicator.classList.add('is-active');
         } else {
@@ -101,7 +115,7 @@ class SystemStatusManager {
         const activeList = document.getElementById('activeJobsList');
         const historyList = document.getElementById('jobHistoryList');
 
-        if (!activeList || !historyList) return; // Modal might not be in DOM yet?
+        if (!activeList || !historyList) return;
 
         // Update active jobs list
         if (status.active.length === 0) {
@@ -112,18 +126,22 @@ class SystemStatusManager {
 
         // Update history
         if (status.history.length === 0) {
-            historyList.innerHTML = '<p class="has-text-grey-light has-text-centered py-4">No history available</p>';
+            historyList.innerHTML = '<p class="has-text-grey-light has-text-centered py-4">No recent activity</p>';
         } else {
-            historyList.innerHTML = status.history.map(job => this.renderHistoryJob(job)).join('');
+            historyList.innerHTML = status.history.slice(0, 10).map(job => this.renderHistoryJob(job)).join('');
         }
     }
 
     renderActiveJob(job) {
         const icon = this.getJobIcon(job.type);
-        const statusColor = job.status === 'error' ? 'danger' : 'info';
+        const statusColor = job.status === 'failed' ? 'danger' : 'info';
+        const progress = (job.progress && job.progress.percent) || 0;
+        const message = (job.progress && job.progress.message) || 'Initializing...';
+        const current = (job.progress && job.progress.current);
+        const total = (job.progress && job.progress.total);
 
         return `
-            <div class="box is-shadowless border mb-3" style="border-left: 4px solid var(--bulma-success) !important; border: 1px solid #dbdbdb;">
+            <div class="box is-shadowless border mb-3" style="border-left: 4px solid var(--bulma-info) !important;">
                 <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
                     <div>
                         <span class="icon-text">
@@ -131,14 +149,14 @@ class SystemStatusManager {
                             <span class="has-text-weight-bold">${this.getJobLabel(job)}</span>
                         </span>
                     </div>
-                    <span class="tag is-${statusColor}">${job.status}</span>
+                    <span class="tag is-${statusColor} is-light">${job.status}</span>
                 </div>
                 
-                <progress class="progress is-${statusColor} is-small mb-2" value="${job.progress}" max="100">${job.progress}%</progress>
+                <progress class="progress is-info is-small mb-2" value="${progress}" max="100">${progress}%</progress>
                 
                 <div class="is-flex is-justify-content-space-between is-size-7 opacity-70">
-                    <span>${job.message}</span>
-                    <span>${job.current !== null ? job.current : 0} / ${job.total || '?'}</span>
+                    <span>${message}</span>
+                    ${current !== undefined ? `<span>${current} / ${total || '?'}</span>` : ''}
                 </div>
             </div>
         `;
@@ -146,21 +164,36 @@ class SystemStatusManager {
 
     renderHistoryJob(job) {
         const icon = this.getJobIcon(job.type);
-        const statusIcon = job.status === 'completed' ? '✅' : '❌';
-        // Handle ISO date string
+        const statusClass = job.status === 'completed' ? 'has-text-success' : 'has-text-danger';
+        const statusIcon = job.status === 'completed' ? '<i class="bi bi-check-circle"></i>' : '<i class="bi bi-x-circle"></i>';
+
         let timeStr = 'Unknown';
         if (job.completed_at) {
             timeStr = new Date(job.completed_at).toLocaleTimeString();
         }
 
+        // Preview of results
+        let resultPreview = '';
+        if (job.result && Object.keys(job.result).length > 0) {
+            const items = Object.entries(job.result)
+                .map(([k, v]) => `<strong>${k}:</strong> ${v}`)
+                .join(' | ');
+            resultPreview = `<div class="mt-1 is-size-7 has-text-grey">${items}</div>`;
+        } else if (job.error) {
+            resultPreview = `<div class="mt-1 is-size-7 has-text-danger">Error: ${job.error}</div>`;
+        }
+
         return `
-            <div class="is-flex is-justify-content-space-between is-align-items-center py-2 border-bottom">
-                <div class="is-flex is-align-items-center">
-                    <span class="mr-2">${statusIcon}</span>
-                    <span class="icon mr-2">${icon}</span>
-                    <span>${this.getJobLabel(job)}</span>
+            <div class="py-2 border-bottom">
+                <div class="is-flex is-justify-content-space-between is-align-items-center">
+                    <div class="is-flex is-align-items-center">
+                        <span class="mr-2 ${statusClass}">${statusIcon}</span>
+                        <span class="icon mr-2">${icon}</span>
+                        <span class="is-size-6">${this.getJobLabel(job)}</span>
+                    </div>
+                    <span class="is-size-7 has-text-grey">${timeStr}</span>
                 </div>
-                <span class="is-size-7 has-text-grey">${timeStr}</span>
+                ${resultPreview}
             </div>
         `;
     }
@@ -170,6 +203,7 @@ class SystemStatusManager {
             'library_scan': '<i class="bi bi-folder-open has-text-info"></i>',
             'titledb_update': '<i class="bi bi-cloud-download has-text-primary"></i>',
             'metadata_fetch': '<i class="bi bi-stars has-text-warning"></i>',
+            'metadata_fetch_all': '<i class="bi bi-stars has-text-warning"></i>',
             'file_identification': '<i class="bi bi-fingerprint has-text-success"></i>',
             'backup': '<i class="bi bi-shield-check has-text-link"></i>',
             'cleanup': '<i class="bi bi-trash has-text-danger"></i>',
@@ -182,6 +216,7 @@ class SystemStatusManager {
             'library_scan': 'Library Scan',
             'titledb_update': 'TitleDB Update',
             'metadata_fetch': 'Metadata Fetch',
+            'metadata_fetch_all': 'Full Metadata Fetch',
             'file_identification': 'File Identification',
             'backup': 'Backup',
             'cleanup': 'Cleanup',

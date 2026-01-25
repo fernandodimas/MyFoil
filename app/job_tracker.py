@@ -1,365 +1,137 @@
-"""
-Job Tracker - Sistema de rastreamento de operações em background
-"""
-from dataclasses import dataclass, asdict
-from datetime import datetime
-from typing import Dict, List, Optional
-from enum import Enum
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import Optional, Dict, Any, List
 import threading
-import copy
-import json
-import os
-import redis
+import uuid
 import logging
 
-logger = logging.getLogger('main')
-
-class JobStatus(Enum):
-    PENDING = "pending"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    ERROR = "error"
-    CANCELLED = "cancelled"
-
-class JobType(Enum):
-    LIBRARY_SCAN = "library_scan"
-    TITLEDB_UPDATE = "titledb_update"
-    METADATA_FETCH = "metadata_fetch"
-    FILE_IDENTIFICATION = "file_identification"
-    BACKUP = "backup"
-    CLEANUP = "cleanup"
+logger = logging.getLogger(__name__)
 
 @dataclass
-class Job:
-    id: str
-    type: JobType
-    status: JobStatus
-    progress: int  # 0-100
-    total: Optional[int] = None
-    current: Optional[int] = None
-    message: str = ""
+class JobStatus:
+    """Represents the status of a background job"""
+    job_id: str
+    job_type: str  # 'library_scan', 'titledb_update', 'identify', 'metadata_fetch', etc
+    status: str  # 'scheduled', 'running', 'completed', 'failed'
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
+    progress: Optional[Dict[str, Any]] = None  # {'current': 10, 'total': 100, 'message': '...'}
+    result: Optional[Dict[str, Any]] = None  # {'files_added': 5, 'files_identified': 3}
     error: Optional[str] = None
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'type': self.type.value,
-            'status': self.status.value,
-            'progress': self.progress,
-            'total': self.total,
-            'current': self.current,
-            'message': self.message,
-            'started_at': self.started_at.isoformat() if self.started_at else None,
-            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
-            'error': self.error
-        }
-    
-    @classmethod
-    def from_dict(cls, data):
-        # Handle cleanup of None/null values if necessary
-        return cls(
-            id=data['id'],
-            type=JobType(data['type']),
-            status=JobStatus(data['status']),
-            progress=int(data['progress']),
-            total=data.get('total'),
-            current=data.get('current'),
-            message=data.get('message', ''),
-            started_at=datetime.fromisoformat(data['started_at']) if data.get('started_at') else None,
-            completed_at=datetime.fromisoformat(data['completed_at']) if data.get('completed_at') else None,
-            error=data.get('error')
-        )
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 class JobTracker:
-    """Singleton para rastrear jobs em background (Redis-backed)"""
+    """Singleton to track system jobs with real-time updates via SocketIO"""
     
-    _instance = None
-    _lock = threading.Lock()
+    def __init__(self):
+        self.jobs: Dict[str, JobStatus] = {}
+        self.lock = threading.Lock()
+        self.emitter = None
     
-    def __new__(cls):
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-                    cls._instance._init_redis()
-        return cls._instance
-    
-    def _init_redis(self):
-        import sys
-        self.redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-        self.use_redis = False
-        self._local_jobs = {}
-        self._local_history = []
-        self._emitter = None
-        self.redis = None
-        self._last_emit_time = {} # Rate limiting per job
-        
-        # Diagnostic: Log process info
-        pid = os.getpid()
-        logger.info(f"[JobTracker PID:{pid}] Initializing with REDIS_URL={self.redis_url}")
-        
-        self._connect_redis()
-    
-    def _connect_redis(self):
-        """Attempt to connect to Redis with retries"""
-        try:
-            url = os.environ.get("REDIS_URL", self.redis_url)
-            # Use a longer timeout for the initial connection
-            self.redis = redis.from_url(url, socket_timeout=10, socket_connect_timeout=10)
-            self.redis.ping()
-            self.use_redis = True
-            logger.info(f"JobTracker: Connected to Redis at {url}")
-            # Auto-cleanup stale jobs on initialization
-            self._cleanup_stale_jobs()
-            return True
-        except Exception as e:
-            # Check if we are in an environment that REQUIRES redis
-            if os.environ.get("REDIS_URL"):
-                logger.error(f"JobTracker: Redis connection failed despite REDIS_URL being set. Task tracking will be local and invisible to other processes! Error: {e}")
-            else:
-                logger.warning(f"JobTracker: Redis not available. {e}")
-            self.use_redis = False
-            return False
+    def set_emitter(self, emitter):
+        """Set the SocketIO emitter for real-time updates"""
+        self.emitter = emitter
+        logger.debug("JobTracker emitter set")
 
-    def check_connection(self):
-        """Ensure connection is alive, reconnect if needed - aggressive reconnection strategy"""
-        # Always try to connect if Redis URL is available but not currently connected
-        if not self.use_redis and os.environ.get("REDIS_URL"):
-            logger.info("JobTracker: Redis URL available but not connected, attempting connection...")
-            success = self._connect_redis()
-            if success:
-                logger.info("JobTracker: Successfully connected to Redis on check")
-            return success
-            
-        # If we think we're connected, verify with ping
-        if self.use_redis:
+    def _emit_update(self, job_id: str):
+        """Emit job update to all connected clients"""
+        if self.emitter and job_id in self.jobs:
             try:
-                self.redis.ping()
-                return True
+                job = self.jobs[job_id]
+                self.emitter.emit('job_update', {
+                    'id': job.job_id,
+                    'type': job.job_type,
+                    'status': job.status,
+                    'progress': job.progress
+                }, namespace='/')
             except Exception as e:
-                logger.warning(f"JobTracker: Redis ping failed ({e}), attempting reconnection...")
-                return self._connect_redis()
+                logger.warning(f"Failed to emit job update: {e}")
+
+    def register_job(self, job_type: str, metadata: Dict[str, Any] = None) -> str:
+        """Register a new job and return the job_id"""
+        job_id = f"{job_type}_{uuid.uuid4().hex[:8]}"
         
-        return False
-
-    def set_emitter(self, emitter_func):
-        """Set a function to emit socket updates. Emitter should take (event_name, data)"""
-        import sys
-        pid = os.getpid()
-        self._emitter = emitter_func
-        logger.info(f"[JobTracker PID:{pid}] Emitter configured: {emitter_func is not None}")
-
-    def _emit_update(self, job_id: str = None, force: bool = False):
-        """Helper to emit job status update to all clients with rate limiting"""
-        import sys
-        pid = os.getpid()
+        with self.lock:
+            job = JobStatus(
+                job_id=job_id,
+                job_type=job_type,
+                status='scheduled',
+                metadata=metadata or {}
+            )
+            self.jobs[job_id] = job
         
-        if not self._emitter:
-            logger.warning(f"[JobTracker PID:{pid}] ⚠️ No emitter configured, cannot send updates to UI!")
-            return
-
-        import time
-        now = time.time()
-        
-        # Rate limit: 1 update per 0.5 seconds per job, unless forced
-        if job_id and not force:
-            last_time = self._last_emit_time.get(job_id, 0)
-            if now - last_time < 0.5:
-                logger.debug(f"[JobTracker PID:{pid}] Rate-limited emit for job {job_id}")
-                return
-            self._last_emit_time[job_id] = now
-
-        try:
-            status = self.get_status()
-            logger.info(f"[JobTracker PID:{pid}] 📡 Calling emitter for 'job_update' event...")
-            self._emitter('job_update', status)
-            logger.info(f"[JobTracker PID:{pid}] ✅ Successfully emitted job_update - {len(status.get('active', []))} active, {len(status.get('history', []))} in history")
-        except Exception as e:
-            logger.error(f"[JobTracker PID:{pid}] ❌ Failed to emit job update: {e}", exc_info=True)
-
-    def _cleanup_stale_jobs(self, max_age_seconds: int = 3600):
-        """Clean up jobs stuck in RUNNING state for more than max_age_seconds"""
-        if not self.use_redis:
-            return
-        
-        try:
-            active_ids = self.redis.smembers("jobs:active")
-            now = datetime.now()
-            cleaned = 0
-            
-            for jid in active_ids:
-                if isinstance(jid, bytes):
-                    jid = jid.decode()
-                
-                job = self.get_job(jid)
-                if job and job.status == JobStatus.RUNNING:
-                    is_stale = False
-                    if job.started_at:
-                        age = (now - job.started_at).total_seconds()
-                        if age > max_age_seconds:
-                            is_stale = True
-                    else:
-                        is_stale = True 
-                        
-                    if is_stale:
-                        job.status = JobStatus.CANCELLED
-                        job.error = "Job timed out or orphaned"
-                        job.completed_at = now
-                        self._save_job(job, emit=False)
-                        cleaned += 1
-            
-            if cleaned > 0:
-                logger.info(f"JobTracker: Cleaned up {cleaned} stale job(s)")
-                self._emit_update(force=True)
-        except Exception as e:
-            logger.error(f"JobTracker: Error during cleanup: {e}")
+        logger.debug(f"Registered job: {job_id} ({job_type})")
+        self._emit_update(job_id)
+        return job_id
     
-    def cleanup_all_active_jobs(self):
-        """Manually clear all active jobs (useful for debugging/maintenance)"""
-        self.check_connection()
-        
-        count = 0
-        if self.use_redis:
-            try:
-                active_ids = list(self.redis.smembers("jobs:active"))
-                for jid in active_ids:
-                    if isinstance(jid, bytes):
-                        jid = jid.decode()
-                    job = self.get_job(jid)
-                    if job:
-                        job.status = JobStatus.CANCELLED
-                        job.error = "Manually cleared"
-                        job.completed_at = datetime.now()
-                        self._save_job(job, emit=False)
-                count = len(active_ids)
-                if count == 0:
-                     self.redis.delete("jobs:active")
-            except Exception as e:
-                logger.error(f"JobTracker: Error manually cleaning: {e}")
-        else:
-            count = len(self._local_jobs)
-            self._local_jobs.clear()
-        
-        self._emit_update(force=True)
-        return count
-
-    def _save_job(self, job: Job, emit: bool = True):
-        # Always try to use Redis if we have a URL
-        if not self.use_redis and os.environ.get("REDIS_URL"):
-            self._connect_redis()
-
-        if self.use_redis:
-            try:
-                key = f"job:{job.id}"
-                expiry = 3600 if job.status == JobStatus.RUNNING else 86400
-                self.redis.set(key, json.dumps(job.to_dict()), ex=expiry)
-                
-                if job.status == JobStatus.RUNNING:
-                    self.redis.sadd("jobs:active", job.id)
-                else:
-                    self.redis.srem("jobs:active", job.id)
-                    self.redis.lpush("jobs:history", json.dumps(job.to_dict()))
-                    self.redis.ltrim("jobs:history", 0, 49)
-            except Exception as e:
-                logger.error(f"JobTracker: Failed to save to Redis: {e}")
-                self.use_redis = False
-        else:
-            self._local_jobs[job.id] = job
-            if job.status != JobStatus.RUNNING:
-                if job.id in self._local_jobs:
-                    del self._local_jobs[job.id]
-                self._local_history.insert(0, job)
-                self._local_history = self._local_history[:50]
-        
-        if emit:
-            # Force emit if job completed or failed
-            self._emit_update(job.id, force=(job.status != JobStatus.RUNNING))
-
-    def start_job(self, job_id: str, job_type: JobType, message: str = "") -> Job:
-        import sys
-        pid = os.getpid()
-        self.check_connection()
-        
-        logger.info(f"[JobTracker PID:{pid}] 🚀 Starting new job: id={job_id}, type={job_type.value}, message={message}")
-        
-        job = Job(
-            id=job_id,
-            type=job_type,
-            status=JobStatus.RUNNING,
-            progress=0,
-            message=message,
-            started_at=datetime.now()
-        )
-        self._save_job(job)
-        logger.info(f"[JobTracker PID:{pid}] ✅ Job {job_id} started and saved to Redis")
-        return job
+    def start_job(self, job_id: str):
+        """Mark job as started"""
+        with self.lock:
+            if job_id in self.jobs:
+                self.jobs[job_id].status = 'running'
+                self.jobs[job_id].started_at = datetime.now()
+                logger.debug(f"Started job: {job_id}")
+        self._emit_update(job_id)
     
-    def update_progress(self, job_id: str, progress: int, current: int = None, total: int = None, message: str = None):
-        job = self.get_job(job_id)
-        if job:
-            job.progress = min(100, max(0, progress))
-            if current is not None:
-                job.current = current
-            if total is not None:
-                job.total = total
-            if message is not None:
-                job.message = message
-            self._save_job(job)
+    def update_progress(self, job_id: str, current: int, total: int, message: str = ''):
+        """Update job progress"""
+        with self.lock:
+            if job_id in self.jobs:
+                self.jobs[job_id].progress = {
+                    'current': current,
+                    'total': total,
+                    'message': message,
+                    'percent': round((current / total * 100) if total > 0 else 0, 1)
+                }
+        self._emit_update(job_id)
     
-    def complete_job(self, job_id: str, message: str = "Completed"):
-        job = self.get_job(job_id)
-        if job:
-            job.status = JobStatus.COMPLETED
-            job.progress = 100
-            job.message = message
-            job.completed_at = datetime.now()
-            self._save_job(job)
+    def complete_job(self, job_id: str, result: Dict[str, Any] = None):
+        """Mark job as completed"""
+        with self.lock:
+            if job_id in self.jobs:
+                job = self.jobs[job_id]
+                job.status = 'completed'
+                job.completed_at = datetime.now()
+                job.result = result or {}
+                logger.debug(f"Completed job: {job_id}")
+        self._emit_update(job_id)
     
     def fail_job(self, job_id: str, error: str):
-        job = self.get_job(job_id)
-        if job:
-            job.status = JobStatus.ERROR
-            job.error = error
-            job.completed_at = datetime.now()
-            self._save_job(job)
-            
-    def get_job(self, job_id: str) -> Optional[Job]:
-        self.check_connection()
-        if self.use_redis:
-            data = self.redis.get(f"job:{job_id}")
-            if data:
-                return Job.from_dict(json.loads(data))
-            return None
-        return self._local_jobs.get(job_id)
-
-    def get_status(self) -> dict:
-        self.check_connection()
-        if self.use_redis:
-            active_ids = self.redis.smembers("jobs:active")
-            active_jobs = []
-            for jid in active_ids:
-                if isinstance(jid, bytes):
-                    jid = jid.decode()
-                job = self.get_job(jid)
-                if job:
-                    active_jobs.append(job.to_dict())
-            
-            history_data = self.redis.lrange("jobs:history", 0, 49)
-            history_jobs = [json.loads(d) for d in history_data]
-            
-            return {
-                'active': active_jobs,
-                'history': history_jobs,
-                'has_active': len(active_jobs) > 0
+        """Mark job as failed"""
+        with self.lock:
+            if job_id in self.jobs:
+                job = self.jobs[job_id]
+                job.status = 'failed'
+                job.completed_at = datetime.now()
+                job.error = error
+                logger.error(f"Failed job: {job_id} - Error: {error}")
+        self._emit_update(job_id)
+    
+    def get_all_jobs(self) -> List[JobStatus]:
+        """Return all jobs"""
+        with self.lock:
+            return list(self.jobs.values())
+    
+    def get_active_jobs(self) -> List[JobStatus]:
+        """Return only active jobs"""
+        with self.lock:
+            return [j for j in self.jobs.values() if j.status in ['scheduled', 'running']]
+    
+    def get_job(self, job_id: str) -> Optional[JobStatus]:
+        """Return a specific job"""
+        with self.lock:
+            return self.jobs.get(job_id)
+    
+    def cleanup_old_jobs(self, max_age_hours: int = 24):
+        """Remove completed/failed jobs older than max_age_hours"""
+        with self.lock:
+            cutoff = datetime.now() - timedelta(hours=max_age_hours)
+            self.jobs = {
+                jid: job for jid, job in self.jobs.items()
+                if job.status in ['scheduled', 'running'] or 
+                   (job.completed_at and job.completed_at > cutoff)
             }
-        else:
-            return {
-                'active': [j.to_dict() for j in self._local_jobs.values()],
-                'history': [j.to_dict() for j in self._local_history],
-                'has_active': len(self._local_jobs) > 0
-            }
+            logger.debug("Cleaned up old jobs from tracker")
 
-# Singleton global
+# Global singleton
 job_tracker = JobTracker()

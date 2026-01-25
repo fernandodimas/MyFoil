@@ -17,6 +17,11 @@ monkey.patch_all()
 import flask.cli
 flask.cli.show_server_banner = lambda *args: None
 
+# Silence noisy libraries
+logging.getLogger('engineio.server').setLevel(logging.WARNING)
+logging.getLogger('socketio.server').setLevel(logging.WARNING)
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
+
 # Core Flask imports
 from flask import Flask
 from flask_socketio import SocketIO
@@ -208,7 +213,7 @@ def reload_conf():
 
 def on_library_change(events):
     """Handle library file changes"""
-    logger.info(f"Library change detected: {len(events)} events")
+    logger.debug(f"Library change detected: {len(events)} events")
     
     with app.app_context():
         files_added = []
@@ -222,7 +227,7 @@ def on_library_change(events):
                 files_deleted.append(event.src_path)
                 delete_file_by_filepath(event.src_path)
             elif event.type == "modified":
-                logger.info(f"Modified file detected: {event.src_path}")
+                logger.debug(f"Modified file detected: {event.src_path}")
                 files_modified.append(event.src_path)
             elif event.type == "moved":
                 if file_exists_in_db(event.src_path):
@@ -242,7 +247,7 @@ def on_library_change(events):
                 ]
                 
                 if files_to_process:
-                    logger.info(f"Processing {len(files_to_process)} new/modified files in {library_path}")
+                    logger.debug(f"Processing {len(files_to_process)} new/modified files in {library_path}")
                     
                     # Add files to DB (this handles upserts/updates)
                     add_files_to_library(library_path, files_to_process)
@@ -271,42 +276,53 @@ def on_library_change(events):
 
 def update_titledb_job(force=False):
     """Update TitleDB in background"""
+    # Track job
+    job_id = job_tracker.register_job('titledb_update', {'force': force})
+    job_tracker.start_job(job_id)
+    
     with state.titledb_update_lock:
         if state.is_titledb_update_running:
             logger.info("TitleDB update already in progress.")
+            job_tracker.fail_job(job_id, "Update already in progress")
             return False
         state.is_titledb_update_running = True
 
     logger.info("Starting TitleDB update job...")
     try:
+        job_tracker.update_progress(job_id, 1, 4, "Downloading/Extracting TitleDB files...")
         current_settings = load_settings()
         import titledb
 
-        # Perform update within app context to allow DB sync during load_titledb
         if "app" in globals():
             with app.app_context():
                 titledb.update_titledb(current_settings, force=force)
-
+                
+                job_tracker.update_progress(job_id, 2, 4, "Syncing database with new versions...")
                 logger.info("Syncing new TitleDB versions to library...")
                 add_missing_apps_to_db()
+                
+                job_tracker.update_progress(job_id, 3, 4, "Updating title status and re-identifying...")
                 update_titles()
-                # Re-identify files that were identified by filename (now TitleDB has more data)
+                
                 from library import identify_library_files, get_libraries
-
                 libraries = get_libraries()
-                for library in libraries:
+                for i, library in enumerate(libraries):
+                    job_tracker.update_progress(job_id, 3, 4, f"Identifying files: library {i+1}/{len(libraries)}")
                     identify_library_files(library.path)
+
+                job_tracker.update_progress(job_id, 4, 4, "Finalizing and regenerating cache...")
                 generate_library(force=True)
                 logger.info("Library cache regenerated after TitleDB update.")
         else:
-             # Fallback for standalone scripts (won't sync to DB)
-             titledb.update_titledb(current_settings, force=force)
+            titledb.update_titledb(current_settings, force=force)
 
         logger.info("TitleDB update job completed.")
+        job_tracker.complete_job(job_id, {'success': True})
         return True
     except Exception as e:
         logger.error(f"Error during TitleDB update job: {e}")
         log_activity("titledb_update_failed", details={"error": str(e)})
+        job_tracker.fail_job(job_id, str(e))
         return False
     finally:
         with state.titledb_update_lock:
@@ -315,18 +331,14 @@ def update_titledb_job(force=False):
 
 def scan_library_job():
     """Scan library in background"""
+    # Track job
+    job_id = job_tracker.register_job('aggregate_scan')
+    job_tracker.start_job(job_id)
+    
     with state.titledb_update_lock:
         if state.is_titledb_update_running:
-            logger.info(
-                "Skipping scheduled library scan: update_titledb job is currently in progress. Rescheduling in 5 minutes."
-            )
-            if "app" in globals() and hasattr(app, "scheduler"):
-                app.scheduler.add_job(
-                    job_id=f"scan_library_rescheduled_{datetime.datetime.now().timestamp()}",
-                    func=scan_library_job,
-                    run_once=True,
-                    start_date=datetime.datetime.now().replace(microsecond=0) + timedelta(minutes=5),
-                )
+            logger.info("Skipping library scan: update_titledb job is in progress.")
+            job_tracker.fail_job(job_id, "TitleDB update in progress")
             return
 
     logger.info("Starting library scan job...")
@@ -349,18 +361,24 @@ def scan_library_job():
 
                 libraries = get_libraries()
                 logger.info(f"Found {len(libraries)} libraries to scan")
-                for lib in libraries:
+                for i, lib in enumerate(libraries):
+                    job_tracker.update_progress(job_id, i+1, len(libraries), f"Scanning {lib.path}...")
                     logger.info(f"Scanning library: {lib.path}")
                     scan_library_path(lib.path)
+                    
+                    job_tracker.update_progress(job_id, i+1, len(libraries), f"Identifying files in {lib.path}...")
                     logger.info(f"Scan complete for {lib.path}, starting identification")
                     identify_library_files(lib.path)
                     logger.info(f"Identification complete for {lib.path}")
-                post_library_change()
+                
+            # No need to call post_library_change here as scan_library_path now does it
         log_activity("library_scan_completed")
-        logger.info("Library scan job completed.")
+        logger.info("Library scan job completed successfully.")
+        job_tracker.complete_job(job_id, {'total_libraries': len(get_libraries())})
     except Exception as e:
         logger.error(f"Error during library scan job: {e}")
         log_activity("library_scan_failed", details={"error": str(e)})
+        job_tracker.fail_job(job_id, str(e))
     finally:
         with state.scan_lock:
             state.scan_in_progress = False
@@ -426,6 +444,17 @@ def init_internal(app):
     from jobs.scheduler import JobScheduler
     job_scheduler = JobScheduler()
     job_scheduler.init_app(app)
+
+    # Schedule metadata fetch (2x per day = every 12h)
+    from metadata_service import metadata_fetcher
+    from datetime import timedelta
+    app.scheduler.add_job(
+        job_id="scheduled_metadata_fetch",
+        func=lambda: metadata_fetcher.fetch_all_metadata(force=False),
+        interval=timedelta(hours=12),
+        run_first=False  # Do NOT run on boot to save resources
+    )
+    logger.info("Scheduled automated metadata fetch (every 12 hours)")
 
 def check_initial_scan(app):
     """Logic to determine if initial scan is needed"""

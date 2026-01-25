@@ -1202,3 +1202,65 @@ $(document).ready(async () => {
 });
 
 $('.modal-background').on('click', function () { closeModal($(this).parent().attr('id')); });
+
+// Metadata Fetch Logic
+async function triggerMetadataFetch(force = false) {
+    try {
+        const response = await fetch('/api/system/metadata/fetch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ force: force })
+        });
+
+        if (response.ok) {
+            if (typeof showToast === 'function') showToast('Busca de metadados iniciada', 'success');
+            else if (typeof showNotification === 'function') showNotification('Busca de metadados iniciada', 'success');
+
+            // Refresh status after a short delay
+            setTimeout(updateMetadataStatus, 2000);
+        } else {
+            if (typeof showToast === 'function') showToast('Falha ao iniciar busca', 'error');
+        }
+    } catch (error) {
+        console.error('Error triggering metadata fetch:', error);
+    }
+}
+
+async function updateMetadataStatus() {
+    const timeEl = document.getElementById('last-metadata-fetch-time');
+    if (!timeEl) return;
+
+    try {
+        const response = await fetch('/api/system/metadata/status');
+        if (response.ok) {
+            const data = await response.json();
+
+            if (data.has_run && data.last_fetch) {
+                const last = data.last_fetch;
+                const date = new Date(last.started_at).toLocaleString();
+                let statusHtml = `<strong>${date}</strong><br>`;
+
+                if (last.status === 'running') {
+                    statusHtml += '<span class="has-text-info">Em execução...</span>';
+                } else if (last.status === 'completed') {
+                    statusHtml += `<span class="has-text-success">Sucesso: ${last.updated} atualizados / ${last.processed} total</span>`;
+                } else {
+                    statusHtml += '<span class="has-text-danger">Falha na última execução</span>';
+                }
+
+                timeEl.innerHTML = statusHtml;
+            }
+        }
+    } catch (error) {
+        console.error('Error updating metadata status:', error);
+    }
+}
+
+// Initialize metadata status check
+$(document).ready(function () {
+    if (document.getElementById('metadata-fetch-status-container')) {
+        updateMetadataStatus();
+        // Periodically refresh if on the page
+        setInterval(updateMetadataStatus, 60000);
+    }
+});

@@ -7,6 +7,7 @@ import datetime
 from pathlib import Path
 from utils import *
 import threading
+from job_tracker import job_tracker
 
 # Session-level cache
 _LIBRARY_CACHE = None
@@ -252,13 +253,22 @@ def add_files_to_library(library, files):
 def scan_library_path(library_path):
     cleanup_metadata_files(library_path)
     library_id = get_library_id(library_path)
+    
+    # Register and start job
+    job_id = job_tracker.register_job('library_scan', {'library_path': library_path})
+    job_tracker.start_job(job_id)
+    
     logger.info(f"Scanning library path {library_path} (library_id={library_id})...")
     if not os.path.isdir(library_path):
         logger.warning(f"Library path {library_path} does not exists.")
+        job_tracker.fail_job(job_id, f"Path does not exist: {library_path}")
         return
+        
+    job_tracker.update_progress(job_id, 1, 4, "Reading disk files...")
     _, files = titles_lib.getDirsAndFiles(library_path)
     logger.info(f"Found {len(files)} files on disk in {library_path}")
 
+    job_tracker.update_progress(job_id, 2, 4, "Comparing with database...")
     filepaths_in_library = get_library_file_paths(library_id)
     logger.info(f"Found {len(filepaths_in_library)} files in database for library_id={library_id}")
 
@@ -267,28 +277,25 @@ def scan_library_path(library_path):
     logger.info(f"Found {len(new_files)} new files to add")
     
     if new_files:
+        job_tracker.update_progress(job_id, 3, 4, f"Adding {len(new_files)} new files...")
         if len(new_files) > 0:
             logger.info(f"Adding new files (showing first 5): {new_files[:5]}")
         add_files_to_library(library_id, new_files)
 
     # 2. Remove deleted files
-    # filepaths_in_library contains all files currently in DB for this lib
-    # files contains all files currently on disk
     deleted_files = [f for f in filepaths_in_library if f not in files]
 
     if deleted_files:
+        job_tracker.update_progress(job_id, 3, 4, f"Removing {len(deleted_files)} deleted files...")
         logger.info(f"Found {len(deleted_files)} deleted files in library {library_path}. Removing from database...")
         if len(deleted_files) > 0:
             logger.info(f"Removing deleted files (showing first 5): {deleted_files[:5]}")
             
         for filepath in deleted_files:
             try:
-                # Find file object
                 file_obj = Files.query.filter_by(filepath=filepath).first()
                 if file_obj:
-                    # Remove from apps relation first
                     remove_file_from_apps(file_obj.id)
-                    # Delete file record
                     db.session.delete(file_obj)
             except Exception as e:
                 logger.error(f"Error removing deleted file {filepath}: {e}")
@@ -296,6 +303,23 @@ def scan_library_path(library_path):
         db.session.commit()
 
     set_library_scan_time(library_id)
+    
+    # Log summary
+    logger.info(f"Scan complete for {library_path}: {len(new_files)} added, {len(deleted_files)} removed")
+    
+    job_tracker.update_progress(job_id, 4, 4, "Finalizing and updating status...")
+    
+    # CRITICAL FIX for Issue #1: Always trigger post_library_change if files changed
+    # This ensures badges/filters update after manual scan
+    if new_files or deleted_files:
+        logger.info("Triggering post-scan library update to refresh badges and filters")
+        post_library_change()
+        
+    job_tracker.complete_job(job_id, {
+        'files_added': len(new_files),
+        'files_removed': len(deleted_files),
+        'total_files': len(files)
+    })
     
     # Log summary
     logger.info(f"Scan complete for {library_path}: {len(new_files)} added, {len(deleted_files)} removed")
@@ -645,6 +669,18 @@ def update_titles():
             db.session.commit()
 
     db.session.commit()
+    
+    # FIX for Issue #4: Remove orphaned titles at the END of update_titles
+    # and invalidate cache if any were removed.
+    titles_removed = remove_titles_without_owned_apps()
+    if titles_removed > 0:
+        logger.info(f"Cleaned up {titles_removed} orphaned titles with no remaining files.")
+        # We don't call post_library_change here to avoid infinite recursion if 
+        # post_library_change calls update_titles, but we do need to invalidate cache.
+        global _LIBRARY_CACHE
+        with _CACHE_LOCK:
+            _LIBRARY_CACHE = None
+        invalidate_library_cache()
 
 
 def get_library_status(title_id):

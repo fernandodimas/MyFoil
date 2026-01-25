@@ -1027,6 +1027,32 @@
                                     </div>
                                 </div>
 
+                                <!-- Automated Metadata Fetch -->
+                                <div class="box is-shadowless border p-4 mb-4 bg-light-soft" id="metadata-fetch-status-container">
+                                    <h4 class="title is-6 mb-3">Busca Automática de Metadados</h4>
+                                    <div id="metadata-fetch-status-content">
+                                        <div class="is-flex is-align-items-center mb-3">
+                                            <div class="mr-4">
+                                                <p class="heading is-size-7 opacity-50">Status de Agendamento</p>
+                                                <span class="tag is-info is-light">2x por dia (12h)</span>
+                                            </div>
+                                            <div id="last-metadata-fetch-info">
+                                                <p class="heading is-size-7 opacity-50">Última Execução</p>
+                                                <span class="is-size-7" id="last-metadata-fetch-time">Nunca executado</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="buttons">
+                                            <button class="button is-small is-primary is-outlined" onclick="triggerMetadataFetch()">
+                                                <i class="bi bi-stars mr-1"></i> Buscar Agora
+                                            </button>
+                                            <button class="button is-small is-warning is-outlined" onclick="triggerMetadataFetch(true)">
+                                                <i class="bi bi-lightning-fill mr-1"></i> Forçar (Ignorar Agendamento)
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <!-- Bulk Actions -->
                                 <div class="notification is-ghost border p-4"
                                     style="border-left: 5px solid var(--color-info) !important;">

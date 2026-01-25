@@ -302,6 +302,56 @@ class Webhook(db.Model):
         }
 
 
+class TitleMetadata(db.Model):
+    """Remote metadata for titles from external sources (RAWG, IGDB, etc)"""
+    __tablename__ = 'title_metadata'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title_id = db.Column(db.String(16), db.ForeignKey('titles.title_id', ondelete="CASCADE"), nullable=False, index=True)
+    
+    # Metadata fields
+    description = db.Column(db.Text)
+    rating = db.Column(db.Float)  # normalized 0-100
+    rating_count = db.Column(db.Integer)
+    genres = db.Column(db.JSON)  # list of strings
+    tags = db.Column(db.JSON)    # list of strings
+    release_date = db.Column(db.Date)
+    
+    # Media URLs
+    cover_url = db.Column(db.String(512))
+    banner_url = db.Column(db.String(512))
+    screenshots = db.Column(db.JSON)  # list of URLs
+    
+    # Source tracking
+    source = db.Column(db.String(50))  # 'rawg', 'igdb', 'nintendo'
+    source_id = db.Column(db.String(100))  # ID in source system
+    
+    # Timestamps
+    fetched_at = db.Column(db.DateTime, default=datetime.datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    
+    # Relationship handled by backref on metadata_entries
+    
+    __table_args__ = (
+        db.UniqueConstraint('title_id', 'source', name='uq_title_source'),
+    )
+
+class MetadataFetchLog(db.Model):
+    """Execution log for metadata fetch jobs"""
+    __tablename__ = 'metadata_fetch_log'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    started_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now)
+    completed_at = db.Column(db.DateTime)
+    status = db.Column(db.String(20))  # 'running', 'completed', 'failed'
+    
+    titles_processed = db.Column(db.Integer, default=0)
+    titles_updated = db.Column(db.Integer, default=0)
+    titles_failed = db.Column(db.Integer, default=0)
+    
+    error_message = db.Column(db.Text)
+
+
 class ActivityLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, default=datetime.datetime.now, index=True)
