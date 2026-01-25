@@ -51,7 +51,7 @@ from routes.wishlist import wishlist_bp
 from routes.upcoming import upcoming_bp
 
 # Jobs
-from jobs.scheduler import JobScheduler
+from scheduler import init_scheduler
 
 # Optional Celery for async tasks
 try:
@@ -441,9 +441,7 @@ def init_internal(app):
     threading.Timer(5.0, stage1_cache).start()
 
     # Initialize job scheduler immediately (it's light)
-    from jobs.scheduler import JobScheduler
-    job_scheduler = JobScheduler()
-    job_scheduler.init_app(app)
+    init_scheduler(app)
 
     # Schedule metadata fetch (2x per day = every 12h)
     from metadata_service import metadata_fetcher
@@ -623,9 +621,7 @@ def create_app():
         # Initialize cloud manager
         cloud_manager = get_cloud_manager(CONFIG_DIR)
 
-    # Initialize job scheduler
-    job_scheduler = JobScheduler()
-    job_scheduler.init_app(app)
+    # Job scheduler already initialized in init_internal
 
     if CELERY_ENABLED:
         logger.info("Celery tasks loaded and enabled.")
