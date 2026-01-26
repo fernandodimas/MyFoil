@@ -28,6 +28,9 @@ def sanitize_large_json_file(filepath):
     Recovers as many valid entries as possible from partially corrupted files.
     Uses database cache as fallback.
 
+    IMPORTANT: This function is designed to be non-blocking with aggressive yielding
+    to prevent Gunicorn worker timeout. It yields control after every operation.
+
     Args:
         filepath: Path to the JSON file
 
@@ -36,6 +39,10 @@ def sanitize_large_json_file(filepath):
     """
     if not os.path.exists(filepath):
         return None
+
+    import time
+
+    start_time = time.time()
 
     try:
         # Try to use cached data first if available
@@ -46,6 +53,9 @@ def sanitize_large_json_file(filepath):
             # Extract file identifier from path
             filename = os.path.basename(filepath)
             identifier = filename.replace("titles.", "").replace(".json", "").lower().replace(".", "_")
+
+            # Yield after setting up identifiers
+            yield_to_event_loop()
 
             # Try to get cached entries from DB
             cached = (
@@ -59,6 +69,8 @@ def sanitize_large_json_file(filepath):
                 logger.info(f"Using {len(cached_entries)} cached entries from database for {filename}")
         except Exception as e:
             logger.debug(f"Could not load cached data: {e}")
+            # Yield after cache attempt fails
+            yield_to_event_loop()
 
         # Try stream-based recovery for large files
         logger.info(f"Attempting stream-based recovery for large file: {filepath}")
@@ -71,18 +83,37 @@ def sanitize_large_json_file(filepath):
             # Pattern to find complete JSON objects: "TitleID": { ... }
             object_pattern = re.compile(r'"([0-9A-Fa-f]{16})"\s*:\s*\{')
 
+            # Yield before opening file
+            yield_to_event_loop()
+
             with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
                 buffer = ""
                 total_found = 0
                 batch_size = 1000
                 current_batch = 0
+                chunk_count = 0
+
+                logger.info(f"Starting stream recovery (chunk_size={chunk_size}MB)...")
 
                 while True:
                     chunk = f.read(chunk_size)
                     if not chunk:
                         break
 
+                    chunk_count += 1
+
+                    # Log every 10MB processed for debugging
+                    if chunk_count % 10 == 0:
+                        elapsed = time.time() - start_time
+                        logger.info(
+                            f"Progress: {chunk_count}MB processed, {total_found} entries found, {elapsed:.1f}s elapsed"
+                        )
+                        yield_to_event_loop()
+
                     buffer += chunk
+
+                    # Yield after each chunk read to prevent blocking
+                    yield_to_event_loop()
 
                     # Find and extract complete objects
                     matches = list(object_pattern.finditer(buffer))
@@ -120,6 +151,9 @@ def sanitize_large_json_file(filepath):
                                     brace_depth -= 1
 
                             i += 1
+                            # Yield after every 1000 characters parsed to prevent tight loops
+                            if i % 1000 == 0:
+                                yield_to_event_loop()
 
                         if valid_end:
                             # Extract the object JSON
@@ -138,12 +172,26 @@ def sanitize_large_json_file(filepath):
                                         buffer = buffer[valid_end:]
                                         break
 
+                                    # Yield more frequently during processing
+                                    if total_found % 100 == 0:
+                                        yield_to_event_loop()
+
                             except json.JSONDecodeError:
                                 pass
 
-                    # Yield periodically to prevent blocking
-                    if total_found > 0 and total_found % 5000 == 0:
+                    # Yield periodically while processing objects
+                    if total_found > 0 and total_found % 500 == 0:
+                        percent_complete = min(100, (total_found / 10000) * 5)  # Rough estimate for logging
+                        logger.info(f"Stream recovery progress: {total_found} entries recovered")
                         yield_to_event_loop()
+
+                # Also yield after processing each chunk
+                yield_to_event_loop()
+
+                elapsed = time.time() - start_time
+                logger.info(
+                    f"Stream recovery completed in {elapsed:.2f}s: {total_found} entries from {chunk_count} chunks"
+                )
 
                 # Merge recovered data with cached data (recovered takes priority)
                 if recovered:
@@ -160,6 +208,7 @@ def sanitize_large_json_file(filepath):
                     logger.info(f"Using only cached data: {len(cached_entries)} entries (file recovery failed)")
                     return cached_entries
                 else:
+                    logger.warning("Stream recovery returned no entries and no cache available")
                     return None
 
         except Exception as e:
@@ -167,9 +216,10 @@ def sanitize_large_json_file(filepath):
             # Fall back to cached data only
             if cached_entries:
                 logger.info(f"Falling back to cached data: {len(cached_entries)} entries")
+                yield_to_event_loop()
                 return cached_entries
             return None
 
     except Exception as e:
         logger.error(f"Error sanitizing large file {filepath}: {e}")
-        return None
+        return None, start_time
