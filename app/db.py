@@ -304,88 +304,90 @@ class Webhook(db.Model):
 
 class TitleMetadata(db.Model):
     """Remote metadata for titles from external sources (RAWG, IGDB, etc)"""
-    __tablename__ = 'title_metadata'
-    
+
+    __tablename__ = "title_metadata"
+
     id = db.Column(db.Integer, primary_key=True)
-    title_id = db.Column(db.String(16), db.ForeignKey('titles.title_id', ondelete="CASCADE"), nullable=False, index=True)
-    
+    title_id = db.Column(
+        db.String(16), db.ForeignKey("titles.title_id", ondelete="CASCADE"), nullable=False, index=True
+    )
+
     # Metadata fields
     description = db.Column(db.Text)
     rating = db.Column(db.Float)  # normalized 0-100
     rating_count = db.Column(db.Integer)
     genres = db.Column(db.JSON)  # list of strings
-    tags = db.Column(db.JSON)    # list of strings
+    tags = db.Column(db.JSON)  # list of strings
     release_date = db.Column(db.Date)
-    
+
     # Media URLs
     cover_url = db.Column(db.String(512))
     banner_url = db.Column(db.String(512))
     screenshots = db.Column(db.JSON)  # list of URLs
-    
+
     # Source tracking
     source = db.Column(db.String(50))  # 'rawg', 'igdb', 'nintendo'
     source_id = db.Column(db.String(100))  # ID in source system
-    
+
     # Timestamps
     fetched_at = db.Column(db.DateTime, default=datetime.datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-    
+
     # Relationship handled by backref on metadata_entries
-    
-    __table_args__ = (
-        db.UniqueConstraint('title_id', 'source', name='uq_title_source'),
-    )
+
+    __table_args__ = (db.UniqueConstraint("title_id", "source", name="uq_title_source"),)
+
 
 class MetadataFetchLog(db.Model):
     """Execution log for metadata fetch jobs"""
-    __tablename__ = 'metadata_fetch_log'
-    
+
+    __tablename__ = "metadata_fetch_log"
+
     id = db.Column(db.Integer, primary_key=True)
     started_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now)
     completed_at = db.Column(db.DateTime)
     status = db.Column(db.String(20))  # 'running', 'completed', 'failed'
-    
+
     titles_processed = db.Column(db.Integer, default=0)
     titles_updated = db.Column(db.Integer, default=0)
     titles_failed = db.Column(db.Integer, default=0)
-    
+
     error_message = db.Column(db.Text)
+
 
 class SystemJob(db.Model):
     """Persistent tracking for system background jobs (Shared between Flask/Celery)"""
-    __tablename__ = 'system_jobs'
-    
+
+    __tablename__ = "system_jobs"
+
     job_id = db.Column(db.String(50), primary_key=True)
     job_type = db.Column(db.String(50), nullable=False)
-    status = db.Column(db.String(20), nullable=False) # 'scheduled', 'running', 'completed', 'failed'
-    
+    status = db.Column(db.String(20), nullable=False)  # 'scheduled', 'running', 'completed', 'failed'
+
     # Progress
     progress_percent = db.Column(db.Float, default=0.0)
     progress_message = db.Column(db.String(255))
-    
+
     # Data
     result_json = db.Column(db.JSON)
     metadata_json = db.Column(db.JSON)
     error = db.Column(db.Text)
-    
+
     # Timestamps
     started_at = db.Column(db.DateTime, default=datetime.datetime.now)
     completed_at = db.Column(db.DateTime)
-    
+
     def to_dict(self):
         return {
-            'id': self.job_id,
-            'type': self.job_type,
-            'status': self.status,
-            'progress': {
-                'percent': self.progress_percent,
-                'message': self.progress_message
-            },
-            'result': self.result_json,
-            'metadata': self.metadata_json,
-            'error': self.error,
-            'started_at': self.started_at.isoformat() if self.started_at else None,
-            'completed_at': self.completed_at.isoformat() if self.completed_at else None
+            "id": self.job_id,
+            "type": self.job_type,
+            "status": self.status,
+            "progress": {"percent": self.progress_percent, "message": self.progress_message},
+            "result": self.result_json,
+            "metadata": self.metadata_json,
+            "error": self.error,
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
         }
 
 
@@ -408,14 +410,23 @@ class ActivityLog(db.Model):
 def log_activity(action_type, title_id=None, user_id=None, **details):
     """Utility function to log activity"""
     import json
+    from flask import current_app
 
     try:
+        # Check if we have an app context
+        if not current_app or not current_app.app_context:
+            logger.debug(f"Skipping log_activity (no app context): {action_type}")
+            return
+
         log = ActivityLog(user_id=user_id, action_type=action_type, title_id=title_id, details=json.dumps(details))
         db.session.add(log)
         db.session.commit()
     except Exception as e:
         logger.error(f"Failed to log activity: {e}")
-        db.session.rollback()
+        try:
+            db.session.rollback()
+        except:
+            pass
 
 
 def init_db(app):
@@ -448,7 +459,8 @@ def init_db(app):
                         # Check for system_jobs table
                         if not inspector.has_table("system_jobs"):
                             logger.info("Creating system_jobs table...")
-                            conn.execute(text("""
+                            conn.execute(
+                                text("""
                                 CREATE TABLE IF NOT EXISTS system_jobs (
                                     job_id VARCHAR(50) NOT NULL PRIMARY KEY,
                                     job_type VARCHAR(50) NOT NULL,
@@ -461,13 +473,15 @@ def init_db(app):
                                     started_at DATETIME,
                                     completed_at DATETIME
                                 )
-                            """))
+                            """)
+                            )
                             conn.commit()
 
                         # Check for title_metadata table
                         if not inspector.has_table("title_metadata"):
                             logger.info("Creating title_metadata table...")
-                            conn.execute(text("""
+                            conn.execute(
+                                text("""
                                 CREATE TABLE IF NOT EXISTS title_metadata (
                                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                                     title_id VARCHAR(16) NOT NULL,
@@ -485,7 +499,8 @@ def init_db(app):
                                     fetched_at DATETIME,
                                     updated_at DATETIME
                                 )
-                            """))
+                            """)
+                            )
                             conn.commit()
 
                         # Check titles table columns

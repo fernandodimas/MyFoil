@@ -48,7 +48,7 @@ def get_region_titles_file(app_settings: Dict) -> str:
 
 def get_region_titles_filenames(region: str, language: str) -> List[str]:
     """Get possible filenames for regional titles"""
-    return [f"titles.{region}.{language}.json", f"{region}.{language}.json"]
+    return f"titles.{region}.{language}.json", f"{region}.{language}.json"
 
 
 def get_version_hash() -> str:
@@ -153,7 +153,8 @@ def download_titledb_file(filename: str, force: bool = False, silent_404: bool =
             return True
         else:
             source.last_error = error
-            if silent_404 and ("404" in str(error) or "not found" in str(error).lower()):
+            error_str = str(error) if error else ""
+            if silent_404 and ("404" in error_str or "not found" in error_str.lower()):
                 logger.debug(f"{filename} not found on {source.name} (skipping silently)")
             else:
                 logger.warning(f"Failed to download {filename} from {source.name}: {error}")
@@ -206,6 +207,10 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
 
                 # FORCE update if critical files are missing from disk
                 region_titles_file = get_region_titles_file(app_settings)
+                # get_region_titles_file returns list now, take first or fallback
+                if isinstance(region_titles_file, list):
+                    region_titles_file = region_titles_file[0] if region_titles_file else "titles.BR.pt.json"
+
                 fallback_titles_file = "titles.US.en.json"
                 ultimate_fallback = "titles.json"
                 critical_files = [
@@ -333,19 +338,20 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
 def update_titledb(app_settings: Dict, force: bool = False) -> bool:
     """
     Main entry point for updating TitleDB
-    
+
     Args:
         app_settings: Application settings dictionary
         force: Force update even if files are recent
-        
+
     Returns:
         True if all files updated successfully, False otherwise
     """
     from job_tracker import job_tracker, JobType
     from socket_helper import get_socketio_emitter
     import time
+
     job_tracker.set_emitter(get_socketio_emitter())
-    
+
     job_id = f"titledb_{int(time.time())}"
     job_tracker.start_job(job_id, JobType.TITLEDB_UPDATE, "Updating TitleDB")
 
@@ -380,7 +386,7 @@ def update_titledb(app_settings: Dict, force: bool = False) -> bool:
             # complete_job already emits via configured emitter
             logger.warning(f"TitleDB update completed with errors ({success_count}/{total_count} files succeeded)")
             return False
-            
+
     except Exception as e:
         job_tracker.fail_job(job_id, str(e))
         # fail_job already emits via configured emitter
