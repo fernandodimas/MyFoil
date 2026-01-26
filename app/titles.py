@@ -680,6 +680,10 @@ def load_titledb(force=False):
 
         for filename in load_order:
             filepath = os.path.join(TITLEDB_DIR, filename)
+            # Skip corrupted files (prevent reloading known-bad files)
+            if filename.endswith(".corrupted") or filepath.endswith(".corrupted"):
+                logger.debug(f"Skipping corrupted file: {filepath}")
+                continue
             if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
                 logger.info(f"Loading TitleDB: {filename}...")
                 loaded = robust_json_load(filepath)
@@ -742,7 +746,11 @@ def load_titledb(force=False):
             _titles_db = {}
 
         _versions_db_path = os.path.join(TITLEDB_DIR, "versions.json")
-        _versions_db = robust_json_load(_versions_db_path) or {}
+        # Skip corrupted versions.json
+        if os.path.exists(_versions_db_path) and not _versions_db_path.endswith(".corrupted"):
+            _versions_db = robust_json_load(_versions_db_path) or {}
+        else:
+            _versions_db = {}
         _cnmts_db = _cnmts_db or {}
 
         _titles_db_loaded = True
