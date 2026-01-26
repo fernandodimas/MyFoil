@@ -154,22 +154,39 @@ class SystemStatusManager {
         const message = (job.progress && job.progress.message) || 'Initializing...';
         const current = (job.progress && job.progress.current);
         const total = (job.progress && job.progress.total);
+        const isStuck = job.is_stuck || false;
+
+        let cancelButton = '';
+        if (job.status === 'running' || job.status === 'scheduled') {
+            cancelButton = `
+                <button class="button is-small is-danger is-light ml-2"
+                        onclick="cancelJob('${job.id}')"
+                        title="Cancel this job">
+                    <span class="icon"><i class="bi bi-x-circle"></i></span>
+                </button>
+            `;
+        }
 
         return `
-            <div class="box is-shadowless border mb-3" style="border-left: 4px solid var(--bulma-info) !important;">
+            <div class="box is-shadowless border mb-3 ${isStuck ? 'has-background-warning-light' : ''}"
+                 style="border-left: 4px solid var(--bulma-info) !important;">
                 <div class="is-flex is-justify-content-space-between is-align-items-center mb-2">
                     <div>
                         <span class="icon-text">
                             <span class="icon">${icon}</span>
                             <span class="has-text-weight-bold">${this.getJobLabel(job)}</span>
+                            ${isStuck ? '<span class="tag is-warning is-light ml-2">STUCK</span>' : ''}
                         </span>
                     </div>
-                    <span class="tag is-${statusColor} is-light">${job.status}</span>
+                    <div class="is-flex is-align-items-center">
+                        <span class="tag is-${statusColor} is-light">${job.status}</span>
+                        ${cancelButton}
+                    </div>
                 </div>
-                
-                <progress class="progress is-info is-small mb-2" value="${progress}" max="100">${progress}%</progress>
-                
-                <div class="is-flex is-justify-content-space-between is-size-7 opacity-70">
+
+                 <progress class="progress is-info is-small mb-2" value="${progress}" max="100">${progress}%</progress>
+
+                 <div class="is-flex is-justify-content-space-between is-size-7 opacity-70">
                     <span>${message}</span>
                     ${current !== undefined ? `<span>${current} / ${total || '?'}</span>` : ''}
                 </div>
@@ -264,22 +281,72 @@ function refreshJobStatus() {
     if (statusManager) statusManager.fetchStatus();
 }
 
+let clearAllJobsRunning = false;
+
 async function clearAllJobs() {
-    if (!confirm('Are you sure you want to clear all active operations? This won\'t stop the background processes but will remove them from the UI tracking.')) {
+    // Prevent multiple simultaneous clicks
+    if (clearAllJobsRunning) {
+        console.warn('Clear jobs already running...');
+        return;
+    }
+
+    if (!confirm('Are you sure you want to clear all active operations? Stuck jobs (> 1h) will be marked as failed.')) {
+        return;
+    }
+
+    clearAllJobsRunning = true;
+
+    // Show loading state
+    const button = document.querySelector('[onclick="clearAllJobs()"]');
+    const originalText = button ? button.textContent : '';
+    if (button) {
+        button.textContent = 'Clearing...';
+        button.disabled = true;
+    }
+
+    // Use setTimeout to allow UI to update before making the request
+    setTimeout(async () => {
+        try {
+            const response = await fetch('/api/system/jobs/cleanup', { method: 'POST' });
+
+            if (response.ok) {
+                if (statusManager) statusManager.fetchStatus();
+                alert('Active operations cleared. Stuck jobs have been cancelled.');
+            } else {
+                console.error('Failed to clear jobs');
+                alert('Failed to clear operations.');
+            }
+        } catch (error) {
+            console.error('Error clearing jobs:', error);
+            alert('Error communicating with server.');
+        } finally {
+            clearAllJobsRunning = false;
+            if (button) {
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        }
+    }, 10); // Small delay to allow UI update
+}
+
+async function cancelJob(jobId) {
+    if (!confirm('Cancel this job? It will be marked as failed.')) {
         return;
     }
 
     try {
-        const response = await fetch('/api/system/jobs/cleanup', { method: 'POST' });
+        const response = await fetch(`/api/system/jobs/${jobId}/cancel`, { method: 'POST' });
+
         if (response.ok) {
+            const data = await response.json();
             if (statusManager) statusManager.fetchStatus();
-            alert('Active operations cleared from tracking.');
+            if (!data.success) {
+                console.error(`Failed to cancel job: ${data.error}`);
+            }
         } else {
-            console.error('Failed to clear jobs');
-            alert('Failed to clear operations.');
+            console.error('Failed to cancel job - HTTP error');
         }
     } catch (error) {
-        console.error('Error clearing jobs:', error);
-        alert('Error communicating with server.');
+        console.error('Error cancelling job:', error);
     }
 }

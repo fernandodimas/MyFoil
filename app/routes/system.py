@@ -125,9 +125,10 @@ def scan_library_api():
     from app import CELERY_ENABLED
     from tasks import scan_library_async, scan_all_libraries_async
     from job_tracker import job_tracker
+
     active_jobs = job_tracker.get_active_jobs()
-    active_scans = [j for j in active_jobs if j.get('type') in ['library_scan', 'aggregate_scan']]
-    
+    active_scans = [j for j in active_jobs if j.get("type") in ["library_scan", "aggregate_scan"]]
+
     if active_scans:
         logger.info("Skipping scan_library_api call: Scan already in progress")
         return jsonify({"success": False, "message": "A scan is already in progress", "errors": []})
@@ -147,6 +148,7 @@ def scan_library_api():
         else:
             # Synchronous mode (local process)
             import state
+
             with state.scan_lock:
                 state.scan_in_progress = True
             try:
@@ -162,6 +164,7 @@ def scan_library_api():
                     scan_library_path(path)
                     identify_library_files(path)
                 from library import post_library_change
+
                 post_library_change()
                 return jsonify({"success": True, "async": False, "errors": []})
             finally:
@@ -171,7 +174,7 @@ def scan_library_api():
         errors.append(str(e))
         success = False
         logger.error(f"Error during library scan: {e}")
-    
+
     resp = {"success": success, "errors": errors}
     return jsonify(resp)
 
@@ -548,6 +551,7 @@ def create_backup_api():
     from job_tracker import job_tracker, JobType
     from socket_helper import get_socketio_emitter
     import time
+
     job_tracker.set_emitter(get_socketio_emitter())
 
     if not backup_manager:
@@ -590,6 +594,7 @@ def restore_backup_api():
     from job_tracker import job_tracker, JobType
     from socket_helper import get_socketio_emitter
     import time
+
     job_tracker.set_emitter(get_socketio_emitter())
 
     if not backup_manager:
@@ -626,9 +631,7 @@ def download_backup_api(filename):
     if not backup_manager:
         return jsonify({"success": False, "error": "Backup manager not initialized"}), 500
 
-    return send_from_directory(
-        backup_manager.backup_dir, filename, as_attachment=True, download_name=filename
-    )
+    return send_from_directory(backup_manager.backup_dir, filename, as_attachment=True, download_name=filename)
 
 
 @system_bp.delete("/backup/<filename>")
@@ -797,13 +800,15 @@ def cloud_files_api(provider):
 def get_all_jobs_api():
     """Retorna status de todos os jobs recentes"""
     from job_tracker import job_tracker
-    
+
     # job_tracker now returns list of dicts from DB
     jobs = job_tracker.get_all_jobs()
-    
-    return jsonify({
-        'jobs': jobs # Now already in dict format with to_dict()
-    })
+
+    return jsonify(
+        {
+            "jobs": jobs  # Now already in dict format with to_dict()
+        }
+    )
 
 
 @system_bp.route("/system/metadata/fetch", methods=["POST"])
@@ -812,50 +817,122 @@ def trigger_metadata_fetch():
     """Trigger manual metadata fetch for all games"""
     from metadata_service import metadata_fetcher
     import threading
-    
+
     data = request.json or {}
-    force = data.get('force', False)
-    
+    force = data.get("force", False)
+
     thread = threading.Thread(target=lambda: metadata_fetcher.fetch_all_metadata(force=force))
     thread.daemon = True
     thread.start()
-    
-    return jsonify({'success': True, 'message': 'Metadata fetch started in background'})
+
+    return jsonify({"success": True, "message": "Metadata fetch started in background"})
 
 
 @system_bp.route("/system/metadata/status", methods=["GET"])
 def get_metadata_status():
     """Get summarized status of metadata fetch service"""
     from db import MetadataFetchLog
+
     last_fetch = MetadataFetchLog.query.order_by(MetadataFetchLog.started_at.desc()).first()
-    
-    return jsonify({
-        'has_run': last_fetch is not None,
-        'last_fetch': {
-            'started_at': last_fetch.started_at.isoformat() if last_fetch else None,
-            'completed_at': last_fetch.completed_at.isoformat() if last_fetch and last_fetch.completed_at else None,
-            'status': last_fetch.status if last_fetch else None,
-            'processed': last_fetch.titles_processed if last_fetch else 0,
-            'updated': last_fetch.titles_updated if last_fetch else 0,
-            'failed': last_fetch.titles_failed if last_fetch else 0
-        } if last_fetch else None
-    })
+
+    return jsonify(
+        {
+            "has_run": last_fetch is not None,
+            "last_fetch": {
+                "started_at": last_fetch.started_at.isoformat() if last_fetch else None,
+                "completed_at": last_fetch.completed_at.isoformat() if last_fetch and last_fetch.completed_at else None,
+                "status": last_fetch.status if last_fetch else None,
+                "processed": last_fetch.titles_processed if last_fetch else 0,
+                "updated": last_fetch.titles_updated if last_fetch else 0,
+                "failed": last_fetch.titles_failed if last_fetch else 0,
+            }
+            if last_fetch
+            else None,
+        }
+    )
 
 
 @system_bp.route("/system/jobs/<job_id>/cancel", methods=["POST"])
 @access_required("admin")
 def cancel_job(job_id):
-    """Cancela um job em execução"""
-    # from job_tracker import job_tracker
-    # TODO: Implement job cancellation logic (rendering the thread/process stop)
-    return jsonify({"success": True})
+    """Cancela um job em execução marcando-o como failed no banco de dados"""
+    from db import SystemJob, db
+    from datetime import datetime
+
+    try:
+        from job_tracker import job_tracker
+
+        job = job_tracker.get_job(job_id)
+
+        if not job:
+            # Try to get from DB as fallback
+            job_db = SystemJob.query.get(job_id)
+            if not job_db:
+                return jsonify({"success": False, "error": "Job not found"}), 404
+
+            if job_db.status not in ["scheduled", "running"]:
+                return jsonify({"success": False, "error": f"Job is {job_db.status}, cannot cancel"}), 400
+
+            # Mark as failed/cancelled
+            job_db.status = "failed"
+            job_db.completed_at = datetime.now()
+            job_db.error = "Cancelled by user"
+            db.session.commit()
+
+            # Emit update
+            job_tracker._emit_update(job_id)
+
+            return jsonify({"success": True, "message": "Job cancelled"})
+
+        if job.get("status") not in ["scheduled", "running"]:
+            return jsonify({"success": False, "error": f"Job is {job.get('status')}, cannot cancel"}), 400
+
+        # Update in DB
+        job_db = SystemJob.query.get(job_id)
+        if job_db:
+            job_db.status = "failed"
+            job_db.completed_at = datetime.now()
+            job_db.error = "Cancelled by user"
+            db.session.commit()
+
+            # Emit update
+            job_tracker._emit_update(job_id)
+
+        return jsonify({"success": True, "message": "Job cancelled"})
+    except Exception as e:
+        logger.error(f"Error cancelling job {job_id}: {e}")
+        if "db" in locals():
+            db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @system_bp.route("/system/jobs/cleanup", methods=["POST"])
 @access_required("admin")
 def cleanup_jobs_api():
-    """Limpa jobs antigos (>24h) ou todos os jobs completados"""
+    """Limpa jobs antigos (>24h) ou todos os jobs completados e cancela jobs presos"""
     from job_tracker import job_tracker
+    from db import SystemJob, db
+    from datetime import datetime, timedelta
+
+    # Cancel stuck jobs (running > 1 hour without progress update)
+    try:
+        cutoff_time = datetime.now() - timedelta(hours=1)
+        stuck_jobs = SystemJob.query.filter(SystemJob.status == "running", SystemJob.started_at < cutoff_time).all()
+
+        for job in stuck_jobs:
+            logger.warning(f"Marking stuck job {job.job_id} as failed (running for > 1 hour)")
+            job.status = "failed"
+            job.completed_at = datetime.now()
+            job.error = "Job timed out (cancelled by user)"
+
+        if stuck_jobs:
+            db.session.commit()
+            logger.info(f"Cancelled {len(stuck_jobs)} stuck jobs")
+    except Exception as e:
+        logger.error(f"Error cancelling stuck jobs: {e}")
+        db.session.rollback()
+
+    # Clean old jobs
     job_tracker.cleanup_old_jobs(max_age_hours=24)
     return jsonify({"success": True, "message": "Job history cleaned up"})
 
@@ -867,7 +944,7 @@ def diagnostic_info():
     from job_tracker import job_tracker
     from app import socketio
     import sys
-    
+
     diagnostic = {
         "process": {
             "pid": os.getpid(),
@@ -888,7 +965,7 @@ def diagnostic_info():
         },
         "jobs": job_tracker.get_status(),
     }
-    
+
     # Test Redis connection
     if job_tracker.use_redis:
         try:
@@ -898,6 +975,5 @@ def diagnostic_info():
             diagnostic["redis_test"] = f"❌ PING failed: {str(e)}"
     else:
         diagnostic["redis_test"] = "⚠️ Not using Redis"
-    
-    return jsonify(diagnostic)
 
+    return jsonify(diagnostic)
