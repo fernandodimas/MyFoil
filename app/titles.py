@@ -411,24 +411,46 @@ def robust_json_load(filepath):
     except:
         pass
 
-    # Try 5: Chunked Recovery (Absolute Last Resort)
-    # Only try this if file is small enough (< 10MB) to avoid hanging the process
-    # for massive files (like 50MB+) which causes Gunicorn worker timeouts
+    # Try 5: Stream Recovery for Large Files (>10MB)
+    # For massive files that would timeout with chunked recovery, use streaming
     filesize = len(content)
     if filesize > 10 * 1024 * 1024:
-        logger.warning(
-            f"File {filepath} is too large ({filesize / 1024 / 1024:.2f} MB) for chunked recovery. Skipping to avoid timeout."
-        )
-        # Rename corrupted file to prevent future crashes
+        logger.info(f"File {filepath} is large ({filesize / 1024 / 1024:.2f} MB). Attempting stream recovery...")
+
         try:
-            new_path = filepath + ".corrupted"
-            os.rename(filepath, new_path)
-            logger.error(f"Renamed corrupted file to {new_path}")
+            from large_json_sanitizer import sanitize_large_json_file
+
+            sanitized = sanitize_large_json_file(filepath)
+
+            if sanitized and len(sanitized) > 0:
+                logger.info(f"Stream recovery successful! Recovered {len(sanitized)} entries.")
+                # Try to restore from .corrupted if possible
+                try:
+                    if filepath.endswith(".corrupted"):
+                        original_path = filepath[:-10]  # Remove .corrupted
+                        if not os.path.exists(original_path):
+                            os.rename(filepath, original_path)
+                            logger.info(f"Restored sanitized file to {original_path}")
+                except Exception as rename_err:
+                    logger.warning(f"Could not rename .corrupted file back: {rename_err}")
+
+                return sanitized
+            else:
+                logger.warning(f"Stream recovery returned empty. File may be too corrupted.")
         except Exception as e:
-            logger.warning(f"Could not rename corrupted file: {e}")
+            logger.error(f"Error in stream recovery: {e}")
+
+        # If streaming failed, keep as .corrupted but return None (cache will be fallback)
+        if not filepath.endswith(".corrupted"):
+            try:
+                new_path = filepath + ".corrupted"
+                os.rename(filepath, new_path)
+                logger.error(f"Renamed large corrupted file to {new_path}")
+            except Exception as e:
+                logger.warning(f"Could not rename corrupted file: {e}")
         return None
 
-    logger.warning(f"Whole-file parsing failed for {filepath}. Attempting chunked recovery...")
+    # Try 6: Chunked Recovery (Absolute Last Resort for smaller files)
     try:
         recovered = {}
         # Pattern for "TitleID": { ... }
