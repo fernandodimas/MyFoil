@@ -170,18 +170,18 @@ def save_titledb_to_db(source_files, app_context=None):
         seen_titles = set()
         pending_entries = []
         BATCH_SIZE = 2000
-        
+
         # Iterate and save in chunks to keep memory usage low
         for i, (tid, data) in enumerate(_titles_db.items()):
             # Yield to event loop every 50 items to prevent blocking heartbeat
             if gevent and i % 50 == 0:
                 gevent.sleep(0.001)
-                
+
             tid_upper = tid.upper()
             if tid_upper in seen_titles:
                 continue
             seen_titles.add(tid_upper)
-            
+
             pending_entries.append(
                 TitleDBCache(
                     title_id=tid_upper,
@@ -191,17 +191,18 @@ def save_titledb_to_db(source_files, app_context=None):
                     updated_at=now,
                 )
             )
-            
+
             if len(pending_entries) >= BATCH_SIZE:
                 db.session.bulk_save_objects(pending_entries)
                 db.session.commit()
-                pending_entries = [] # Release memory
-                
+                pending_entries = []  # Release memory
+
                 # Yield after DB commit
                 if gevent:
                     gevent.sleep(0.01)
 
         # Save remaining entries
+        title_count = len(seen_titles)
         if pending_entries:
             db.session.bulk_save_objects(pending_entries)
             db.session.commit()
@@ -210,16 +211,16 @@ def save_titledb_to_db(source_files, app_context=None):
         # Batch insert versions
         version_entries = []
         # ... logic for versions ...
-        
+
         # Deduplicate versions
-        seen_versions = set() # (tid, version)
-        
+        seen_versions = set()  # (tid, version)
+
         # Safe iteration with yield
         version_items = list((_versions_db or {}).items())
         for i, (tid, versions) in enumerate(version_items):
             if gevent and i % 50 == 0:
                 gevent.sleep(0.001)
-                
+
             tid_upper = tid.upper()
             for version_str, release_date in versions.items():
                 try:
@@ -227,57 +228,63 @@ def save_titledb_to_db(source_files, app_context=None):
                     if (tid_upper, v_int) in seen_versions:
                         continue
                     seen_versions.add((tid_upper, v_int))
-                    
+
                     version_entries.append(
                         TitleDBVersions(title_id=tid_upper, version=v_int, release_date=release_date)
                     )
-                    
-                    if len(version_entries) >= BATCH_SIZE * 2: # 4000 items
+
+                    if len(version_entries) >= BATCH_SIZE * 2:  # 4000 items
                         db.session.bulk_save_objects(version_entries)
                         db.session.commit()
                         version_entries = []
-                        if gevent: gevent.sleep(0.01)
+                        if gevent:
+                            gevent.sleep(0.01)
                 except (ValueError, TypeError):
                     continue
 
         if version_entries:
             db.session.bulk_save_objects(version_entries)
             db.session.commit()
-            version_entries = []
+            version_count = len(version_entries)
+        else:
+            version_count = len(version_items)
+        version_entries = []
 
         # Batch insert DLCs
         dlc_entries = []
-        seen_dlcs = set() # (base, dlc)
-        
+        seen_dlcs = set()  # (base, dlc)
+
         cnmts_items = list((_cnmts_db or {}).items())
         for i, (base_tid, dlcs) in enumerate(cnmts_items):
             if gevent and i % 50 == 0:
                 gevent.sleep(0.001)
-                
+
             base_upper = base_tid.upper()
             for dlc_app_id in dlcs.keys():
                 dlc_upper = dlc_app_id.upper()
                 if (base_upper, dlc_upper) in seen_dlcs:
                     continue
                 seen_dlcs.add((base_upper, dlc_upper))
-                
+
                 dlc_entries.append(TitleDBDLCs(base_title_id=base_upper, dlc_app_id=dlc_upper))
-                
+
                 if len(dlc_entries) >= BATCH_SIZE * 2:
                     db.session.bulk_save_objects(dlc_entries)
                     db.session.commit()
                     dlc_entries = []
-                    if gevent: gevent.sleep(0.01)
+                    if gevent:
+                        gevent.sleep(0.01)
 
         if dlc_entries:
             db.session.bulk_save_objects(dlc_entries)
             db.session.commit()
-            dlc_entries = []
+            dlc_count = len(dlc_entries)
+        else:
+            dlc_count = len(seen_dlcs)
+        dlc_entries = []
 
         _titledb_cache_timestamp = time.time()  # Use time.time() for cache TTL comparison
-        logger.info(
-            f"TitleDB saved to DB cache: {len(title_entries)} titles, {len(version_entries)} versions, {len(dlc_entries)} DLCs"
-        )
+        logger.info(f"TitleDB saved to DB cache: {title_count} titles, {version_count} versions, {dlc_count} DLCs")
         return True
 
     except Exception as e:
@@ -342,7 +349,9 @@ def robust_json_load(filepath):
     # to prevent CPU lockup and Gunicorn timeouts
     filesize = len(content)
     if filesize > 1 * 1024 * 1024:
-        logger.warning(f"File {filepath} is too large ({filesize/1024/1024:.2f} MB) for aggressive recovery. Skipping to prevent timeout.")
+        logger.warning(
+            f"File {filepath} is too large ({filesize / 1024 / 1024:.2f} MB) for aggressive recovery. Skipping to prevent timeout."
+        )
         return None
 
     logger.warning(f"JSON error in {filepath}, attempting aggressive sanitization...")
@@ -400,7 +409,9 @@ def robust_json_load(filepath):
     # for massive files (like 50MB+) which causes Gunicorn worker timeouts
     filesize = len(content)
     if filesize > 10 * 1024 * 1024:
-        logger.warning(f"File {filepath} is too large ({filesize/1024/1024:.2f} MB) for chunked recovery. Skipping to avoid timeout.")
+        logger.warning(
+            f"File {filepath} is too large ({filesize / 1024 / 1024:.2f} MB) for chunked recovery. Skipping to avoid timeout."
+        )
         # Rename corrupted file to prevent future crashes
         try:
             new_path = filepath + ".corrupted"
@@ -532,13 +543,13 @@ def identify_appId(app_id):
                 title_id = app_id.upper()
             elif app["titleType"] == 129:
                 app_type = APP_TYPE_UPD
-                if "otherApplicationId" in app:
+                if "otherApplicationId" in app and app["otherApplicationId"]:
                     title_id = app["otherApplicationId"].upper()
                 else:
                     title_id = get_title_id_from_app_id(app_id, app_type)
             elif app["titleType"] == 130:
                 app_type = APP_TYPE_DLC
-                if "otherApplicationId" in app:
+                if "otherApplicationId" in app and app["otherApplicationId"]:
                     title_id = app["otherApplicationId"].upper()
                 else:
                     title_id = get_title_id_from_app_id(app_id, app_type)
@@ -553,14 +564,14 @@ def identify_appId(app_id):
             else:
                 app_type = APP_TYPE_DLC
                 title_id = get_title_id_from_app_id(app_id, app_type)
-    
+
     # Strategy 2: Reverse DLC Map lookup (if we are dealing with a DLC ID)
     elif _dlc_map and app_id.upper() in _dlc_map:
         base_id = _dlc_map[app_id.upper()]
         title_id = base_id.upper()
         app_type = APP_TYPE_DLC
         # logger.debug(f"Identified DLC {app_id} -> Base {title_id} using reverse map")
-    
+
     # Strategy 3: Fallback heuristic
     else:
         logger.warning(f"{app_id} not in cnmts_db, fallback to default identification.")
@@ -574,7 +585,7 @@ def identify_appId(app_id):
             app_type = APP_TYPE_DLC
             title_id = get_title_id_from_app_id(app_id, app_type)
 
-    return title_id.upper(), app_type
+    return title_id.upper() if title_id else app_id.upper(), app_type
 
 
 def load_titledb(force=False):
@@ -672,10 +683,10 @@ def load_titledb(force=False):
                         current_batch = {}
                         if isinstance(loaded, list):
                             for item in loaded:
-                                if isinstance(item, dict) and "id" in item:
+                                if isinstance(item, dict) and "id" in item and item["id"]:
                                     current_batch[item["id"].upper()] = item
                         else:
-                            current_batch = {k.upper(): v for k, v in loaded.items() if isinstance(v, dict)}
+                            current_batch = {k.upper(): v for k, v in loaded.items() if isinstance(v, dict) and k}
 
                         # MERGE logic: Keep metadata (urls, size, etc) but update names/descriptions
                         if not _titles_db:
@@ -1293,6 +1304,7 @@ def sync_titles_to_db(force=False):
         return
 
     from flask import has_app_context
+
     if not has_app_context():
         logger.warning("sync_titles_to_db: No app context, skipping sync.")
         return
@@ -1313,10 +1325,12 @@ def sync_titles_to_db(force=False):
                 return
             raise e
 
-        db_titles_map = {t.title_id.upper(): t for t in db_titles}
+        db_titles_map = {t.title_id.upper(): t for t in db_titles if t.title_id}
 
         updated_count = 0
         for tid, tdb_info in _titles_db.items():
+            if not tid:
+                continue
             tid = tid.upper()
             if tid in db_titles_map:
                 title = db_titles_map[tid]
