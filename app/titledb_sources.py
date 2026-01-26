@@ -63,6 +63,15 @@ class TitleDBSource:
                     # Keep track if we hit rate limits to stop trying files/branches immediately
                     self._rate_limit_hit = False
 
+                    # Import the caching function
+                    try:
+                        from github_api_cache import get_github_date_cached
+
+                        use_cache = True
+                    except ImportError:
+                        use_cache = False
+                        logger.debug("GitHub API cache not available, using direct requests")
+
                     # Try to get commit info for the file
                     def _get_github_date(fname, br):
                         if getattr(self, "_rate_limit_hit", False):
@@ -70,6 +79,12 @@ class TitleDBSource:
 
                         api_url = f"https://api.github.com/repos/{user}/{repo}/commits?path={fname}&sha={br}&per_page=1"
                         headers = {"User-Agent": "MyFoil-App", "Accept": "application/vnd.github.v3+json"}
+
+                        # Use cached version if available
+                        if use_cache:
+                            return get_github_date_cached(api_url, headers)
+
+                        # Fallback to direct request
                         try:
                             resp = requests.get(api_url, headers=headers, timeout=5)
                             if resp.status_code == 200:
@@ -79,7 +94,9 @@ class TitleDBSource:
                                     return datetime.fromisoformat(commit_date.replace("Z", "+00:00"))
                             elif resp.status_code == 403:
                                 if not getattr(self, "_rate_limit_hit", False):
-                                    logger.warning(f"GitHub API rate limited for {self.name} - aborting further checks.")
+                                    logger.warning(
+                                        f"GitHub API rate limited for {self.name} - aborting further checks."
+                                    )
                                     self._rate_limit_hit = True
                                 return None
                         except Exception as e:
