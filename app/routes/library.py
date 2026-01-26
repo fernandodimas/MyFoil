@@ -306,7 +306,6 @@ def get_stats_overview():
             func.sum(case((Files.identified == False, 1), else_=0)).label("unidentified_files"),
         ).first()
 
-
     # Extrair resultados da query otimizada
     total_files = file_stats.total_files or 0
     total_size = file_stats.total_size or 0
@@ -400,17 +399,21 @@ def get_stats_overview():
 
     # Coverage Logic: compare owned bases vs total available in TitleDB
     # We define "available" as any entry in TitleDBCache that ends with 000 (standard base TitleID rule)
-    total_available_titledb = TitleDBCache.query.filter(TitleDBCache.title_id.like('%000')).count()
-    
+    total_available_titledb = TitleDBCache.query.filter(TitleDBCache.title_id.like("%000")).count()
+
     # Recognized games are games we have that exist in TitleDB
-    games_with_metadata = len([g for g in filtered_games if g.get("name") and not g.get("name", "").startswith("Unknown")])
-    
+    games_with_metadata = len(
+        [g for g in filtered_games if g.get("name") and not g.get("name", "").startswith("Unknown")]
+    )
+
     # Coverage relative to what we HAVE (metadata quality)
     metadata_coverage_pct = round((games_with_metadata / total_owned * 100), 1) if total_owned > 0 else 0
-    
+
     # Global coverage (Discovery): what percentage of the full library do we own?
     # Consider only base games for a fair comparison
-    global_coverage_pct = round((total_owned_bases / total_available_titledb * 100), 2) if total_available_titledb > 0 else 0
+    global_coverage_pct = (
+        round((total_owned_bases / total_available_titledb * 100), 2) if total_available_titledb > 0 else 0
+    )
 
     app_settings = load_settings()
     keys_valid = app_settings.get("titles", {}).get("valid_keys", False)
@@ -444,9 +447,9 @@ def get_stats_overview():
             "identification": {
                 "total_files": total_files,
                 "identified_pct": id_rate,
-                "recognition_pct": recognition_rate,
+                "recognition_pct": metadata_coverage_pct,
                 "unidentified_count": unidentified_files,
-                "unrecognized_count": total_owned - recognized_games,
+                "unrecognized_count": total_owned - games_with_metadata,
                 "keys_valid": keys_valid,
             },
             "genres": genre_dist,
@@ -653,25 +656,27 @@ def app_info_api(id):
         result["rawg_rating"] = title_obj.rawg_rating
         result["rating_count"] = title_obj.rating_count
         result["playtime_main"] = title_obj.playtime_main
-        
+
         # Merge enriched metadata from TitleMetadata table
         remote_meta = TitleMetadata.query.filter_by(title_id=tid).all()
         for meta in remote_meta:
             if meta.rating and not result.get("metacritic_score"):
                 result["metacritic_score"] = int(meta.rating)
-            if meta.description and (not result.get("description") or len(meta.description) > len(result.get("description", ""))):
+            if meta.description and (
+                not result.get("description") or len(meta.description) > len(result.get("description", ""))
+            ):
                 result["description"] = meta.description
             if meta.rating:
-                result["rawg_rating"] = meta.rating / 20.0 # Convert back to 0-5 for UI consistency
+                result["rawg_rating"] = meta.rating / 20.0  # Convert back to 0-5 for UI consistency
             if meta.rating_count:
                 result["rating_count"] = meta.rating_count
-            
+
             # API Genres/Tags
             if meta.genres:
                 result["category"] = list(set((result.get("category") or []) + (meta.genres or [])))
             if meta.tags:
                 result["tags"] = list(set((result.get("tags") or []) + (meta.tags or [])))
-            
+
             # Screenshots
             if meta.screenshots:
                 existing_ss = set(s if isinstance(s, str) else s.get("url") for s in result.get("screenshots", []))
