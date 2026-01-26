@@ -12,15 +12,17 @@ import logging
 warnings.filterwarnings("ignore", category=UserWarning, module="flask_limiter")
 
 from gevent import monkey
+
 monkey.patch_all()
 
 import flask.cli
+
 flask.cli.show_server_banner = lambda *args: None
 
 # Silence noisy libraries
-logging.getLogger('engineio.server').setLevel(logging.WARNING)
-logging.getLogger('socketio.server').setLevel(logging.WARNING)
-logging.getLogger('werkzeug').setLevel(logging.WARNING)
+logging.getLogger("engineio.server").setLevel(logging.WARNING)
+logging.getLogger("socketio.server").setLevel(logging.WARNING)
+logging.getLogger("werkzeug").setLevel(logging.WARNING)
 
 # Core Flask imports
 from flask import Flask
@@ -99,20 +101,21 @@ app_settings = {}
 # - ping_timeout=60, ping_interval=25: Longer timeouts for connections behind proxies
 socketio = SocketIO(
     cors_allowed_origins="*",
-    async_mode='gevent',
+    async_mode="gevent",
     logger=True,
     engineio_logger=True,
     ping_timeout=60,
     ping_interval=25,
     message_queue=os.environ.get("REDIS_URL"),  # Essential: Allows Celery workers to emit to Web clients
     # Explicit configuration for pub/sub
-    channel='flask-socketio',  # Ensure consistent channel name
+    channel="flask-socketio",  # Ensure consistent channel name
 )
 
 # Import state to allow job tracking
 import state
 from job_tracker import job_tracker
 from socket_helper import get_socketio_emitter
+
 job_tracker.set_emitter(get_socketio_emitter())
 
 # Initialize Limiter
@@ -214,12 +217,12 @@ def reload_conf():
 def on_library_change(events):
     """Handle library file changes"""
     logger.debug(f"Library change detected: {len(events)} events")
-    
+
     with app.app_context():
         files_added = []
         files_deleted = []
         files_modified = []
-        
+
         for event in events:
             if event.type == "created":
                 files_added.append(event.src_path)
@@ -234,36 +237,35 @@ def on_library_change(events):
                     update_file_path(event.directory, event.src_path, event.dest_path)
                 else:
                     files_added.append(event.dest_path)
-        
+
         # Process additions and modifications (which may be new files being written)
         all_new_files = files_added + files_modified
         if all_new_files:
             directories = list(set(e.directory for e in events if e.type in ["created", "modified"]))
-            
+
             for library_path in directories:
-                files_to_process = [
-                    f for f in all_new_files 
-                    if f.startswith(library_path)
-                ]
-                
+                files_to_process = [f for f in all_new_files if f.startswith(library_path)]
+
                 if files_to_process:
                     logger.debug(f"Processing {len(files_to_process)} new/modified files in {library_path}")
-                    
+
                     # Add files to DB (this handles upserts/updates)
                     add_files_to_library(library_path, files_to_process)
-                    
+
                     # Identify files
                     if CELERY_ENABLED:
                         from tasks import identify_file_async
+
                         # Queue identification for each file
                         for filepath in files_to_process:
                             identify_file_async.delay(filepath)
                         logger.info(f"Queued async identification for {len(files_to_process)} files")
                     else:
                         from library import identify_library_files
+
                         logger.info(f"Identifying files in {library_path}")
                         identify_library_files(library_path)
-        
+
         # CRITICAL: Always call post_library_change to update cache and notifying frontend
         # This fixes issues where badges/filters wouldn't update after new files were added
         if files_added or files_deleted or files_modified:
@@ -277,9 +279,9 @@ def on_library_change(events):
 def update_titledb_job(force=False):
     """Update TitleDB in background"""
     # Track job
-    job_id = job_tracker.register_job('titledb_update', {'force': force})
+    job_id = job_tracker.register_job("titledb_update", {"force": force})
     job_tracker.start_job(job_id)
-    
+
     with state.titledb_update_lock:
         if state.is_titledb_update_running:
             logger.info("TitleDB update already in progress.")
@@ -296,18 +298,19 @@ def update_titledb_job(force=False):
         if "app" in globals():
             with app.app_context():
                 titledb.update_titledb(current_settings, force=force)
-                
+
                 job_tracker.update_progress(job_id, 2, 4, "Syncing database with new versions...")
                 logger.info("Syncing new TitleDB versions to library...")
                 add_missing_apps_to_db()
-                
+
                 job_tracker.update_progress(job_id, 3, 4, "Updating title status and re-identifying...")
                 update_titles()
-                
+
                 from library import identify_library_files, get_libraries
+
                 libraries = get_libraries()
                 for i, library in enumerate(libraries):
-                    job_tracker.update_progress(job_id, 3, 4, f"Identifying files: library {i+1}/{len(libraries)}")
+                    job_tracker.update_progress(job_id, 3, 4, f"Identifying files: library {i + 1}/{len(libraries)}")
                     identify_library_files(library.path)
 
                 job_tracker.update_progress(job_id, 4, 4, "Finalizing and regenerating cache...")
@@ -317,11 +320,15 @@ def update_titledb_job(force=False):
             titledb.update_titledb(current_settings, force=force)
 
         logger.info("TitleDB update job completed.")
-        job_tracker.complete_job(job_id, {'success': True})
+        job_tracker.complete_job(job_id, {"success": True})
         return True
     except Exception as e:
         logger.error(f"Error during TitleDB update job: {e}")
-        log_activity("titledb_update_failed", details={"error": str(e)})
+        # Wrap in app_context for thread safety
+        try:
+            log_activity("titledb_update_failed", details={"error": str(e)})
+        except Exception as log_err:
+            logger.warning(f"Failed to log activity: {log_err}")
         job_tracker.fail_job(job_id, str(e))
         return False
     finally:
@@ -332,9 +339,9 @@ def update_titledb_job(force=False):
 def scan_library_job():
     """Scan library in background"""
     # Track job
-    job_id = job_tracker.register_job('aggregate_scan')
+    job_id = job_tracker.register_job("aggregate_scan")
     job_tracker.start_job(job_id)
-    
+
     with state.titledb_update_lock:
         if state.is_titledb_update_running:
             logger.info("Skipping library scan: update_titledb job is in progress.")
@@ -362,19 +369,19 @@ def scan_library_job():
                 libraries = get_libraries()
                 logger.info(f"Found {len(libraries)} libraries to scan")
                 for i, lib in enumerate(libraries):
-                    job_tracker.update_progress(job_id, i+1, len(libraries), f"Scanning {lib.path}...")
+                    job_tracker.update_progress(job_id, i + 1, len(libraries), f"Scanning {lib.path}...")
                     logger.info(f"Scanning library: {lib.path}")
                     scan_library_path(lib.path)
-                    
-                    job_tracker.update_progress(job_id, i+1, len(libraries), f"Identifying files in {lib.path}...")
+
+                    job_tracker.update_progress(job_id, i + 1, len(libraries), f"Identifying files in {lib.path}...")
                     logger.info(f"Scan complete for {lib.path}, starting identification")
                     identify_library_files(lib.path)
                     logger.info(f"Identification complete for {lib.path}")
-                
+
             # No need to call post_library_change here as scan_library_path now does it
         log_activity("library_scan_completed")
         logger.info("Library scan job completed successfully.")
-        job_tracker.complete_job(job_id, {'total_libraries': len(get_libraries())})
+        job_tracker.complete_job(job_id, {"total_libraries": len(get_libraries())})
     except Exception as e:
         logger.error(f"Error during library scan job: {e}")
         log_activity("library_scan_failed", details={"error": str(e)})
@@ -399,20 +406,22 @@ def create_automatic_backup():
 def init_internal(app):
     """Initialize internal components"""
     global watcher_thread
-    
+
     # Staged initialization to prevent CPU spike killing Gunicorn worker
     def stage1_cache():
         logger.info("Init Stage 1: Pre-loading Library Cache...")
         try:
             from library import load_library_from_disk
+
             saved = load_library_from_disk()
             if saved and "library" in saved:
                 import library
+
                 library._LIBRARY_CACHE = saved["library"]
                 logger.info(f"Pre-loaded {len(saved['library'])} items from disk cache")
         except Exception as e:
             logger.warning(f"Stage 1 failed: {e}")
-        
+
         # Schedule Stage 2
         threading.Timer(10.0, stage2_watchdog).start()
 
@@ -423,12 +432,12 @@ def init_internal(app):
             watcher_thread = threading.Thread(target=state.watcher.run)
             watcher_thread.daemon = True
             watcher_thread.start()
-            
+
             # Setup paths but don't scan yet
             library_paths = app_settings.get("library", {}).get("paths", [])
             init_libraries(app, state.watcher, library_paths)
             logger.info(f"Initialized {len(library_paths)} library paths")
-        
+
         # Schedule Stage 3
         threading.Timer(15.0, stage3_scan).start()
 
@@ -446,13 +455,15 @@ def init_internal(app):
     # Schedule metadata fetch (2x per day = every 12h)
     from metadata_service import metadata_fetcher
     from datetime import timedelta
+
     app.scheduler.add_job(
         job_id="scheduled_metadata_fetch",
         func=lambda: metadata_fetcher.fetch_all_metadata(force=False),
         interval=timedelta(hours=12),
-        run_first=False  # Do NOT run on boot to save resources
+        run_first=False,  # Do NOT run on boot to save resources
     )
     logger.info("Scheduled automated metadata fetch (every 12 hours)")
+
 
 def check_initial_scan(app):
     """Logic to determine if initial scan is needed"""
@@ -471,13 +482,15 @@ def check_initial_scan(app):
         critical_files = ["cnmts.json", "versions.json"]
         import os
         from constants import TITLEDB_DIR
-        
+
         titledb_missing = any(not os.path.exists(os.path.join(TITLEDB_DIR, f)) for f in critical_files)
 
         if not libs or any(l.last_scan is None for l in libs) or titledb_missing:
             if titledb_missing:
                 logger.info("Initial scan required: TitleDB critical files are missing.")
-                threading.Thread(target=lambda: update_titledb_job(force=True) if "app" in globals() else None, daemon=True).start()
+                threading.Thread(
+                    target=lambda: update_titledb_job(force=True) if "app" in globals() else None, daemon=True
+                ).start()
             else:
                 logger.info("Initial scan required: New or un-scanned libraries detected.")
                 threading.Thread(target=scan_library_job, daemon=True).start()
@@ -567,24 +580,26 @@ def create_app():
     def add_cache_control_headers(response):
         """
         Prevent aggressive caching of static assets to avoid stale JS/CSS issues.
-        
+
         Strategy:
         - JS/CSS: Force revalidation on every request (no-cache)
         - Images/Fonts: Allow 1 hour browser cache (performance)
         - API responses: No caching (already handled per-endpoint)
         """
         from flask import request
-        
-        if request.path.startswith('/static/'):
+
+        if request.path.startswith("/static/"):
             # Force revalidation for JS/CSS to prevent stale code
-            if request.path.endswith(('.js', '.css')):
-                response.headers['Cache-Control'] = 'no-cache, must-revalidate'
-                response.headers['Pragma'] = 'no-cache'
-                response.headers['Expires'] = '0'
+            if request.path.endswith((".js", ".css")):
+                response.headers["Cache-Control"] = "no-cache, must-revalidate"
+                response.headers["Pragma"] = "no-cache"
+                response.headers["Expires"] = "0"
             # Allow reasonable caching for images/fonts (performance)
-            elif request.path.endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.woff', '.woff2', '.ttf', '.eot')):
-                response.headers['Cache-Control'] = 'public, max-age=3600'
-        
+            elif request.path.endswith(
+                (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".woff", ".woff2", ".ttf", ".eot")
+            ):
+                response.headers["Cache-Control"] = "public, max-age=3600"
+
         return response
 
     # SocketIO event handlers
@@ -612,6 +627,7 @@ def create_app():
 
         # Initialize job tracker with app context
         from job_tracker import job_tracker
+
         job_tracker.init_app(app)
 
         # Initialize file watcher and libraries
