@@ -352,6 +352,13 @@ def robust_json_load(filepath):
         logger.warning(
             f"File {filepath} is too large ({filesize / 1024 / 1024:.2f} MB) for aggressive recovery. Skipping to prevent timeout."
         )
+        # Rename corrupted large file to prevent future crashes
+        try:
+            new_path = filepath + ".corrupted"
+            os.rename(filepath, new_path)
+            logger.error(f"Renamed corrupted large file to {new_path}")
+        except Exception as e:
+            logger.warning(f"Could not rename corrupted file: {e}")
         return None
 
     logger.warning(f"JSON error in {filepath}, attempting aggressive sanitization...")
@@ -417,8 +424,8 @@ def robust_json_load(filepath):
             new_path = filepath + ".corrupted"
             os.rename(filepath, new_path)
             logger.error(f"Renamed corrupted file to {new_path}")
-        except:
-            pass
+        except Exception as e:
+            logger.warning(f"Could not rename corrupted file: {e}")
         return None
 
     logger.warning(f"Whole-file parsing failed for {filepath}. Attempting chunked recovery...")
@@ -458,8 +465,9 @@ def robust_json_load(filepath):
         # Rename corrupted file
         try:
             os.rename(filepath, filepath + ".corrupted")
-        except:
-            pass
+            logger.error(f"Renamed corrupted file to {filepath}.corrupted")
+        except Exception as rename_err:
+            logger.warning(f"Could not rename corrupted file: {rename_err}")
 
     return None
 
