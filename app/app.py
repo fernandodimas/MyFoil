@@ -98,18 +98,20 @@ app_settings = {}
 # Initialize SocketIO with production-ready configuration
 # - cors_allowed_origins="*": Allow connections from any domain (safe for this use case)
 # - async_mode='gevent': Use gevent for async operations (already monkey-patched)
-# - logger=True, engineio_logger=True: Enable detailed logging for debugging
+# - logger=False, engineio_logger=False: Disable detailed logging in production
 # - ping_timeout=60, ping_interval=25: Longer timeouts for connections behind proxies
+# - manage_session=True: Keep Flask session integration
 socketio = SocketIO(
     cors_allowed_origins="*",
     async_mode="gevent",
-    logger=True,
-    engineio_logger=True,
+    logger=False,
+    engineio_logger=False,
     ping_timeout=60,
     ping_interval=25,
     message_queue=os.environ.get("REDIS_URL"),  # Essential: Allows Celery workers to emit to Web clients
-    # Explicit configuration for pub/sub
-    channel="flask-socketio",  # Ensure consistent channel name
+    channel="flask-socketio",
+    manage_session=True,
+    cookie=None  # Disable cookies for socketio to avoid some session issues behind proxies
 )
 
 # Import state to allow job tracking
@@ -597,8 +599,8 @@ def create_app():
     # Initialize metrics
     init_metrics(app)
 
-    # Initialize SocketIO
-    socketio.init_app(app, cors_allowed_origins="*", async_mode="gevent", engineio_logger=False, logger=False)
+    # Initialize SocketIO with already configured object
+    socketio.init_app(app)
 
     # Add Cache-Control headers for static files
     @app.after_request

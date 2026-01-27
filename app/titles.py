@@ -667,35 +667,43 @@ def load_titledb(force=False):
         _cnmts_db = robust_json_load(os.path.join(TITLEDB_DIR, "cnmts.json"))
 
         # Database fallback chain: Region -> US/en -> Generic titles.json
-        region = app_settings["titles"].get("region", "US")
-        language = app_settings["titles"].get("language", "en")
-        possible_files = titledb.get_region_titles_filenames(region, language) + [
-            "titles.US.en.json",
-            "US.en.json",
-            "titles.json",
-        ]
-
+        region = app_settings.get("titles", {}).get("region", "US")
+        language = app_settings.get("titles", {}).get("language", "en")
+        
+        # 1. Base files that provide structural data
+        load_order = ["titles.json"]
+        
+        # 2. Heuristic to pick the BEST regional file (most specific first)
+        possible_regional = titledb.get_region_titles_filenames(region, language)
+        
+        # Fallback to US English if not in US
+        if region != "US":
+             possible_regional += ["titles.US.en.json", "US.en.json"]
+        
+        # Add the first one that actually exists to the load order
+        regional_file_found = None
+        for f in possible_regional:
+            if os.path.exists(os.path.join(TITLEDB_DIR, f)):
+                if f not in load_order:
+                    load_order.append(f)
+                    regional_file_found = f
+                    break # Only load the most specific regional file
+        
+        # 3. Always load custom.json last for manual overrides
+        load_order.append("custom.json")
+        
         _titles_db = {}
         global _loaded_titles_file
-        _loaded_titles_file = []  # Now a list of files loaded
+        _loaded_titles_file = []  # Track files actually successfully loaded
 
-        # Load order: Basic titles.json -> Region specific (reverses possible_files)
-        # We want to load the most "generic" first and OVERWRITE with the most "specific"
-        load_order = ["titles.json", "US.en.json", "titles.US.en.json"]
-        # Add regional files at the end of the load order so they take priority
-        for f in possible_files:
-            if f not in load_order:
-                load_order.append(f)
-
-        # Always load custom.json last to allow manual overrides
-        load_order.append("custom.json")
+        logger.info(f"TitleDB Load Order: {', '.join(load_order)}")
 
         for filename in load_order:
             filepath = os.path.join(TITLEDB_DIR, filename)
-            # Skip corrupted files (prevent reloading known-bad files)
+            # Skip corrupted files
             if filename.endswith(".corrupted") or filepath.endswith(".corrupted"):
-                logger.debug(f"Skipping corrupted file: {filepath}")
                 continue
+                
             if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
                 logger.info(f"Loading TitleDB: {filename}...")
                 loaded = robust_json_load(filepath)
@@ -711,42 +719,29 @@ def load_titledb(force=False):
                                     current_batch[item["id"].upper()] = item
                         else:
                             current_batch = {k.upper(): v for k, v in loaded.items() if isinstance(v, dict) and k}
-
-                        # MERGE logic: Keep metadata (urls, size, etc) but update names/descriptions
+                        
+                        # MERGE logic: Overwrite names/descriptions but keep existing metadata
                         if not _titles_db:
                             _titles_db = current_batch
                         else:
                             for tid, data in current_batch.items():
                                 if tid in _titles_db:
                                     if is_custom:
-                                        # For custom.json, merge EVERYTHING to ensure manual overrides persist
                                         _titles_db[tid].update(data)
                                     else:
-                                        # Override specific fields but keep the rest
-                                        for field in [
-                                            "name",
-                                            "description",
-                                            "bannerUrl",
-                                            "iconUrl",
-                                            "publisher",
-                                            "releaseDate",
-                                            "size",
-                                            "category",
-                                            "genre",
-                                            "release_date",
-                                        ]:
+                                        # Only override specific human-readable fields
+                                        for field in ["name", "description", "publisher", "releaseDate", "category", "genre"]:
                                             val = data.get(field)
                                             if val is not None and val != "":
                                                 _titles_db[tid][field] = val
                                 else:
                                     _titles_db[tid] = data
-
+                        
                         _loaded_titles_file.append(filename)
-                        logger.info(
-                            f"SUCCESS: Merged {count} items from {filename} {'(AS OVERRIDE)' if is_custom else ''}"
-                        )
+                        logger.info(f"SUCCESS: Merged {count} items from {filename} {'(AS OVERRIDE)' if is_custom else ''}")
                 else:
                     logger.warning(f"Could not parse {filename}, skipping...")
+
 
         if _titles_db:
             # Our _titles_db is already keyed by TitleID (upper) due to the merge logic above.

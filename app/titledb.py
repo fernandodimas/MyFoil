@@ -41,14 +41,14 @@ def get_source_manager() -> TitleDBSourceManager:
 
 def get_region_titles_file(app_settings: Dict) -> str:
     """Get the preferred region-specific titles filename"""
-    region = app_settings["titles"].get("region", "US")
-    language = app_settings["titles"].get("language", "en")
+    region = app_settings.get("titles", {}).get("region", "US")
+    language = app_settings.get("titles", {}).get("language", "en")
     return f"titles.{region}.{language}.json"
 
 
 def get_region_titles_filenames(region: str, language: str) -> List[str]:
     """Get possible filenames for regional titles"""
-    return f"titles.{region}.{language}.json", f"{region}.{language}.json"
+    return [f"titles.{region}.{language}.json", f"{region}.{language}.json"]
 
 
 def get_version_hash() -> str:
@@ -207,10 +207,6 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
 
                 # FORCE update if critical files are missing from disk
                 region_titles_file = get_region_titles_file(app_settings)
-                # get_region_titles_file returns list now, take first or fallback
-                if isinstance(region_titles_file, list):
-                    region_titles_file = region_titles_file[0] if region_titles_file else "titles.BR.pt.json"
-
                 fallback_titles_file = "titles.US.en.json"
                 ultimate_fallback = "titles.json"
                 critical_files = [
@@ -221,6 +217,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
                     ultimate_fallback,
                 ]
                 missing_critical = any(not os.path.exists(os.path.join(TITLEDB_DIR, f)) for f in critical_files)
+
 
                 if missing_critical:
                     logger.info("Critical TitleDB files missing from disk, forcing extraction...")
@@ -322,6 +319,13 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
                     source.last_success = datetime.now()
                     source.last_error = None
                     source_manager.save_sources()
+                    
+                    # Log which regional results we got
+                    if region_success:
+                         logger.info(f"Source {source.name} provided full TitleDB with region {region}")
+                    else:
+                         logger.warning(f"Source {source.name} provided core files but NO region-specific titles.")
+                    
                     return results
                 else:
                     logger.warning(f"JSON source {source.name} failed to provide core files.")

@@ -8,12 +8,13 @@ class SystemStatusManager {
         // - reconnectionAttempts: 5 - Limit reconnection attempts
         if (typeof socket === 'undefined') {
             this.socket = io({
-                transports: ['polling', 'websocket'],
+                transports: ['websocket', 'polling'], // Try websocket first (more stable)
                 upgrade: true,
                 reconnection: true,
-                reconnectionAttempts: 5,
+                reconnectionAttempts: 10,
                 reconnectionDelay: 1000,
-                timeout: 20000
+                reconnectionDelayMax: 5000,
+                timeout: 10000
             });
 
             // Log connection status for debugging
