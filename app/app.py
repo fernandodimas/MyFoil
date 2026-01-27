@@ -35,6 +35,7 @@ from constants import *
 from settings import *
 from db import *
 from i18n import I18n
+import titles
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from rest_api import init_rest_api

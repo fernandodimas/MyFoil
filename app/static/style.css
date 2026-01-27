@@ -1483,3 +1483,82 @@ input[type=range].slider.is-small {
 .border-bottom {
     border-bottom: 1px solid var(--border-color);
 }
+
+/* Table layout fixes for File Explorer */
+#filesExplorerTable.table-fixed {
+    table-layout: fixed;
+}
+
+/* Consistent cell heights */
+#filesExplorerTable td {
+    height: auto;
+    min-height: 50px;
+    vertical-align: middle;
+    overflow: hidden;
+}
+
+/* Width classes for cells matching header percentages */
+#filesExplorerTable .table-cell-35 { width: 35%; min-width: 0; }
+#filesExplorerTable .table-cell-30 { width: 30%; min-width: 0; }
+#filesExplorerTable .table-cell-10 { width: 10%; min-width: 0; }
+#filesExplorerTable .table-cell-5 { width: 5%; min-width: 0; }
+#filesExplorerTable .table-cell-full { width: 100%; }
+
+/* Flexbox for filename cell handles 2-line content */
+.filename-cell {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    overflow: hidden;
+}
+
+.filename-main {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    overflow: hidden;
+}
+
+.filename-main .truncate {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.filename-sub {
+    font-size: 0.75em;
+    opacity: 0.7;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Text ellipsis for paths */
+.text-ellipsis {
+    display: block;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Generic truncate (with min-width: 0 for flexbox) */
+.truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+/* Folder items alignment */
+.folder-item {
+    display: flex;
+    align-items: center;
+    height: 50px;
+    min-height: 50px;
+}
+

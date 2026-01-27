@@ -941,7 +941,7 @@ function renderFilesExplorer() {
 
     $('.breadcrumb').removeClass('is-hidden');
     if (currentExplorerPath === '') {
-        explorerLibraries.forEach(lib => tbody.append(`<tr class="is-clickable" onclick="setExplorerPath('${lib.path}')"><td colspan="6"><i class="bi bi-folder-fill has-text-warning mr-2"></i><span class="has-text-weight-bold">${lib.path}</span><span class="tag is-light ml-2">${lib.files_count} ${t('arquivos')}</span></td></tr>`));
+        explorerLibraries.forEach(lib => tbody.append(`<tr class="is-clickable" onclick="setExplorerPath('${lib.path}')"><td colspan="6" class="table-cell-full"><div class="folder-item"><i class="bi bi-folder-fill has-text-warning mr-2"></i><span class="has-text-weight-bold">${escapeHtml(lib.path)}</span><span class="tag is-light ml-2">${lib.files_count} ${t('arquivos')}</span></div></td></tr>`));
         $('#filesExplorerCount').text(explorerLibraries.length + t(' bibliotecas configuradas'));
     } else {
         const items = [], folders = new Set();
@@ -967,8 +967,8 @@ function renderFilesExplorer() {
             par = last > 0 ? currentExplorerPath.substring(0, last) : '';
         }
 
-        tbody.append(`<tr class="is-clickable" onclick="setExplorerPath('${par}')"><td colspan="6"><i class="bi bi-arrow-up-circle mr-2 opacity-50"></i><span class="has-text-weight-bold">..</span></td></tr>`);
-        Array.from(folders).sort().forEach(f => tbody.append(`<tr class="is-clickable" onclick="setExplorerPath('${currentExplorerPath.endsWith('/') ? currentExplorerPath + f : currentExplorerPath + '/' + f}')"><td colspan="6"><i class="bi bi-folder-fill has-text-warning mr-2"></i><span class="has-text-weight-bold">${f}</span></td></tr>`));
+        tbody.append(`<tr class="is-clickable" onclick="setExplorerPath('${par}')"><td colspan="6" class="table-cell-full"><div class="folder-item"><i class="bi bi-arrow-up-circle mr-2 opacity-50"></i><span class="has-text-weight-bold">..</span></div></td></tr>`);
+        Array.from(folders).sort().forEach(f => tbody.append(`<tr class="is-clickable" onclick="setExplorerPath('${currentExplorerPath.endsWith('/') ? currentExplorerPath + f : currentExplorerPath + '/' + f}')"><td colspan="6" class="table-cell-full"><div class="folder-item"><i class="bi bi-folder-fill has-text-warning mr-2"></i><span class="has-text-weight-bold">${escapeHtml(f)}</span></div></td></tr>`));
         renderFileList(tbody, items, false);
         $('#filesExplorerCount').text(folders.size + t(' pastas, ') + items.length + t(' arquivos nesta pasta'));
     }
@@ -978,7 +978,33 @@ function renderFileList(tbody, files, showPath) {
     files.forEach(f => {
         const badge = f.identified ? `<span class="tag is-success is-light is-small"><i class="bi bi-check-circle mr-1"></i> ${t('Identificado')}</span>` : `<span class="tag is-danger is-light is-small"><i class="bi bi-x-circle mr-1"></i> ${t('Erro')}</span>`;
         const tColor = { '.nsp': 'is-info', '.nsz': 'is-primary', '.xci': 'is-warning', '.xcz': 'is-danger' }[f.extension] || 'is-light';
-        tbody.append(`<tr><td class="truncate" style="max-width: 300px;" title="${escapeHtml(f.filename)}"><i class="bi bi-file-earmark mr-1 opacity-50"></i><span class="has-text-weight-bold">${escapeHtml(f.filename)}</span>${f.title_name ? `<br><span class="is-size-7 opacity-50">${escapeHtml(f.title_name)}</span>` : ''}</td><td class="truncate is-family-monospace is-size-7 opacity-70" style="max-width: 400px;" title="${escapeHtml(f.filepath)}">${showPath ? escapeHtml(f.filepath) : '...'}</td><td class="has-text-right is-family-monospace">${f.size_formatted}</td><td><span class="tag ${tColor} is-light is-small">${f.extension.toUpperCase().replace('.', '')}</span></td><td class="has-text-centered">${badge}</td><td class="has-text-right"><button class="button is-ghost is-small has-text-danger" onclick="deleteErrorFile(${f.id})" title="${t('Excluir arquivo')}"><i class="bi bi-trash3"></i></button></td></tr>`);
+        
+        const filenameCell = `
+            <div class="filename-cell">
+                <div class="filename-main">
+                    <i class="bi bi-file-earmark mr-1 opacity-50"></i>
+                    <span class="has-text-weight-bold truncate">${escapeHtml(f.filename)}</span>
+                </div>
+                ${f.title_name ? `<div class="filename-sub truncate">${escapeHtml(f.title_name)}</div>` : ''}
+            </div>
+        `;
+        
+        const pathCell = showPath ? `<span class="text-ellipsis">${escapeHtml(f.filepath)}</span>` : '<span class="opacity-70">...</span>';
+        
+        tbody.append(`
+            <tr>
+                <td class="table-cell-35">${filenameCell}</td>
+                <td class="table-cell-30 is-family-monospace is-size-7 opacity-70">${pathCell}</td>
+                <td class="table-cell-10 has-text-right is-family-monospace">${f.size_formatted}</td>
+                <td class="table-cell-10"><span class="tag ${tColor} is-light is-small">${f.extension.toUpperCase().replace('.', '')}</span></td>
+                <td class="table-cell-10 has-text-centered">${badge}</td>
+                <td class="table-cell-5 has-text-right">
+                    <button class="button is-ghost is-small has-text-danger" onclick="deleteErrorFile(${f.id})" title="${t('Excluir arquivo')}">
+                        <i class="bi bi-trash3"></i>
+                    </button>
+                </td>
+            </tr>
+        `);
     });
 }
 
