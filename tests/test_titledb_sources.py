@@ -64,7 +64,8 @@ def test_source_manager():
         manager = TitleDBSourceManager(temp_dir)
         
         # Should have default sources
-        assert len(manager.sources) > 0
+        default_count = len(TitleDBSourceManager.DEFAULT_SOURCES)
+        assert len(manager.sources) == default_count
         print(f"   Found {len(manager.sources)} default sources")
         
         # Test adding a source
@@ -74,7 +75,7 @@ def test_source_manager():
             priority=50
         )
         assert success == True
-        assert len(manager.sources) == 4  # 3 defaults + 1 custom
+        assert len(manager.sources) == default_count + 1
         
         # Test duplicate prevention
         success = manager.add_source(
@@ -100,7 +101,7 @@ def test_source_manager():
         # Test removing a source
         success = manager.remove_source("Test Custom Source")
         assert success == True
-        assert len(manager.sources) == 3  # Back to defaults
+        assert len(manager.sources) == default_count  # Back to defaults
         
         # Test getting active sources
         active = manager.get_active_sources()
