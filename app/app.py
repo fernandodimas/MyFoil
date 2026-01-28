@@ -95,23 +95,39 @@ from datetime import timedelta
 # Global variables
 app_settings = {}
 
+# Custom SocketIO class to gracefully handle session disconnections
+# This prevents noisy 'KeyError: Session is disconnected' tracebacks in logs
+class SafeSocketIO(SocketIO):
+    def __call__(self, environ, start_response):
+        try:
+            return super().__call__(environ, start_response)
+        except KeyError as e:
+            if "Session is disconnected" in str(e) or "Session is closed" in str(e):
+                # Return a valid 400 response instead of letting the exception bubble up to the WSGI server
+                status = "400 Bad Request"
+                response_headers = [("Content-type", "text/plain")]
+                start_response(status, response_headers)
+                return [b"Session is disconnected"]
+            raise
+
+
 # Initialize SocketIO with production-ready configuration
 # - cors_allowed_origins="*": Allow connections from any domain (safe for this use case)
 # - async_mode='gevent': Use gevent for async operations (already monkey-patched)
 # - logger=False, engineio_logger=False: Disable detailed logging in production
-# - ping_timeout=60, ping_interval=25: Longer timeouts for connections behind proxies
+# - ping_timeout=120, ping_interval=20: Longer timeouts and shorter intervals for stability behind proxies
 # - manage_session=True: Keep Flask session integration
-socketio = SocketIO(
+socketio = SafeSocketIO(
     cors_allowed_origins="*",
     async_mode="gevent",
     logger=False,
     engineio_logger=False,
-    ping_timeout=60,
-    ping_interval=25,
+    ping_timeout=120,
+    ping_interval=20,
     message_queue=os.environ.get("REDIS_URL"),  # Essential: Allows Celery workers to emit to Web clients
     channel="flask-socketio",
     manage_session=True,
-    cookie=None  # Disable cookies for socketio to avoid some session issues behind proxies
+    cookie=None,  # Disable cookies for socketio to avoid some session issues behind proxies
 )
 
 # Import state to allow job tracking
