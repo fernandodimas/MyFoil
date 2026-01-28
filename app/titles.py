@@ -721,10 +721,20 @@ def load_titledb(force=False):
                             current_batch = {k.upper(): v for k, v in loaded.items() if isinstance(v, dict) and k}
                         
                         # MERGE logic: Overwrite names/descriptions but keep existing metadata
+                        # Optimization: Yield every 2000 items to prevent worker timeout
                         if not _titles_db:
                             _titles_db = current_batch
                         else:
+                            i = 0
                             for tid, data in current_batch.items():
+                                i += 1
+                                if i % 1000 == 0:
+                                    try:
+                                        import gevent
+                                        gevent.sleep(0.001)
+                                    except:
+                                        pass
+                                        
                                 if tid in _titles_db:
                                     if is_custom:
                                         _titles_db[tid].update(data)

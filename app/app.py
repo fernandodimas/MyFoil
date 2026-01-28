@@ -316,62 +316,52 @@ def update_titledb_job(force=False):
 
     logger.info("Starting TitleDB update job...")
     try:
-        job_tracker.update_progress(job_id, 0, 5, "Initializing...")
+        job_tracker.update_progress(job_id, 0, 10, "Initializing...")
         import time
+        time.sleep(0.1)
 
-        time.sleep(0.1)  # Yield para garantir que update foi emitido
-
-        job_tracker.update_progress(job_id, 1, 5, "Downloading/Extracting TitleDB files...")
+        job_tracker.update_progress(job_id, 1, 10, "Downloading TitleDB files...")
         current_settings = load_settings()
         import titledb
 
-        # Emit update before starting download
-        time.sleep(0.1)
-
         if "app" in globals():
             with app.app_context():
-                # Download e extract
+                # Step 1: Download
                 titledb.update_titledb_files(current_settings, force=force)
-
-                # Emit update após download
-                job_tracker.update_progress(job_id, 2, 5, "Reloading database...")
-                time.sleep(0.1)
-
-                # Reload titles
+                
+                # Step 2: Reload memory cache
+                job_tracker.update_progress(job_id, 3, 10, "Reloading into memory...")
                 titles.load_titledb(force=True)
 
-                # Emit update após reload
-                job_tracker.update_progress(job_id, 3, 5, "Syncing database with new versions...")
-                logger.info("Syncing new TitleDB versions to library...")
+                # Step 3: Sync to SQLite (The title data itself)
+                job_tracker.update_progress(job_id, 5, 10, "Syncing database metadata...")
                 add_missing_apps_to_db()
-
-                job_tracker.update_progress(job_id, 4, 5, "Updating title status and re-identifying...")
                 update_titles()
 
-                from library import identify_library_files, get_libraries
-
-                libraries = get_libraries()
-                for i, library in enumerate(libraries):
-                    job_tracker.update_progress(job_id, 4, 5, f"Identifying files: library {i + 1}/{len(libraries)}")
-                    identify_library_files(library.path)
-
-                job_tracker.update_progress(job_id, 5, 5, "Finalizing and regenerating cache...")
+                # Step 4: Optional Library identification
+                # We only do this if specifically needed, or we do it faster
+                from library import get_libraries, invalidate_library_cache
+                
+                # Instead of full identification of every file (which is slow),
+                # we just invalidate the cache so new titles appear, 
+                # and let the user trigger a scan if they want a full refresh.
+                job_tracker.update_progress(job_id, 8, 10, "Refreshing library views...")
+                invalidate_library_cache()
                 generate_library(force=True)
-                logger.info("Library cache regenerated after TitleDB update.")
+                
+                job_tracker.update_progress(job_id, 10, 10, "Finalizing...")
+                logger.info("TitleDB update completed and library views refreshed.")
         else:
             titledb.update_titledb(current_settings, force=force)
 
-        logger.info("TitleDB update job completed.")
         job_tracker.complete_job(job_id, {"success": True})
         return True
     except Exception as e:
         logger.error(f"Error during TitleDB update job: {e}")
-        # Wrap in app_context for thread safety
         try:
-            logger.info("Attempting to log activity error...")
             log_activity("titledb_update_failed", details={"error": str(e)})
-        except Exception as log_err:
-            logger.warning(f"Failed to log activity: {log_err}")
+        except:
+            pass
         job_tracker.fail_job(job_id, str(e))
         return False
     finally:
