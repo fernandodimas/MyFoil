@@ -36,6 +36,7 @@ from settings import *
 from db import *
 from i18n import I18n
 import titles
+import titledb
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 from rest_api import init_rest_api
@@ -534,6 +535,13 @@ def check_initial_scan(app):
             func=lambda: (update_titledb_job(), scan_library_job()),
             interval=timedelta(hours=24),
             run_first=False,
+        )
+
+        app.scheduler.add_job(
+            job_id="refresh_titledb_remote_dates",
+            func=lambda: titledb.get_source_manager().refresh_remote_dates(),
+            interval=timedelta(hours=6),
+            run_first=True,
         )
 
         # Weekly metadata refresh for existing games

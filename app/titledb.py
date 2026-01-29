@@ -418,12 +418,16 @@ def get_active_source_info() -> Dict:
         time_since = datetime.now() - active.last_success
         is_updated = time_since.total_seconds() < (24 * 3600)  # Considered updated if < 24h
 
-        # Get remote last modified date for the main titles file
-        # We need to construct the filename to check
-        app_settings = load_settings()
-        filename = get_region_titles_file(app_settings)
+        # Use cached remote_date if available, otherwise fetch it
+        remote_date = active.remote_date
+        if not remote_date:
+            # Fallback to construction of filename and fetching (only if not recently failed)
+            app_settings = load_settings()
+            filename = get_region_titles_file(app_settings)
+            remote_date = active.get_last_modified_date(filename)
+            # Cache it in the object for this session
+            active.remote_date = remote_date
 
-        remote_date = active.get_last_modified_date(filename)
         remote_date_str = "Unknown"
         if remote_date:
             remote_date_str = remote_date.strftime("%Y-%m-%d %H:%M")
@@ -433,10 +437,18 @@ def get_active_source_info() -> Dict:
 
         loaded_file = titles.get_loaded_titles_file() or "Not loaded yet"
 
+        # Check if update is available
+        update_available = False
+        if remote_date and active.last_success:
+            # If remote date is newer than last download (with 1min margin)
+            if remote_date > (active.last_success + timedelta(minutes=1)):
+                update_available = True
+
         return {
             "name": active.name,
             "last_success": active.last_success,
             "is_updated": is_updated,
+            "update_available": update_available,
             "time_since": str(time_since).split(".")[0],  # Simple formatting
             "last_download_date": active.last_success.strftime("%Y-%m-%d %H:%M") if active.last_success else "Never",
             "titles_count": titles.get_titles_count(),

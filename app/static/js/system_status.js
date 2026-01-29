@@ -67,19 +67,24 @@ class SystemStatusManager {
             const response = await fetch('/api/system/jobs');
             if (response.ok) {
                 const data = await response.json();
-                this.updateStatus(data.jobs);
+                this.updateStatus(data.jobs, data.titledb);
             }
         } catch (error) {
             console.error('Failed to fetch jobs:', error);
         }
     }
 
-    updateStatus(jobs) {
+    updateStatus(jobs, titledb) {
         if (!jobs) return;
 
         // If single job object provided, convert to array (legacy fallback)
         const jobsArray = Array.isArray(jobs) ? jobs : [jobs];
         this.currentJobs = jobsArray;
+
+        // Update cached titledb info if provided
+        if (titledb) {
+            this.currentTitleDB = titledb;
+        }
 
         const active = jobsArray.filter(j => j.status === 'running' || j.status === 'scheduled');
         const history = jobsArray.filter(j => j.status === 'completed' || j.status === 'failed');
@@ -87,7 +92,8 @@ class SystemStatusManager {
         const status = {
             has_active: active.length > 0,
             active: active,
-            history: history
+            history: history,
+            titledb: this.currentTitleDB
         };
 
         this.updateIndicator(status);
@@ -146,6 +152,32 @@ class SystemStatusManager {
         } else {
             historyList.innerHTML = status.history.slice(0, 10).map(job => this.renderHistoryJob(job)).join('');
         }
+
+        // Update TitleDB info
+        if (status.titledb) {
+            const tdb = status.titledb;
+            this.updateElementText('tdbSource', tdb.name);
+            this.updateElementText('tdbFile', tdb.loaded_titles_file);
+            this.updateElementText('tdbLastDownload', tdb.last_download_date);
+
+            const remoteEl = document.getElementById('tdbRemoteDate');
+            if (remoteEl) {
+                let content = tdb.remote_date || 'Unknown';
+                if (tdb.update_available) {
+                    content += ' <span class="tag is-info is-light is-small ml-2">Update Available</span>';
+                }
+                remoteEl.innerHTML = content;
+
+                if (tdb.remote_date && tdb.remote_date !== 'Unknown') {
+                    remoteEl.classList.add('has-text-info');
+                }
+            }
+        }
+    }
+
+    updateElementText(id, text) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text || '-';
     }
 
     renderActiveJob(job) {

@@ -804,9 +804,13 @@ def get_all_jobs_api():
     # job_tracker now returns list of dicts from DB
     jobs = job_tracker.get_all_jobs()
 
+    # Add TitleDB status info
+    titledb_status = titledb.get_active_source_info()
+
     return jsonify(
         {
-            "jobs": jobs  # Now already in dict format with to_dict()
+            "jobs": jobs,  # Now already in dict format with to_dict()
+            "titledb": titledb_status
         }
     )
 
