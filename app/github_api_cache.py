@@ -5,6 +5,7 @@ Avoids redundant API calls to prevent rate limiting
 
 import time
 import threading
+import logging
 from datetime import datetime
 from typing import Dict, Tuple, Optional
 
