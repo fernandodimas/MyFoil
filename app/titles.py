@@ -326,17 +326,35 @@ def robust_json_load(filepath):
 
     # Try 0: Fast load first (Native JSON parser is much faster)
     try:
-        # Check size to avoid memory issues on extreme files
         filesize = os.path.getsize(filepath)
-        
-        # If file is not too massive, try direct load
-        if filesize < 200 * 1024 * 1024: # 200MB limit for direct load
+        if filesize < 200 * 1024 * 1024:
             with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
                 return json.load(f)
     except Exception as e:
-        logger.warning(f"Fast JSON load failed for {os.path.basename(filepath)}: {e}. Attempting robust recovery...")
+        # Step 1: Semi-Fast Load - Fix invalid escapes with Regex
+        # This is the most common issue in TitleDB JSONs (bare backslashes)
+        logger.warning(f"Fast JSON load failed for {os.path.basename(filepath)}: {e}. Attempting regex sanitization...")
+        try:
+            with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
+                content = f.read()
+            
+            # Pattern to match a valid escape sequence OR a bare backslash
+            # Group 1 captures valid escapes, Group 3 captures bare backslashes
+            import re
+            pattern = re.compile(r"(\\([\"\\/bfnrt]|u[0-9a-fA-F]{4}))|(\\)")
+            
+            def replace_func(m):
+                return m.group(1) if m.group(1) else r"\\"
+            
+            # Correct only bare backslashes
+            content = pattern.sub(replace_func, content)
+            
+            # Try loading again with strict=False
+            return json.loads(content, strict=False)
+        except Exception as e2:
+            logger.warning(f"Regex sanitization failed: {e2}. Falling back to slow robust recovery...")
 
-    # Step 2: Stream Recovery for Large Files (>10MB) - Fallback for corrupted files
+    # Step 2: Stream Recovery for Large Files (>10MB) - Fallback for heavily corrupted files
     try:
         filesize = os.path.getsize(filepath)
         if filesize > 10 * 1024 * 1024:

@@ -151,8 +151,8 @@ def sanitize_large_json_file(filepath):
                                     brace_depth -= 1
 
                             i += 1
-                            # Yield after every 1000 characters parsed to prevent tight loops
-                            if i % 1000 == 0:
+                            # Yield after every 100,000 characters parsed to prevent tight loops
+                            if i % 100000 == 0:
                                 yield_to_event_loop()
 
                         if valid_end:
@@ -173,7 +173,7 @@ def sanitize_large_json_file(filepath):
                                         break
 
                                     # Yield more frequently during processing
-                                    if total_found % 100 == 0:
+                                    if total_found % 1000 == 0:
                                         yield_to_event_loop()
 
                             except json.JSONDecodeError:
