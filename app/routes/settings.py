@@ -10,7 +10,7 @@ from sqlalchemy import func
 from settings import reload_conf, load_settings, set_titles_settings, set_shop_settings, DEFAULT_SETTINGS, CONFIG_FILE
 from auth import access_required
 from constants import CONFIG_DIR
-from utils import format_size_py
+from utils import format_size_py, format_datetime
 import os
 import json
 import copy
@@ -225,7 +225,7 @@ def library_paths_api():
                         "total_size": total_size,
                         "total_size_formatted": format_size_py(total_size),
                         "titles_count": titles_count,
-                        "last_scan": l.last_scan.strftime("%Y-%m-%d %H:%M:%S") if l.last_scan else "Nunca",
+                        "last_scan": format_datetime(l.last_scan),
                     }
                 )
 

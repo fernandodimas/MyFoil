@@ -16,6 +16,7 @@ import shutil
 import logging
 import datetime
 from constants import *
+from utils import now_utc
 
 # Retrieve main logger
 logger = logging.getLogger("main")
@@ -344,7 +345,7 @@ class MetadataFetchLog(db.Model):
     __tablename__ = "metadata_fetch_log"
 
     id = db.Column(db.Integer, primary_key=True)
-    started_at = db.Column(db.DateTime, nullable=False, default=datetime.datetime.now)
+    started_at = db.Column(db.DateTime, nullable=False, default=now_utc)
     completed_at = db.Column(db.DateTime)
     status = db.Column(db.String(20))  # 'running', 'completed', 'failed'
 
@@ -374,7 +375,7 @@ class SystemJob(db.Model):
     error = db.Column(db.Text)
 
     # Timestamps
-    started_at = db.Column(db.DateTime, default=datetime.datetime.now)
+    started_at = db.Column(db.DateTime, default=now_utc)
     completed_at = db.Column(db.DateTime)
 
     def to_dict(self):
@@ -393,7 +394,7 @@ class SystemJob(db.Model):
 
 class ActivityLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=datetime.datetime.now, index=True)
+    timestamp = db.Column(db.DateTime, default=now_utc, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
     action_type = db.Column(
         db.String(50), index=True
@@ -905,7 +906,7 @@ def add_title_id_in_db(title_id):
     existing_title = Titles.query.filter_by(title_id=title_id).first()
 
     if not existing_title:
-        new_title = Titles(title_id=title_id, added_at=datetime.datetime.now())
+        new_title = Titles(title_id=title_id, added_at=now_utc())
         db.session.add(new_title)
         db.session.commit()
 

@@ -17,12 +17,13 @@ try:
 except ImportError:
     logger.warning("unzip-http module not found. Legacy ZIP TitleDB source will not be available.")
     HAS_UNZIP_HTTP = False
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
 from constants import *
 from settings import load_settings
 from titledb_sources import TitleDBSourceManager
+from utils import format_datetime, now_utc
 
 # Retrieve main logger
 logger = logging.getLogger("main")
@@ -239,7 +240,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                     with open(local_commit_file, "w") as f:
                         f.write(latest_remote_commit)
 
-                    source.last_success = datetime.utcnow()
+                    source.last_success = now_utc()
                     source.last_error = None
                 else:
                     logger.info("TitleDB already up to date (Legacy)")
@@ -284,7 +285,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                     download_titledb_file("titles.json", force=force, silent_404=True)
 
                 if all(results.get(f) for f in core_files):
-                    source.last_success = datetime.utcnow()
+                    source.last_success = now_utc()
                     source.last_error = None
                     source_manager.save_sources()
                     
@@ -383,7 +384,7 @@ def get_active_source_info() -> Dict:
     if successful_sources:
         active = successful_sources[0]
         # Calculate time since update using UTC to match last_success
-        time_since = datetime.utcnow() - active.last_success
+        time_since = now_utc() - active.last_success
         is_updated = time_since.total_seconds() < (24 * 3600)  # Considered updated if < 24h
 
         # Use cached remote_date if available, otherwise fetch it
@@ -396,7 +397,7 @@ def get_active_source_info() -> Dict:
 
         remote_date_str = "Unknown"
         if remote_date:
-            remote_date_str = remote_date.strftime("%Y-%m-%d %H:%M")
+            remote_date_str = format_datetime(remote_date)
 
         # Get which titles file is actually loaded
         import titles
@@ -414,8 +415,8 @@ def get_active_source_info() -> Dict:
             if comp_remote > (comp_success + timedelta(minutes=1)):
                 update_available = True
         
-        # Format dates for UI (naive strings)
-        last_download_date = active.last_success.strftime("%Y-%m-%d %H:%M") if active.last_success else "Never"
+        # Format dates for UI
+        last_download_date = format_datetime(active.last_success)
         
         return {
             "name": active.name,

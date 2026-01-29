@@ -7,8 +7,9 @@ import requests
 import json
 import logging
 from typing import Dict, List, Optional, Tuple
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
+from utils import format_datetime
 
 logger = logging.getLogger("main")
 
@@ -32,7 +33,21 @@ class TitleDBSource:
         return f"{self.base_url}/{filename}"
 
     def to_dict(self) -> Dict:
-        """Convert to dictionary for serialization"""
+        """Convert to dictionary for serialization (formatted for UI)"""
+        return {
+            "name": self.name,
+            "base_url": self.base_url,
+            "enabled": self.enabled,
+            "priority": self.priority,
+            "source_type": self.source_type,
+            "last_success": format_datetime(self.last_success) if self.last_success else None,
+            "last_error": self.last_error,
+            "remote_date": format_datetime(self.remote_date) if self.remote_date else None,
+            "is_fetching": self.is_fetching,
+        }
+
+    def to_dict_raw(self) -> Dict:
+        """Convert to dictionary for persistent storage (ISO UTC)"""
         return {
             "name": self.name,
             "base_url": self.base_url,
@@ -253,7 +268,7 @@ class TitleDBSourceManager:
         try:
             self.config_dir.mkdir(parents=True, exist_ok=True)
             with open(self.sources_file, "w") as f:
-                json.dump([s.to_dict() for s in self.sources], f, indent=2)
+                json.dump([s.to_dict_raw() for s in self.sources], f, indent=2)
             logger.debug("Saved TitleDB sources to config")
         except Exception as e:
             logger.error(f"Error saving TitleDB sources: {e}")

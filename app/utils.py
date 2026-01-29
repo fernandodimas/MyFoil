@@ -5,6 +5,7 @@ from functools import wraps
 import json
 import os
 import tempfile
+from datetime import datetime, timezone
 
 # Global lock for all JSON writes in this process
 _json_write_lock = threading.Lock()
@@ -182,3 +183,34 @@ def format_size_py(size):
             return f"{size:.2f} {unit}"
         size /= 1024
     return f"{size:.2f} TB"
+
+def now_utc():
+    """Returns current datetime in UTC (aware)"""
+    return datetime.now(timezone.utc)
+
+def get_local_timezone():
+    """Returns the local timezone of the system"""
+    return datetime.now().astimezone().tzinfo
+
+
+def format_datetime(dt, format="%Y-%m-%d %H:%M:%S"):
+    """
+    Formats a datetime object to the local timezone.
+    If dt is naive, it's assumed to be UTC.
+    """
+    if dt is None:
+        return "Nunca"
+    
+    if isinstance(dt, str):
+        try:
+            dt = datetime.fromisoformat(dt.replace('Z', '+00:00'))
+        except:
+            return dt
+            
+    # Ensure dt is aware. If naive, assume UTC.
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    
+    # Convert to local timezone
+    local_dt = dt.astimezone(get_local_timezone())
+    return local_dt.strftime(format)

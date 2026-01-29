@@ -468,7 +468,7 @@ def identify_library_files(library):
 
             # and finally update the File with identification info
             file.identification_attempts += 1
-            file.last_attempt = datetime.datetime.now()
+            file.last_attempt = now_utc()
 
             # Otimização: Usar flush() a cada 50 arquivos para liberar memória sem commit completo
             # Commit apenas a cada 100 arquivos para reduzir overhead de transações
@@ -565,7 +565,7 @@ def trigger_library_update_notification():
         from app import socketio
         import datetime
 
-        socketio.emit("library_updated", {"timestamp": datetime.datetime.now().isoformat()}, namespace="/")
+        socketio.emit("library_updated", {"timestamp": now_utc().isoformat()}, namespace="/")
     except Exception as e:
         logger.debug(f"Could not emit library_updated event: {e}")
 
@@ -661,7 +661,7 @@ def update_titles():
                     if file.last_attempt:
                         if earliest_date is None or file.last_attempt < earliest_date:
                             earliest_date = file.last_attempt
-            title.added_at = earliest_date or datetime.datetime.now()
+            title.added_at = earliest_date or now_utc()
             logger.info(f"Setting added_at for title {title_id} to {title.added_at}")
 
         # Commit every 100 titles to avoid excessive memory use

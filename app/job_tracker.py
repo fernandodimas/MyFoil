@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 import uuid
 import logging
+from utils import now_utc
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +146,7 @@ class JobTracker:
                 
                 if job:
                     job.status = JobStatus.RUNNING
-                    job.started_at = datetime.now()
+                    job.started_at = now_utc()
                     job.progress_message = message
                     db.session.commit()
                     logger.info(f"Started job: {job_id}")
@@ -198,7 +199,7 @@ class JobTracker:
                 job = SystemJob.query.get(job_id)
                 if job:
                     job.status = JobStatus.COMPLETED
-                    job.completed_at = datetime.now()
+                    job.completed_at = now_utc()
                     if isinstance(result, dict):
                         job.result_json = result
                     else:
@@ -221,7 +222,7 @@ class JobTracker:
                 job = SystemJob.query.get(job_id)
                 if job:
                     job.status = JobStatus.FAILED
-                    job.completed_at = datetime.now()
+                    job.completed_at = now_utc()
                     job.error = error
                     db.session.commit()
                     logger.error(f"Failed job: {job_id} - {error}")
