@@ -1250,13 +1250,12 @@ def sync_titles_to_db(force=False):
         db_titles_map = {t.title_id.upper(): t for t in db_titles if t.title_id}
 
         updated_count = 0
-        for tid, tdb_info in _titles_db.items():
-            if not tid:
-                continue
-            tid = tid.upper()
-            if tid in db_titles_map:
-                title = db_titles_map[tid]
-
+        # Optimization: Only iterate over titles that are actually in our DB
+        # instead of iterating over all 24k+ titles from the JSON
+        for tid, title in db_titles_map.items():
+            if tid in _titles_db:
+                tdb_info = _titles_db[tid]
+                
                 # Only update if NOT custom
                 if not title.is_custom:
                     title.name = tdb_info.get("name", title.name)
@@ -1272,9 +1271,13 @@ def sync_titles_to_db(force=False):
                     title.size = tdb_info.get("size", title.size)
                     title.nsuid = tdb_info.get("nsuid", title.nsuid)
                     updated_count += 1
+                
+                # Periodic yield for safety
+                if updated_count % 500 == 0:
+                    yield_to_event_loop()
 
         db.session.commit()
-        logger.info(f"Sync complete. Updated {updated_count} titles in database.")
+        logger.info(f"Sync complete. Updated {updated_count} titles in database metadata tracker.")
     except Exception as e:
         logger.error(f"Error during TitleDB-to-DB sync: {e}")
         db.session.rollback()
