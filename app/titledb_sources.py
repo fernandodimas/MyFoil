@@ -291,7 +291,7 @@ class TitleDBSourceManager:
                         f.write(chunk)
 
                 # Update source status
-                source.last_success = datetime.now()
+                source.last_success = datetime.utcnow()
                 source.last_error = None
                 self.save_sources()
 
