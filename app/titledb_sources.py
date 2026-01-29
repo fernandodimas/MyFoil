@@ -258,7 +258,7 @@ class TitleDBSourceManager:
         return sorted(active, key=lambda x: x.priority)
 
     def download_file(
-        self, filename: str, dest_path: str, timeout: int = 30
+        self, filename: str, dest_path: str, timeout: int = 30, silent_404: bool = False
     ) -> Tuple[bool, Optional[str], Optional[str]]:
         """
         Download a file from sources with automatic fallback
@@ -293,9 +293,15 @@ class TitleDBSourceManager:
                 return True, source.name, None
 
             except requests.exceptions.RequestException as e:
-                error_msg = f"Failed to download from {source.name}: {str(e)}"
-                logger.warning(error_msg)
-                source.last_error = str(e)
+                error_str = str(e)
+                error_msg = f"Failed to download from {source.name}: {error_str}"
+                
+                if silent_404 and ("404" in error_str or "not found" in error_str.lower()):
+                    logger.debug(f"{filename} not found on {source.name} (skipping silently)")
+                else:
+                    logger.warning(error_msg)
+                
+                source.last_error = error_str
                 continue
             except Exception as e:
                 error_msg = f"Unexpected error with {source.name}: {str(e)}"

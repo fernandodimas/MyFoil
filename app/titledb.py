@@ -115,7 +115,7 @@ def download_titledb_file(filename: str, force: bool = False, silent_404: bool =
     source_manager = get_source_manager()
     
     # Increase timeout to 120 seconds for large files (e.g., 76MB US.en.json)
-    success, source_name, error = source_manager.download_file(filename, dest_path, timeout=120)
+    success, source_name, error = source_manager.download_file(filename, dest_path, timeout=120, silent_404=silent_404)
     
     if success:
         logger.info(f"Successfully downloaded {filename} from {source_name}")
