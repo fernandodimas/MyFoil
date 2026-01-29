@@ -1,5 +1,7 @@
+from __future__ import annotations
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+import datetime
+from datetime import timedelta
 from typing import Optional, Dict, Any, List
 import uuid
 import logging
@@ -28,8 +30,8 @@ class JobState:
     job_id: str
     job_type: str
     status: str
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    started_at: Optional[datetime.datetime] = None
+    completed_at: Optional[datetime.datetime] = None
     progress: Dict[str, Any] = field(default_factory=lambda: {'percent': 0, 'message': ''})
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
