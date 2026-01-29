@@ -422,22 +422,23 @@
                                     </ul>
                                 </nav>
 
-                                 <div class="table-container">
-                                     <table class="table is-fullwidth is-hoverable is-size-7 table-fixed" id="filesExplorerTable" style="table-layout: fixed;">
-                                         <thead>
-                                             <tr>
-                                                 <th style="width: 35%;">Nome do Arquivo</th>
-                                                 <th style="width: 30%;">Caminho</th>
-                                                 <th style="width: 10%; text-align: right;">Tamanho</th>
-                                                 <th style="width: 10%;">Tipo</th>
-                                                 <th style="width: 10%; text-align: center;">Status</th>
-                                                 <th style="width: 5%; text-align: right;">Ações</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody>
-                                             <!-- Populated by JS -->
-                                         </tbody>
-                                     </table>
+                                <div class="table-container">
+                                    <table class="table is-fullwidth is-hoverable is-size-7 table-fixed"
+                                        id="filesExplorerTable" style="table-layout: fixed;">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 35%;">{{ t('Arquivo / Caminho') }}</th>
+                                                <th style="width: 25%;">{{ t('Título Identificado') }}</th>
+                                                <th style="width: 15%;">{{ t('Tamanho') }}</th>
+                                                <th style="width: 10%;">{{ t('Tipo') }}</th>
+                                                <th style="width: 10%; text-align: center;">{{ t('Status') }}</th>
+                                                <th style="width: 5%; text-align: right;">{{ t('Ações') }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Populated by JS -->
+                                        </tbody>
+                                    </table>
                                 </div>
 
                                 <!-- Pagination Info -->
@@ -964,7 +965,7 @@
                                                         <div class="field">
                                                             <label class="label is-small">Client ID</label>
                                                             <div class="control">
-                                                                 <input class="input is-small" type="text"
+                                                                <input class="input is-small" type="text"
                                                                     id="igdbClientId"
                                                                     placeholder="Client ID do Twitch Dev Portal"
                                                                     autocomplete="username">
@@ -1031,7 +1032,8 @@
                                 </div>
 
                                 <!-- Automated Metadata Fetch -->
-                                <div class="box is-shadowless border p-4 mb-4 bg-light-soft" id="metadata-fetch-status-container">
+                                <div class="box is-shadowless border p-4 mb-4 bg-light-soft"
+                                    id="metadata-fetch-status-container">
                                     <h4 class="title is-6 mb-3">Busca Automática de Metadados</h4>
                                     <div id="metadata-fetch-status-content">
                                         <div class="is-flex is-align-items-center mb-3">
@@ -1041,15 +1043,18 @@
                                             </div>
                                             <div id="last-metadata-fetch-info">
                                                 <p class="heading is-size-7 opacity-50">Última Execução</p>
-                                                <span class="is-size-7" id="last-metadata-fetch-time">Nunca executado</span>
+                                                <span class="is-size-7" id="last-metadata-fetch-time">Nunca
+                                                    executado</span>
                                             </div>
                                         </div>
-                                        
+
                                         <div class="buttons">
-                                            <button class="button is-small is-primary is-outlined" onclick="triggerMetadataFetch()">
+                                            <button class="button is-small is-primary is-outlined"
+                                                onclick="triggerMetadataFetch()">
                                                 <i class="bi bi-stars mr-1"></i> Buscar Agora
                                             </button>
-                                            <button class="button is-small is-warning is-outlined" onclick="triggerMetadataFetch(true)">
+                                            <button class="button is-small is-warning is-outlined"
+                                                onclick="triggerMetadataFetch(true)">
                                                 <i class="bi bi-lightning-fill mr-1"></i> Forçar (Ignorar Agendamento)
                                             </button>
                                         </div>

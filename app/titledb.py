@@ -164,10 +164,16 @@ def download_titledb_file(filename: str, force: bool = False, silent_404: bool =
     return False
 
 
-def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, bool]:
+def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = None) -> Dict[str, bool]:
     """
     Update all required TitleDB files using either Legacy ZIP or JSON sources
     """
+    from job_tracker import job_tracker
+    def log_tdb(msg, p=None):
+        logger.info(msg)
+        if job_id:
+            job_tracker.update_progress(job_id, p, 10, msg)
+
     results = {}
     source_manager = get_source_manager()
     active_sources = source_manager.get_active_sources()
@@ -177,7 +183,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
         return {}
 
     for source in active_sources:
-        logger.info(f"Attempting update using source: {source.name} (Type: {source.source_type})")
+        log_tdb(f"Source: {source.name}", 2)
         results = {}
 
         if source.source_type == "zip_legacy":
@@ -250,7 +256,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
                                     break
 
                         if target_zip_path:
-                            logger.info(f"Extracting {filename} from legacy ZIP ({target_zip_path})...")
+                            log_tdb(f"Extracting {filename}...", 4)
                             try:
                                 with rzf.open(target_zip_path) as fpin:
                                     with open(os.path.join(TITLEDB_DIR, filename), "wb") as fpout:
@@ -322,13 +328,13 @@ def update_titledb_files(app_settings: Dict, force: bool = False) -> Dict[str, b
                     
                     # Log which regional results we got
                     if region_success:
-                         logger.info(f"Source {source.name} provided full TitleDB with region {region}")
+                         log_tdb(f"Full TitleDB with region {region}", 10)
                     else:
-                         logger.warning(f"Source {source.name} provided core files but NO region-specific titles.")
+                         log_tdb(f"Source {source.name} NO region-specific titles.", 9)
                     
                     return results
                 else:
-                    logger.warning(f"JSON source {source.name} failed to provide core files.")
+                    log_tdb(f"JSON source {source.name} failed to provide core files.", 2)
                     continue
             except Exception as e:
                 logger.error(f"JSON update from {source.name} failed: {e}")
@@ -367,7 +373,7 @@ def update_titledb(app_settings: Dict, force: bool = False) -> bool:
 
         # Update all files
         job_tracker.update_progress(job_id, 10, message="Downloading files...")
-        results = update_titledb_files(app_settings, force=force)
+        results = update_titledb_files(app_settings, force=force, job_id=job_id)
 
         # Check results
         success_count = sum(1 for v in results.values() if v)
@@ -461,6 +467,8 @@ def get_active_source_info() -> Dict:
             "titles_count": titles.get_titles_count(),
             "remote_date": remote_date_str,
             "loaded_titles_file": loaded_file,
+            "is_fetching": getattr(active, "is_fetching", False),
+            "last_error": getattr(active, "last_error", None),
         }
 
     return None

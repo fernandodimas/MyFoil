@@ -161,11 +161,23 @@ class SystemStatusManager {
             this.updateElementText('tdbLastDownload', tdb.last_download_date);
 
             const remoteEl = document.getElementById('tdbRemoteDate');
+            const refreshIcon = document.getElementById('refreshRemoteIcon');
+
+            if (refreshIcon) {
+                if (tdb.is_fetching) refreshIcon.classList.add('spin');
+                else refreshIcon.classList.remove('spin');
+            }
+
             if (remoteEl) {
                 let content = tdb.remote_date || 'Unknown';
                 if (tdb.update_available) {
                     content += ' <span class="tag is-info is-light is-small ml-2">Update Available</span>';
                 }
+
+                if (tdb.last_error) {
+                    content += ` <span class="has-text-danger ml-1" title="${tdb.last_error}"><i class="bi bi-exclamation-triangle"></i></span>`;
+                }
+
                 remoteEl.innerHTML = content;
 
                 if (tdb.remote_date && tdb.remote_date !== 'Unknown') {
@@ -381,5 +393,22 @@ async function cancelJob(jobId) {
         }
     } catch (error) {
         console.error('Error cancelling job:', error);
+    }
+}
+
+async function refreshTdbRemote() {
+    try {
+        const icon = document.getElementById('refreshRemoteIcon');
+        if (icon) icon.classList.add('spin');
+
+        const response = await fetch('/api/settings/titledb/refresh_remote', { method: 'POST' });
+        if (response.ok) {
+            // Wait a bit then fetch status
+            setTimeout(() => {
+                if (statusManager) statusManager.fetchStatus();
+            }, 1000);
+        }
+    } catch (error) {
+        console.error('Error refreshing TDB remote:', error);
     }
 }

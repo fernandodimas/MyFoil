@@ -328,7 +328,8 @@ def update_titledb_job(force=False):
         if "app" in globals():
             with app.app_context():
                 # Step 1: Download
-                titledb.update_titledb_files(current_settings, force=force)
+                # Pass job_id so update_titledb_files can report granular progress
+                titledb.update_titledb_files(current_settings, force=force, job_id=job_id)
                 
                 # Step 2: Reload memory cache
                 job_tracker.update_progress(job_id, 3, 10, "Reloading into memory...")

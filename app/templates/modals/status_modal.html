@@ -27,9 +27,13 @@
 
             <!-- TitleDB Status -->
             <div class="mb-5" id="titledbStatusSection">
-                <h5 class="title is-6 mb-3 has-text-weight-bold">
+                <h5 class="title is-6 mb-3 has-text-weight-bold is-flex is-align-items-center">
                     <i class="bi bi-database-check mr-2 has-text-success"></i>
-                    TitleDB Status
+                    <span>TitleDB Status</span>
+                    <button class="button is-ghost is-small ml-auto p-0" id="refreshRemoteBtn"
+                        onclick="refreshTdbRemote()" title="Refresh remote date">
+                        <i class="bi bi-arrow-repeat" id="refreshRemoteIcon"></i>
+                    </button>
                 </h5>
                 <div id="titledbStatusInfo" class="is-size-7">
                     <div class="columns is-mobile is-multiline mb-0">

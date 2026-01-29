@@ -978,30 +978,51 @@ function renderFileList(tbody, files, showPath) {
     files.forEach(f => {
         const badge = f.identified ? `<span class="tag is-success is-light is-small"><i class="bi bi-check-circle mr-1"></i> ${t('Identificado')}</span>` : `<span class="tag is-danger is-light is-small"><i class="bi bi-x-circle mr-1"></i> ${t('Erro')}</span>`;
         const tColor = { '.nsp': 'is-info', '.nsz': 'is-primary', '.xci': 'is-warning', '.xcz': 'is-danger' }[f.extension] || 'is-light';
-        
+        const iconClass = { '.nsp': 'bi-filetype-exe', '.nsz': 'bi-file-zip', '.xci': 'bi-disc', '.xcz': 'bi-disc-fill' }[f.extension] || 'bi-file-earmark';
+
         const filenameCell = `
-            <div class="filename-cell">
-                <div class="filename-main">
-                    <i class="bi bi-file-earmark mr-1 opacity-50"></i>
-                    <span class="has-text-weight-bold truncate">${escapeHtml(f.filename)}</span>
+            <div class="is-flex is-align-items-center">
+                <i class="bi ${iconClass} mr-2 opacity-40 is-size-5"></i>
+                <div style="min-width: 0;">
+                    <p class="has-text-weight-bold has-text-primary is-size-7 m-0 truncate">${escapeHtml(f.filename)}</p>
+                    <p class="is-family-monospace is-size-7 opacity-40 truncate">${escapeHtml(f.filepath)}</p>
                 </div>
-                ${f.title_name ? `<div class="filename-sub truncate">${escapeHtml(f.title_name)}</div>` : ''}
             </div>
         `;
-        
-        const pathCell = showPath ? `<span class="text-ellipsis">${escapeHtml(f.filepath)}</span>` : '<span class="opacity-70">...</span>';
-        
+
+        const metadataCell = f.title_name ? `
+            <div class="is-flex is-align-items-center">
+                <i class="bi bi-link-45deg mr-2 has-text-info"></i>
+                <div style="min-width: 0;">
+                    <span class="has-text-weight-semibold is-size-7 truncate">${escapeHtml(f.title_name)}</span>
+                    <span class="is-size-7 opacity-50 block">${f.title_id || ''}</span>
+                </div>
+            </div>
+        ` : `
+            <div class="is-flex is-align-items-center opacity-40 italic">
+                <i class="bi bi-link-45deg mr-2"></i>
+                <span class="is-size-7">${t('Desconhecido')}</span>
+            </div>
+        `;
+
         tbody.append(`
             <tr>
-                <td class="table-cell-35">${filenameCell}</td>
-                <td class="table-cell-30 is-family-monospace is-size-7 opacity-70">${pathCell}</td>
-                <td class="table-cell-10 has-text-right is-family-monospace">${f.size_formatted}</td>
-                <td class="table-cell-10"><span class="tag ${tColor} is-light is-small">${f.extension.toUpperCase().replace('.', '')}</span></td>
-                <td class="table-cell-10 has-text-centered">${badge}</td>
-                <td class="table-cell-5 has-text-right">
-                    <button class="button is-ghost is-small has-text-danger" onclick="deleteErrorFile(${f.id})" title="${t('Excluir arquivo')}">
-                        <i class="bi bi-trash3"></i>
-                    </button>
+                <td>${filenameCell}</td>
+                <td>${metadataCell}</td>
+                <td>
+                    <div class="is-flex is-align-items-center">
+                        <i class="bi bi-hdd mr-2 opacity-50"></i>
+                        <span class="is-size-7">${f.size_formatted}</span>
+                    </div>
+                </td>
+                <td><span class="tag ${tColor} is-light is-small">${f.extension.toUpperCase().replace('.', '')}</span></td>
+                <td>${badge}</td>
+                <td class="has-text-right">
+                    <div class="buttons is-right">
+                        <button class="button is-small is-ghost has-text-danger" onclick="deleteErrorFile(${f.id})" title="${t('Excluir arquivo')}">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `);
