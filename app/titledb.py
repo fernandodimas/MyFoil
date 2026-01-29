@@ -389,10 +389,8 @@ def get_active_source_info() -> Dict:
         # Use cached remote_date if available, otherwise fetch it
         remote_date = active.remote_date
         if not remote_date:
-            # Fallback to construction of filename and fetching (only if not recently failed)
-            app_settings = load_settings()
-            filename = get_region_titles_file(app_settings)
-            remote_date = active.get_last_modified_date(filename)
+            # Fetch remote date using versions files as the main indicator
+            remote_date = active.get_last_modified_date(["versions.json", "versions.txt"])
             # Cache it in the object for this session
             active.remote_date = remote_date
 
