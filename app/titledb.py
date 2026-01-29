@@ -419,6 +419,14 @@ def get_active_source_info() -> Dict:
         # Format dates for UI
         last_download_date = format_datetime(active.last_success)
         
+        # Get cache timestamp from titles module (real reading/sanitization)
+        cache_ts = titles.get_titledb_cache_timestamp()
+        last_process_date = "Never"
+        if cache_ts:
+            from datetime import datetime
+            dt_processed = datetime.fromtimestamp(cache_ts, tz=timezone.utc)
+            last_process_date = format_datetime(dt_processed)
+        
         return {
             "name": active.name,
             "last_success": active.last_success,
@@ -426,6 +434,7 @@ def get_active_source_info() -> Dict:
             "update_available": update_available,
             "time_since": str(time_since).split(".")[0],
             "last_download_date": last_download_date,
+            "last_process_date": last_process_date,
             "titles_count": titles.get_titles_count(),
             "remote_date": remote_date_str,
             "loaded_titles_file": loaded_file,

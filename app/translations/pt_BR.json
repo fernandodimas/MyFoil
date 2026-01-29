@@ -179,5 +179,6 @@
     "Not monitoring": "Não monitorando",
     "libraries": "bibliotecas",
     "library": "biblioteca",
-    "No libraries configured": "Nenhuma biblioteca configurada"
+    "No libraries configured": "Nenhuma biblioteca configurada",
+    "Last Processing": "Último processamento"
 }
