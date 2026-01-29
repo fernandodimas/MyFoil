@@ -278,14 +278,9 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
 
                 results["region_titles"] = region_success
 
-                # Fallback downloads
+                # Only try titles.json if region failed, as a last resort
                 if not region_success:
-                    logger.warning(f"Region-specific files {region_filenames} not available, trying fallbacks...")
-                    download_titledb_file("titles.US.en.json", force=force, silent_404=True)
-                    download_titledb_file("US.en.json", force=force, silent_404=True)
-                    download_titledb_file("titles.json", force=force, silent_404=True)
-                else:
-                    # Optionally download major fallbacks
+                    logger.warning(f"Region-specific files {region_filenames} not available, trying titles.json as fallback...")
                     download_titledb_file("titles.json", force=force, silent_404=True)
 
                 if all(results.get(f) for f in core_files):
