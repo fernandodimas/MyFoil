@@ -324,162 +324,37 @@ def robust_json_load(filepath):
     if not os.path.exists(filepath):
         return None
 
-    # Check file size BEFORE loading content to avoid memory issues
+    # Try 0: Fast load first (Native JSON parser is much faster)
+    try:
+        # Check size to avoid memory issues on extreme files
+        filesize = os.path.getsize(filepath)
+        
+        # If file is not too massive, try direct load
+        if filesize < 200 * 1024 * 1024: # 200MB limit for direct load
+            with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
+                return json.load(f)
+    except Exception as e:
+        logger.warning(f"Fast JSON load failed for {os.path.basename(filepath)}: {e}. Attempting robust recovery...")
+
+    # Step 2: Stream Recovery for Large Files (>10MB) - Fallback for corrupted files
     try:
         filesize = os.path.getsize(filepath)
-    except Exception as e:
-        logger.error(f"Error getting file size for {filepath}: {e}")
-        return None
+        if filesize > 10 * 1024 * 1024:
+            logger.info(f"File {filepath} is large ({filesize / 1024 / 1024:.2f} MB). Attempting stream recovery...")
 
-    # Try 0: Stream Recovery for Large Files (>10MB) - BEFORE loading into memory
-    if filesize > 10 * 1024 * 1024:
-        logger.info(f"File {filepath} is large ({filesize / 1024 / 1024:.2f} MB). Attempting stream recovery...")
-
-        try:
-            from large_json_sanitizer import sanitize_large_json_file
-
-            sanitized = sanitize_large_json_file(filepath)
-
-            if sanitized and len(sanitized) > 0:
-                logger.info(f"Stream recovery successful! Recovered {len(sanitized)} entries.")
-                # Try to restore from .corrupted if possible
-                try:
-                    if filepath.endswith(".corrupted"):
-                        original_path = filepath[:-10]  # Remove .corrupted
-                        if not os.path.exists(original_path):
-                            os.rename(filepath, original_path)
-                            logger.info(f"Restored sanitized file to {original_path}")
-                except Exception as rename_err:
-                    logger.warning(f"Could not rename .corrupted file back: {rename_err}")
-
-                return sanitized
-            else:
-                logger.warning(f"Stream recovery returned empty. File may be too corrupted.")
-        except Exception as e:
-            logger.error(f"Error in stream recovery: {e}")
-
-        # If streaming failed, keep as .corrupted but return None (cache will be fallback)
-        if not filepath.endswith(".corrupted"):
             try:
-                new_path = filepath + ".corrupted"
-                os.rename(filepath, new_path)
-                logger.error(f"Renamed large corrupted file to {new_path}")
+                from large_json_sanitizer import sanitize_large_json_file
+                sanitized = sanitize_large_json_file(filepath)
+
+                if sanitized and len(sanitized) > 0:
+                    logger.info(f"Stream recovery successful! Recovered {len(sanitized)} entries.")
+                    return sanitized
             except Exception as e:
-                logger.warning(f"Could not rename corrupted file: {e}")
-        return None
-
-    # For smaller files (<10MB), load content into memory
-    try:
-        with open(filepath, encoding="utf-8", errors="ignore") as f:
-            content = f.read()
-            if not content:
-                return None
-    except Exception as e:
-        logger.error(f"Error reading {filepath}: {e}")
-        return None
-
-    # Try 1: Standard load - fast and correct
-    try:
-        data = json.loads(content)
-        return (
-            data
-            if not isinstance(data, dict)
-            else (data.get("data") or data.get("items") or data.get("titles") or data)
-        )
-    except json.JSONDecodeError:
+                logger.error(f"Error in stream recovery: {e}")
+    except Exception:
         pass
 
-    # Try 2: More aggressive sanitization for escape sequences
-    logger.warning(f"JSON error in {filepath}, attempting aggressive sanitization...")
-    try:
-        # Pattern to match a valid escape or a bare backslash
-        # Group 1 captures valid escape sequences: \", \\, \/, \b, \f, \n, \r, \t, or \uXXXX
-        pattern = re.compile(r"(\\([\"\\/bfnrt]|u[0-9a-fA-F]{4}))|(\\)")
-
-        def replace_func(m):
-            if m.group(1):
-                return m.group(1)  # Valid escape, keep it
-            else:
-                return r"\\"  # Bare backslash, escape it
-
-        sanitized = pattern.sub(replace_func, content)
-
-        # Strip ALL non-printable control characters except whitespace
-        sanitized = "".join(ch for ch in sanitized if ord(ch) >= 32 or ch in "\n\r\t")
-
-        # Try loading the sanitized version
-        data = json.loads(sanitized, strict=False)
-        return (
-            data
-            if not isinstance(data, dict)
-            else (data.get("data") or data.get("items") or data.get("titles") or data)
-        )
-    except Exception as e:
-        logger.error(f"Aggressive sanitization failed for {filepath}: {e}")
-
-    # Try 3: Nuclear Cleanup - if still failing, it's likely structural or has nested escape issues
-    try:
-        # Bruteforce: replace all \ with \\ then restore common escapes
-        # This fixes bare backslashes but we MUST restore valid sequences or it will remain invalid
-        nuclear = content.replace("\\", "\\\\")
-        for escape in ['"', "\\", "/", "b", "f", "n", "r", "t"]:
-            nuclear = nuclear.replace("\\\\" + escape, "\\" + escape)
-        # Restore unicode
-        nuclear = re.sub(r"\\\\u([0-9a-fA-F]{4})", r"\\u\1", nuclear)
-
-        nuclear = "".join(ch for ch in nuclear if ord(ch) >= 32 or ch in "\n\r\t")
-        data = json.loads(nuclear, strict=False)
-        return (
-            data
-            if not isinstance(data, dict)
-            else (data.get("data") or data.get("items") or data.get("titles") or data)
-        )
-    except Exception as e:
-        logger.error(f"Nuclear cleanup failed for {filepath}: {e}")
-
-    except:
-        pass
-
-    # Try 5: Chunked Recovery (Absolute Last Resort for smaller files)
-    try:
-        recovered = {}
-        # Pattern for "TitleID": { ... }
-        # Matches 16 hex characters as a key
-        pattern = re.compile(r"\"([0-9A-F]{16})\":\s*\{")
-
-        # We need the full content for this
-        parts = pattern.split(content)
-        # parts[0] is garbage or opening brace
-        # parts[1] is ID, parts[2] is Body, etc.
-
-        for i in range(1, len(parts), 2):
-            tid = parts[i]
-            body = parts[i + 1]
-
-            # Find the end of this object (the last closing brace)
-            last_brace = body.rfind("}")
-            if last_brace != -1:
-                clean_body = "{" + body[: last_brace + 1]
-                try:
-                    # Try to parse this individual object
-                    obj = json.loads(clean_body, strict=False)
-                    recovered[tid] = obj
-                except:
-                    continue
-
-        if len(recovered) > 0:
-            logger.info(
-                f"Chunked recovery successful! Salvaged {len(recovered)} entries from corrupted file {filepath}."
-            )
-            return recovered
-    except Exception as e:
-        logger.error(f"Chunked recovery failed for {filepath}: {e}")
-        # Rename corrupted file
-        try:
-            os.rename(filepath, filepath + ".corrupted")
-            logger.error(f"Renamed corrupted file to {filepath}.corrupted")
-        except Exception as rename_err:
-            logger.warning(f"Could not rename corrupted file: {rename_err}")
+    return None
 
     return None
 
@@ -1172,19 +1047,6 @@ def get_app_id_version_from_versions_txt(app_id):
     return None
 
 
-def get_loaded_titles_file():
-    global _loaded_titles_file
-    if isinstance(_loaded_titles_file, list):
-        # Prefer showing the most specific/regional file if multiple were merged
-        # The regional ones are at the end of the load_order
-        for f in reversed(_loaded_titles_file):
-            if "." in f and any(ext in f.lower() for ext in [".br", "pt", "pt.json", "br.json"]):
-                return f
-        return _loaded_titles_file[-1] if _loaded_titles_file else "None"
-    return _loaded_titles_file or "None"
-    return _versions_txt_db.get(app_id, None)
-
-
 def get_all_existing_dlc(title_id):
     global _cnmts_db
     if _cnmts_db is None:
@@ -1194,20 +1056,29 @@ def get_all_existing_dlc(title_id):
     title_id = title_id.lower()
     dlcs = []
     for app_id in _cnmts_db.keys():
-        for version, version_description in _cnmts_db[app_id].items():
-            if (
-                version_description.get("titleType") == 130
-                and version_description.get("otherApplicationId") == title_id
-            ):
-                if app_id.upper() not in dlcs:
-                    dlcs.append(app_id.upper())
+        # Ensure we iterate over versions (0, 65536, etc)
+        app_versions = _cnmts_db[app_id]
+        if isinstance(app_versions, dict):
+            for version_key, version_description in app_versions.items():
+                if (
+                    version_description.get("titleType") == 130
+                    and version_description.get("otherApplicationId") == title_id
+                ):
+                    if app_id.upper() not in dlcs:
+                        dlcs.append(app_id.upper())
     return dlcs
 
 
 def get_loaded_titles_file():
-    """Return the filename of the currently loaded titles database"""
+    """Return the currently loaded titles filename(s)"""
     global _loaded_titles_file
-    return _loaded_titles_file
+    if isinstance(_loaded_titles_file, list):
+        # Prefer showing the most specific/regional file if multiple were merged
+        for f in reversed(_loaded_titles_file):
+            if "." in f and any(ext in f.lower() for ext in [".br", "pt", "pt.json", "br.json"]):
+                return f
+        return _loaded_titles_file[-1] if _loaded_titles_file else "None"
+    return _loaded_titles_file or "None"
 
 
 def get_custom_title_info(title_id):
