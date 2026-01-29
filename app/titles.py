@@ -585,23 +585,49 @@ def load_titledb(force=False):
         # 1. Base files that provide structural data
         load_order = ["titles.json"]
         
-        # 2. Heuristic to pick the BEST regional file (most specific first)
-        possible_regional = titledb.get_region_titles_filenames(region, language)
+        # 2. Collect ALL available regional files
+        import re
+        all_db_files = []
+        try:
+            all_db_files = os.listdir(TITLEDB_DIR)
+        except:
+            pass
+            
+        regional_pattern = re.compile(r"^(titles\.)?[A-Z]{2}\.[a-z]{2}\.json$")
         
-        # Fallback to US English if not in US
+        # Primary regional preferences
+        primary_prefs = titledb.get_region_titles_filenames(region, language)
         if region != "US":
-             possible_regional += ["titles.US.en.json", "US.en.json"]
+             primary_prefs += ["titles.US.en.json", "US.en.json"]
+             
+        # Separate primary found from others
+        primary_file_found = None
+        other_regionals = []
         
-        # Add the first one that actually exists to the load order
-        regional_file_found = None
-        for f in possible_regional:
-            if os.path.exists(os.path.join(TITLEDB_DIR, f)):
-                if f not in load_order:
-                    load_order.append(f)
-                    regional_file_found = f
-                    break # Only load the most specific regional file
+        for f in all_db_files:
+            if not regional_pattern.match(f):
+                continue
+            
+            if f in primary_prefs:
+                # Keep track of the best matching primary file
+                if not primary_file_found or primary_prefs.index(f) < primary_prefs.index(primary_file_found):
+                    primary_file_found = f
+            else:
+                other_regionals.append(f)
         
-        # 3. Always load custom.json last for manual overrides
+        # 3. Build logical load order
+        # Step A: Master titles.json (lowest priority metadata)
+        # Step B: All other regional files (as fallbacks)
+        # Step C: Primary regional file (highest priority regional)
+        # Step D: custom.json (absolute priority)
+        
+        for f in sorted(other_regionals):
+            if f not in load_order:
+                load_order.append(f)
+                
+        if primary_file_found and primary_file_found not in load_order:
+            load_order.append(primary_file_found)
+            
         load_order.append("custom.json")
         
         _titles_db = {}
