@@ -101,7 +101,8 @@ def download_titledb_legacy(
 
 def download_titledb_file(filename: str, force: bool = False, silent_404: bool = False) -> bool:
     """
-    Download a single TitleDB file using the source manager
+    Download a single TitleDB file using the source manager.
+    The source_manager handles fallback and error handling automatically.
     """
     dest_path = os.path.join(TITLEDB_DIR, filename)
 
@@ -110,58 +111,22 @@ def download_titledb_file(filename: str, force: bool = False, silent_404: bool =
         logger.info(f"{filename} is up to date, skipping download")
         return True
 
+    # Use source_manager which has proper fallback logic
     source_manager = get_source_manager()
-    active_sources = source_manager.get_active_sources()
-
-    if not active_sources:
-        logger.error("No active TitleDB sources configured")
+    
+    # Increase timeout to 120 seconds for large files (e.g., 76MB US.en.json)
+    success, source_name, error = source_manager.download_file(filename, dest_path, timeout=120)
+    
+    if success:
+        logger.info(f"Successfully downloaded {filename} from {source_name}")
+        return True
+    else:
+        error_str = str(error) if error else ""
+        if silent_404 and ("404" in error_str or "not found" in error_str.lower()):
+            logger.debug(f"{filename} not found (404), skipping silently")
+        else:
+            logger.warning(f"Failed to download {filename}: {error}")
         return False
-
-    for source in active_sources:
-        logger.info(f"Attempting to download {filename} from {source.name} ({source.source_type})...")
-
-        if source.source_type == "zip_legacy":
-            success, error = download_titledb_legacy(source.name, source.base_url, filename, dest_path)
-        else:
-            # Standard JSON download
-            url = source.get_file_url(filename)
-            try:
-                response = requests.get(url, timeout=30, stream=True)
-                response.raise_for_status()
-                with open(dest_path, "wb") as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        f.write(chunk)
-
-                # Validation: Binary check if extension is .json
-                if filename.endswith(".json"):
-                    with open(dest_path, "rb") as f:
-                        header = f.read(256)
-                        if header.startswith(b"TINFOIL"):
-                            success = False
-                            error = "Downloaded file is in binary TINFOIL format, not JSON."
-                            os.remove(dest_path)
-                        else:
-                            success, error = True, None
-                else:
-                    success, error = True, None
-            except Exception as e:
-                success, error = False, str(e)
-
-        if success:
-            source.last_success = datetime.utcnow()
-            logger.info(f"Successfully downloaded {filename} from {source.name}")
-            return True
-        else:
-            source.last_error = error
-            error_str = str(error) if error else ""
-            if silent_404 and ("404" in error_str or "not found" in error_str.lower()):
-                logger.debug(f"{filename} not found on {source.name} (skipping silently)")
-            else:
-                logger.warning(f"Failed to download {filename} from {source.name}: {error}")
-            continue
-
-    source_manager.save_sources()
-    return False
 
 
 def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = None) -> Dict[str, bool]:
@@ -274,7 +239,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                     with open(local_commit_file, "w") as f:
                         f.write(latest_remote_commit)
 
-                    source.last_success = datetime.now()
+                    source.last_success = datetime.utcnow()
                     source.last_error = None
                 else:
                     logger.info("TitleDB already up to date (Legacy)")
@@ -292,6 +257,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
         else:
             # --- NEW JSON MULTI-SOURCE LOGIC ---
             try:
+                log_tdb(f"Downloading core files from {source.name}...", 3)
                 core_files = ["cnmts.json", "versions.json", "languages.json"]
                 for filename in core_files:
                     results[filename] = download_titledb_file(filename, force=force)
@@ -301,6 +267,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                 language = app_settings["titles"].get("language", "en")
                 region_filenames = get_region_titles_filenames(region, language)
 
+                log_tdb(f"Downloading regional titles ({region}.{language})...", 5)
                 region_success = False
                 for region_filename in region_filenames:
                     logger.info(f"Attempting to download region-specific file: {region_filename}")
@@ -322,19 +289,19 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                     download_titledb_file("titles.json", force=force, silent_404=True)
 
                 if all(results.get(f) for f in core_files):
-                    source.last_success = datetime.now()
+                    source.last_success = datetime.utcnow()
                     source.last_error = None
                     source_manager.save_sources()
                     
                     # Log which regional results we got
                     if region_success:
-                         log_tdb(f"Full TitleDB with region {region}", 10)
+                         log_tdb(f"✓ Downloaded TitleDB from {source.name}", 8)
                     else:
-                         log_tdb(f"Source {source.name} NO region-specific titles.", 9)
+                         logger.warning(f"Source {source.name} NO region-specific titles.")
                     
                     return results
                 else:
-                    log_tdb(f"JSON source {source.name} failed to provide core files.", 2)
+                    logger.warning(f"JSON source {source.name} failed to provide core files.")
                     continue
             except Exception as e:
                 logger.error(f"JSON update from {source.name} failed: {e}")

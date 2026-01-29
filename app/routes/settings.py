@@ -466,6 +466,36 @@ def refresh_sources_dates_api():
     return jsonify({"success": success})
 
 
+@settings_bp.route("/settings/titledb/refresh_remote", methods=["POST"])
+@access_required("admin")
+def refresh_titledb_remote_api():
+    """
+    Manually trigger remote date check for active TitleDB source.
+    Used by the UI refresh button in System Status modal.
+    """
+    try:
+        import titledb
+        from settings import load_settings
+        
+        # Get active source info (will fetch remote date)
+        info = titledb.get_active_source_info()
+        
+        if info:
+            return jsonify({
+                "success": True,
+                "remote_date": info.get("remote_date"),
+                "update_available": info.get("update_available", False)
+            })
+        else:
+            return jsonify({"success": False, "error": "No active TitleDB source"}), 404
+            
+    except Exception as e:
+        import logging
+        logger = logging.getLogger("main")
+        logger.error(f"Error refreshing TitleDB remote date: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @settings_bp.route("/users")
 @access_required("admin")
 def get_users_api():
