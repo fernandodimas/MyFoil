@@ -1,0 +1,35 @@
+[
+  {
+    "name": "tinfoil.media",
+    "base_url": "https://tinfoil.media/repo/db",
+    "enabled": true,
+    "priority": 1,
+    "source_type": "json",
+    "last_success": "2026-01-29T18:02:56.559747",
+    "last_error": "HTTPSConnectionPool(host='tinfoil.media', port=443): Max retries exceeded with url: /repo/db/BR.pt.json (Caused by NameResolutionError(\"HTTPSConnection(host='tinfoil.media', port=443): Failed to resolve 'tinfoil.media' ([Errno 8] nodename nor servname provided, or not known)\"))",
+    "remote_date": null,
+    "is_fetching": false
+  },
+  {
+    "name": "MyFoil (Legacy)",
+    "base_url": "https://nightly.link/a1ex4/ownfoil/workflows/region_titles/master/titledb.zip",
+    "enabled": true,
+    "priority": 2,
+    "source_type": "zip_legacy",
+    "last_success": null,
+    "last_error": "404 Client Error: Not Found for url: https://nightly.link/a1ex4/ownfoil/workflows/region_titles/master/titledb.zip/versions.txt",
+    "remote_date": null,
+    "is_fetching": false
+  },
+  {
+    "name": "blawar/titledb (GitHub)",
+    "base_url": "https://raw.githubusercontent.com/blawar/titledb/master",
+    "enabled": true,
+    "priority": 1,
+    "source_type": "json",
+    "last_success": "2026-01-29T18:21:01.033327",
+    "last_error": null,
+    "remote_date": null,
+    "is_fetching": false
+  }
+]

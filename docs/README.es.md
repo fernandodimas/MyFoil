@@ -115,7 +115,6 @@ MyFoil viene con cuatro fuentes preconfiguradas (por orden de prioridad):
    - Actualizada frecuentemente por la comunidad
    - Directo del contenido bruto de GitHub
 
-4. **julesontheroad/titledb (GitHub)** - Prioridad 4 (Activado)
    - Espejo confiable de metadatos TitleDB
    - Excelente opción de fallback
    - Alojado en GitHub

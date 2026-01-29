@@ -183,12 +183,6 @@ class TitleDBSourceManager:
             priority=1,
             source_type="json",
         ),
-        TitleDBSource(
-            name="julesontheroad/titledb (GitHub)",
-            base_url="https://raw.githubusercontent.com/julesontheroad/titledb/master",
-            priority=2,
-            source_type="json",
-        ),
         TitleDBSource(name="tinfoil.media", base_url="https://tinfoil.media/repo/db", priority=3, source_type="json"),
         TitleDBSource(
             name="MyFoil (Legacy)",
