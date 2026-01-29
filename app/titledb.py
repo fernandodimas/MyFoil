@@ -148,7 +148,7 @@ def download_titledb_file(filename: str, force: bool = False, silent_404: bool =
                 success, error = False, str(e)
 
         if success:
-            source.last_success = datetime.now()
+            source.last_success = datetime.utcnow()
             logger.info(f"Successfully downloaded {filename} from {source.name}")
             return True
         else:
@@ -414,8 +414,8 @@ def get_active_source_info() -> Dict:
 
     if successful_sources:
         active = successful_sources[0]
-        # Calculate time since update
-        time_since = datetime.now() - active.last_success
+        # Calculate time since update using UTC to match last_success
+        time_since = datetime.utcnow() - active.last_success
         is_updated = time_since.total_seconds() < (24 * 3600)  # Considered updated if < 24h
 
         # Use cached remote_date if available, otherwise fetch it
@@ -440,17 +440,24 @@ def get_active_source_info() -> Dict:
         # Check if update is available
         update_available = False
         if remote_date and active.last_success:
+            # Ensure both are naive for comparison (strip tzinfo if present)
+            comp_remote = remote_date.replace(tzinfo=None) if remote_date.tzinfo else remote_date
+            comp_success = active.last_success.replace(tzinfo=None) if active.last_success.tzinfo else active.last_success
+            
             # If remote date is newer than last download (with 1min margin)
-            if remote_date > (active.last_success + timedelta(minutes=1)):
+            if comp_remote > (comp_success + timedelta(minutes=1)):
                 update_available = True
-
+        
+        # Format dates for UI (naive strings)
+        last_download_date = active.last_success.strftime("%Y-%m-%d %H:%M") if active.last_success else "Never"
+        
         return {
             "name": active.name,
             "last_success": active.last_success,
             "is_updated": is_updated,
             "update_available": update_available,
-            "time_since": str(time_since).split(".")[0],  # Simple formatting
-            "last_download_date": active.last_success.strftime("%Y-%m-%d %H:%M") if active.last_success else "Never",
+            "time_since": str(time_since).split(".")[0],
+            "last_download_date": last_download_date,
             "titles_count": titles.get_titles_count(),
             "remote_date": remote_date_str,
             "loaded_titles_file": loaded_file,
