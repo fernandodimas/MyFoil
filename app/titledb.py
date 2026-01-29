@@ -17,7 +17,7 @@ try:
 except ImportError:
     logger.warning("unzip-http module not found. Legacy ZIP TitleDB source will not be available.")
     HAS_UNZIP_HTTP = False
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 from constants import *
