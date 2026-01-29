@@ -690,6 +690,8 @@ def get_all_titles_from_db():
 
 
 def get_all_title_files(title_id):
+    if not title_id:
+        return []
     title_id = title_id.upper()
     results = Files.query.filter_by(title_id=title_id).all()
     return [to_dict(r) for r in results]

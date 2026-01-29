@@ -92,22 +92,26 @@ def load_titledb_from_db():
 
         _titles_db = {}
         for entry in cached_titles:
-            _titles_db[entry.title_id.upper()] = entry.data
+            if entry.title_id:
+                _titles_db[entry.title_id.upper()] = entry.data
 
         # Load versions from cache
         cached_versions = TitleDBVersions.query.all()
         _versions_db = {}
         for entry in cached_versions:
-            tid = entry.title_id.lower()
-            if tid not in _versions_db:
-                _versions_db[tid] = {}
-            _versions_db[tid][str(entry.version)] = entry.release_date
+            if entry.title_id:
+                tid = entry.title_id.lower()
+                if tid not in _versions_db:
+                    _versions_db[tid] = {}
+                _versions_db[tid][str(entry.version)] = entry.release_date
 
         # Load DLCs from cache and build index + REVERSE MAP
         _cnmts_db = {}
         _dlc_map = {}
         cached_dlcs = TitleDBDLCs.query.all()
         for entry in cached_dlcs:
+            if not entry.base_title_id or not entry.dlc_app_id:
+                continue
             base_tid = entry.base_title_id.lower()
             dlc_app_id = entry.dlc_app_id.upper()
 
@@ -1040,6 +1044,8 @@ def get_all_app_existing_versions(app_id):
         logger.warning("cnmts_db is not loaded. Call load_titledb first.")
         return None
 
+    if not app_id:
+        return None
     app_id = app_id.lower()
     if app_id in _cnmts_db:
         versions_from_cnmts_db = _cnmts_db[app_id].keys()
@@ -1059,6 +1065,8 @@ def get_app_id_version_from_versions_txt(app_id):
         logger.error("versions_txt_db is not loaded. Call load_titledb first.")
         return None
 
+    if not app_id:
+        return None
     app_id = app_id.lower()
     if app_id in _versions_txt_db:
         return _versions_txt_db[app_id]
@@ -1071,6 +1079,8 @@ def get_all_existing_dlc(title_id):
         logger.error("cnmts_db is not loaded. Call load_titledb first.")
         return []
 
+    if not title_id:
+        return []
     title_id = title_id.lower()
     dlcs = []
     for app_id in _cnmts_db.keys():
@@ -1093,7 +1103,7 @@ def get_loaded_titles_file():
     if isinstance(_loaded_titles_file, list):
         # Prefer showing the most specific/regional file if multiple were merged
         for f in reversed(_loaded_titles_file):
-            if "." in f and any(ext in f.lower() for ext in [".br", "pt", "pt.json", "br.json"]):
+            if f and "." in f and any(ext in f.lower() for ext in [".br", "pt", "pt.json", "br.json"]):
                 return f
         return _loaded_titles_file[-1] if _loaded_titles_file else "None"
     return _loaded_titles_file or "None"
