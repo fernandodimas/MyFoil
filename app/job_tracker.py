@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime as dt_class, timedelta
+from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 import uuid
 import logging

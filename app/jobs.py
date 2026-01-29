@@ -3,8 +3,7 @@ MyFoil - Background Jobs Module
 Contains scheduled job functions for library scanning, TitleDB updates, and backups
 """
 import logging
-import datetime
-from datetime import timedelta, datetime as dt_class
+from datetime import datetime, timedelta
 from utils import now_utc
 
 logger = logging.getLogger('jobs')
