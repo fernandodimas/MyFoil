@@ -54,11 +54,17 @@ class TitleDBSource:
             # Check if it's a raw GitHub URL
             if "raw.githubusercontent.com" in self.base_url:
                 # https://raw.githubusercontent.com/<user>/<repo>/<branch>
+                # OR https://raw.githubusercontent.com/<user>/<repo>/refs/heads/<branch>
                 parts = self.base_url.split("/")
                 if len(parts) >= 6:
                     user = parts[3]
                     repo = parts[4]
-                    branch = parts[5].rstrip("/")
+                    
+                    # Detect new GitHub URL format: .../<user>/<repo>/refs/heads/<branch>
+                    if parts[5] == "refs" and len(parts) >= 8 and parts[6] == "heads":
+                        branch = parts[7].rstrip("/")
+                    else:
+                        branch = parts[5].rstrip("/")
 
                     # Keep track if we hit rate limits to stop trying files/branches immediately
                     self._rate_limit_hit = False
@@ -179,7 +185,7 @@ class TitleDBSourceManager:
     DEFAULT_SOURCES = [
         TitleDBSource(
             name="blawar/titledb (GitHub)",
-            base_url="https://raw.githubusercontent.com/blawar/titledb/master",
+            base_url="https://raw.githubusercontent.com/blawar/titledb/refs/heads/master",
             priority=1,
             source_type="json",
         ),

@@ -1,7 +1,7 @@
 [
     {
         "name": "blawar/titledb (GitHub)",
-        "base_url": "https://raw.githubusercontent.com/blawar/titledb/master",
+        "base_url": "https://raw.githubusercontent.com/blawar/titledb/refs/heads/master",
         "enabled": true,
         "priority": 1,
         "last_success": null,
