@@ -188,6 +188,14 @@ def now_utc():
     """Returns current datetime in UTC (aware)"""
     return datetime.now(timezone.utc)
 
+def ensure_utc(dt):
+    """Ensure a datetime object is aware and in UTC. If naive, assume UTC."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
 def get_local_timezone():
     """Returns the local timezone of the system"""
     return datetime.now().astimezone().tzinfo

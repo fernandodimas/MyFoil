@@ -1,6 +1,7 @@
 import requests
 import logging
 from datetime import datetime
+from utils import now_utc, ensure_utc
 from typing import Dict, Optional, Any
 from db import db, TitleMetadata, MetadataFetchLog, Titles
 from job_tracker import job_tracker
@@ -27,7 +28,8 @@ class MetadataFetcher:
             return True
         
         # passed 12 hours?
-        hours_since_last = (datetime.now() - last_fetch.completed_at).total_seconds() / 3600
+        age = now_utc() - ensure_utc(last_fetch.completed_at)
+        hours_since_last = age.total_seconds() / 3600
         
         if hours_since_last >= 12:
             logger.info(f"Last fetch was {hours_since_last:.1f}h ago - should run")
@@ -45,7 +47,7 @@ class MetadataFetcher:
         
         # Create log entry
         fetch_log = MetadataFetchLog(
-            started_at=datetime.now(),
+            started_at=now_utc(),
             status='running'
         )
         db.session.add(fetch_log)
@@ -95,7 +97,7 @@ class MetadataFetcher:
             db.session.commit()
             
             # Update execution log
-            fetch_log.completed_at = datetime.now()
+            fetch_log.completed_at = now_utc()
             fetch_log.status = 'completed'
             fetch_log.titles_processed = processed
             fetch_log.titles_updated = updated
@@ -114,7 +116,7 @@ class MetadataFetcher:
             logger.error(f"Fatal metadata fetch error: {e}")
             fetch_log.status = 'failed'
             fetch_log.error_message = str(e)
-            fetch_log.completed_at = datetime.now()
+            fetch_log.completed_at = now_utc()
             db.session.commit()
             
             job_tracker.fail_job(job_id, str(e))
@@ -195,7 +197,7 @@ class MetadataFetcher:
             for key, value in data.items():
                 if hasattr(existing, key):
                     setattr(existing, key, value)
-            existing.updated_at = datetime.now()
+            existing.updated_at = now_utc()
         else:
             # Create new
             metadata = TitleMetadata(

@@ -9,7 +9,7 @@ import logging
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timezone
 from pathlib import Path
-from utils import format_datetime
+from utils import format_datetime, ensure_utc
 
 logger = logging.getLogger("main")
 
@@ -186,9 +186,10 @@ class TitleDBSource:
             source_type=data.get("source_type", "json"),
         )
         if data.get("last_success"):
-            source.last_success = datetime.fromisoformat(data["last_success"])
+            source.last_success = ensure_utc(datetime.fromisoformat(data["last_success"]))
+        
         if data.get("remote_date"):
-            source.remote_date = datetime.fromisoformat(data["remote_date"])
+            source.remote_date = ensure_utc(datetime.fromisoformat(data["remote_date"]))
         source.last_error = data.get("last_error")
         return source
 

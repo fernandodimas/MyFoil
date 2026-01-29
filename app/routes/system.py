@@ -10,7 +10,7 @@ from auth import access_required, admin_account_created
 import titles
 import titledb
 import json
-from utils import format_size_py
+from utils import format_size_py, now_utc, ensure_utc
 from metrics import generate_latest, CONTENT_TYPE_LATEST
 from constants import BUILD_VERSION
 
@@ -874,12 +874,16 @@ def cancel_job(job_id):
             if not job_db:
                 return jsonify({"success": False, "error": "Job not found"}), 404
 
+            # Check if already completed/failed
+            if job_db.status in ["completed", "failed"]:
+                return jsonify({"success": False, "error": "Job already finished"}), 400
+
             if job_db.status not in ["scheduled", "running"]:
                 return jsonify({"success": False, "error": f"Job is {job_db.status}, cannot cancel"}), 400
 
             # Mark as failed/cancelled
             job_db.status = "failed"
-            job_db.completed_at = datetime.now()
+            job_db.completed_at = now_utc()
             job_db.error = "Cancelled by user"
             db.session.commit()
 
@@ -895,7 +899,7 @@ def cancel_job(job_id):
         job_db = SystemJob.query.get(job_id)
         if job_db:
             job_db.status = "failed"
-            job_db.completed_at = datetime.now()
+            job_db.completed_at = now_utc()
             job_db.error = "Cancelled by user"
             db.session.commit()
 
@@ -920,13 +924,13 @@ def cleanup_jobs_api():
 
     # Cancel stuck jobs (running > 1 hour without progress update)
     try:
-        cutoff_time = datetime.now() - timedelta(hours=1)
+        cutoff_time = now_utc() - timedelta(hours=1)
         stuck_jobs = SystemJob.query.filter(SystemJob.status == "running", SystemJob.started_at < cutoff_time).all()
 
         for job in stuck_jobs:
             logger.warning(f"Marking stuck job {job.job_id} as failed (running for > 1 hour)")
             job.status = "failed"
-            job.completed_at = datetime.now()
+            job.completed_at = now_utc()
             job.error = "Job timed out (cancelled by user)"
 
         if stuck_jobs:

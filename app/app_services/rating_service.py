@@ -6,6 +6,7 @@ import time
 import logging
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
+from utils import now_utc, ensure_utc
 
 logger = logging.getLogger("main")
 
@@ -239,7 +240,7 @@ def fetch_game_metadata(title_name: str, title_id: str = None) -> Optional[Dict[
                         for s in details.get("short_screenshots", [])[:5]
                     ],
                     "api_source": "rawg",
-                    "api_last_update": datetime.now()
+                    "api_last_update": now_utc()
                 }
         except Exception as e:
             logger.warning(f"RAWG fail for {title_name}: {e}")
@@ -275,7 +276,7 @@ def fetch_game_metadata(title_name: str, title_id: str = None) -> Optional[Dict[
                 if not metadata.get("api_source"):
                     metadata["api_source"] = "igdb"
                 
-                metadata["api_last_update"] = datetime.now()
+                metadata["api_last_update"] = now_utc()
         except Exception as e:
             logger.warning(f"IGDB fail for {title_name}: {e}")
 
@@ -295,7 +296,8 @@ def should_update_metadata(game_obj) -> bool:
         except ValueError:
             return True
 
-    age = datetime.now() - actual_last_update
+    # Ensure aware UTC for age calculation
+    age = now_utc() - ensure_utc(actual_last_update)
     return age > timedelta(days=CACHE_TTL_DAYS)
 
 
@@ -321,7 +323,7 @@ def update_game_metadata(game_obj, force: bool = False):
     game_obj.tags_json = metadata.get("tags")
     game_obj.screenshots_json = metadata.get("screenshots")
     game_obj.api_source = metadata.get("api_source")
-    game_obj.api_last_update = metadata.get("api_last_update")
+    game_obj.api_last_update = metadata.get("api_last_update") or now_utc()
     
     db.session.commit()
     

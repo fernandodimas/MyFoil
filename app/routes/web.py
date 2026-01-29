@@ -127,7 +127,8 @@ def trigger_webhook(event_type, data):
                 if event_type not in events:
                     continue
 
-                payload = {"event": event_type, "timestamp": datetime.datetime.now().isoformat(), "data": data}
+                from utils import now_utc
+                payload = {"event": event_type, "timestamp": now_utc().isoformat(), "data": data}
 
                 headers = {"Content-Type": "application/json"}
                 if webhook.secret:

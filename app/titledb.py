@@ -23,7 +23,7 @@ from typing import Dict, List, Optional, Tuple
 from constants import *
 from settings import load_settings
 from titledb_sources import TitleDBSourceManager
-from utils import format_datetime, now_utc
+from utils import format_datetime, now_utc, ensure_utc
 
 # Retrieve main logger
 logger = logging.getLogger("main")
@@ -54,7 +54,7 @@ def get_region_titles_filenames(region: str, language: str) -> List[str]:
 
 def get_version_hash() -> str:
     """Get a simple version hash based on current timestamp"""
-    return datetime.now().strftime("%Y%m%d%H%M%S")
+    return now_utc().strftime("%Y%m%d%H%M%S")
 
 
 def is_file_outdated(filepath: str, max_age_hours: int = 24) -> bool:
@@ -66,8 +66,8 @@ def is_file_outdated(filepath: str, max_age_hours: int = 24) -> bool:
     if os.path.getsize(filepath) == 0:
         return True
 
-    file_time = datetime.fromtimestamp(os.path.getmtime(filepath))
-    age = datetime.now() - file_time
+    file_time = datetime.fromtimestamp(os.path.getmtime(filepath), tz=timezone.utc)
+    age = now_utc() - file_time
     return age.total_seconds() > (max_age_hours * 3600)
 
 
@@ -384,7 +384,9 @@ def get_active_source_info() -> Dict:
     if successful_sources:
         active = successful_sources[0]
         # Calculate time since update using UTC to match last_success
-        time_since = now_utc() - active.last_success
+        # Ensure aware datetime for comparison to avoid offset-naive vs offset-aware error
+        last_success = ensure_utc(active.last_success)
+        time_since = now_utc() - last_success
         is_updated = time_since.total_seconds() < (24 * 3600)  # Considered updated if < 24h
 
         # Use cached remote_date if available, otherwise fetch it
@@ -407,9 +409,8 @@ def get_active_source_info() -> Dict:
         # Check if update is available
         update_available = False
         if remote_date and active.last_success:
-            # Ensure both are naive for comparison (strip tzinfo if present)
-            comp_remote = remote_date.replace(tzinfo=None) if remote_date.tzinfo else remote_date
-            comp_success = active.last_success.replace(tzinfo=None) if active.last_success.tzinfo else active.last_success
+            comp_remote = ensure_utc(remote_date)
+            comp_success = ensure_utc(active.last_success)
             
             # If remote date is newer than last download (with 1min margin)
             if comp_remote > (comp_success + timedelta(minutes=1)):
