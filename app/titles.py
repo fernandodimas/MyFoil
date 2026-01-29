@@ -354,7 +354,16 @@ def robust_json_load(filepath):
             content = pattern.sub(replace_func, content)
             
             # Try loading again with strict=False
-            return json.loads(content, strict=False)
+            data = json.loads(content, strict=False)
+            if data:
+                # AUTO-REPAIR: Save the sanitized version back to disk
+                logger.info(f"Auto-repairing {os.path.basename(filepath)} with sanitized JSON...")
+                try:
+                    with open(filepath, 'w', encoding='utf-8') as f:
+                        json.dump(data, f, indent=2)
+                except Exception as save_err:
+                    logger.warning(f"Failed to save auto-repaired JSON: {save_err}")
+            return data
         except Exception as e2:
             logger.warning(f"Regex sanitization failed: {e2}. Falling back to slow robust recovery...")
 
@@ -370,6 +379,13 @@ def robust_json_load(filepath):
 
                 if sanitized and len(sanitized) > 0:
                     logger.info(f"Stream recovery successful! Recovered {len(sanitized)} entries.")
+                    # AUTO-REPAIR: Save the recovered blocks back to disk as a clean JSON
+                    logger.info(f"Auto-repairing {os.path.basename(filepath)} with recovered blocks...")
+                    try:
+                        with open(filepath, 'w', encoding='utf-8') as f:
+                            json.dump(sanitized, f, indent=2)
+                    except Exception as save_err:
+                        logger.warning(f"Failed to save auto-repaired JSON after stream recovery: {save_err}")
                     return sanitized
             except Exception as e:
                 logger.error(f"Error in stream recovery: {e}")
