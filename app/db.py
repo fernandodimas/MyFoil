@@ -42,7 +42,7 @@ def get_current_db_version():
 
 def create_db_backup():
     current_revision = get_current_db_version()
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = now_utc().strftime("%Y%m%d_%H%M%S")
     backup_filename = f".backup_v{current_revision}_{timestamp}.db"
     backup_path = os.path.join(CONFIG_DIR, backup_filename)
     shutil.copy2(DB_FILE, backup_path)
@@ -88,7 +88,7 @@ class Files(db.Model):
     identification_type = db.Column(db.String)
     identification_error = db.Column(db.String)
     identification_attempts = db.Column(db.Integer, default=0)
-    last_attempt = db.Column(db.DateTime, default=datetime.datetime.now())
+    last_attempt = db.Column(db.DateTime, default=now_utc)
     titledb_version = db.Column(db.String)  # TitleDB version when file was identified
 
     library = db.relationship("Libraries", backref=db.backref("files", lazy=True, cascade="all, delete-orphan"))
@@ -157,8 +157,8 @@ class TitleDBCache(db.Model):
     title_id = db.Column(db.String(16), unique=True, nullable=False, index=True)
     data = db.Column(db.JSON, nullable=False)  # Full title data as JSON
     source = db.Column(db.String(50), nullable=False)  # 'titles.json', 'titles.BR.pt.json', etc.
-    downloaded_at = db.Column(db.DateTime, nullable=False, default=db.func.now())
-    updated_at = db.Column(db.DateTime, nullable=False, default=db.func.now(), onupdate=db.func.now())
+    downloaded_at = db.Column(db.DateTime, nullable=False, default=now_utc)
+    updated_at = db.Column(db.DateTime, nullable=False, default=now_utc, onupdate=now_utc)
 
     # Indexes for fast lookups
     __table_args__ = (db.Index("idx_source", "source"),)
@@ -262,7 +262,7 @@ class Wishlist(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"))
     title_id = db.Column(db.String, index=True)
-    added_date = db.Column(db.DateTime, default=datetime.datetime.now)
+    added_date = db.Column(db.DateTime, default=now_utc)
     priority = db.Column(db.Integer, default=0)  # 0-5
     notes = db.Column(db.Text)
 
@@ -279,7 +279,7 @@ class WishlistIgnore(db.Model):
     title_id = db.Column(db.String, index=True, nullable=False)
     ignore_dlcs = db.Column(db.Text, default="{}")  # JSON: {"app_id1": true, "app_id2": false, ...}
     ignore_updates = db.Column(db.Text, default="{}")  # JSON: {"v1": true, "v2": false, ...}
-    created_at = db.Column(db.DateTime, default=datetime.datetime.now)
+    created_at = db.Column(db.DateTime, default=now_utc)
 
     __table_args__ = (db.UniqueConstraint("user_id", "title_id", name="uix_user_title_ignore"),)
 
@@ -331,8 +331,8 @@ class TitleMetadata(db.Model):
     source_id = db.Column(db.String(100))  # ID in source system
 
     # Timestamps
-    fetched_at = db.Column(db.DateTime, default=datetime.datetime.now)
-    updated_at = db.Column(db.DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    fetched_at = db.Column(db.DateTime, default=now_utc)
+    updated_at = db.Column(db.DateTime, default=now_utc, onupdate=now_utc)
 
     # Relationship handled by backref on metadata_entries
 
@@ -862,7 +862,7 @@ def get_library_file_paths(library_id):
 
 def set_library_scan_time(library_id, scan_time=None):
     library = get_library(library_id)
-    library.last_scan = scan_time or datetime.datetime.now()
+    library.last_scan = scan_time or now_utc()
     db.session.commit()
 
 

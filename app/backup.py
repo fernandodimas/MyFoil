@@ -1,7 +1,8 @@
 import os
 import shutil
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
+from utils import now_utc
 
 logger = logging.getLogger('main')
 
@@ -14,7 +15,7 @@ class BackupManager:
     
     def create_backup(self):
         """Create a timestamped backup of database and settings"""
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = now_utc().strftime('%Y%m%d_%H%M%S')
         backup_created = False
         
         try:
@@ -102,7 +103,7 @@ class BackupManager:
                         'filename': filename,
                         'path': filepath,
                         'size': stat.st_size,
-                        'created': datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                        'created': datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
                         'type': self._get_backup_type(filename)
                     })
             

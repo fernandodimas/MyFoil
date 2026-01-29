@@ -379,7 +379,7 @@ def get_active_source_info() -> Dict:
 
     # Sort by last success time (descending) to find the most recently used
     successful_sources = [s for s in sources if s.last_success]
-    successful_sources.sort(key=lambda s: s.last_success, reverse=True)
+    successful_sources.sort(key=lambda s: ensure_utc(s.last_success), reverse=True)
 
     if successful_sources:
         active = successful_sources[0]

@@ -92,6 +92,7 @@ from file_watcher import Watcher
 import threading
 import datetime
 from datetime import timedelta
+from utils import now_utc
 
 # Global variables
 app_settings = {}
@@ -559,7 +560,7 @@ def check_initial_scan(app):
             func=create_automatic_backup,
             interval=timedelta(days=1),
             run_first=False,
-            start_date=datetime.datetime.now().replace(hour=3, minute=0, second=0, microsecond=0),
+            start_date=now_utc().replace(hour=3, minute=0, second=0, microsecond=0),
         )
 
     log_activity("system_startup", details={"version": BUILD_VERSION})

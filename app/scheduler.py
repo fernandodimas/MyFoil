@@ -2,6 +2,7 @@ import threading
 import time
 import logging
 from datetime import datetime, timedelta
+from utils import now_utc, ensure_utc
 from typing import Callable, Dict, Any, Optional, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from flask import Flask
@@ -37,7 +38,7 @@ class JobScheduler:
             logger.info("Scheduler loop exited.")
 
     def _check_jobs(self):
-        now = datetime.now().replace(microsecond=0)
+        now = now_utc().replace(microsecond=0)
         with self._lock:
             for job_id, job in list(self.scheduled_jobs.items()):
                 if job['next_run'] <= now:
@@ -51,7 +52,7 @@ class JobScheduler:
                     logger.info(f"Starting job {job['id']}")
                     job['func'](*job.get('args', []), **job.get('kwargs', {}))
                     with self._lock:
-                        job['last_run'] = datetime.now().replace(microsecond=0)
+                        job['last_run'] = now_utc().replace(microsecond=0)
                         job['last_error'] = None
                     schedule_info = f" Next run at {job['next_run']}" if not job.get('run_once') else ""
                     logger.info(f"Completed job {job['id']}.{schedule_info}")
@@ -69,7 +70,7 @@ class JobScheduler:
                 del self.scheduled_jobs[job['id']]
                 logger.info(f"Job {job['id']} completed and removed (one-off).")
         else:
-            now = datetime.now().replace(microsecond=0)
+            now = now_utc().replace(microsecond=0)
             if job['interval']:
                 job['next_run'] = now + job['interval']
             elif job['cron']:
@@ -77,7 +78,7 @@ class JobScheduler:
 
     def _next_cron(self, cron_expr: str) -> datetime:
         try:
-            base = datetime.now().replace(microsecond=0)
+            base = now_utc().replace(microsecond=0)
             return croniter(cron_expr, base).get_next(datetime)
         except CroniterBadCronError:
             raise ValueError(f"Invalid cron expression: {cron_expr}")
@@ -101,10 +102,10 @@ class JobScheduler:
             if not (cron or interval or run_once):
                 raise ValueError("Must provide either cron, interval, or run_once=True.")
             
-            now = datetime.now().replace(microsecond=0)
+            now = now_utc().replace(microsecond=0)
             if run_once:
                 if start_date:
-                    next_run = start_date
+                    next_run = ensure_utc(start_date)
                 else:
                     next_run = now
             elif run_first: # If run_first is True, execute immediately

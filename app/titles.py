@@ -2,7 +2,6 @@ import os
 import re
 import json
 import time
-import datetime
 
 import titledb
 from constants import *
@@ -43,7 +42,7 @@ def format_release_date(date_input):
     # Tentar parsear outros formatos
     for fmt in ["%Y/%m/%d", "%d/%m/%Y", "%m/%d/%Y", "%Y%m%d"]:
         try:
-            parsed = datetime.datetime.strptime(date_str, fmt)
+            parsed = datetime.strptime(date_str, fmt)
             return parsed.strftime("%Y-%m-%d")
         except ValueError:
             continue
@@ -152,7 +151,7 @@ def save_titledb_to_db(source_files, app_context=None):
 
         logger.info("Saving TitleDB to database cache...")
 
-        now = datetime.datetime.now()
+        now = now_utc()
 
         # Clear old cache entries - use raw execution for speed and reliability
         try:

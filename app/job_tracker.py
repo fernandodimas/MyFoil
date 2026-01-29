@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime as dt_class, timedelta
 from typing import Optional, Dict, Any, List
 import uuid
 import logging
@@ -240,7 +240,7 @@ class JobTracker:
             with app.app_context():
                 from db import SystemJob
                 # Get last 24h jobs or all active ones
-                cutoff = datetime.now() - timedelta(hours=24)
+                cutoff = now_utc() - timedelta(hours=24)
                 jobs = SystemJob.query.filter(
                     (SystemJob.status.in_([JobStatus.SCHEDULED, JobStatus.RUNNING])) |
                     (SystemJob.completed_at > cutoff)
@@ -286,7 +286,7 @@ class JobTracker:
         try:
             with app.app_context():
                 from db import db, SystemJob
-                cutoff = datetime.now() - timedelta(hours=max_age_hours)
+                cutoff = now_utc() - timedelta(hours=max_age_hours)
                 SystemJob.query.filter(
                     (SystemJob.status.in_([JobStatus.COMPLETED, JobStatus.FAILED])) &
                     (SystemJob.completed_at < cutoff)

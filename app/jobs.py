@@ -4,7 +4,8 @@ Contains scheduled job functions for library scanning, TitleDB updates, and back
 """
 import logging
 import datetime
-from datetime import timedelta
+from datetime import timedelta, datetime as dt_class
+from utils import now_utc
 
 logger = logging.getLogger('jobs')
 
@@ -78,10 +79,10 @@ def scan_library_job(app=None):
             logger.info("Skipping scheduled library scan: update_titledb job is currently in progress.")
             if app and hasattr(app, 'scheduler'):
                 app.scheduler.add_job(
-                    job_id=f'scan_library_rescheduled_{datetime.datetime.now().timestamp()}',
+                    job_id=f'scan_library_rescheduled_{now_utc().timestamp()}',
                     func=lambda: scan_library_job(app),
                     run_once=True,
-                    start_date=datetime.datetime.now().replace(microsecond=0) + timedelta(minutes=5)
+                    start_date=now_utc().replace(microsecond=0) + timedelta(minutes=5)
                 )
             return
 
@@ -225,7 +226,7 @@ def schedule_jobs(app, run_now=False):
         func=lambda: create_backup_job(app),
         interval=timedelta(days=1),
         run_first=False,
-        start_date=datetime.datetime.now().replace(hour=3, minute=0, second=0, microsecond=0)
+        start_date=now_utc().replace(hour=3, minute=0, second=0, microsecond=0)
     )
     
     logger.info("Background jobs scheduled")
