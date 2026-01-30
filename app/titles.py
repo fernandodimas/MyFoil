@@ -153,15 +153,33 @@ def save_titledb_to_db(source_files, app_context=None):
 
         now = now_utc()
 
-        # Clear old cache entries - use raw execution for speed and reliability
-        try:
-            db.session.execute(db.text("DELETE FROM titledb_cache"))
-            db.session.execute(db.text("DELETE FROM titledb_versions"))
-            db.session.execute(db.text("DELETE FROM titledb_dlcs"))
-            db.session.commit()
-        except Exception as e:
-            logger.warning(f"Could not clear old cache via delete: {e}")
-            db.session.rollback()
+        # Try to clear old cache entries with retries
+        import time
+        from sqlalchemy.exc import OperationalError
+        
+        max_retries = 3
+        retry_delay = 2
+        
+        for attempt in range(max_retries):
+            try:
+                db.session.execute(db.text("DELETE FROM titledb_cache"))
+                db.session.execute(db.text("DELETE FROM titledb_versions"))
+                db.session.execute(db.text("DELETE FROM titledb_dlcs"))
+                db.session.commit()
+                break
+            except OperationalError as e:
+                if "locked" in str(e).lower() and attempt < max_retries - 1:
+                    logger.warning(f"Database locked while clearing cache (attempt {attempt+1}). Retrying in {retry_delay}s...")
+                    db.session.rollback()
+                    time.sleep(retry_delay)
+                    continue
+                logger.warning(f"Could not clear old cache via delete: {e}")
+                db.session.rollback()
+                break
+            except Exception as e:
+                logger.warning(f"Error clearing cache: {e}")
+                db.session.rollback()
+                break
 
         # Try to import gevent for cooperative multitasking
         try:
@@ -196,8 +214,18 @@ def save_titledb_to_db(source_files, app_context=None):
             )
 
             if len(pending_entries) >= BATCH_SIZE:
-                db.session.bulk_save_objects(pending_entries)
-                db.session.commit()
+                for attempt in range(max_retries):
+                    try:
+                        db.session.bulk_save_objects(pending_entries)
+                        db.session.commit()
+                        break
+                    except OperationalError as e:
+                        if "locked" in str(e).lower() and attempt < max_retries - 1:
+                            logger.warning(f"DB locked during bulk save (attempt {attempt+1}). Retrying...")
+                            db.session.rollback()
+                            time.sleep(retry_delay)
+                            continue
+                        raise
                 pending_entries = []  # Release memory
 
                 # Yield after DB commit
@@ -207,8 +235,18 @@ def save_titledb_to_db(source_files, app_context=None):
         # Save remaining entries
         title_count = len(seen_titles)
         if pending_entries:
-            db.session.bulk_save_objects(pending_entries)
-            db.session.commit()
+            for attempt in range(max_retries):
+                try:
+                    db.session.bulk_save_objects(pending_entries)
+                    db.session.commit()
+                    break
+                except OperationalError as e:
+                    if "locked" in str(e).lower() and attempt < max_retries - 1:
+                        logger.warning(f"DB locked during final bulk save (attempt {attempt+1})...")
+                        db.session.rollback()
+                        time.sleep(retry_delay)
+                        continue
+                    raise
             pending_entries = []
 
         # Batch insert versions
@@ -237,8 +275,18 @@ def save_titledb_to_db(source_files, app_context=None):
                     )
 
                     if len(version_entries) >= BATCH_SIZE * 2:  # 4000 items
-                        db.session.bulk_save_objects(version_entries)
-                        db.session.commit()
+                        for attempt in range(max_retries):
+                            try:
+                                db.session.bulk_save_objects(version_entries)
+                                db.session.commit()
+                                break
+                            except OperationalError as e:
+                                if "locked" in str(e).lower() and attempt < max_retries - 1:
+                                    logger.warning(f"DB locked during versions bulk save (attempt {attempt+1})...")
+                                    db.session.rollback()
+                                    time.sleep(retry_delay)
+                                    continue
+                                raise
                         version_entries = []
                         if gevent:
                             gevent.sleep(0.01)
@@ -246,8 +294,18 @@ def save_titledb_to_db(source_files, app_context=None):
                     continue
 
         if version_entries:
-            db.session.bulk_save_objects(version_entries)
-            db.session.commit()
+            for attempt in range(max_retries):
+                try:
+                    db.session.bulk_save_objects(version_entries)
+                    db.session.commit()
+                    break
+                except OperationalError as e:
+                    if "locked" in str(e).lower() and attempt < max_retries - 1:
+                        logger.warning(f"DB locked during final versions bulk save (attempt {attempt+1})...")
+                        db.session.rollback()
+                        time.sleep(retry_delay)
+                        continue
+                    raise
             version_count = len(version_entries)
         else:
             version_count = len(version_items)
@@ -272,15 +330,35 @@ def save_titledb_to_db(source_files, app_context=None):
                 dlc_entries.append(TitleDBDLCs(base_title_id=base_upper, dlc_app_id=dlc_upper))
 
                 if len(dlc_entries) >= BATCH_SIZE * 2:
-                    db.session.bulk_save_objects(dlc_entries)
-                    db.session.commit()
+                    for attempt in range(max_retries):
+                        try:
+                            db.session.bulk_save_objects(dlc_entries)
+                            db.session.commit()
+                            break
+                        except OperationalError as e:
+                            if "locked" in str(e).lower() and attempt < max_retries - 1:
+                                logger.warning(f"DB locked during DLC bulk save (attempt {attempt+1})...")
+                                db.session.rollback()
+                                time.sleep(retry_delay)
+                                continue
+                            raise
                     dlc_entries = []
                     if gevent:
                         gevent.sleep(0.01)
 
         if dlc_entries:
-            db.session.bulk_save_objects(dlc_entries)
-            db.session.commit()
+            for attempt in range(max_retries):
+                try:
+                    db.session.bulk_save_objects(dlc_entries)
+                    db.session.commit()
+                    break
+                except OperationalError as e:
+                    if "locked" in str(e).lower() and attempt < max_retries - 1:
+                        logger.warning(f"DB locked during final DLC bulk save (attempt {attempt+1})...")
+                        db.session.rollback()
+                        time.sleep(retry_delay)
+                        continue
+                    raise
             dlc_count = len(dlc_entries)
         else:
             dlc_count = len(seen_dlcs)

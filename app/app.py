@@ -211,10 +211,11 @@ logging.getLogger("alembic.runtime.migration").setLevel(logging.WARNING)
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
-    """Configure SQLite pragmas for better performance"""
+    """Configure SQLite pragmas for better performance and concurrency"""
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.execute("PRAGMA busy_timeout=30000")  # 30 seconds timeout for locked DB
     cursor.close()
 
 
@@ -572,6 +573,11 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = MYFOIL_DB
     app.config["SECRET_KEY"] = get_or_create_secret_key()
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "connect_args": {
+            "timeout": 30  # SQLite busy timeout in seconds
+        }
+    }
 
     # Initialize components
     db.init_app(app)
