@@ -146,7 +146,7 @@ def trigger_webhook(event_type, data):
             logger.error(f"Error in trigger_webhook: {e}")
 
 
-@web_bp.route("/api/renaming/preview")
+@web_bp.route("/api/renaming/preview", methods=["POST"])
 @access_required("admin")
 def preview_renaming_api():
     """Pré-visualizar renomeação de arquivos"""
@@ -184,7 +184,7 @@ def preview_renaming_api():
     return jsonify({"success": True, "preview": results})
 
 
-@web_bp.route("/api/renaming/run")
+@web_bp.route("/api/renaming/run", methods=["POST"])
 @access_required("admin")
 def run_renaming_api():
     """Executar renomeação de arquivos"""
