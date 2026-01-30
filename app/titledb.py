@@ -391,11 +391,16 @@ def get_active_source_info() -> Dict:
 
         # Use cached remote_date if available, otherwise fetch it
         remote_date = active.remote_date
+        # Use cached remote_date if available, otherwise trigger background fetch
+        remote_date = active.remote_date
         if not remote_date:
-            # Fetch remote date using versions files as the main indicator
-            remote_date = active.get_last_modified_date(["versions.json", "versions.txt"])
-            # Cache it in the object for this session
-            active.remote_date = remote_date
+            # If not already fetching, trigger a background update
+            if not getattr(active, "is_fetching", False):
+                 # Use the source manager from global scope to refresh
+                source_manager.refresh_remote_dates()
+            
+            # Return current None state for now (UI shows Unknown/Spinning)
+            remote_date = None
 
         remote_date_str = "Unknown"
         if remote_date:
