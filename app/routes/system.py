@@ -451,6 +451,20 @@ def force_titledb_update_api():
     return jsonify({"success": True, "message": "Update started in background"})
 
 
+@system_bp.post("/system/reidentify-all")
+@access_required("admin")
+def reidentify_all_api():
+    """Trigger complete re-identification of all files"""
+    from library import reidentify_all_files_job
+    import threading
+    
+    # Run in background thread (although it uses gevent inside, we need to spawn it)
+    threading.Thread(target=reidentify_all_files_job).start()
+    
+    return jsonify({"success": True, "message": "Re-identification job started"})
+
+
+
 @system_bp.post("/settings/titledb/sources/refresh-dates")
 @access_required("admin")
 def refresh_titledb_sources_dates_api():

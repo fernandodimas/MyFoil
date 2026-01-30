@@ -216,7 +216,27 @@ def save_titledb_to_db(source_files, app_context=None):
             if len(pending_entries) >= BATCH_SIZE:
                 for attempt in range(max_retries):
                     try:
-                        db.session.bulk_save_objects(pending_entries)
+                        # Use upsert to handle duplicates
+                        from sqlalchemy.dialects.sqlite import insert
+                        
+                        for entry in pending_entries:
+                            stmt = insert(TitleDBCache).values(
+                                title_id=entry.title_id,
+                                data=entry.data,
+                                source=entry.source,
+                                downloaded_at=entry.downloaded_at,
+                                updated_at=entry.updated_at
+                            )
+                            stmt = stmt.on_conflict_do_update(
+                                index_elements=['title_id'],
+                                set_=dict(
+                                    data=stmt.excluded.data,
+                                    source=stmt.excluded.source,
+                                    updated_at=stmt.excluded.updated_at
+                                )
+                            )
+                            db.session.execute(stmt)
+                        
                         db.session.commit()
                         break
                     except OperationalError as e:
@@ -237,7 +257,27 @@ def save_titledb_to_db(source_files, app_context=None):
         if pending_entries:
             for attempt in range(max_retries):
                 try:
-                    db.session.bulk_save_objects(pending_entries)
+                    # Use upsert to handle duplicates
+                    from sqlalchemy.dialects.sqlite import insert
+                    
+                    for entry in pending_entries:
+                        stmt = insert(TitleDBCache).values(
+                            title_id=entry.title_id,
+                            data=entry.data,
+                            source=entry.source,
+                            downloaded_at=entry.downloaded_at,
+                            updated_at=entry.updated_at
+                        )
+                        stmt = stmt.on_conflict_do_update(
+                            index_elements=['title_id'],
+                            set_=dict(
+                                data=stmt.excluded.data,
+                                source=stmt.excluded.source,
+                                updated_at=stmt.excluded.updated_at
+                            )
+                        )
+                        db.session.execute(stmt)
+                    
                     db.session.commit()
                     break
                 except OperationalError as e:
@@ -405,12 +445,31 @@ def robust_json_load(filepath):
     if not os.path.exists(filepath):
         return None
 
+    # CACHE SYSTEM: Check for pre-sanitized .clean file
+    clean_filepath = filepath + ".clean"
+    if os.path.exists(clean_filepath):
+        # Check if clean file is newer than source file
+        if os.path.getmtime(clean_filepath) >= os.path.getmtime(filepath):
+            try:
+                with open(clean_filepath, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                logger.warning(f"Failed to load cached clean file {clean_filepath}: {e}")
+                # Fall through to process original file
+    
     # Try 0: Fast load first (Native JSON parser is much faster)
     try:
         filesize = os.path.getsize(filepath)
-        if filesize < 200 * 1024 * 1024:
+        # Increase limit for fast load to avoid unnecessary sanitization for valid big files
+        if filesize < 500 * 1024 * 1024: 
             with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
-                return json.load(f)
+                data = json.load(f)
+                
+                # Create clean marker for valid files too
+                # This prevents re-parsing logic checks next time if we wanted to
+                # But mostly we use .clean for files that NEEDED sanitization.
+                # However, for consistency, we could just return here.
+                return data
     except Exception as e:
         # Step 1: Semi-Fast Load - Fix invalid escapes with Regex
         # This is the most common issue in TitleDB JSONs (bare backslashes)
@@ -433,11 +492,18 @@ def robust_json_load(filepath):
             # Try loading again with strict=False
             data = json.loads(content, strict=False)
             if data:
-                # AUTO-REPAIR: Save the sanitized version back to disk
-                logger.info(f"Auto-repairing {os.path.basename(filepath)} with sanitized JSON...")
+                # AUTO-REPAIR: Save the sanitized version to .clean file
+                # We don't overwrite the original to avoid conflict with downloaders or re-downloads
+                logger.info(f"Sanitized {os.path.basename(filepath)} successfully. Saving to cache...")
                 try:
-                    with open(filepath, 'w', encoding='utf-8') as f:
+                    with open(clean_filepath, 'w', encoding='utf-8') as f:
                         json.dump(data, f, indent=2)
+                    
+                    # Update mtime of clean file to be definitely newer than source
+                    # (in case everything happened in the same second)
+                    now = time.time()
+                    times = (now, now)
+                    os.utime(clean_filepath, times)
                 except Exception as save_err:
                     logger.warning(f"Failed to save auto-repaired JSON: {save_err}")
             return data
@@ -598,7 +664,7 @@ def identify_appId(app_id):
     return title_id.upper() if title_id else app_id.upper(), app_type
 
 
-def load_titledb(force=False):
+def load_titledb(force=False, progress_callback=None):
     global _cnmts_db
     global _titles_db
     global _versions_db
@@ -633,11 +699,16 @@ def load_titledb(force=False):
     if not _titles_db_loaded:
         # Priority 1: Try loading from database cache (fast - < 100ms)
         if is_db_cache_valid():
+            if progress_callback:
+                progress_callback("Carregando do cache interno...", 10)
+            
             if load_titledb_from_db():
                 identification_in_progress_count -= 1
                 return
 
         logger.info("Loading TitleDBs into memory...")
+        if progress_callback:
+            progress_callback("Iniciando leitura de arquivos...", 15)
 
         # Ensure TitleDB directory exists
         try:
@@ -655,6 +726,8 @@ def load_titledb(force=False):
         app_settings = load_settings()
 
         _cnmts_db = robust_json_load(os.path.join(TITLEDB_DIR, "cnmts.json"))
+        
+        if gevent: gevent.sleep(0.01)
 
         # Database fallback chain: Region -> US/en -> Generic titles.json
         region = app_settings.get("titles", {}).get("region", "US")
@@ -714,7 +787,12 @@ def load_titledb(force=False):
 
         logger.info(f"TitleDB Load Order: {', '.join(load_order)}")
 
-        for filename in load_order:
+        total_files = len(load_order)
+        for i, filename in enumerate(load_order):
+            if progress_callback:
+                progress = 20 + int((i / total_files) * 60)
+                progress_callback(f"Processando {filename}...", progress)
+                
             filepath = os.path.join(TITLEDB_DIR, filename)
             # Skip corrupted files
             if filename.endswith(".corrupted") or filepath.endswith(".corrupted"):
@@ -723,6 +801,9 @@ def load_titledb(force=False):
             if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
                 logger.info(f"Loading TitleDB: {filename}...")
                 loaded = robust_json_load(filepath)
+                
+                if gevent: gevent.sleep(0.01) # Yield after load
+                
                 if loaded:
                     count = len(loaded) if isinstance(loaded, (dict, list)) else 0
                     if count > 0:
@@ -741,10 +822,10 @@ def load_titledb(force=False):
                         if not _titles_db:
                             _titles_db = current_batch
                         else:
-                            i = 0
+                            j = 0
                             for tid, data in current_batch.items():
-                                i += 1
-                                if i % 1000 == 0:
+                                j += 1
+                                if j % 1000 == 0:
                                     try:
                                         import gevent
                                         gevent.sleep(0.001)

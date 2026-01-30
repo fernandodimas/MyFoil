@@ -275,6 +275,7 @@ def on_library_change(events):
                     add_files_to_library(library_path, files_to_process)
 
                     # Identify files
+                    # Identify files
                     if CELERY_ENABLED:
                         from tasks import identify_file_async
 
@@ -283,10 +284,13 @@ def on_library_change(events):
                             identify_file_async.delay(filepath)
                         logger.info(f"Queued async identification for {len(files_to_process)} files")
                     else:
-                        from library import identify_library_files
+                        # CRITICAL FIX: Use new identify_single_file function
+                        from library import identify_single_file
 
-                        logger.info(f"Identifying files in {library_path}")
-                        identify_library_files(library_path)
+                        logger.info(f"Identifying {len(files_to_process)} files individually")
+                        for filepath in files_to_process:
+                            logger.info(f"Identifying file: {filepath}")
+                            identify_single_file(filepath)
 
         # CRITICAL: Always call post_library_change to update cache and notifying frontend
         # This fixes issues where badges/filters wouldn't update after new files were added
@@ -334,8 +338,21 @@ def update_titledb_job(force=False):
                 titledb.update_titledb_files(current_settings, force=force, job_id=job_id)
                 
                 # Step 2: Reload memory cache
-                job_tracker.update_progress(job_id, 3, 10, "Reloading into memory...")
-                titles.load_titledb(force=True)
+                # Define progress callback for granular updates
+                def progress_cb(msg, percent):
+                    # Map load_titledb progress (0-100) to job progress (1-4)
+                    # This is just for the loading phase
+                    scaled_progress = 1 + (percent / 100 * 3)
+                    job_tracker.update_progress(job_id, int(scaled_progress), 10, msg)
+                    try:
+                        import gevent
+                        gevent.sleep(0)
+                    except:
+                        pass
+
+                # Step 2: Reload memory cache
+                # titles.load_titledb will call progress_cb
+                titles.load_titledb(force=True, progress_callback=progress_cb)
 
                 # Step 3: Sync to SQLite (The title data itself)
                 job_tracker.update_progress(job_id, 5, 10, "Syncing database metadata...")
@@ -351,7 +368,7 @@ def update_titledb_job(force=False):
                 # and let the user trigger a scan if they want a full refresh.
                 job_tracker.update_progress(job_id, 8, 10, "Refreshing library views...")
                 invalidate_library_cache()
-                generate_library(force=True)
+                # generate_library(force=True)  <-- REMOVED: Too slow and blocking
                 
                 job_tracker.update_progress(job_id, 10, 10, "Finalizing...")
                 logger.info("TitleDB update completed and library views refreshed.")

@@ -94,7 +94,9 @@ def add_library_path_to_settings(path):
     settings["library"]["paths"] = library_paths
     with open(CONFIG_FILE, "w") as yaml_file:
         yaml.dump(settings, yaml_file)
+    reload_conf()
     return success, errors
+
 
 
 def delete_library_path_from_settings(path):
@@ -108,10 +110,12 @@ def delete_library_path_from_settings(path):
             settings["library"]["paths"] = library_paths
             with open(CONFIG_FILE, "w") as yaml_file:
                 yaml.dump(settings, yaml_file)
+            reload_conf()
         else:
             success = False
             errors.append({"path": "library/paths", "error": f"Path {path} not configured."})
     return success, errors
+
 
 
 def set_titles_settings(region, language, dbi_versions=None, auto_use_latest=None):
@@ -124,6 +128,8 @@ def set_titles_settings(region, language, dbi_versions=None, auto_use_latest=Non
         settings["titles"]["auto_use_latest"] = auto_use_latest
     with open(CONFIG_FILE, "w") as yaml_file:
         yaml.dump(settings, yaml_file)
+    reload_conf()
+
 
 
 def set_shop_settings(data):
@@ -134,6 +140,8 @@ def set_shop_settings(data):
     settings["shop"].update(data)
     with open(CONFIG_FILE, "w") as yaml_file:
         yaml.dump(settings, yaml_file)
+    reload_conf()
+
 
 
 def toggle_plugin_settings(plugin_id, enabled):
@@ -153,7 +161,9 @@ def toggle_plugin_settings(plugin_id, enabled):
     settings["plugins"]["disabled"] = disabled_list
     with open(CONFIG_FILE, "w") as yaml_file:
         yaml.dump(settings, yaml_file)
+    reload_conf()
     return True
+
 
 
 def reload_conf():

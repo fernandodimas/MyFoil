@@ -344,6 +344,143 @@ def get_files_to_identify(library_id):
     return non_identified_files
 
 
+def identify_single_file(filepath):
+    """
+    Identify a single file and create Apps records.
+    This is called by the file watcher when new files are detected.
+    
+    Args:
+        filepath: Absolute path to the file to identify
+        
+    Returns:
+        bool: True if identification succeeded, False otherwise
+    """
+    import titles as titles_lib
+    
+    # Get file from database
+    file_obj = Files.query.filter_by(filepath=filepath).first()
+    if not file_obj:
+        logger.warning(f"File not found in database: {filepath}")
+        return False
+    
+    # Skip if already identified and has Apps associations
+    if file_obj.identified and file_obj.apps and len(file_obj.apps) > 0:
+        logger.debug(f"File already identified with Apps: {filepath}")
+        return True
+    
+    # Check if file still exists on disk
+    if not os.path.exists(filepath):
+        logger.warning(f"File no longer exists on disk: {filepath}")
+        try:
+             # Remove file from apps associations FIRST
+            if file_obj.apps:
+                file_obj.apps.clear()
+            
+            db.session.delete(file_obj)
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"Error removing non-existent file: {e}")
+            db.session.rollback()
+        return False
+    
+    try:
+        # Ensure TitleDB is loaded
+        titles_lib.load_titledb()
+        
+        # Identify file
+        logger.info(f"Identifying single file: {file_obj.filename}")
+        identification, success, contents, error = titles_lib.identify_file(filepath)
+        
+        if success and contents and not error:
+            # Clear old associations before adding new ones
+            if file_obj.apps:
+                file_obj.apps.clear()
+            
+            # Add title IDs to database
+            title_ids = list(dict.fromkeys([c["title_id"] for c in contents]))
+            for title_id in title_ids:
+                add_title_id_in_db(title_id)
+            
+            # Create Apps records
+            nb_content = 0
+            for file_content in contents:
+                logger.info(
+                    f"Found content - Title ID: {file_content['title_id']} "
+                    f"App ID: {file_content['app_id']} "
+                    f"Type: {file_content['type']} "
+                    f"Version: {file_content['version']}"
+                )
+                
+                title_id_in_db = get_title_id_db_id(file_content["title_id"])
+                
+                # Check if app already exists
+                existing_app = get_app_by_id_and_version(
+                    file_content["app_id"], 
+                    file_content["version"]
+                )
+                
+                if existing_app:
+                    # Add file to existing app using many-to-many relationship
+                    # Check if connection already exists to avoid duplicates (though set usage helps)
+                    if file_obj not in existing_app.files:
+                        existing_app.files.append(file_obj)
+                else:
+                    # Create new app entry and add file
+                    new_app = Apps(
+                        app_id=file_content["app_id"],
+                        app_version=file_content["version"],
+                        app_type=file_content["type"],
+                        owned=True,
+                        title_id=title_id_in_db,
+                    )
+                    db.session.add(new_app)
+                    db.session.flush()  # Flush to get the app ID
+                    
+                    # Add the file to the new app
+                    new_app.files.append(file_obj)
+                
+                nb_content += 1
+            
+            # Update file record
+            file_obj.identified = True
+            file_obj.identification_type = identification
+            file_obj.identification_error = None
+            file_obj.nb_content = nb_content
+            file_obj.multicontent = nb_content > 1
+            file_obj.identification_attempts += 1
+            file_obj.last_attempt = now_utc()
+            
+            # Update TitleDB version timestamp
+            current_titledb_ts = titles_lib.get_titledb_cache_timestamp()
+            if current_titledb_ts:
+                file_obj.titledb_version = str(current_titledb_ts)
+            
+            db.session.commit()
+            logger.info(f"Successfully identified file: {file_obj.filename} ({nb_content} content(s))")
+            return True
+        else:
+            # Identification failed
+            file_obj.identified = False
+            file_obj.identification_error = error
+            file_obj.identification_attempts += 1
+            file_obj.last_attempt = now_utc()
+            db.session.commit()
+            logger.warning(f"Failed to identify file: {file_obj.filename} - {error}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error identifying file {filepath}: {e}")
+        try:
+            file_obj.identification_error = str(e)
+            file_obj.identified = False
+            file_obj.identification_attempts += 1
+            file_obj.last_attempt = now_utc()
+            db.session.commit()
+        except:
+            db.session.rollback()
+        return False
+
+
 def identify_library_files(library):
     if isinstance(library, int) or library.isdigit():
         library_id = library
@@ -977,6 +1114,103 @@ def get_game_info_item(tid, title_data):
     version_list = []
     for upd in update_apps:
         v_int = int(upd["app_version"])
+        version_list.append(
+            {
+                "version": upd["app_version"],
+                "release_date": version_release_dates.get(upd["app_version"]),
+            }
+        )
+
+    return sorted(version_list, key=lambda x: int(x["version"]), reverse=True)
+
+
+def reidentify_all_files_job():
+    """Re-identify all files from scratch"""
+    from job_tracker import job_tracker
+    import gevent
+    
+    logger.info("Starting complete re-identification job...")
+    job_id = f"reidentify_all_{int(datetime.datetime.now().timestamp())}"
+    job_tracker.register_job("reidentify_all", {}, job_id=job_id)
+    job_tracker.start_job(job_id)
+    
+    try:
+        # Step 1: Clear all Apps associations
+        logger.info("Clearing all Apps associations...")
+        job_tracker.update_progress(job_id, 0, 100, "Clearing database associations...")
+        
+        # Delete associations using raw SQL for speed or ORM
+        # Using ORM for safety regarding cascade
+        # Note: We need to be careful not to delete files themselves, just the links
+        
+        # We can iterate and clear .apps for all files, but that's slow.
+        # Faster: Delete all Apps records. Files are linked via association table.
+        # If we delete Apps records, the association table entries should go away if cascade is set.
+        # Let's check model. Apps has no direct relationship to Files in definition above, 
+        # but Files has 'apps' backref presumably through secondary.
+        # Actually Files definition showed:
+        # library = db.relationship(...)
+        # no explicit 'apps' in the snippet I saw, but logic uses file.apps.
+        # Assume Many-to-Many via 'apps_files' (or similar).
+        
+        # Safest way without assuming schema details too much:
+        # Clear 'identified' flag on all files.
+        # Delete all Apps.
+        
+        stmt = Files.query.update({
+            'identified': False,
+            'identification_error': None,
+            'identification_attempts': 0
+        })
+        logger.info(f"Reset {stmt} files to unidentified state.")
+        
+        # Delete all apps
+        num_apps = Apps.query.delete()
+        logger.info(f"Deleted {num_apps} apps records.")
+        
+        db.session.commit()
+        
+        # Step 3: Re-identify all files
+        logger.info("Re-identifying all files...")
+        all_files = Files.query.all()
+        total = len(all_files)
+        
+        if total == 0:
+            job_tracker.complete_job(job_id, "No files to identify")
+            return True
+
+        for i, file_obj in enumerate(all_files):
+            # Calculate progress
+            # 5-95% is identification
+            progress = 5 + int((i / total) * 90)
+            
+            job_tracker.update_progress(
+                job_id, 
+                progress, 
+                100,
+                f"Identifying {file_obj.filename} ({i+1}/{total})"
+            )
+            
+            identify_single_file(file_obj.filepath)
+            
+            # Yield every 5 files to keep system responsive
+            if i % 5 == 0:
+                gevent.sleep(0.01)
+        
+        # Step 4: Regenerate library cache
+        logger.info("Regenerating library cache...")
+        job_tracker.update_progress(job_id, 98, 100, "Regenerating library cache...")
+        
+        invalidate_library_cache()
+        generate_library(force=True)
+        
+        job_tracker.complete_job(job_id, f"Re-identified {total} files")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error re-identifying files: {e}")
+        job_tracker.fail_job(job_id, str(e))
+        return False
         if v_int == 0:
             continue  # Skip base version in updates list
         version_list.append(
