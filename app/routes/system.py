@@ -242,8 +242,9 @@ def get_all_files_api():
         if f.apps and len(f.apps) > 0:
             try:
                 title_id = f.apps[0].title.title_id
-                title_info = titles.get_game_info(title_id)
-                title_name = title_info.get("name", "Unknown") if title_info else "Unknown"
+                if title_id:
+                    title_info = titles.get_game_info(title_id)
+                    title_name = title_info.get("name", "Unknown") if title_info else "Unknown"
             except (IndexError, AttributeError):
                 pass
 
