@@ -248,7 +248,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                         mappings = [
                             {
                                 "title_id": e.title_id,
-                                "data": e.data,
+                                "data": json.dumps(e.data),
                                 "source": e.source,
                                 "downloaded_at": e.downloaded_at,
                                 "updated_at": e.updated_at,
@@ -295,11 +295,11 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                 try:
                     mappings = [
                         {
-                            "title_id": e.title_id,
-                            "data": e.data,
-                            "source": e.source,
-                            "downloaded_at": e.downloaded_at,
-                            "updated_at": e.updated_at,
+                                "title_id": e.title_id,
+                                "data": json.dumps(e.data),
+                                "source": e.source,
+                                "downloaded_at": e.downloaded_at,
+                                "updated_at": e.updated_at,
                         }
                         for e in pending_entries
                     ]

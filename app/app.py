@@ -3,17 +3,13 @@ MyFoil - Enhanced Nintendo Switch Library Manager
 Application Factory e Inicialização
 """
 
+from gevent import monkey
+monkey.patch_all()
+
 import warnings
 import os
 import sys
 import logging
-
-# Suppress warnings
-warnings.filterwarnings("ignore", category=UserWarning, module="flask_limiter")
-
-from gevent import monkey
-
-monkey.patch_all()
 
 import flask.cli
 
