@@ -188,7 +188,7 @@ def library_paths_api():
             import app
             from library import add_library_complete
 
-            success, errors = add_library_complete(app.app, app.watcher, data["path"])
+            success, errors = add_library_complete(app.app, None, data["path"])
             if success:
                 reload_conf()
                 from library import post_library_change
@@ -235,7 +235,7 @@ def library_paths_api():
             import app
             from library import remove_library_complete
 
-            success, errors = remove_library_complete(app.app, app.watcher, data["path"])
+            success, errors = remove_library_complete(app.app, None, data["path"])
             if success:
                 reload_conf()
                 from library import post_library_change

@@ -389,14 +389,12 @@ def get_active_source_info() -> Dict:
         time_since = now_utc() - last_success
         is_updated = time_since.total_seconds() < (24 * 3600)  # Considered updated if < 24h
 
-        # Use cached remote_date if available, otherwise fetch it
-        remote_date = active.remote_date
-        # Use cached remote_date if available, otherwise trigger background fetch
+        # Use cached remote_date if available
         remote_date = active.remote_date
         if not remote_date:
             # If not already fetching, trigger a background update
             if not getattr(active, "is_fetching", False):
-                 # Use the source manager from global scope to refresh
+                # Use the source manager from global scope to refresh
                 source_manager.refresh_remote_dates()
             
             # Return current None state for now (UI shows Unknown/Spinning)

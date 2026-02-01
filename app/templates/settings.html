@@ -316,12 +316,106 @@
                                                     placeholder="/mnt/games">
                                             </div>
                                             <div class="control">
+                                                <button class="button is-info is-light" onclick="openFileBrowser()">
+                                                    <i class="bi bi-folder2-open"></i>
+                                                </button>
+                                            </div>
+                                            <div class="control">
                                                 <button class="button is-primary" onclick="submitNewLibraryPath()">
                                                     {{ t('Add Path') }}
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
+
+                                    <!-- File Browser Modal -->
+                                    <div class="modal" id="fileBrowserModal">
+                                        <div class="modal-background" onclick="closeFileBrowser()"></div>
+                                        <div class="modal-card">
+                                            <header class="modal-card-head">
+                                                <p class="modal-card-title">Selecionar Pasta</p>
+                                                <button class="delete" aria-label="close"
+                                                    onclick="closeFileBrowser()"></button>
+                                            </header>
+                                            <section class="modal-card-body p-0">
+                                                <div class="p-3 border-bottom has-background-white-bis">
+                                                    <p class="is-size-7 has-text-grey mb-1">Caminho Atual:</p>
+                                                    <div class="field has-addons mb-0">
+                                                        <div class="control is-expanded">
+                                                            <input class="input is-small font-mono" type="text"
+                                                                id="browserCurrentPath" readonly>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div id="fileBrowserList" class="list is-hoverable"
+                                                    style="max-height: 400px; overflow-y: auto;">
+                                                    <!-- Populated via JS -->
+                                                </div>
+                                            </section>
+                                            <footer class="modal-card-foot is-justify-content-flex-end">
+                                                <button class="button" onclick="closeFileBrowser()">Cancelar</button>
+                                                <button class="button is-primary"
+                                                    onclick="selectBrowserPath()">Selecionar Pasta Atual</button>
+                                            </footer>
+                                        </div>
+                                    </div>
+
+                                    <script>
+                                        let currentBrowserPath = "/";
+
+                                        function openFileBrowser() {
+                                            document.getElementById('fileBrowserModal').classList.add('is-active');
+                                            loadBrowserPath(currentBrowserPath);
+                                        }
+
+                                        function closeFileBrowser() {
+                                            document.getElementById('fileBrowserModal').classList.remove('is-active');
+                                        }
+
+                                        function loadBrowserPath(path) {
+                                            const list = document.getElementById('fileBrowserList');
+                                            list.innerHTML = '<div class="p-5 has-text-centered"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+
+                                            fetch('/api/system/fs/list', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ path: path })
+                                            })
+                                                .then(r => r.json())
+                                                .then(data => {
+                                                    if (data.error) {
+                                                        alert(data.error);
+                                                        return;
+                                                    }
+                                                    currentBrowserPath = data.current_path;
+                                                    document.getElementById('browserCurrentPath').value = currentBrowserPath;
+
+                                                    list.innerHTML = '';
+                                                    data.items.forEach(item => {
+                                                        const a = document.createElement('a');
+                                                        a.className = 'list-item is-flex is-align-items-center';
+                                                        a.onclick = () => loadBrowserPath(item.path);
+
+                                                        const icon = item.name === '..' ? 'bi-arrow-90deg-up' : 'bi-folder-fill has-text-warning';
+
+                                                        a.innerHTML = `
+                                                    <span class="icon mr-3"><i class="bi ${icon}"></i></span>
+                                                    <span>${item.name}</span>
+                                                `;
+                                                        list.appendChild(a);
+                                                    });
+                                                })
+                                                .catch(err => {
+                                                    list.innerHTML = `<div class="p-4 has-text-danger">Erro: ${err}</div>`;
+                                                });
+                                        }
+
+                                        function selectBrowserPath() {
+                                            document.getElementById('libraryPathInput').value = currentBrowserPath;
+                                            closeFileBrowser();
+                                        }
+                                    </script>
+
                                     <div class="column is-narrow">
                                         <button class="button is-warning is-outlined scanBtn mr-2"
                                             onclick="scanLibrary()">

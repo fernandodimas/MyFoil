@@ -95,8 +95,13 @@ def add_library_complete(app, watcher, path):
         # Add to database
         add_library(path)
 
-        # Add to watchdog
-        watcher.add_directory(path)
+        # Add to watchdog - Handle cases where watcher is None (e.g. from tests or API quirks)
+        if watcher:
+             watcher.add_directory(path)
+        elif hasattr(app, 'watcher') and app.watcher:
+             app.watcher.add_directory(path)
+        else:
+             logger.warning(f"Could not add {path} to watchdog: No watcher instance found.")
 
         logger.info(f"Successfully added library: {path}")
         return True, []
@@ -108,7 +113,10 @@ def remove_library_complete(app, watcher, path):
 
     with app.app_context():
         # Remove from watchdog first
-        watcher.remove_directory(path)
+        if watcher:
+            watcher.remove_directory(path)
+        elif hasattr(app, 'watcher') and app.watcher:
+            app.watcher.remove_directory(path)
 
         # Get library object before deletion
         library = Libraries.query.filter_by(path=path).first()
@@ -286,12 +294,24 @@ def scan_library_path(library_path):
     deleted_files = [f for f in filepaths_in_library if f not in files]
 
     if deleted_files:
-        job_tracker.update_progress(job_id, 3, 4, f"Removing {len(deleted_files)} deleted files...")
-        logger.info(f"Found {len(deleted_files)} deleted files in library {library_path}. Removing from database...")
-        if len(deleted_files) > 0:
-            logger.info(f"Removing deleted files (showing first 5): {deleted_files[:5]}")
+        # Check if job was cancelled
+        from db import SystemJob
+        job_db = SystemJob.query.get(job_id)
+        if job_db and job_db.status == "failed":
+            logger.info(f"Job {job_id} was cancelled by user, stopping scan")
+            return
+        
+        for n, filepath in enumerate(deleted_files):
+            # Check if job was cancelled (fast in-memory check)
+            if job_tracker.is_cancelled(job_id):
+                logger.info(f"Job {job_id} was cancelled by user, stopping scan")
+                return
             
-        for filepath in deleted_files:
+            # Yield to other gevent co-routines frequently
+            if n % 10 == 0:
+                import gevent
+                gevent.sleep(0.01)
+
             try:
                 file_obj = Files.query.filter_by(filepath=filepath).first()
                 if file_obj:
@@ -299,6 +319,10 @@ def scan_library_path(library_path):
                     db.session.delete(file_obj)
             except Exception as e:
                 logger.error(f"Error removing deleted file {filepath}: {e}")
+
+            # Commit periodically to avoid huge transactions
+            if (n + 1) % 50 == 0:
+                db.session.commit()
 
         db.session.commit()
 
@@ -497,6 +521,8 @@ def identify_library_files(library):
     from job_tracker import job_tracker, JobType
     from socket_helper import get_socketio_emitter
     import time
+    import gevent
+    from gevent.threadpool import ThreadPool as Pool
 
     # Ensure TitleDB is loaded for identification
     titles_lib.load_titledb()
@@ -508,122 +534,164 @@ def identify_library_files(library):
     
     if nb_to_identify == 0:
         job_tracker.complete_job(job_id, "No files to identify")
+        return
+
+    # Worker function for parallel processing
+    def _worker_identify(file_data):
+        file_id, filepath, filename = file_data
+        try:
+            # check existence
+            if not os.path.exists(filepath):
+                return (file_id, filepath, filename, False, None, "File not found", None)
+
+            # Heavy I/O/CPU operation
+            # This runs in OS thread. If it's CPU intensive, it holds GIL.
+            identification, success, file_contents, error = titles_lib.identify_file(filepath)
+            
+            # CRITICAL: Sleep briefly to force GIL release so MainThread (gevent loop) can run
+            # Reduced to 10ms to improve speed while maintaining responsiveness
+            time.sleep(0.01)
+            
+            # Gevent yield (for good measure, though running in thread)
+            gevent.sleep(0)
+            
+            return (file_id, filepath, filename, success, file_contents, error, identification)
+        except Exception as e:
+            return (file_id, filepath, filename, False, None, str(e), None)
 
     try:
-        for n, file in enumerate(files_to_identify):
-            try:
-                file_id = file.id
-                filepath = file.filepath
-                filename = file.filename
+        # Prepare data for pool
+        batch_data = [(f.id, f.filepath, f.filename) for f in files_to_identify]
+        
+        # Increasing to 4 workers for speed since they are I/O bound and don't write to DB
+        # The main loop handles DB writes sequentially
+        pool = Pool(4)
+        
+        processed_count = 0
+        
+        # Use imap_unordered to process results as they finish
+        for result in pool.imap_unordered(_worker_identify, batch_data):
+            
+            # Yield to event loop to keep server responsive
+            gevent.sleep(0)
+            
+            # Check cancellation
+            if job_tracker.is_cancelled(job_id):
+                logger.info(f"Job {job_id} was cancelled by user, stopping identification")
+                pool.kill()
+                job_tracker.fail_job(job_id, "Cancelled by user")
+                return
 
-                if not os.path.exists(filepath):
-                    logger.warning(
-                        f"Identifying file ({n + 1}/{nb_to_identify}): {filename} no longer exists, clearing from database."
+            # Unpack result
+            file_id, filepath, filename, success, file_contents, error, identification_type = result
+
+            processed_count += 1
+            
+            # Retrieve DB object freshly for this session/thread
+            file_obj = get_file_from_db(file_id)
+            if not file_obj:
+                continue
+
+            if error == "File not found":
+                logger.warning(f"File {filename} no longer exists during identification cleanup.")
+                remove_file_from_apps(file_id)
+                Files.query.filter_by(id=file_id).delete(synchronize_session=False)
+            
+            elif success and file_contents:
+                # Clear old associations
+                remove_file_from_apps(file_id)
+
+                # Increment metrics
+                FILES_IDENTIFIED.labels(
+                    app_type="multiple" if len(file_contents) > 1 else file_contents[0]["type"]
+                ).inc()
+                
+                # Add title IDs to DB
+                title_ids = list(dict.fromkeys([c["title_id"] for c in file_contents]))
+                for title_id in title_ids:
+                    add_title_id_in_db(title_id)
+
+                nb_content = 0
+                for file_content in file_contents:
+                    title_id_in_db = get_title_id_db_id(file_content["title_id"])
+                    
+                    # Check/Create App
+                    update_or_create_app_and_link_file(
+                        file_content["app_id"],
+                        file_content["version"],
+                        file_content["type"],
+                        title_id_in_db,
+                        file_obj
                     )
-                    # Use helper to ensure ownership is updated
-                    remove_file_from_apps(file_id)
-                    Files.query.filter_by(id=file_id).delete(synchronize_session=False)
-                    db.session.flush()  # Otimização: usar flush ao invés de commit imediato
-                    continue
+                    nb_content += 1
 
-                logger.info(f"Identifying file ({n + 1}/{nb_to_identify}): {filename}")
+                if nb_content > 1:
+                    file_obj.multicontent = True
+                file_obj.nb_content = nb_content
+                file_obj.identified = True
+                file_obj.identification_error = None
                 
-                # Update job progress
-                progress = int(((n + 1) / nb_to_identify) * 100)
-                job_tracker.update_progress(job_id, progress, current=n+1, total=nb_to_identify, message=f"Identifying {filename}")
-                
-                with IDENTIFICATION_DURATION.time():
-                    identification, success, file_contents, error = titles_lib.identify_file(filepath)
+                logger.info(f"Identified {filename} ({nb_content} content)")
+            else:
+                # Failure case
+                logger.warning(f"Error identifying file {filename}: {error}")
+                file_obj.identification_error = error
+                file_obj.identified = False
 
-                if success and file_contents and not error:
-                    # Clear old associations before adding new ones
-                    remove_file_from_apps(file_id)
+            if identification_type:
+                file_obj.identification_type = identification_type
 
-                    # Increment metrics
-                    FILES_IDENTIFIED.labels(
-                        app_type="multiple" if len(file_contents) > 1 else file_contents[0]["type"]
-                    ).inc()
-                    # find all unique Titles ID to add to the Titles db
-                    title_ids = list(dict.fromkeys([c["title_id"] for c in file_contents]))
+            file_obj.identification_attempts += 1
+            file_obj.last_attempt = now_utc()
+            
+            current_titledb_ts = titles_lib.get_titledb_cache_timestamp()
+            if current_titledb_ts:
+                file_obj.titledb_version = str(current_titledb_ts)
 
-                    for title_id in title_ids:
-                        add_title_id_in_db(title_id)
-
-                    nb_content = 0
-                    for file_content in file_contents:
-                        logger.info(
-                            f"Identifying file ({n + 1}/{nb_to_identify}) - Found content Title ID: {file_content['title_id']} App ID : {file_content['app_id']} Title Type: {file_content['type']} Version: {file_content['version']}"
-                        )
-                        # now add the content to Apps
-                        title_id_in_db = get_title_id_db_id(file_content["title_id"])
-
-                        # Check if app already exists
-                        existing_app = get_app_by_id_and_version(file_content["app_id"], file_content["version"])
-
-                        if existing_app:
-                            # Add file to existing app using many-to-many relationship
-                            add_file_to_app(file_content["app_id"], file_content["version"], file_id)
-                        else:
-                            # Create new app entry and add file using many-to-many relationship
-                            new_app = Apps(
-                                app_id=file_content["app_id"],
-                                app_version=file_content["version"],
-                                app_type=file_content["type"],
-                                owned=True,
-                                title_id=title_id_in_db,
-                            )
-                            db.session.add(new_app)
-                            db.session.flush()  # Flush to get the app ID
-
-                            # Add the file to the new app
-                            file_obj = get_file_from_db(file_id)
-                            if file_obj:
-                                new_app.files.append(file_obj)
-
-                        nb_content += 1
-
-                    if nb_content > 1:
-                        file.multicontent = True
-                    file.nb_content = nb_content
-                    file.identified = True
-                else:
-                    logger.warning(f"Error identifying file {filename}: {error}")
-                    file.identification_error = error
-                    file.identified = False
-
-                file.identification_type = identification
-
-                # Update TitleDB version timestamp after successful identification
-                current_titledb_ts = titles_lib.get_titledb_cache_timestamp()
-                if current_titledb_ts:
-                    file.titledb_version = str(current_titledb_ts)
-
-            except Exception as e:
-                logger.warning(f"Error identifying file {filename}: {e}")
-                file.identification_error = str(e)
-                file.identified = False
-
-            # and finally update the File with identification info
-            file.identification_attempts += 1
-            file.last_attempt = now_utc()
-
-            # Otimização: Usar flush() a cada 50 arquivos para liberar memória sem commit completo
-            # Commit apenas a cada 100 arquivos para reduzir overhead de transações
-            if (n + 1) % 50 == 0:
-                db.session.flush()  # Libera memória sem commit completo
-            if (n + 1) % 100 == 0:
-                db.session.commit()  # Commit completo a cada 100 arquivos
+            # More frequent yields to keep system responsive
+            if processed_count % 10 == 0:
+                gevent.sleep(0)
+            
+            # Frequent progress updates (UI feels faster)
+            if processed_count % 10 == 0:
+                db.session.flush()
+                progress = int((processed_count / nb_to_identify) * 100)
+                job_tracker.update_progress(job_id, progress, current=processed_count, total=nb_to_identify, message=f"Identified {processed_count}/{nb_to_identify} files")
+                gevent.sleep(0)  # Yield after progress update
+            
+            # Less frequent commits (better DB performance)
+            if processed_count % 200 == 0:
+                db.session.commit()
 
         # Final commit
         db.session.commit()
+        pool.join()
 
-        job_tracker.complete_job(job_id, f"Identified {nb_to_identify} files")
-        # No need to emit here - complete_job already emits via configured emitter
+        job_tracker.complete_job(job_id, f"Identified {processed_count} files")
     
     except Exception as e:
         logger.exception(f"Error identifying files: {e}")
         job_tracker.fail_job(job_id, str(e))
-        # No need to emit here - fail_job already emits via configured emitter
+    finally:
+        if 'pool' in locals():
+            pool.kill()
+
+def update_or_create_app_and_link_file(app_id, version, app_type, title_id_db, file_obj):
+    existing_app = get_app_by_id_and_version(app_id, version)
+    if existing_app:
+        if file_obj not in existing_app.files:
+            existing_app.files.append(file_obj)
+    else:
+        new_app = Apps(
+            app_id=app_id,
+            app_version=version,
+            app_type=app_type,
+            owned=True,
+            title_id=title_id_db,
+        )
+        db.session.add(new_app)
+        db.session.flush() 
+        new_app.files.append(file_obj)
 
 
 def add_missing_apps_to_db():
@@ -632,6 +700,10 @@ def add_missing_apps_to_db():
     apps_added = 0
 
     for n, title in enumerate(titles):
+        # Yield to other gevent co-routines
+        import gevent
+        gevent.sleep(0)
+
         title_id = title.title_id
         title_db_id = get_title_id_db_id(title_id)
 
@@ -729,6 +801,10 @@ def update_titles():
     # Optimized query to fetch titles and their apps in fixed number of queries
     titles = Titles.query.options(joinedload(Titles.apps).joinedload(Apps.files)).all()
     for n, title in enumerate(titles):
+        # Yield to other gevent co-routines
+        import gevent
+        gevent.sleep(0)
+
         have_base = False
         up_to_date = False
         complete = False
@@ -1114,103 +1190,6 @@ def get_game_info_item(tid, title_data):
     version_list = []
     for upd in update_apps:
         v_int = int(upd["app_version"])
-        version_list.append(
-            {
-                "version": upd["app_version"],
-                "release_date": version_release_dates.get(upd["app_version"]),
-            }
-        )
-
-    return sorted(version_list, key=lambda x: int(x["version"]), reverse=True)
-
-
-def reidentify_all_files_job():
-    """Re-identify all files from scratch"""
-    from job_tracker import job_tracker
-    import gevent
-    
-    logger.info("Starting complete re-identification job...")
-    job_id = f"reidentify_all_{int(datetime.datetime.now().timestamp())}"
-    job_tracker.register_job("reidentify_all", {}, job_id=job_id)
-    job_tracker.start_job(job_id)
-    
-    try:
-        # Step 1: Clear all Apps associations
-        logger.info("Clearing all Apps associations...")
-        job_tracker.update_progress(job_id, 0, 100, "Clearing database associations...")
-        
-        # Delete associations using raw SQL for speed or ORM
-        # Using ORM for safety regarding cascade
-        # Note: We need to be careful not to delete files themselves, just the links
-        
-        # We can iterate and clear .apps for all files, but that's slow.
-        # Faster: Delete all Apps records. Files are linked via association table.
-        # If we delete Apps records, the association table entries should go away if cascade is set.
-        # Let's check model. Apps has no direct relationship to Files in definition above, 
-        # but Files has 'apps' backref presumably through secondary.
-        # Actually Files definition showed:
-        # library = db.relationship(...)
-        # no explicit 'apps' in the snippet I saw, but logic uses file.apps.
-        # Assume Many-to-Many via 'apps_files' (or similar).
-        
-        # Safest way without assuming schema details too much:
-        # Clear 'identified' flag on all files.
-        # Delete all Apps.
-        
-        stmt = Files.query.update({
-            'identified': False,
-            'identification_error': None,
-            'identification_attempts': 0
-        })
-        logger.info(f"Reset {stmt} files to unidentified state.")
-        
-        # Delete all apps
-        num_apps = Apps.query.delete()
-        logger.info(f"Deleted {num_apps} apps records.")
-        
-        db.session.commit()
-        
-        # Step 3: Re-identify all files
-        logger.info("Re-identifying all files...")
-        all_files = Files.query.all()
-        total = len(all_files)
-        
-        if total == 0:
-            job_tracker.complete_job(job_id, "No files to identify")
-            return True
-
-        for i, file_obj in enumerate(all_files):
-            # Calculate progress
-            # 5-95% is identification
-            progress = 5 + int((i / total) * 90)
-            
-            job_tracker.update_progress(
-                job_id, 
-                progress, 
-                100,
-                f"Identifying {file_obj.filename} ({i+1}/{total})"
-            )
-            
-            identify_single_file(file_obj.filepath)
-            
-            # Yield every 5 files to keep system responsive
-            if i % 5 == 0:
-                gevent.sleep(0.01)
-        
-        # Step 4: Regenerate library cache
-        logger.info("Regenerating library cache...")
-        job_tracker.update_progress(job_id, 98, 100, "Regenerating library cache...")
-        
-        invalidate_library_cache()
-        generate_library(force=True)
-        
-        job_tracker.complete_job(job_id, f"Re-identified {total} files")
-        return True
-        
-    except Exception as e:
-        logger.error(f"Error re-identifying files: {e}")
-        job_tracker.fail_job(job_id, str(e))
-        return False
         if v_int == 0:
             continue  # Skip base version in updates list
         version_list.append(
@@ -1282,10 +1261,15 @@ def generate_library(force=False):
     all_titles_data = get_all_titles_with_apps()
     games_info = []
 
-    for title_data in all_titles_data:
+    import gevent
+    for idx, title_data in enumerate(all_titles_data):
         game = get_game_info_item(title_data["title_id"], title_data)
         if game:
             games_info.append(game)
+        
+        # Yield every 50 games to keep server responsive
+        if idx % 50 == 0:
+            gevent.sleep(0)
 
     sorted_library = sorted(games_info, key=lambda x: x.get("name", "Unrecognized") or "Unrecognized")
 
@@ -1317,33 +1301,122 @@ def generate_library(force=False):
 
 def post_library_change():
     """Called after library changes to update titles and regenerate library cache"""
-    global _LIBRARY_CACHE
+    import gevent
     
-    logger.info("Post-library change: updating titles and cache")
-    
-    try:
-        # 1. Invalidate in-memory cache FIRST
-        with _CACHE_LOCK:
-            _LIBRARY_CACHE = None
+    def _do_post_library_change():
+        global _LIBRARY_CACHE
         
-        # 2. Delete disk cache
-        invalidate_library_cache()
+        logger.info("Post-library change: updating titles and cache")
         
-        # 3. Update titles with new files
-        # This is critical for updating 'up_to_date' and 'complete' status flags
-        # which control the badges (UPDATE, DLC) and filters
-        update_titles()
-        
-        # 4. Regenerate library cache (force=True) to ensure fresh data
-        generate_library(force=True)
-        
-        # 5. Notify frontend via WebSocket
-        trigger_library_update_notification()
-        
-        logger.info("Library cache regenerated successfully")
-    except Exception as e:
-        logger.error(f"Error in post_library_change: {e}")
-        import traceback
-        traceback.print_exc()
+        try:
+            # 1. Invalidate in-memory cache FIRST
+            with _CACHE_LOCK:
+                _LIBRARY_CACHE = None
+            
+            # 2. Delete disk cache
+            invalidate_library_cache()
+            
+            # 3. Update titles with new files
+            # This is critical for updating 'up_to_date' and 'complete' status flags
+            # which control the badges (UPDATE, DLC) and filters
+            update_titles()
+            
+            # 4. Regenerate library cache (force=True) to ensure fresh data
+            # This is expensive so we yield periodically
+            gevent.sleep(0)
+            generate_library(force=True)
+            
+            # 5. Notify frontend via WebSocket
+            trigger_library_update_notification()
+            
+            logger.info("Library cache regenerated successfully")
+        except Exception as e:
+            logger.error(f"Error in post_library_change: {e}")
+            import traceback
+            traceback.print_exc()
 
-    titles_lib.unload_titledb()
+        titles_lib.unload_titledb()
+    
+    # Run in background so it doesn't block the scan job completion
+    gevent.spawn(_do_post_library_change)
+
+
+def reidentify_all_files_job():
+    """Re-identify all files from scratch"""
+    from job_tracker import job_tracker
+    import gevent
+    import datetime
+    from app import app
+    from db import db, Files, Apps
+    
+    with app.app_context():
+        logger.info("Starting complete re-identification job...")
+        job_id = f"reidentify_all_{int(datetime.datetime.now().timestamp())}"
+        job_tracker.register_job("reidentify_all", {}, job_id=job_id)
+        job_tracker.start_job(job_id)
+        
+        try:
+            # Step 1: Clear all Apps associations
+            logger.info("Clearing all Apps associations...")
+            job_tracker.update_progress(job_id, 0, 100, "Clearing database associations...")
+            
+            # Clear 'identified' flag on all files.
+            stmt = Files.query.update({
+                'identified': False,
+                'identification_error': None,
+                'identification_attempts': 0
+            })
+            logger.info(f"Reset {stmt} files to unidentified state.")
+            
+            # Delete all apps
+            num_apps = Apps.query.delete()
+            logger.info(f"Deleted {num_apps} apps records.")
+            
+            db.session.commit()
+            
+            # Step 3: Re-identify all files
+            logger.info("Re-identifying all files...")
+            all_files = Files.query.all()
+            total = len(all_files)
+            
+            if total == 0:
+                job_tracker.complete_job(job_id, "No files to identify")
+                return True
+    
+            for i, file_obj in enumerate(all_files):
+                # Calculate progress
+                # 5-95% is identification
+                progress = 5 + int((i / total) * 90)
+                
+                job_tracker.update_progress(
+                    job_id, 
+                    progress, 
+                    100,
+                    f"Identifying {file_obj.filename} ({i+1}/{total})"
+                )
+                
+                identify_single_file(file_obj.filepath)
+                
+                # Yield every 5 files to keep system responsive
+                if i % 5 == 0:
+                    try:
+                        import gevent
+                        gevent.sleep(0.01)
+                    except ImportError:
+                        pass
+            
+            # Step 4: Regenerate library cache
+            logger.info("Regenerating library cache...")
+            job_tracker.update_progress(job_id, 98, 100, "Regenerating library cache...")
+            
+            invalidate_library_cache()
+            generate_library(force=True)
+            
+            job_tracker.complete_job(job_id, f"Re-identified {total} files")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error re-identifying files: {e}")
+            job_tracker.fail_job(job_id, str(e))
+            return False
+

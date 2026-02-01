@@ -43,6 +43,7 @@ class JobTracker:
     def __init__(self):
         self.emitter = None
         self.app = None
+        self.cancelled_jobs = set()
     
     def init_app(self, app):
         """Initialize with Flask app instance"""
@@ -156,6 +157,37 @@ class JobTracker:
             self._emit_update(job_id)
         except Exception as e:
             logger.error(f"Failed to start job {job_id} in DB: {e}")
+            
+    def cancel_job(self, job_id: str):
+        """Mark job as cancelled in memory and DB"""
+        self.cancelled_jobs.add(job_id)
+        
+        app = self._get_app()
+        if not app: return
+
+        try:
+            with app.app_context():
+                from db import db, SystemJob
+                job = SystemJob.query.get(job_id)
+                if job:
+                    if job.status not in [JobStatus.COMPLETED, JobStatus.FAILED]:
+                        job.status = JobStatus.FAILED
+                        job.completed_at = now_utc()
+                        job.error = "Cancelled by user"
+                        db.session.commit()
+                        logger.info(f"Cancelled job: {job_id}")
+            
+            self._emit_update(job_id)
+        except Exception as e:
+            logger.error(f"Failed to cancel job {job_id} in DB: {e}")
+            
+    def is_cancelled(self, job_id: str) -> bool:
+        """Check if job is marked as cancelled (check memory first, then DB)"""
+        if job_id in self.cancelled_jobs:
+            return True
+            
+        # Optional: check DB as fallback but this is what we want to avoid
+        return False
     
     def update_progress(self, job_id: str, percent: int = 0, total: int = None, message: str = '', current: int = None):
         """
@@ -187,7 +219,22 @@ class JobTracker:
                     db.session.commit()
             
             self._emit_update(job_id)
+            
+            # Yield to other gevent co-routines
+            try:
+                import gevent
+                gevent.sleep(0)
+            except:
+                pass
         except Exception as e:
+            if "locked" in str(e).lower():
+                # Silently ignore lock errors for progress updates to avoid flooding logs
+                # and allow the app to be responsive
+                try:
+                    db.session.rollback()
+                except:
+                    pass
+                return
             logger.error(f"Failed to update job progress for {job_id}: {e}")
     
     def complete_job(self, job_id: str, result: Any = None):
@@ -200,6 +247,8 @@ class JobTracker:
                 from db import db, SystemJob
                 job = SystemJob.query.get(job_id)
                 if job:
+                    if job_id in self.cancelled_jobs:
+                        self.cancelled_jobs.remove(job_id)
                     job.status = JobStatus.COMPLETED
                     job.completed_at = now_utc()
                     if isinstance(result, dict):
@@ -223,6 +272,8 @@ class JobTracker:
                 from db import db, SystemJob
                 job = SystemJob.query.get(job_id)
                 if job:
+                    if job_id in self.cancelled_jobs:
+                        self.cancelled_jobs.remove(job_id)
                     job.status = JobStatus.FAILED
                     job.completed_at = now_utc()
                     job.error = error

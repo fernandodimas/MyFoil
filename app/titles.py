@@ -3,6 +3,11 @@ import re
 import json
 import time
 
+try:
+    import gevent
+except ImportError:
+    gevent = None
+
 import titledb
 from constants import *
 from utils import *
@@ -56,7 +61,7 @@ _titles_db_loaded = False
 _cnmts_db = None
 _titles_db = None
 _versions_db = None
-_versions_db = None
+_dlc_map = {}
 _loaded_titles_file = None  # Track which titles file was loaded
 _titledb_cache_timestamp = None  # Timestamp when TitleDB is last loaded
 _titledb_cache_ttl = 3600  # TTL in seconds (1 hour default)
@@ -727,7 +732,8 @@ def load_titledb(force=False, progress_callback=None):
 
         _cnmts_db = robust_json_load(os.path.join(TITLEDB_DIR, "cnmts.json"))
         
-        if gevent: gevent.sleep(0.01)
+        if gevent:
+            gevent.sleep(0.01)
 
         # Database fallback chain: Region -> US/en -> Generic titles.json
         region = app_settings.get("titles", {}).get("region", "US")
@@ -826,11 +832,8 @@ def load_titledb(force=False, progress_callback=None):
                             for tid, data in current_batch.items():
                                 j += 1
                                 if j % 1000 == 0:
-                                    try:
-                                        import gevent
+                                    if gevent:
                                         gevent.sleep(0.001)
-                                    except:
-                                        pass
                                         
                                 if tid in _titles_db:
                                     if is_custom:

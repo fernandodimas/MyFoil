@@ -92,6 +92,57 @@ def system_info_api():
     )
 
 
+
+@system_bp.route("/system/fs/list", methods=["POST"])
+@access_required("admin")
+def list_filesystem():
+    """List local filesystem directories for browser"""
+    data = request.get_json() or {}
+    path = data.get("path")
+    
+    if not path:
+        path = os.getcwd()
+        # On macOS/Linux start at root if not specified, or home?
+        # Let's start at root if explicitly requested or empty.
+        # Actually, let's default to root / on unix
+        if os.name == 'posix':
+            path = "/"
+        else:
+            path = "C:\\"
+
+    if not os.path.exists(path):
+        return jsonify({"error": "Path does not exist"}), 404
+        
+    try:
+        items = []
+        # Parent directory
+        parent = os.path.dirname(os.path.abspath(path))
+        if parent != path:
+             items.append({"name": "..", "path": parent, "type": "dir"})
+             
+        with os.scandir(path) as it:
+            for entry in it:
+                if entry.is_dir() and not entry.name.startswith('.'):
+                    try:
+                        items.append({
+                            "name": entry.name,
+                            "path": entry.path,
+                            "type": "dir"
+                        })
+                    except OSError:
+                        pass # Permission denied etc
+        
+        # Sort by name
+        items.sort(key=lambda x: x["name"])
+        
+        return jsonify({
+            "current_path": os.path.abspath(path),
+            "items": items
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @system_bp.route("/stats")
 @access_required("shop")
 def get_stats():
@@ -880,52 +931,13 @@ def cancel_job(job_id):
 
     try:
         from job_tracker import job_tracker
-
-        job = job_tracker.get_job(job_id)
-
-        if not job:
-            # Try to get from DB as fallback
-            job_db = SystemJob.query.get(job_id)
-            if not job_db:
-                return jsonify({"success": False, "error": "Job not found"}), 404
-
-            # Check if already completed/failed
-            if job_db.status in ["completed", "failed"]:
-                return jsonify({"success": False, "error": "Job already finished"}), 400
-
-            if job_db.status not in ["scheduled", "running"]:
-                return jsonify({"success": False, "error": f"Job is {job_db.status}, cannot cancel"}), 400
-
-            # Mark as failed/cancelled
-            job_db.status = "failed"
-            job_db.completed_at = now_utc()
-            job_db.error = "Cancelled by user"
-            db.session.commit()
-
-            # Emit update
-            job_tracker._emit_update(job_id)
-
-            return jsonify({"success": True, "message": "Job cancelled"})
-
-        if job.get("status") not in ["scheduled", "running"]:
-            return jsonify({"success": False, "error": f"Job is {job.get('status')}, cannot cancel"}), 400
-
-        # Update in DB
-        job_db = SystemJob.query.get(job_id)
-        if job_db:
-            job_db.status = "failed"
-            job_db.completed_at = now_utc()
-            job_db.error = "Cancelled by user"
-            db.session.commit()
-
-            # Emit update
-            job_tracker._emit_update(job_id)
-
+        
+        # This will update DB and handle in-memory cancellation set
+        job_tracker.cancel_job(job_id)
+        
         return jsonify({"success": True, "message": "Job cancelled"})
     except Exception as e:
         logger.error(f"Error cancelling job {job_id}: {e}")
-        if "db" in locals():
-            db.session.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -933,31 +945,23 @@ def cancel_job(job_id):
 @access_required("admin")
 def cleanup_jobs_api():
     """Limpa jobs antigos (>24h) ou todos os jobs completados e cancela jobs presos"""
-    from job_tracker import job_tracker
-    from db import SystemJob, db
-    from datetime import datetime, timedelta
-
-    # Cancel stuck jobs (running > 1 hour without progress update)
     try:
-        cutoff_time = now_utc() - timedelta(hours=1)
-        stuck_jobs = SystemJob.query.filter(SystemJob.status == "running", SystemJob.started_at < cutoff_time).all()
-
-        for job in stuck_jobs:
-            logger.warning(f"Marking stuck job {job.job_id} as failed (running for > 1 hour)")
-            job.status = "failed"
-            job.completed_at = now_utc()
-            job.error = "Job timed out (cancelled by user)"
-
-        if stuck_jobs:
-            db.session.commit()
-            logger.info(f"Cancelled {len(stuck_jobs)} stuck jobs")
+        from job_tracker import job_tracker
+        from db import SystemJob, db
+        
+        # 1. Cancel ALL currently running jobs
+        running_jobs = SystemJob.query.filter(SystemJob.status == "running").all()
+        for job in running_jobs:
+            logger.warning(f"Forcing cancellation of job {job.job_id} during cleanup")
+            job_tracker.cancel_job(job.job_id)
+            
+        # 2. History cleanup
+        job_tracker.cleanup_old_jobs(max_age_hours=24)
+        
+        return jsonify({"success": True, "message": f"Cancelled {len(running_jobs)} running jobs and cleaned history"})
     except Exception as e:
-        logger.error(f"Error cancelling stuck jobs: {e}")
-        db.session.rollback()
-
-    # Clean old jobs
-    job_tracker.cleanup_old_jobs(max_age_hours=24)
-    return jsonify({"success": True, "message": "Job history cleaned up"})
+        logger.error(f"Error during jobs cleanup: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @system_bp.route("/system/diagnostic", methods=["GET"])

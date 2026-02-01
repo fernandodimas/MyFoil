@@ -275,9 +275,24 @@ class TitleDBSourceManager:
             logger.error(f"Error saving TitleDB sources: {e}")
 
     def get_active_sources(self) -> List[TitleDBSource]:
-        """Get enabled sources sorted by priority"""
+        """Get enabled sources sorted by priority (asc), then by most recent remote date (desc)"""
         active = [s for s in self.sources if s.enabled]
-        return sorted(active, key=lambda x: x.priority)
+        
+        def sort_key(s):
+            # Priority: Lower is better (0 comes before 1)
+            prio = s.priority
+            # Freshness: Newer is better (larger timestamp)
+            # We negate it because sorted is ascending by default
+            if s.remote_date:
+                try:
+                    remote_ts = ensure_utc(s.remote_date).timestamp()
+                except:
+                    remote_ts = 0
+            else:
+                remote_ts = 0
+            return (prio, -remote_ts)
+
+        return sorted(active, key=sort_key)
 
     def download_file(
         self, filename: str, dest_path: str, timeout: int = 30, silent_404: bool = False
@@ -307,7 +322,7 @@ class TitleDBSourceManager:
                         f.write(chunk)
 
                 # Update source status
-                source.last_success = datetime.utcnow()
+                source.last_success = datetime.now(timezone.utc)
                 source.last_error = None
                 self.save_sources()
 
@@ -385,7 +400,19 @@ class TitleDBSourceManager:
 
     def get_sources_status(self) -> List[Dict]:
         """Get status of all sources using cached dates"""
-        return [s.to_dict() for s in sorted(self.sources, key=lambda x: x.priority)]
+        def sort_key(s):
+            prio = s.priority
+            if s.remote_date:
+                try:
+                    remote_ts = ensure_utc(s.remote_date).timestamp()
+                except:
+                    remote_ts = 0
+            else:
+                remote_ts = 0
+            return (prio, -remote_ts, s.name)
+
+        sorted_sources = sorted(self.sources, key=sort_key)
+        return [s.to_dict() for s in sorted_sources]
 
     def refresh_remote_dates(self):
         """Asynchronously refresh remote dates for all enabled sources"""

@@ -143,11 +143,11 @@ job_tracker.set_emitter(get_socketio_emitter())
 redis_url = os.environ.get("REDIS_URL")
 if redis_url:
     limiter = Limiter(
-        key_func=get_remote_address, storage_uri=redis_url, default_limits=["5000 per day", "2000 per hour"]
+        key_func=get_remote_address, storage_uri=redis_url, default_limits=["50000 per day", "10000 per hour"]
     )
 else:
     # Fallback to memory (will warn)
-    limiter = Limiter(key_func=get_remote_address, default_limits=["1000 per day", "500 per hour"])
+    limiter = Limiter(key_func=get_remote_address, default_limits=["20000 per day", "5000 per hour"])
 
 backup_manager = None
 plugin_manager = None
@@ -304,145 +304,154 @@ def on_library_change(events):
 
 def update_titledb_job(force=False):
     """Update TitleDB in background"""
-    from job_tracker import job_tracker
-    from socket_helper import get_socketio_emitter
+    with app.app_context():
+        from job_tracker import job_tracker
+        from socket_helper import get_socketio_emitter
 
-    # Configure emitter antes de registrar job
-    job_tracker.set_emitter(get_socketio_emitter())
+        # Configure emitter antes de registrar job
+        job_tracker.set_emitter(get_socketio_emitter())
 
-    # Track job
-    job_id = job_tracker.register_job("titledb_update", {"force": force})
-    job_tracker.start_job(job_id)
+        # Track job
+        job_id = job_tracker.register_job("titledb_update", {"force": force})
+        job_tracker.start_job(job_id)
 
-    with state.titledb_update_lock:
-        if state.is_titledb_update_running:
-            logger.info("TitleDB update already in progress.")
-            job_tracker.fail_job(job_id, "Update already in progress")
-            return False
-        state.is_titledb_update_running = True
-
-    logger.info("Starting TitleDB update job...")
-    try:
-        job_tracker.update_progress(job_id, 0, 10, "Initializing...")
-        import time
-        time.sleep(0.1)
-
-        job_tracker.update_progress(job_id, 1, 10, "Downloading TitleDB files...")
-        current_settings = load_settings()
-        import titledb
-
-        if "app" in globals():
-            with app.app_context():
-                # Step 1: Download
-                # Pass job_id so update_titledb_files can report granular progress
-                titledb.update_titledb_files(current_settings, force=force, job_id=job_id)
-                
-                # Step 2: Reload memory cache
-                # Define progress callback for granular updates
-                def progress_cb(msg, percent):
-                    # Map load_titledb progress (0-100) to job progress (1-4)
-                    # This is just for the loading phase
-                    scaled_progress = 1 + (percent / 100 * 3)
-                    job_tracker.update_progress(job_id, int(scaled_progress), 10, msg)
-                    try:
-                        import gevent
-                        gevent.sleep(0)
-                    except:
-                        pass
-
-                # Step 2: Reload memory cache
-                # titles.load_titledb will call progress_cb
-                titles.load_titledb(force=True, progress_callback=progress_cb)
-
-                # Step 3: Sync to SQLite (The title data itself)
-                job_tracker.update_progress(job_id, 5, 10, "Syncing database metadata...")
-                add_missing_apps_to_db()
-                update_titles()
-
-                # Step 4: Optional Library identification
-                # We only do this if specifically needed, or we do it faster
-                from library import get_libraries, invalidate_library_cache
-                
-                # Instead of full identification of every file (which is slow),
-                # we just invalidate the cache so new titles appear, 
-                # and let the user trigger a scan if they want a full refresh.
-                job_tracker.update_progress(job_id, 8, 10, "Refreshing library views...")
-                invalidate_library_cache()
-                # generate_library(force=True)  <-- REMOVED: Too slow and blocking
-                
-                job_tracker.update_progress(job_id, 10, 10, "Finalizing...")
-                logger.info("TitleDB update completed and library views refreshed.")
-        else:
-            titledb.update_titledb(current_settings, force=force)
-
-        job_tracker.complete_job(job_id, {"success": True})
-        return True
-    except Exception as e:
-        logger.error(f"Error during TitleDB update job: {e}")
-        try:
-            log_activity("titledb_update_failed", details={"error": str(e)})
-        except:
-            pass
-        job_tracker.fail_job(job_id, str(e))
-        return False
-    finally:
         with state.titledb_update_lock:
-            state.is_titledb_update_running = False
+            if state.is_titledb_update_running:
+                logger.info("TitleDB update already in progress.")
+                job_tracker.fail_job(job_id, "Update already in progress")
+                return False
+            state.is_titledb_update_running = True
+
+        logger.info("Starting TitleDB update job...")
+        try:
+            job_tracker.update_progress(job_id, 0, 10, "Initializing...")
+            import time
+            time.sleep(0.1)
+
+            job_tracker.update_progress(job_id, 1, 10, "Downloading TitleDB files...")
+            current_settings = load_settings()
+            import titledb
+
+            # Step 1: Download
+            # Pass job_id so update_titledb_files can report granular progress
+            titledb.update_titledb_files(current_settings, force=force, job_id=job_id)
+
+            # Step 2: Reload memory cache
+            # Define progress callback for granular updates
+            def progress_cb(msg, percent):
+                # Map load_titledb progress (0-100) to job progress (1-4)
+                # This is just for the loading phase
+                scaled_progress = 1 + (percent / 100 * 3)
+                job_tracker.update_progress(job_id, int(scaled_progress), 10, msg)
+                try:
+                    import gevent
+                    gevent.sleep(0)
+                except:
+                    pass
+
+            # Step 2: Reload memory cache
+            # titles.load_titledb will call progress_cb
+            titles.load_titledb(force=True, progress_callback=progress_cb)
+
+            # Step 3: Sync to SQLite (The title data itself)
+            job_tracker.update_progress(job_id, 5, 10, "Syncing database metadata...")
+            add_missing_apps_to_db()
+            update_titles()
+
+            # Step 4: Optional Library identification
+            # We only do this if specifically needed, or we do it faster
+            from library import get_libraries, invalidate_library_cache
+            
+            # Instead of full identification of every file (which is slow),
+            # we just invalidate the cache so new titles appear, 
+            # and let the user trigger a scan if they want a full refresh.
+            job_tracker.update_progress(job_id, 8, 10, "Refreshing library views...")
+            invalidate_library_cache()
+            # generate_library(force=True)  <-- REMOVED: Too slow and blocking
+            
+            job_tracker.update_progress(job_id, 10, 10, "Finalizing...")
+            logger.info("TitleDB update completed and library views refreshed.")
+
+            job_tracker.complete_job(job_id, {"success": True})
+            return True
+        except Exception as e:
+            logger.error(f"Error during TitleDB update job: {e}")
+            try:
+                log_activity("titledb_update_failed", details={"error": str(e)})
+            except:
+                pass
+            job_tracker.fail_job(job_id, str(e))
+            return False
+        finally:
+            with state.titledb_update_lock:
+                state.is_titledb_update_running = False
 
 
 def scan_library_job():
     """Scan library in background"""
-    # Track job
-    job_id = job_tracker.register_job("aggregate_scan")
-    job_tracker.start_job(job_id)
+    with app.app_context():
+        # Track job
+        job_id = job_tracker.register_job("aggregate_scan")
+        job_tracker.start_job(job_id)
 
-    with state.titledb_update_lock:
-        if state.is_titledb_update_running:
-            logger.info("Skipping library scan: update_titledb job is in progress.")
-            job_tracker.fail_job(job_id, "TitleDB update in progress")
+        with state.titledb_update_lock:
+            if state.is_titledb_update_running:
+                logger.info("Skipping library scan: update_titledb job is in progress.")
+                job_tracker.fail_job(job_id, "TitleDB update in progress")
+                return
+
+        logger.info("Starting library scan job...")
+        
+        # Check if there are already active scan jobs
+        active_jobs = job_tracker.get_active_jobs()
+        active_scan_jobs = [j for j in active_jobs if j.get('type') in ['library_scan', 'aggregate_scan', 'file_identification']]
+        
+        if active_scan_jobs:
+            logger.warning(f"Skipping library scan: {len(active_scan_jobs)} scan job(s) already in progress.")
+            job_tracker.fail_job(job_id, f"{len(active_scan_jobs)} scan job(s) already running")
             return
-
-    logger.info("Starting library scan job...")
-    with state.scan_lock:
-        if state.scan_in_progress:
-            logger.info("Skipping library scan: scan already in progress.")
-            return
-        state.scan_in_progress = True
-    try:
-        from metrics import ACTIVE_SCANS
-
-        with ACTIVE_SCANS.track_inprogress():
-            if CELERY_ENABLED:
-                from tasks import scan_all_libraries_async
-
-                scan_all_libraries_async.delay()
-                logger.info("Scheduled library scan queued to Celery.")
-            else:
-                from library import scan_library_path, identify_library_files, get_libraries
-
-                libraries = get_libraries()
-                logger.info(f"Found {len(libraries)} libraries to scan")
-                for i, lib in enumerate(libraries):
-                    job_tracker.update_progress(job_id, i + 1, len(libraries), f"Scanning {lib.path}...")
-                    logger.info(f"Scanning library: {lib.path}")
-                    scan_library_path(lib.path)
-
-                    job_tracker.update_progress(job_id, i + 1, len(libraries), f"Identifying files in {lib.path}...")
-                    logger.info(f"Scan complete for {lib.path}, starting identification")
-                    identify_library_files(lib.path)
-                    logger.info(f"Identification complete for {lib.path}")
-
-            # No need to call post_library_change here as scan_library_path now does it
-        log_activity("library_scan_completed")
-        logger.info("Library scan job completed successfully.")
-        job_tracker.complete_job(job_id, {"total_libraries": len(get_libraries())})
-    except Exception as e:
-        logger.error(f"Error during library scan job: {e}")
-        log_activity("library_scan_failed", details={"error": str(e)})
-        job_tracker.fail_job(job_id, str(e))
-    finally:
+        
         with state.scan_lock:
-            state.scan_in_progress = False
+            if state.scan_in_progress:
+                logger.info("Skipping library scan: scan already in progress.")
+                job_tracker.fail_job(job_id, "Scan already in progress")
+                return
+            state.scan_in_progress = True
+        try:
+            from metrics import ACTIVE_SCANS
+    
+            with ACTIVE_SCANS.track_inprogress():
+                if CELERY_ENABLED:
+                    from tasks import scan_all_libraries_async
+    
+                    scan_all_libraries_async.delay()
+                    logger.info("Scheduled library scan queued to Celery.")
+                else:
+                    from library import scan_library_path, identify_library_files, get_libraries
+    
+                    libraries = get_libraries()
+                    logger.info(f"Found {len(libraries)} libraries to scan")
+                    for i, lib in enumerate(libraries):
+                        job_tracker.update_progress(job_id, i + 1, len(libraries), f"Scanning {lib.path}...")
+                        logger.info(f"Scanning library: {lib.path}")
+                        scan_library_path(lib.path)
+    
+                        job_tracker.update_progress(job_id, i + 1, len(libraries), f"Identifying files in {lib.path}...")
+                        logger.info(f"Scan complete for {lib.path}, starting identification")
+                        identify_library_files(lib.path)
+                        logger.info(f"Identification complete for {lib.path}")
+    
+                # No need to call post_library_change here as scan_library_path now does it
+            log_activity("library_scan_completed")
+            logger.info("Library scan job completed successfully.")
+            job_tracker.complete_job(job_id, {"total_libraries": len(get_libraries())})
+        except Exception as e:
+            logger.error(f"Error during library scan job: {e}")
+            log_activity("library_scan_failed", details={"error": str(e)})
+            job_tracker.fail_job(job_id, str(e))
+        finally:
+            with state.scan_lock:
+                state.scan_in_progress = False
 
 
 def create_automatic_backup():
@@ -721,5 +730,5 @@ app = create_app()
 if __name__ == "__main__":
     logger.info(f"Build Version: {BUILD_VERSION}")
     logger.info("Starting server on port 8465...")
-    socketio.run(app, debug=False, use_reloader=False, host="0.0.0.0", port=8465)
+    socketio.run(app, debug=True, use_reloader=False, host="0.0.0.0", port=8465, allow_unsafe_werkzeug=True)
     logger.info("Shutting down server...")
