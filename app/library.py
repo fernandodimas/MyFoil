@@ -445,6 +445,9 @@ def identify_single_file(filepath):
                 if existing_app:
                     # Add file to existing app using many-to-many relationship
                     # Check if connection already exists to avoid duplicates (though set usage helps)
+                    if not existing_app.owned:
+                        existing_app.owned = True
+
                     if file_obj not in existing_app.files:
                         existing_app.files.append(file_obj)
                 else:
@@ -678,6 +681,9 @@ def identify_library_files(library):
 def update_or_create_app_and_link_file(app_id, version, app_type, title_id_db, file_obj):
     existing_app = get_app_by_id_and_version(app_id, version)
     if existing_app:
+        if not existing_app.owned:
+            existing_app.owned = True
+
         if file_obj not in existing_app.files:
             existing_app.files.append(file_obj)
     else:
@@ -796,6 +802,15 @@ def update_titles():
     titles_removed = remove_titles_without_owned_apps()
     if titles_removed > 0:
         logger.info(f"Removed {titles_removed} titles with no owned apps.")
+
+    # Auto-heal: Ensure apps with files are marked as owned
+    # This fixes cases where files were linked but 'owned' flag wasn't updated due to bugs
+    try:
+        db.session.execute(db.text("UPDATE apps SET owned = 1 WHERE id IN (SELECT app_id FROM app_files) AND owned = 0"))
+        db.session.commit()
+    except Exception as e:
+        logger.warning(f"Auto-heal owned status failed: {e}")
+        db.session.rollback()
 
     # Optimized query to fetch titles and their apps in fixed number of queries
     titles = Titles.query.options(joinedload(Titles.apps).joinedload(Apps.files)).all()
