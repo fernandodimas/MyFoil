@@ -58,6 +58,17 @@ def format_release_date(date_input):
 # Global variables for TitleDB data
 identification_in_progress_count = 0
 _titles_db_loaded = False
+
+
+def yield_to_event_loop():
+    """Yield control to the event loop to prevent blocking"""
+    try:
+        if gevent:
+            gevent.sleep(0.001)
+        else:
+            time.sleep(0.001)
+    except:
+        pass
 _cnmts_db = None
 _titles_db = None
 _versions_db = None
@@ -141,7 +152,7 @@ def load_titledb_from_db():
         return False
 
 
-def save_titledb_to_db(source_files, app_context=None):
+def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
     """Save TitleDB data to database cache for fast loading."""
     global _titles_db, _versions_db, _cnmts_db, _titledb_cache_timestamp
 
@@ -221,27 +232,18 @@ def save_titledb_to_db(source_files, app_context=None):
             if len(pending_entries) >= BATCH_SIZE:
                 for attempt in range(max_retries):
                     try:
-                        # Use upsert to handle duplicates
-                        from sqlalchemy.dialects.sqlite import insert
-                        
-                        for entry in pending_entries:
-                            stmt = insert(TitleDBCache).values(
-                                title_id=entry.title_id,
-                                data=entry.data,
-                                source=entry.source,
-                                downloaded_at=entry.downloaded_at,
-                                updated_at=entry.updated_at
-                            )
-                            stmt = stmt.on_conflict_do_update(
-                                index_elements=['title_id'],
-                                set_=dict(
-                                    data=stmt.excluded.data,
-                                    source=stmt.excluded.source,
-                                    updated_at=stmt.excluded.updated_at
-                                )
-                            )
-                            db.session.execute(stmt)
-                        
+                        # Convert objects to dicts for bulk_insert_mappings
+                        mappings = [
+                            {
+                                "title_id": e.title_id,
+                                "data": e.data,
+                                "source": e.source,
+                                "downloaded_at": e.downloaded_at,
+                                "updated_at": e.updated_at,
+                            }
+                            for e in pending_entries
+                        ]
+                        db.session.bulk_insert_mappings(TitleDBCache, mappings)
                         db.session.commit()
                         break
                     except OperationalError as e:
@@ -252,6 +254,11 @@ def save_titledb_to_db(source_files, app_context=None):
                             continue
                         raise
                 pending_entries = []  # Release memory
+                
+                # Progress update if possible
+                if progress_callback:
+                    prog = 81 + int((i / len(_titles_db)) * 10)
+                    progress_callback(f"Salvando títulos no cache ({i}/{len(_titles_db)})...", prog)
 
                 # Yield after DB commit
                 if gevent:
@@ -262,27 +269,17 @@ def save_titledb_to_db(source_files, app_context=None):
         if pending_entries:
             for attempt in range(max_retries):
                 try:
-                    # Use upsert to handle duplicates
-                    from sqlalchemy.dialects.sqlite import insert
-                    
-                    for entry in pending_entries:
-                        stmt = insert(TitleDBCache).values(
-                            title_id=entry.title_id,
-                            data=entry.data,
-                            source=entry.source,
-                            downloaded_at=entry.downloaded_at,
-                            updated_at=entry.updated_at
-                        )
-                        stmt = stmt.on_conflict_do_update(
-                            index_elements=['title_id'],
-                            set_=dict(
-                                data=stmt.excluded.data,
-                                source=stmt.excluded.source,
-                                updated_at=stmt.excluded.updated_at
-                            )
-                        )
-                        db.session.execute(stmt)
-                    
+                    mappings = [
+                        {
+                            "title_id": e.title_id,
+                            "data": e.data,
+                            "source": e.source,
+                            "downloaded_at": e.downloaded_at,
+                            "updated_at": e.updated_at,
+                        }
+                        for e in pending_entries
+                    ]
+                    db.session.bulk_insert_mappings(TitleDBCache, mappings)
                     db.session.commit()
                     break
                 except OperationalError as e:
@@ -502,7 +499,7 @@ def robust_json_load(filepath):
                 logger.info(f"Sanitized {os.path.basename(filepath)} successfully. Saving to cache...")
                 try:
                     with open(clean_filepath, 'w', encoding='utf-8') as f:
-                        json.dump(data, f, indent=2)
+                        json.dump(data, f)  # Removed indent to save space and I/O time
                     
                     # Update mtime of clean file to be definitely newer than source
                     # (in case everything happened in the same second)
@@ -531,7 +528,7 @@ def robust_json_load(filepath):
                     logger.info(f"Auto-repairing {os.path.basename(filepath)} with recovered blocks...")
                     try:
                         with open(filepath, 'w', encoding='utf-8') as f:
-                            json.dump(sanitized, f, indent=2)
+                            json.dump(sanitized, f)  # Removed indent to save space and I/O time
                     except Exception as save_err:
                         logger.warning(f"Failed to save auto-repaired JSON after stream recovery: {save_err}")
                     return sanitized
@@ -757,34 +754,28 @@ def load_titledb(force=False, progress_callback=None):
         if region != "US":
              primary_prefs += ["titles.US.en.json", "US.en.json"]
              
+        # 2. Collect ALL available regional files
         # Separate primary found from others
-        primary_file_found = None
-        other_regionals = []
+        found_primary = [f for f in all_db_files if f in primary_prefs]
+        # Sort such that the highest priority file (lowest index) is loaded LAST
+        found_primary.sort(key=lambda x: primary_prefs.index(x), reverse=True)
         
-        for f in all_db_files:
-            if not regional_pattern.match(f):
-                continue
-            
-            if f in primary_prefs:
-                # Keep track of the best matching primary file
-                if not primary_file_found or primary_prefs.index(f) < primary_prefs.index(primary_file_found):
-                    primary_file_found = f
-            else:
-                other_regionals.append(f)
+        other_regionals = [f for f in all_db_files if regional_pattern.match(f) and f not in primary_prefs]
         
         # 3. Build logical load order
         # Step A: Master titles.json (lowest priority metadata)
         # Step B: All other regional files (as fallbacks)
-        # Step C: Primary regional file (highest priority regional)
+        # Step C: Primary regional files (highest priority regional)
         # Step D: custom.json (absolute priority)
         
         for f in sorted(other_regionals):
             if f not in load_order:
                 load_order.append(f)
                 
-        if primary_file_found and primary_file_found not in load_order:
-            load_order.append(primary_file_found)
-            
+        for f in found_primary:
+            if f not in load_order:
+                load_order.append(f)
+        
         load_order.append("custom.json")
         
         _titles_db = {}
@@ -814,17 +805,30 @@ def load_titledb(force=False, progress_callback=None):
                     count = len(loaded) if isinstance(loaded, (dict, list)) else 0
                     if count > 0:
                         is_custom = filename == "custom.json"
-                        # Convert list to dict if necessary for merging
+                        # Convert list/dict to standardized dict keyed by TitleID
                         current_batch = {}
                         if isinstance(loaded, list):
                             for item in loaded:
                                 if isinstance(item, dict) and "id" in item and item["id"]:
                                     current_batch[item["id"].upper()] = item
-                        else:
-                            current_batch = {k.upper(): v for k, v in loaded.items() if isinstance(v, dict) and k}
+                        elif isinstance(loaded, dict):
+                            # Improved handling for dicts where keys might be NSUIDs (like raw regional files)
+                            for k, v in loaded.items():
+                                if not isinstance(v, dict): continue
+                                
+                                # Priority: Use the "id" field if it looks like a TitleID, fallback to key
+                                obj_id = v.get("id")
+                                if obj_id and isinstance(obj_id, str) and len(obj_id) == 16:
+                                    tid = obj_id.upper()
+                                else:
+                                    tid = str(k).upper()
+                                
+                                # Standardize ID to 16 chars upper
+                                if len(tid) == 16:
+                                    current_batch[tid] = v
                         
                         # MERGE logic: Overwrite names/descriptions but keep existing metadata
-                        # Optimization: Yield every 2000 items to prevent worker timeout
+                        # Optimization: Yield every 1000 items to prevent worker timeout
                         if not _titles_db:
                             _titles_db = current_batch
                         else:
@@ -832,17 +836,25 @@ def load_titledb(force=False, progress_callback=None):
                             for tid, data in current_batch.items():
                                 j += 1
                                 if j % 1000 == 0:
-                                    if gevent:
-                                        gevent.sleep(0.001)
+                                    if gevent: gevent.sleep(0.001)
                                         
                                 if tid in _titles_db:
                                     if is_custom:
                                         _titles_db[tid].update(data)
                                     else:
-                                        # Only override specific human-readable fields
-                                        for field in ["name", "description", "publisher", "releaseDate", "category", "genre"]:
+                                        # Fields to merge/override from regional files
+                                        # We want images and local names
+                                        merge_fields = [
+                                            "name", "description", "publisher", "releaseDate", 
+                                            "category", "genre", "iconUrl", "bannerUrl", 
+                                            "screenshots", "nsuId"
+                                        ]
+                                        for field in merge_fields:
                                             val = data.get(field)
                                             if val is not None and val != "":
+                                                # Avoid overwriting populated lists with empty ones
+                                                if isinstance(val, list) and len(val) == 0:
+                                                    continue
                                                 _titles_db[tid][field] = val
                                 else:
                                     _titles_db[tid] = data
@@ -878,7 +890,11 @@ def load_titledb(force=False, progress_callback=None):
         source_files = {}
         for f in _loaded_titles_file:
             source_files[f.lower().replace(".json", "")] = f
-        save_titledb_to_db(source_files)
+        
+        if progress_callback:
+            progress_callback("Salvando cache no banco de dados...", 80)
+            
+        save_titledb_to_db(source_files, progress_callback=progress_callback)
 
         # Sync metadata to database if loaded
         if _titles_db:
@@ -1471,18 +1487,35 @@ def sync_titles_to_db(force=False):
                 
                 # Only update if NOT custom
                 if not title.is_custom:
-                    title.name = tdb_info.get("name", title.name)
-                    title.description = tdb_info.get("description", title.description)
-                    title.publisher = tdb_info.get("publisher", title.publisher)
-                    title.icon_url = tdb_info.get("iconUrl", title.icon_url)
-                    title.banner_url = tdb_info.get("bannerUrl", title.banner_url)
+                    # Simple helper to avoid overwriting with None or empty
+                    def set_if_not_empty(obj, attr, val):
+                        if val is not None and val != "":
+                            setattr(obj, attr, val)
+
+                    set_if_not_empty(title, "name", tdb_info.get("name"))
+                    set_if_not_empty(title, "description", tdb_info.get("description"))
+                    set_if_not_empty(title, "publisher", tdb_info.get("publisher"))
+                    set_if_not_empty(title, "icon_url", tdb_info.get("iconUrl"))
+                    set_if_not_empty(title, "banner_url", tdb_info.get("bannerUrl"))
 
                     cat = tdb_info.get("category", [])
-                    title.category = ",".join(cat) if isinstance(cat, list) else cat
+                    if cat:
+                        title.category = ",".join(cat) if isinstance(cat, list) else cat
 
-                    title.release_date = tdb_info.get("releaseDate", title.release_date)
-                    title.size = tdb_info.get("size", title.size)
-                    title.nsuid = tdb_info.get("nsuid", title.nsuid)
+                    set_if_not_empty(title, "release_date", tdb_info.get("releaseDate"))
+                    if tdb_info.get("size"):
+                        title.size = tdb_info.get("size")
+                        
+                    # Support both nsuid and nsuId
+                    nsuid_val = tdb_info.get("nsuid") or tdb_info.get("nsuId")
+                    if nsuid_val:
+                        title.nsuid = str(nsuid_val)
+
+                    # Update screenshots if available
+                    ss = tdb_info.get("screenshots")
+                    if ss and isinstance(ss, list):
+                        title.screenshots_json = ss
+                    
                     updated_count += 1
                 
                 # Periodic yield for safety
