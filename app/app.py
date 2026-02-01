@@ -263,7 +263,7 @@ def on_library_change(events):
         # Process additions and modifications (which may be new files being written)
         all_new_files = files_added + files_modified
         if all_new_files:
-            directories = list(set(e.directory for e in events if e.type in ["created", "modified"]))
+            directories = list(set(e.directory for e in events if e.type in ["created", "modified", "moved"]))
 
             for library_path in directories:
                 files_to_process = [f for f in all_new_files if f.startswith(library_path)]

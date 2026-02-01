@@ -169,7 +169,10 @@ class Handler(FileSystemEventHandler):
         logger.debug(f"Watchdog event detected: {event.event_type} - {event.src_path}")
         found = False
         for directory in self.directories:
-            if event.src_path.startswith(directory):
+            is_src_in = event.src_path.startswith(directory)
+            is_dest_in = hasattr(event, 'dest_path') and event.dest_path and event.dest_path.startswith(directory)
+            
+            if is_src_in or is_dest_in:
                 self.collect_event(event, directory)
                 found = True
                 break
