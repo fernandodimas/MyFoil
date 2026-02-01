@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from celery_app import celery
 from flask import Flask
-from db import db
+from db import db, remove_missing_files_from_db
 from library import scan_library_path, identify_library_files, update_titles, generate_library
 from job_tracker import job_tracker, JobType
 from socket_helper import get_socketio_emitter
@@ -66,6 +66,7 @@ def scan_library_async(library_path):
         job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, f"Scanning {library_path}")
 
         try:
+            from db import remove_missing_files_from_db
             # 1. Cleanup missing files first
             job_tracker.update_progress(job_id, 10, message="Cleaning up missing files...")
             count = remove_missing_files_from_db()
@@ -101,7 +102,6 @@ def scan_library_async(library_path):
 def identify_file_async(filepath):
     """Identify a single file in background (e.g. from watchdog)"""
     with flask_app.app_context():
-        from db import remove_missing_files_from_db
         import time
         
         # Recreate emitter fresh for THIS task execution
@@ -115,6 +115,7 @@ def identify_file_async(filepath):
 
             # For simple file changes, we can just run the global cleanup and identification
             job_tracker.update_progress(job_id, 20, message="Checking for changes...")
+            from db import remove_missing_files_from_db
             remove_missing_files_from_db()
 
             from library import Libraries
@@ -143,7 +144,6 @@ def identify_file_async(filepath):
 def scan_all_libraries_async():
     """Full library scan for all configured paths in background"""
     with flask_app.app_context():
-        from db import remove_missing_files_from_db, get_libraries
         import time
 
         # Recreate emitter fresh for THIS task execution
@@ -155,6 +155,7 @@ def scan_all_libraries_async():
         job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, "Scanning all libraries")
 
         try:
+            from db import remove_missing_files_from_db, get_libraries
             job_tracker.update_progress(job_id, 10, message="Cleaning up missing files...")
             count = remove_missing_files_from_db()
             logger.info("cleanup_completed", removed=count)

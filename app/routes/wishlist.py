@@ -48,6 +48,8 @@ def get_wishlist():
                 "id": item.id,
                 "title_id": item.title_id,
                 "name": title_info.get("name", f"Unknown ({item.title_id})"),
+                "iconUrl": title_info.get("iconUrl"),
+                "bannerUrl": title_info.get("bannerUrl"),
                 "priority": item.priority,
                 "added_date": item.added_date.isoformat() if item.added_date else None,
                 "owned": owned,

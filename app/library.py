@@ -151,13 +151,12 @@ def remove_library_complete(app, watcher, path):
 
 def init_libraries(app, watcher, paths):
     with app.app_context():
-        # delete non existing libraries
+        # delete non existing libraries (DISABLED - Too dangerous if drive is temporarily disconnected)
         for library in get_libraries():
             path = library.path
             if not os.path.exists(path):
-                logger.warning(f"Library {path} no longer exists, deleting from database.")
-                # Use the complete removal function for consistency
-                remove_library_complete(app, watcher, path)
+                logger.warning(f"Library {path} is currently inaccessible. It will NOT be deleted from the database to prevent data loss, but it won't be monitored until it reappears.")
+                # remove_library_complete(app, watcher, path)
 
         # add libraries and start watchdog
         logger.info(f"Initializing libraries with paths: {paths}")

@@ -5,7 +5,7 @@
     "enabled": true,
     "priority": 1,
     "source_type": "json",
-    "last_success": "2026-01-31T17:18:05.033487+00:00",
+    "last_success": "2026-02-01T14:40:11.299151+00:00",
     "last_error": null,
     "remote_date": "2026-01-31T08:11:46",
     "is_fetching": false
@@ -27,7 +27,7 @@
     "enabled": true,
     "priority": 1,
     "source_type": "json",
-    "last_success": "2026-01-31T17:18:05.035924+00:00",
+    "last_success": "2026-02-01T14:40:11.300153+00:00",
     "last_error": null,
     "remote_date": "2026-02-01T08:36:18+00:00",
     "is_fetching": false

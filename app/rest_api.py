@@ -108,6 +108,8 @@ def init_rest_api(app):
             "id": fields.Integer(description="Wishlist item ID"),
             "title_id": fields.String(required=True, description="Title ID"),
             "name": fields.String(description="Game name"),
+            "iconUrl": fields.String(description="Icon URL"),
+            "bannerUrl": fields.String(description="Banner URL"),
             "priority": fields.Integer(description="Priority (1=high, 5=low)"),
             "added_at": fields.String(description="Date added"),
             "notes": fields.String(description="User notes"),

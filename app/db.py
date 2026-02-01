@@ -453,187 +453,195 @@ def init_db(app):
                 # Ensure new tables are created even if DB exists
                 db.create_all()
 
-                # Proactive column check for new metadata fields (Auto-migration)
-                try:
-                    from sqlalchemy import text, inspect
+            # Cleanup: Remove titles with null title_id
+            try:
+                Titles.query.filter((Titles.title_id == None) | (Titles.title_id == "")).delete()
+                db.session.commit()
+            except Exception as e:
+                logger.warning(f"Failed to cleanup null titles: {e}")
+                db.session.rollback()
 
-                    engine = db.engine
-                    with engine.connect() as conn:
-                        inspector = inspect(engine)
+            # Proactive column check for new metadata fields (Auto-migration)
+            try:
+                from sqlalchemy import text, inspect
 
-                        # Check for system_jobs table
-                        if not inspector.has_table("system_jobs"):
-                            logger.info("Creating system_jobs table...")
-                            conn.execute(
-                                text("""
-                                CREATE TABLE IF NOT EXISTS system_jobs (
-                                    job_id VARCHAR(50) NOT NULL PRIMARY KEY,
-                                    job_type VARCHAR(50) NOT NULL,
-                                    status VARCHAR(20) NOT NULL,
-                                    progress_percent FLOAT DEFAULT 0.0,
-                                    progress_message VARCHAR(255),
-                                    result_json JSON,
-                                    metadata_json JSON,
-                                    error TEXT,
-                                    started_at DATETIME,
-                                    completed_at DATETIME
-                                )
-                            """)
+                engine = db.engine
+                with engine.connect() as conn:
+                    inspector = inspect(engine)
+
+                    # Check for system_jobs table
+                    if not inspector.has_table("system_jobs"):
+                        logger.info("Creating system_jobs table...")
+                        conn.execute(
+                            text("""
+                            CREATE TABLE IF NOT EXISTS system_jobs (
+                                job_id VARCHAR(50) NOT NULL PRIMARY KEY,
+                                job_type VARCHAR(50) NOT NULL,
+                                status VARCHAR(20) NOT NULL,
+                                progress_percent FLOAT DEFAULT 0.0,
+                                progress_message VARCHAR(255),
+                                result_json JSON,
+                                metadata_json JSON,
+                                error TEXT,
+                                started_at DATETIME,
+                                completed_at DATETIME
                             )
-                            conn.commit()
+                        """)
+                        )
+                        conn.commit()
 
-                        # Check for title_metadata table
-                        if not inspector.has_table("title_metadata"):
-                            logger.info("Creating title_metadata table...")
-                            conn.execute(
-                                text("""
-                                CREATE TABLE IF NOT EXISTS title_metadata (
-                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                    title_id VARCHAR(16) NOT NULL,
-                                    description TEXT,
-                                    rating FLOAT,
-                                    rating_count INTEGER,
-                                    genres JSON,
-                                    tags JSON,
-                                    release_date DATE,
-                                    cover_url VARCHAR(512),
-                                    banner_url VARCHAR(512),
-                                    screenshots JSON,
-                                    source VARCHAR(50),
-                                    source_id VARCHAR(100),
-                                    fetched_at DATETIME,
-                                    updated_at DATETIME
-                                )
-                            """)
+                    # Check for title_metadata table
+                    if not inspector.has_table("title_metadata"):
+                        logger.info("Creating title_metadata table...")
+                        conn.execute(
+                            text("""
+                            CREATE TABLE IF NOT EXISTS title_metadata (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                title_id VARCHAR(16) NOT NULL,
+                                description TEXT,
+                                rating FLOAT,
+                                rating_count INTEGER,
+                                genres JSON,
+                                tags JSON,
+                                release_date DATE,
+                                cover_url VARCHAR(512),
+                                banner_url VARCHAR(512),
+                                screenshots JSON,
+                                source VARCHAR(50),
+                                source_id VARCHAR(100),
+                                fetched_at DATETIME,
+                                updated_at DATETIME
                             )
-                            conn.commit()
+                        """)
+                        )
+                        conn.commit()
 
-                        # Check titles table columns
-                        existing_columns = [c["name"] for c in inspector.get_columns("titles")]
-                        new_cols = [
-                            ("name", "TEXT"),
-                            ("icon_url", "TEXT"),
-                            ("banner_url", "TEXT"),
-                            ("category", "TEXT"),
-                            ("release_date", "TEXT"),
-                            ("publisher", "TEXT"),
-                            ("description", "TEXT"),
-                            ("size", "INTEGER"),
-                            ("nsuid", "TEXT"),
-                            ("is_custom", "BOOLEAN DEFAULT 0"),
-                            ("last_updated", "DATETIME"),
-                            ("added_at", "DATETIME"),
-                            ("metacritic_score", "INTEGER"),
-                            ("user_rating", "FLOAT"),
-                            ("rawg_rating", "FLOAT"),
-                            ("rating_count", "INTEGER"),
-                            ("playtime_main", "INTEGER"),
-                            ("playtime_extra", "INTEGER"),
-                            ("playtime_completionist", "INTEGER"),
-                            ("genres_json", "TEXT"),
-                            ("tags_json", "TEXT"),
-                            ("screenshots_json", "TEXT"),
-                            ("rawg_id", "INTEGER"),
-                            ("igdb_id", "INTEGER"),
-                            ("api_last_update", "DATETIME"),
-                            ("api_source", "VARCHAR(20)"),
-                        ]
+                    # Check titles table columns
+                    existing_columns = [c["name"] for c in inspector.get_columns("titles")]
+                    new_cols = [
+                        ("name", "TEXT"),
+                        ("icon_url", "TEXT"),
+                        ("banner_url", "TEXT"),
+                        ("category", "TEXT"),
+                        ("release_date", "TEXT"),
+                        ("publisher", "TEXT"),
+                        ("description", "TEXT"),
+                        ("size", "INTEGER"),
+                        ("nsuid", "TEXT"),
+                        ("is_custom", "BOOLEAN DEFAULT 0"),
+                        ("last_updated", "DATETIME"),
+                        ("added_at", "DATETIME"),
+                        ("metacritic_score", "INTEGER"),
+                        ("user_rating", "FLOAT"),
+                        ("rawg_rating", "FLOAT"),
+                        ("rating_count", "INTEGER"),
+                        ("playtime_main", "INTEGER"),
+                        ("playtime_extra", "INTEGER"),
+                        ("playtime_completionist", "INTEGER"),
+                        ("genres_json", "TEXT"),
+                        ("tags_json", "TEXT"),
+                        ("screenshots_json", "TEXT"),
+                        ("rawg_id", "INTEGER"),
+                        ("igdb_id", "INTEGER"),
+                        ("api_last_update", "DATETIME"),
+                        ("api_source", "VARCHAR(20)"),
+                    ]
 
-                        modified = False
-                        for col_name, col_type in new_cols:
-                            if col_name not in existing_columns:
-                                logger.info(f"Adding missing column {col_name} to titles table...")
-                                try:
-                                    conn.execute(text(f"ALTER TABLE titles ADD COLUMN {col_name} {col_type}"))
-                                    modified = True
-                                except Exception as e:
-                                    logger.error(f"Failed to add column {col_name}: {e}")
+                    modified = False
+                    for col_name, col_type in new_cols:
+                        if col_name not in existing_columns:
+                            logger.info(f"Adding missing column {col_name} to titles table...")
+                            try:
+                                conn.execute(text(f"ALTER TABLE titles ADD COLUMN {col_name} {col_type}"))
+                                modified = True
+                            except Exception as e:
+                                logger.error(f"Failed to add column {col_name}: {e}")
 
-                        if modified:
-                            conn.commit()
-                            logger.info("Database schema updated with new metadata columns.")
+                    if modified:
+                        conn.commit()
+                        logger.info("Database schema updated with new metadata columns.")
 
-                        # Check wishlist table columns (2026-01-16)
-                        wishlist_cols = [c["name"] for c in inspector.get_columns("wishlist")]
-                        wishlist_new_cols = [
-                            ("ignore_dlc", "BOOLEAN DEFAULT 0"),
-                            ("ignore_update", "BOOLEAN DEFAULT 0"),
-                        ]
+                    # Check wishlist table columns (2026-01-16)
+                    wishlist_cols = [c["name"] for c in inspector.get_columns("wishlist")]
+                    wishlist_new_cols = [
+                        ("ignore_dlc", "BOOLEAN DEFAULT 0"),
+                        ("ignore_update", "BOOLEAN DEFAULT 0"),
+                    ]
 
-                        wishlist_modified = False
-                        for col_name, col_type in wishlist_new_cols:
-                            if col_name not in wishlist_cols:
-                                logger.info(f"Adding missing column {col_name} to wishlist table...")
-                                try:
-                                    conn.execute(text(f"ALTER TABLE wishlist ADD COLUMN {col_name} {col_type}"))
-                                    wishlist_modified = True
-                                except Exception as e:
-                                    logger.error(f"Failed to add column {col_name} to wishlist: {e}")
+                    wishlist_modified = False
+                    for col_name, col_type in wishlist_new_cols:
+                        if col_name not in wishlist_cols:
+                            logger.info(f"Adding missing column {col_name} to wishlist table...")
+                            try:
+                                conn.execute(text(f"ALTER TABLE wishlist ADD COLUMN {col_name} {col_type}"))
+                                wishlist_modified = True
+                            except Exception as e:
+                                logger.error(f"Failed to add column {col_name} to wishlist: {e}")
 
-                        if wishlist_modified:
-                            conn.commit()
-                            logger.info("Database schema updated with wishlist ignore columns.")
+                    if wishlist_modified:
+                        conn.commit()
+                        logger.info("Database schema updated with wishlist ignore columns.")
 
-                        # Create wishlist_ignore table if not exists (2026-01-16)
-                        tables = inspector.get_table_names()
-                        if "wishlist_ignore" not in tables:
-                            logger.info("Creating wishlist_ignore table...")
-                            conn.execute(
-                                text("""
-                                CREATE TABLE wishlist_ignore (
-                                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                    user_id INTEGER,
-                                    title_id VARCHAR NOT NULL,
-                                    ignore_dlcs TEXT DEFAULT '{}',
-                                    ignore_updates TEXT DEFAULT '{}',
-                                    created_at DATETIME,
-                                    FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE,
-                                    UNIQUE (user_id, title_id)
-                                )
-                            """)
+                    # Create wishlist_ignore table if not exists (2026-01-16)
+                    tables = inspector.get_table_names()
+                    if "wishlist_ignore" not in tables:
+                        logger.info("Creating wishlist_ignore table...")
+                        conn.execute(
+                            text("""
+                            CREATE TABLE wishlist_ignore (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                user_id INTEGER,
+                                title_id VARCHAR NOT NULL,
+                                ignore_dlcs TEXT DEFAULT '{}',
+                                ignore_updates TEXT DEFAULT '{}',
+                                created_at DATETIME,
+                                FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE,
+                                UNIQUE (user_id, title_id)
                             )
-                            conn.commit()
-                            logger.info("wishlist_ignore table created.")
-                        else:
-                            existing_cols = [c["name"] for c in inspector.get_columns("wishlist_ignore")]
-                            if "ignore_dlc" in existing_cols and "ignore_dlcs" not in existing_cols:
-                                logger.info("Migrating wishlist_ignore columns to new JSON format...")
-                                try:
-                                    conn.execute(
-                                        text("ALTER TABLE wishlist_ignore RENAME COLUMN ignore_dlc TO ignore_dlcs_old")
-                                    )
-                                    conn.execute(
-                                        text(
-                                            "ALTER TABLE wishlist_ignore RENAME COLUMN ignore_update TO ignore_updates_old"
-                                        )
-                                    )
-                                    conn.execute(
-                                        text("ALTER TABLE wishlist_ignore ADD COLUMN ignore_dlcs TEXT DEFAULT '{}'")
-                                    )
-                                    conn.execute(
-                                        text("ALTER TABLE wishlist_ignore ADD COLUMN ignore_updates TEXT DEFAULT '{}'")
-                                    )
-                                    conn.commit()
-                                    logger.info("wishlist_ignore columns renamed and new JSON columns added.")
-                                except Exception as e:
-                                    logger.error(f"Failed to migrate wishlist_ignore columns: {e}")
-
-                            if "ignore_dlcs" in existing_cols:
+                        """)
+                        )
+                        conn.commit()
+                        logger.info("wishlist_ignore table created.")
+                    else:
+                        existing_cols = [c["name"] for c in inspector.get_columns("wishlist_ignore")]
+                        if "ignore_dlc" in existing_cols and "ignore_dlcs" not in existing_cols:
+                            logger.info("Migrating wishlist_ignore columns to new JSON format...")
+                            try:
                                 conn.execute(
-                                    text(
-                                        "UPDATE wishlist_ignore SET ignore_dlcs = '{}' WHERE ignore_dlcs IS NULL OR ignore_dlcs = ''"
-                                    )
+                                    text("ALTER TABLE wishlist_ignore RENAME COLUMN ignore_dlc TO ignore_dlcs_old")
                                 )
                                 conn.execute(
                                     text(
-                                        "UPDATE wishlist_ignore SET ignore_updates = '{}' WHERE ignore_updates IS NULL OR ignore_updates = ''"
+                                        "ALTER TABLE wishlist_ignore RENAME COLUMN ignore_update TO ignore_updates_old"
                                     )
+                                )
+                                conn.execute(
+                                    text("ALTER TABLE wishlist_ignore ADD COLUMN ignore_dlcs TEXT DEFAULT '{}'")
+                                )
+                                conn.execute(
+                                    text("ALTER TABLE wishlist_ignore ADD COLUMN ignore_updates TEXT DEFAULT '{}'")
                                 )
                                 conn.commit()
-                                logger.info("Ensured ignore_dlcs and ignore_updates have default values.")
+                                logger.info("wishlist_ignore columns renamed and new JSON columns added.")
+                            except Exception as e:
+                                logger.error(f"Failed to migrate wishlist_ignore columns: {e}")
 
-                except Exception as e:
-                    logger.warning(f"Auto-migration check failed: {e}")
+                        if "ignore_dlcs" in existing_cols:
+                            conn.execute(
+                                text(
+                                    "UPDATE wishlist_ignore SET ignore_dlcs = '{}' WHERE ignore_dlcs IS NULL OR ignore_dlcs = ''"
+                                )
+                            )
+                            conn.execute(
+                                text(
+                                    "UPDATE wishlist_ignore SET ignore_updates = '{}' WHERE ignore_updates IS NULL OR ignore_updates = ''"
+                                )
+                            )
+                            conn.commit()
+                            logger.info("Ensured ignore_dlcs and ignore_updates have default values.")
+
+            except Exception as e:
+                logger.warning(f"Auto-migration check failed: {e}")
 
                 logger.info("Checking database migration...")
                 if is_migration_needed():

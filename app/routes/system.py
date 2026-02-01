@@ -356,7 +356,7 @@ def delete_file_api(file_id):
 
             # Run orphaned files cleanup after successful deletion
             try:
-                from library import remove_missing_files_from_db
+                from db import remove_missing_files_from_db
 
                 removed_count = remove_missing_files_from_db()
                 if removed_count > 0:
