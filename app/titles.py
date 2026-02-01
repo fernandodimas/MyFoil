@@ -2,6 +2,8 @@ import os
 import re
 import json
 import time
+import fcntl
+import sqlite3
 
 try:
     import gevent
@@ -165,6 +167,16 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
 
         from db import db, TitleDBCache, TitleDBVersions, TitleDBDLCs
 
+        # Use a file lock to prevent concurrent cache saves from different processes (e.g. Workers)
+        lock_path = os.path.join(CONFIG_DIR, ".titledb_save.lock")
+        lock_file = open(lock_path, "w")
+        try:
+            fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except (BlockingIOError, IOError):
+            logger.info("Outro processo já está salvando o TitleDB no cache. Ignorando esta execução.")
+            lock_file.close()
+            return True # Not an error, just redundant
+
         logger.info("Saving TitleDB to database cache...")
 
         now = now_utc()
@@ -232,7 +244,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
             if len(pending_entries) >= BATCH_SIZE:
                 for attempt in range(max_retries):
                     try:
-                        # Convert objects to dicts for bulk_insert_mappings
+                        # Convert objects to dicts for bulk save
                         mappings = [
                             {
                                 "title_id": e.title_id,
@@ -243,7 +255,15 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                             }
                             for e in pending_entries
                         ]
-                        db.session.bulk_insert_mappings(TitleDBCache, mappings)
+                        # Use raw execution for INSERT OR REPLACE to be race-condition proof
+                        # and much faster than standard ORM bulk inserts
+                        db.session.execute(
+                            db.text("""
+                                INSERT OR REPLACE INTO titledb_cache (title_id, data, source, downloaded_at, updated_at)
+                                VALUES (:title_id, :data, :source, :downloaded_at, :updated_at)
+                            """),
+                            mappings
+                        )
                         db.session.commit()
                         break
                     except OperationalError as e:
@@ -252,6 +272,10 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                             db.session.rollback()
                             time.sleep(retry_delay)
                             continue
+                        raise
+                    except Exception as e:
+                        logger.error(f"Error during bulk save: {e}")
+                        db.session.rollback()
                         raise
                 pending_entries = []  # Release memory
                 
@@ -279,7 +303,13 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                         }
                         for e in pending_entries
                     ]
-                    db.session.bulk_insert_mappings(TitleDBCache, mappings)
+                    db.session.execute(
+                        db.text("""
+                            INSERT OR REPLACE INTO titledb_cache (title_id, data, source, downloaded_at, updated_at)
+                            VALUES (:title_id, :data, :source, :downloaded_at, :updated_at)
+                        """),
+                        mappings
+                    )
                     db.session.commit()
                     break
                 except OperationalError as e:
@@ -288,6 +318,10 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                         db.session.rollback()
                         time.sleep(retry_delay)
                         continue
+                    raise
+                except Exception as e:
+                    logger.error(f"Error during final bulk save: {e}")
+                    db.session.rollback()
                     raise
             pending_entries = []
 
@@ -388,6 +422,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                     if gevent:
                         gevent.sleep(0.01)
 
+        # Final batch of DLCs
         if dlc_entries:
             for attempt in range(max_retries):
                 try:
@@ -401,10 +436,10 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                         time.sleep(retry_delay)
                         continue
                     raise
-            dlc_count = len(dlc_entries)
-        else:
-            dlc_count = len(seen_dlcs)
-        dlc_entries = []
+            dlc_entries = []
+
+        version_count = len(seen_versions)
+        dlc_count = len(seen_dlcs)
 
         _titledb_cache_timestamp = time.time()  # Use time.time() for cache TTL comparison
         logger.info(f"TitleDB saved to DB cache: {title_count} titles, {version_count} versions, {dlc_count} DLCs")
@@ -417,6 +452,14 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
         except:
             pass
         return False
+    finally:
+        # Release lock regardless of success or failure
+        try:
+            if "lock_file" in locals() and not lock_file.closed:
+                fcntl.flock(lock_file, fcntl.LOCK_UN)
+                lock_file.close()
+        except:
+            pass
 
 
 def is_db_cache_valid():
