@@ -133,7 +133,7 @@ socketio = SafeSocketIO(
 
 # Import state to allow job tracking
 import state
-from job_tracker import job_tracker
+from job_tracker import job_tracker, JobStatus
 from socket_helper import get_socketio_emitter
 
 job_tracker.set_emitter(get_socketio_emitter())
@@ -468,6 +468,21 @@ def create_automatic_backup():
 def init_internal(app):
     """Initialize internal components"""
     global watcher_thread
+
+    # Cleanup stale jobs first (Reset stuck 'RUNNING' jobs from previous session)
+    try:
+        with app.app_context():
+            from utils import now_utc
+            stale = SystemJob.query.filter_by(status=JobStatus.RUNNING).all()
+            if stale:
+                logger.warning(f"Startup: Resetting {len(stale)} stale RUNNING jobs to FAILED.")
+                for j in stale:
+                    j.status = JobStatus.FAILED
+                    j.error = "System restart / Stale job"
+                    j.completed_at = now_utc()
+                db.session.commit()
+    except Exception as e:
+        logger.error(f"Failed to cleanup stale jobs: {e}")
 
     # Staged initialization to prevent CPU spike killing Gunicorn worker
     def stage1_cache():
