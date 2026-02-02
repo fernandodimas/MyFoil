@@ -202,27 +202,32 @@ def scan_library_api():
             import threading
             import state
             from flask import current_app
+            from library import scan_library_path, Libraries, identify_library_files, post_library_change
+            
+            logger.info(f"Preparing background scan thread (path={path})")
             
             def run_scan_background():
                 """Background scan thread with proper app context"""
                 try:
+                    logger.info(f"Background thread started - acquiring app context")
                     # Create new app context for thread
                     with current_app.app_context():
-                        from library import scan_library_path, Libraries, identify_library_files, post_library_change
-                        
-                        logger.info(f"Background scan started (path={path})")
+                        logger.info(f"Background scan executing (path={path})")
                         
                         if path is None:
                             # Scan all libraries
                             libraries = Libraries.query.all()
+                            logger.info(f"Scanning {len(libraries)} libraries")
                             for lib in libraries:
                                 logger.debug(f"Scanning library: {lib.path}")
                                 scan_library_path(lib.path)
                                 identify_library_files(lib.path)
                         else:
+                            logger.info(f"Scanning single library: {path}")
                             scan_library_path(path)
                             identify_library_files(path)
                         
+                        logger.info("Running post_library_change...")
                         post_library_change()
                         logger.info("Background scan completed successfully")
                         
@@ -231,14 +236,15 @@ def scan_library_api():
                 finally:
                     with state.scan_lock:
                         state.scan_in_progress = False
+                    logger.info("Background scan thread exiting")
             
             with state.scan_lock:
                 state.scan_in_progress = True
             
             scan_thread = threading.Thread(target=run_scan_background, daemon=True, name="LibraryScan")
             scan_thread.start()
+            logger.info("Background scan thread launched successfully")
             
-            logger.info("Scan started in background thread (Celery unavailable)")
             return jsonify({"success": True, "async": False, "message": "Scan started in background thread", "errors": []})
     except Exception as e:
         errors.append(str(e))
