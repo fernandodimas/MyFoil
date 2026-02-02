@@ -198,30 +198,48 @@ def scan_library_api():
                 logger.info(f"Triggered asynchronous library scan for: {path}")
             return jsonify({"success": True, "async": True, "errors": []})
         else:
-            # Synchronous mode (local process)
+            # Synchronous mode - Use daemon thread to avoid worker timeout
+            import threading
             import state
-
+            from flask import current_app
+            
+            def run_scan_background():
+                """Background scan thread with proper app context"""
+                try:
+                    # Create new app context for thread
+                    with current_app.app_context():
+                        from library import scan_library_path, Libraries, identify_library_files, post_library_change
+                        
+                        logger.info(f"Background scan started (path={path})")
+                        
+                        if path is None:
+                            # Scan all libraries
+                            libraries = Libraries.query.all()
+                            for lib in libraries:
+                                logger.debug(f"Scanning library: {lib.path}")
+                                scan_library_path(lib.path)
+                                identify_library_files(lib.path)
+                        else:
+                            scan_library_path(path)
+                            identify_library_files(path)
+                        
+                        post_library_change()
+                        logger.info("Background scan completed successfully")
+                        
+                except Exception as e:
+                    logger.error(f"Background scan failed: {e}", exc_info=True)
+                finally:
+                    with state.scan_lock:
+                        state.scan_in_progress = False
+            
             with state.scan_lock:
                 state.scan_in_progress = True
-            try:
-                from library import scan_library_path, Libraries, identify_library_files
-
-                if path is None:
-                    # Scan all libraries
-                    libraries = Libraries.query.all()
-                    for lib in libraries:
-                        scan_library_path(lib.path)
-                        identify_library_files(lib.path)
-                else:
-                    scan_library_path(path)
-                    identify_library_files(path)
-                from library import post_library_change
-
-                post_library_change()
-                return jsonify({"success": True, "async": False, "errors": []})
-            finally:
-                with state.scan_lock:
-                    state.scan_in_progress = False
+            
+            scan_thread = threading.Thread(target=run_scan_background, daemon=True, name="LibraryScan")
+            scan_thread.start()
+            
+            logger.info("Scan started in background thread (Celery unavailable)")
+            return jsonify({"success": True, "async": False, "message": "Scan started in background thread", "errors": []})
     except Exception as e:
         errors.append(str(e))
         success = False
