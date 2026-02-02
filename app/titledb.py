@@ -429,6 +429,46 @@ def get_active_source_info() -> Dict:
             # If remote date is newer than last download (with 1min margin)
             if comp_remote > (comp_success + timedelta(minutes=1)):
                 update_available = True
+                
+                # Auto-update: Check if we should trigger an update
+                # We do this here as it's the polling entry point
+                try:
+                    from job_tracker import job_tracker, JobType, JobStatus
+                    
+                    # 1. Check if any update is already running/scheduled
+                    active_jobs = job_tracker.get_active_jobs()
+                    is_running = any(j['type'] == JobType.TITLEDB_UPDATE for j in active_jobs)
+                    
+                    # 2. Check for recent failures to prevent infinite loops (backoff 1 hour)
+                    all_jobs = job_tracker.get_all_jobs()
+                    recent_fail = any(
+                        j['type'] == JobType.TITLEDB_UPDATE and 
+                        j['status'] == JobStatus.FAILED and 
+                        j.get('completed_at') and 
+                        (now_utc() - ensure_utc(j['completed_at'])).total_seconds() < 3600
+                        for j in all_jobs
+                    )
+
+                    if not is_running and not recent_fail:
+                        logger.info(f"New TitleDB version detected ({active.name}). Scheduling auto-update in 15s...")
+                        
+                        def _delayed_launch():
+                            import gevent
+                            gevent.sleep(15)
+                             # Re-check running status inside the thread just in case
+                            if any(j['type'] == JobType.TITLEDB_UPDATE for j in job_tracker.get_active_jobs()):
+                                return
+
+                            from tasks import update_titledb_async
+                            # Trigger Celery task
+                            update_titledb_async.apply_async()
+                            logger.info("Auto-update TitleDB triggered.")
+
+                        import gevent
+                        gevent.spawn(_delayed_launch)
+
+                except Exception as e:
+                    logger.error(f"Failed to trigger auto-update: {e}")
         
         # Format dates for UI
         last_download_date = format_datetime(active.last_success)
