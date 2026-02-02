@@ -695,7 +695,7 @@ def identify_appId(app_id):
 
     # Strategy 3: Fallback heuristic
     else:
-        logger.warning(f"{app_id} not in cnmts_db, fallback to default identification.")
+        logger.debug(f"{app_id} not in cnmts_db, fallback to default identification.")
         if app_id.endswith("000"):
             app_type = APP_TYPE_BASE
             title_id = app_id
