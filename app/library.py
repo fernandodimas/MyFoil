@@ -1318,38 +1318,41 @@ def post_library_change():
     import gevent
     
     def _do_post_library_change():
-        global _LIBRARY_CACHE
+        from app import app
         
-        logger.info("Post-library change: updating titles and cache")
-        
-        try:
-            # 1. Invalidate in-memory cache FIRST
-            with _CACHE_LOCK:
-                _LIBRARY_CACHE = None
+        with app.app_context():
+            global _LIBRARY_CACHE
             
-            # 2. Delete disk cache
-            invalidate_library_cache()
+            logger.info("Post-library change: updating titles and cache")
             
-            # 3. Update titles with new files
-            # This is critical for updating 'up_to_date' and 'complete' status flags
-            # which control the badges (UPDATE, DLC) and filters
-            update_titles()
-            
-            # 4. Regenerate library cache (force=True) to ensure fresh data
-            # This is expensive so we yield periodically
-            gevent.sleep(0)
-            generate_library(force=True)
-            
-            # 5. Notify frontend via WebSocket
-            trigger_library_update_notification()
-            
-            logger.info("Library cache regenerated successfully")
-        except Exception as e:
-            logger.error(f"Error in post_library_change: {e}")
-            import traceback
-            traceback.print_exc()
+            try:
+                # 1. Invalidate in-memory cache FIRST
+                with _CACHE_LOCK:
+                    _LIBRARY_CACHE = None
+                
+                # 2. Delete disk cache
+                invalidate_library_cache()
+                
+                # 3. Update titles with new files
+                # This is critical for updating 'up_to_date' and 'complete' status flags
+                # which control the badges (UPDATE, DLC) and filters
+                update_titles()
+                
+                # 4. Regenerate library cache (force=True) to ensure fresh data
+                # This is expensive so we yield periodically
+                gevent.sleep(0)
+                generate_library(force=True)
+                
+                # 5. Notify frontend via WebSocket
+                trigger_library_update_notification()
+                
+                logger.info("Library cache regenerated successfully")
+            except Exception as e:
+                logger.error(f"Error in post_library_change: {e}")
+                import traceback
+                traceback.print_exc()
 
-        titles_lib.unload_titledb()
+            titles_lib.unload_titledb()
     
     # Run in background so it doesn't block the scan job completion
     gevent.spawn(_do_post_library_change)
