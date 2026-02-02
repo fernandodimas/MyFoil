@@ -27,7 +27,10 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 # Local imports
-from constants import *
+from constants import (
+    APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC,
+    MYFOIL_DB, BUILD_VERSION, CONFIG_DIR, PLUGINS_DIR, DATA_DIR
+)
 from settings import *
 from db import *
 from i18n import I18n
