@@ -209,7 +209,7 @@ class SystemStatusManager {
         if (job.status === 'running' || job.status === 'scheduled') {
             cancelButton = `
                 <button class="button is-small is-danger is-light ml-2"
-                        onclick="cancelJob('${job.id}')"
+                        onclick="cancelJob('${job.id}', this)"
                         title="Cancel this job">
                     <span class="icon"><i class="bi bi-x-circle"></i></span>
                 </button>
@@ -334,20 +334,32 @@ let clearAllJobsRunning = false;
 
 async function clearAllJobs() {
     // Prevent multiple simultaneous clicks
-    if (clearAllJobsRunning) {
-        console.warn('Clear jobs already running...');
-        return;
-    }
+    if (clearAllJobsRunning) return;
 
-    if (!confirm('Are you sure you want to clear all active operations? Stuck jobs (> 1h) will be marked as failed.')) {
+    const button = document.querySelector('[onclick="clearAllJobs()"]');
+
+    // Check if confirming
+    if (button && button.dataset.confirming !== "true") {
+        button.dataset.confirming = "true";
+        const originalText = button.textContent;
+        button.textContent = "Confirm Clear?";
+        button.classList.add('is-warning');
+
+        // Reset after 3 seconds
+        setTimeout(() => {
+            if (button && button.dataset.confirming === "true") {
+                button.dataset.confirming = "false";
+                button.textContent = originalText;
+                button.classList.remove('is-warning');
+            }
+        }, 3000);
         return;
     }
 
     clearAllJobsRunning = true;
+    const originalText = button ? (button.getAttribute('data-original-text') || 'Clear All') : 'Clear';
 
     // Show loading state
-    const button = document.querySelector('[onclick="clearAllJobs()"]');
-    const originalText = button ? button.textContent : '';
     if (button) {
         button.textContent = 'Clearing...';
         button.disabled = true;
@@ -360,27 +372,50 @@ async function clearAllJobs() {
 
             if (response.ok) {
                 if (statusManager) statusManager.fetchStatus();
-                alert('Active operations cleared. Stuck jobs have been cancelled.');
+                showToast('Active operations cleared. Stuck jobs cancelled.', 'success');
             } else {
                 console.error('Failed to clear jobs');
-                alert('Failed to clear operations.');
+                showToast('Failed to clear operations.', 'danger');
             }
         } catch (error) {
             console.error('Error clearing jobs:', error);
-            alert('Error communicating with server.');
+            showToast('Error communicating with server.', 'danger');
         } finally {
             clearAllJobsRunning = false;
+            // Reset button
             if (button) {
                 button.textContent = originalText;
                 button.disabled = false;
+                button.dataset.confirming = "false";
+                button.classList.remove('is-warning');
             }
         }
-    }, 10); // Small delay to allow UI update
+    }, 10);
+
 }
 
-async function cancelJob(jobId) {
-    if (!confirm('Cancel this job? It will be marked as failed.')) {
+async function cancelJob(jobId, btnElement) {
+    // Confirmation logic using button state
+    if (btnElement && btnElement.dataset.confirming !== "true") {
+        btnElement.dataset.confirming = "true";
+        btnElement.classList.remove('is-light');
+        btnElement.classList.add('is-warning'); // Highlight button
+
+        // Reset after 3 seconds
+        setTimeout(() => {
+            if (btnElement && btnElement.dataset.confirming === "true") {
+                btnElement.dataset.confirming = "false";
+                btnElement.classList.remove('is-warning');
+                btnElement.classList.add('is-light');
+            }
+        }, 3000);
         return;
+    }
+
+    // Execution logic
+    if (btnElement) {
+        btnElement.classList.add('is-loading');
+        btnElement.disabled = true;
     }
 
     try {
@@ -391,12 +426,26 @@ async function cancelJob(jobId) {
             if (statusManager) statusManager.fetchStatus();
             if (!data.success) {
                 console.error(`Failed to cancel job: ${data.error}`);
+                showToast(`Failed to cancel job: ${data.error}`, 'danger');
+            } else {
+                showToast('Job cancelled successfully', 'success');
             }
         } else {
             console.error('Failed to cancel job - HTTP error');
+            showToast('Failed to cancel job - HTTP error', 'danger');
         }
     } catch (error) {
         console.error('Error cancelling job:', error);
+        showToast('Error communicating with server', 'danger');
+    } finally {
+        if (btnElement) {
+            btnElement.classList.remove('is-loading');
+            btnElement.disabled = false;
+            // Also reset confirmation state
+            btnElement.dataset.confirming = "false";
+            btnElement.classList.remove('is-warning');
+            btnElement.classList.add('is-light');
+        }
     }
 }
 
