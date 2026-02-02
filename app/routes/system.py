@@ -204,14 +204,17 @@ def scan_library_api():
             from flask import current_app
             from library import scan_library_path, Libraries, identify_library_files, post_library_change
             
+            # Capture app instance BEFORE creating thread (current_app won't work in thread)
+            app_instance = current_app._get_current_object()
+            
             logger.info(f"Preparing background scan thread (path={path})")
             
             def run_scan_background():
                 """Background scan thread with proper app context"""
                 try:
-                    logger.info(f"Background thread started - acquiring app context")
-                    # Create new app context for thread
-                    with current_app.app_context():
+                    logger.info(f"Background thread started - creating app context")
+                    # Use the captured app instance to create context
+                    with app_instance.app_context():
                         logger.info(f"Background scan executing (path={path})")
                         
                         if path is None:
