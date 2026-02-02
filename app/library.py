@@ -679,12 +679,11 @@ def identify_library_files(library):
                     pass  # Use filename if game info unavailable
 
             # Frequent progress updates (UI feels faster)
-            # Update every 5 items to show filename without flooding websocket
-            # Also update IMMEDIATELY on first item so user doesn't see 0% for too long
-            if processed_count % 5 == 0 or processed_count == 1:
-                progress = int((processed_count / nb_to_identify) * 100)
-                job_tracker.update_progress(job_id, progress, current=processed_count, total=nb_to_identify, message=f"Identifying: {display_name}")
-                gevent.sleep(0)  # Yield after progress update
+            # Frequent progress updates (UI feels faster)
+            # Update EVERY item to show realtime progress
+            progress = int((processed_count / nb_to_identify) * 100)
+            job_tracker.update_progress(job_id, progress, current=processed_count, total=nb_to_identify, message=f"Identifying: {display_name}")
+            gevent.sleep(0)  # Yield after progress update
 
             # Flush every 10 items for memory management
             if processed_count % 10 == 0:

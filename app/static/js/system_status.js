@@ -114,7 +114,11 @@ class SystemStatusManager {
             const job = status.active[0]; // Primary job
 
             icon.innerHTML = '<i class="bi bi-arrow-repeat spin has-text-info"></i>';
-            text.textContent = this.getJobLabel(job);
+            if (job.progress && job.progress.message) {
+                text.textContent = job.progress.message;
+            } else {
+                text.textContent = this.getJobLabel(job);
+            }
 
             if (job.progress && job.progress.percent) {
                 progressContainer.classList.remove('is-hidden');
