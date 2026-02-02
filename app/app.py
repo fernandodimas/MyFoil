@@ -164,8 +164,8 @@ def get_system_status():
         except:
             pass
     return {
-        "scanning": state.scan_in_progress,
-        "updating_titledb": state.is_titledb_update_running,
+        "scanning": state.scan_in_progress or any(j.get('type') == 'library_scan' for j in job_tracker.get_active_jobs()),
+        "updating_titledb": state.is_titledb_update_running or any(j.get('type') == 'titledb_update' for j in job_tracker.get_active_jobs()),
         "watching": watching > 0,
         "libraries": watching,
     }
