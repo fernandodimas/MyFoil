@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, request, redirect, jsonify, send_f
 from flask_login import login_required
 from auth import access_required, admin_account_created
 from middleware.auth import tinfoil_access
-from db import *
+from db import db, Files, Apps, Webhook, logger
 import os
 import hmac
 import hashlib
@@ -116,6 +116,7 @@ def tinfoil_error(error):
 
 def trigger_webhook(event_type, data):
     """Disparar webhooks configurados"""
+    from app import app
     with app.app_context():
         try:
             webhooks = Webhook.query.filter_by(active=True).all()
@@ -202,6 +203,7 @@ def run_renaming_api():
 
     # Run in background to avoid timeout
     def run_wrapper():
+        from app import app
         with app.app_context():
             start_renaming_job(patterns)
 
