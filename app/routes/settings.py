@@ -4,11 +4,11 @@ Settings Routes - Endpoints relacionados às configurações do sistema
 
 from flask import Blueprint, request, jsonify
 from flask_login import current_user
-from db import db, Libraries, User, Apps, Files, logger, app_files
+from db import db, Libraries, User, Apps, Files, logger, app_files, Webhook
 from sqlalchemy import func
 from settings import reload_conf, load_settings, set_titles_settings, set_shop_settings, DEFAULT_SETTINGS, CONFIG_FILE
 from auth import access_required
-from constants import CONFIG_DIR
+from constants import CONFIG_DIR, TITLEDB_DIR
 from utils import format_size_py, format_datetime
 import os
 import json
