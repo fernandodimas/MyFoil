@@ -920,7 +920,7 @@ def add_title_id_in_db(title_id):
     if not existing_title:
         new_title = Titles(title_id=title_id, added_at=now_utc())
         db.session.add(new_title)
-        db.session.commit()
+        db.session.flush()
 
 
 def backfill_added_at_for_existing_titles():
