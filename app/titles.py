@@ -350,7 +350,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                         TitleDBVersions(title_id=tid_upper, version=v_int, release_date=release_date)
                     )
 
-                    if len(version_entries) >= BATCH_SIZE * 2:  # 4000 items
+                    if len(version_entries) >= 500:  # Reduced from BATCH_SIZE * 2 to 500 to avoid locks
                         for attempt in range(max_retries):
                             try:
                                 db.session.bulk_save_objects(version_entries)
@@ -405,7 +405,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
 
                 dlc_entries.append(TitleDBDLCs(base_title_id=base_upper, dlc_app_id=dlc_upper))
 
-                if len(dlc_entries) >= BATCH_SIZE * 2:
+                if len(dlc_entries) >= 500:
                     for attempt in range(max_retries):
                         try:
                             db.session.bulk_save_objects(dlc_entries)

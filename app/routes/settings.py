@@ -13,6 +13,7 @@ from constants import CONFIG_DIR
 from utils import format_size_py, format_datetime
 import os
 import json
+import yaml
 import copy
 
 settings_bp = Blueprint("settings", __name__, url_prefix="/api")
