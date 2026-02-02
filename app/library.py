@@ -565,9 +565,9 @@ def identify_library_files(library):
         # Prepare data for pool
         batch_data = [(f.id, f.filepath, f.filename) for f in files_to_identify]
         
-        # Increasing to 4 workers for speed since they are I/O bound and don't write to DB
+        # Increasing to 8 workers for speed since they are I/O bound
         # The main loop handles DB writes sequentially
-        pool = Pool(4)
+        pool = Pool(8)
         
         processed_count = 0
         
