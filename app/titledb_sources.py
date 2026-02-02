@@ -5,6 +5,7 @@ Supports multiple sources with automatic fallback and configurable priorities
 
 import requests
 import json
+import os
 import logging
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timezone
@@ -317,9 +318,24 @@ class TitleDBSourceManager:
                 response.raise_for_status()
 
                 # Write to file
-                with open(dest_path, "wb") as f:
+                # Write to temp file to ensure atomicity
+                tmp_path = dest_path + ".tmp"
+                with open(tmp_path, "wb") as f:
+                    # Peek first chunk for validation
+                    first_chunk = True
                     for chunk in response.iter_content(chunk_size=8192):
+                        if first_chunk:
+                            # Basic validation: Check if it looks like an HTML error page instead of JSON/File
+                            if chunk.lstrip().startswith(b"<!DOCTYPE html") or chunk.lstrip().startswith(b"<html"):
+                                logger.warning(f"Source {source.name} returned HTML instead of expected file. Skipping.")
+                                raise Exception("Invalid content: Received HTML")
+                            first_chunk = False
                         f.write(chunk)
+
+                # Rename to final destination (Atomic operation)
+                if os.path.exists(dest_path):
+                    os.remove(dest_path)
+                os.rename(tmp_path, dest_path)
 
                 # Update source status
                 source.last_success = datetime.now(timezone.utc)
