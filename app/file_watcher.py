@@ -1,5 +1,5 @@
-from constants import *
-from utils import *
+from constants import ALLOWED_EXTENSIONS
+from utils import now_utc
 import time
 import os
 from watchdog.observers.polling import PollingObserver
