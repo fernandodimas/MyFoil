@@ -655,11 +655,15 @@ def identify_library_files(library):
                 gevent.sleep(0)
             
             # Frequent progress updates (UI feels faster)
+            # Update every 5 items to show filename without flooding websocket
+            if processed_count % 5 == 0:
+                progress = int((processed_count / nb_to_identify) * 100)
+                job_tracker.update_progress(job_id, progress, current=processed_count, total=nb_to_identify, message=f"Processing: {filename}")
+                gevent.sleep(0)  # Yield after progress update
+
+            # Flush every 10 items for memory management
             if processed_count % 10 == 0:
                 db.session.flush()
-                progress = int((processed_count / nb_to_identify) * 100)
-                job_tracker.update_progress(job_id, progress, current=processed_count, total=nb_to_identify, message=f"Identified {processed_count}/{nb_to_identify} files")
-                gevent.sleep(0)  # Yield after progress update
             
             # Less frequent commits (better DB performance)
             if processed_count % 200 == 0:
