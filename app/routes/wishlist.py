@@ -4,7 +4,7 @@ Wishlist Routes - Endpoints para gerenciar lista de desejos
 
 from flask import Blueprint, jsonify, request, Response
 from flask_login import current_user, login_required
-from db import *
+from db import db, Apps, Wishlist, WishlistIgnore
 import titles
 import csv
 from io import StringIO
