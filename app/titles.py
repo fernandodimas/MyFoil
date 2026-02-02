@@ -188,12 +188,18 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
         max_retries = 3
         retry_delay = 2
         
+        logger.info(f"Attempting to clear old titledb cache (max_retries={max_retries})...")
         for attempt in range(max_retries):
             try:
+                logger.info(f"DELETE attempt {attempt+1}/{max_retries} - Clearing titledb_cache...")
                 db.session.execute(db.text("DELETE FROM titledb_cache"))
+                logger.info("DELETE attempt - Clearing titledb_versions...")
                 db.session.execute(db.text("DELETE FROM titledb_versions"))
+                logger.info("DELETE attempt - Clearing titledb_dlcs...")
                 db.session.execute(db.text("DELETE FROM titledb_dlcs"))
+                logger.info("DELETE attempt - Committing...")
                 db.session.commit()
+                logger.info("✅ Successfully cleared old cache")
                 break
             except OperationalError as e:
                 if "locked" in str(e).lower() and attempt < max_retries - 1:
@@ -220,6 +226,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
         pending_entries = []
         BATCH_SIZE = 500  # Reduced from 2000 to minimize SQLite lock duration
 
+        logger.info(f"Starting to process {len(_titles_db)} titles in batches of {BATCH_SIZE}...")
         # Iterate and save in chunks to keep memory usage low
         for i, (tid, data) in enumerate(_titles_db.items()):
             # Yield to event loop every 50 items to prevent blocking heartbeat

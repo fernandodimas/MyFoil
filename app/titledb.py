@@ -141,6 +141,27 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
             job_tracker.update_progress(job_id, p, 10, msg)
 
     results = {}
+    
+    # Migration: Rename legacy titledb files (titles.XX.yy.json -> XX.yy.json)
+    try:
+        import glob
+        legacy_pattern = os.path.join(TITLEDB_DIR, "titles.*.json")
+        legacy_files = glob.glob(legacy_pattern)
+        for old_path in legacy_files:
+            filename = os.path.basename(old_path)
+            if filename.startswith("titles.") and filename != "titles.json":
+                # Extract region.lang from titles.XX.yy.json
+                new_filename = filename.replace("titles.", "", 1)
+                new_path = os.path.join(TITLEDB_DIR, new_filename)
+                if not os.path.exists(new_path):
+                    logger.info(f"Migrating legacy TitleDB file: {filename} -> {new_filename}")
+                    os.rename(old_path, new_path)
+                else:
+                    logger.info(f"Removing redundant legacy file: {filename} (new format exists)")
+                    os.remove(old_path)
+    except Exception as e:
+        logger.warning(f"Failed to migrate legacy titledb files: {e}")
+    
     source_manager = get_source_manager()
     active_sources = source_manager.get_active_sources()
 
