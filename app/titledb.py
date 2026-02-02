@@ -49,7 +49,7 @@ def get_region_titles_file(app_settings: Dict) -> str:
 
 def get_region_titles_filenames(region: str, language: str) -> List[str]:
     """Get possible filenames for regional titles"""
-    return [f"{region}.{language}.json", f"titles.{region}.{language}.json"]
+    return [f"{region}.{language}.json"]
 
 
 def get_version_hash() -> str:
