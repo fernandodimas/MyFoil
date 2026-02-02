@@ -1209,8 +1209,8 @@ def get_game_info(title_id):
                     prefix = search_id[:-3]
                     base_prefix = hex(int(prefix, 16) - 1)[2:].upper().rjust(13, "0")
                     possible_base_ids.append(base_prefix + "000")
-                except:
-                    pass
+                except (ValueError, IndexError):
+                    pass  # Invalid hex format
 
                 for bid in possible_base_ids:
                     # Avoid infinite recursion
