@@ -10,9 +10,10 @@ from auth import access_required, admin_account_created
 import titles
 import titledb
 import json
+import os
 from utils import format_size_py, now_utc, ensure_utc
 from metrics import generate_latest, CONTENT_TYPE_LATEST
-from constants import BUILD_VERSION
+from constants import BUILD_VERSION, TITLEDB_DIR
 
 system_bp = Blueprint("system", __name__, url_prefix="/api")
 
