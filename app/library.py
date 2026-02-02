@@ -502,7 +502,8 @@ def identify_single_file(filepath):
             file_obj.identification_attempts += 1
             file_obj.last_attempt = now_utc()
             db.session.commit()
-        except:
+        except Exception as e:
+            logger.debug(f"Failed to save identification error: {e}")
             db.session.rollback()
         return False
 
@@ -663,8 +664,8 @@ def identify_library_files(library):
                         info = titles_lib.get_game_info(tid)
                         if info and info.get("name"):
                             display_name = info.get("name")
-                except:
-                    pass
+                except Exception:
+                    pass  # Use filename if game info unavailable
 
             # Frequent progress updates (UI feels faster)
             # Update every 5 items to show filename without flooding websocket
@@ -1020,7 +1021,8 @@ def load_library_from_disk():
     try:
         with cache_path.open("r", encoding="utf-8") as f:
             return json.load(f)
-    except:
+    except (OSError, json.JSONDecodeError, ValueError) as e:
+        logger.debug(f"Failed to load library cache: {e}")
         return None
 
 

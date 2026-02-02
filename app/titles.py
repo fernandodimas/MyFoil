@@ -69,8 +69,8 @@ def yield_to_event_loop():
             gevent.sleep(0.001)
         else:
             time.sleep(0.001)
-    except:
-        pass
+    except Exception:
+        pass  # Ignore sleep errors
 _cnmts_db = None
 _titles_db = None
 _versions_db = None
@@ -449,8 +449,8 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
         logger.error(f"Error saving TitleDB to cache: {e}")
         try:
             db.session.rollback()
-        except:
-            pass
+        except Exception as e:
+            logger.debug(f"Rollback failed: {e}")
         return False
     finally:
         # Release lock regardless of success or failure
@@ -458,8 +458,8 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
             if "lock_file" in locals() and not lock_file.closed:
                 fcntl.flock(lock_file, fcntl.LOCK_UN)
                 lock_file.close()
-        except:
-            pass
+        except (OSError, ValueError) as e:
+            logger.debug(f"Lock cleanup failed: {e}")
 
 
 def is_db_cache_valid():
@@ -729,8 +729,8 @@ def load_titledb(force=False, progress_callback=None):
         try:
             app_settings = load_settings()
             _titledb_cache_ttl = app_settings.get("titledb", {}).get("cache_ttl", 3600)
-        except:
-            pass  # Usar padrão se não conseguir carregar settings
+        except Exception:
+            pass  # Use default if settings unavailable
 
         elapsed = current_time - _titledb_cache_timestamp
         if elapsed > _titledb_cache_ttl:
@@ -787,8 +787,8 @@ def load_titledb(force=False, progress_callback=None):
         all_db_files = []
         try:
             all_db_files = os.listdir(TITLEDB_DIR)
-        except:
-            pass
+        except (OSError, FileNotFoundError) as e:
+            logger.warning(f"Cannot list TitleDB directory: {e}")
             
         regional_pattern = re.compile(r"^(titles\.)?[A-Z]{2}\.[a-z]{2}\.json$")
         
@@ -1236,8 +1236,8 @@ def get_game_info(title_id):
                 prefix = search_id[:-3]
                 base_prefix = hex(int(prefix, 16) - 1)[2:].upper().rjust(13, "0")
                 possible_base_ids.append(base_prefix + "000")
-            except:
-                pass
+            except (ValueError, IndexError):
+                pass  # Invalid hex format
 
             for bid in possible_base_ids:
                 logger.debug(f"ID {search_id} not found, attempting fallback to base {bid}")
@@ -1300,8 +1300,8 @@ def get_all_existing_versions(titleid):
         for v_str, release_date in _versions_db[titleid].items():
             try:
                 versions_dict[int(v_str)] = release_date
-            except:
-                continue
+            except (ValueError, TypeError):
+                continue  # Skip invalid version strings
 
     if not versions_dict:
         return []
