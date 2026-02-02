@@ -4,8 +4,7 @@ Library Routes - Endpoints relacionados à biblioteca de jogos
 
 from flask import Blueprint, request, jsonify
 from sqlalchemy import func, and_, case
-from db import *
-from db import app_files
+from db import db, Apps, Titles, Libraries, Files, get_libraries, logger, app_files
 from settings import load_settings
 from auth import access_required
 import titles
