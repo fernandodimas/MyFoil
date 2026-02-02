@@ -473,16 +473,33 @@ def init_internal(app):
     try:
         with app.app_context():
             from utils import now_utc
+            from models import SystemJob, JobStatus, db
             stale = SystemJob.query.filter_by(status=JobStatus.RUNNING).all()
             if stale:
                 logger.warning(f"Startup: Resetting {len(stale)} stale RUNNING jobs to FAILED.")
                 for j in stale:
                     j.status = JobStatus.FAILED
-                    j.error = "System restart / Stale job"
                     j.completed_at = now_utc()
+                    j.error = "System restart during execution"
                 db.session.commit()
     except Exception as e:
-        logger.error(f"Failed to cleanup stale jobs: {e}")
+        logger.error(f"Error checking stale jobs: {e}")
+
+    # Load TitleDB cache on startup (CRITICAL for versions_db)
+    # This prevents "Call load_titledb first" errors during scans
+    try:
+        with app.app_context():
+            logger.info("Startup: Loading TitleDB cache...")
+            import titles
+            titles.load_titledb()
+    except Exception as e:
+        logger.error(f"Startup: Failed to load TitleDB: {e}")
+
+    # Start file watcher
+    try:
+        from library import start_watcher
+    except ImportError:
+        logger.warning("Could not import start_watcher. File watching might be disabled.")
 
     # Staged initialization to prevent CPU spike killing Gunicorn worker
     def stage1_cache():
