@@ -4,7 +4,7 @@ System Routes - Endpoints relacionados ao sistema (stats, backups, etc.)
 
 from flask import Blueprint, render_template, request, jsonify, Response, send_from_directory
 from flask_login import current_user
-from db import db, Apps, Titles, Libraries, Files, ActivityLog, get_libraries, get_all_unidentified_files, logger
+from db import db, Apps, Titles, Libraries, Files, ActivityLog, get_libraries, get_all_unidentified_files, logger, joinedload
 from settings import load_settings
 from auth import access_required, admin_account_created
 import titles
@@ -286,19 +286,29 @@ def get_unidentified_files_api():
 @access_required("admin")
 def get_all_files_api():
     """Obter todos os arquivos"""
-    files = Files.query.order_by(Files.filename).all()
+    # Optimized query with eager loading to avoid N+1 problem (Fixes 524 Timeout)
+    files = (
+        Files.query.options(joinedload(Files.apps).joinedload(Apps.title))
+        .order_by(Files.filename)
+        .all()
+    )
+    
     results = []
     for f in files:
         title_id = None
         title_name = None
         if f.apps and len(f.apps) > 0:
             try:
-                title_id = f.apps[0].title.title_id
-                if title_id:
-                    title_info = titles.get_game_info(title_id)
-                    title_name = title_info.get("name", "Unknown") if title_info else "Unknown"
+                app = f.apps[0]
+                if app.title:
+                    title_id = app.title.title_id
+                    title_name = app.title.name
             except (IndexError, AttributeError):
                 pass
+        
+        # Fallback if name not in DB title
+        if title_id and not title_name:
+             title_name = "Unknown"
 
         ext = ""
         if f.filename:
