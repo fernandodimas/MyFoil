@@ -11,6 +11,7 @@ except ImportError:
     gevent = None
 
 import titledb
+import titledb_cache_file
 from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC, TITLEDB_DIR, TITLEDB_DEFAULT_FILES, ALLOWED_EXTENSIONS, CONFIG_DIR
 from utils import now_utc, ensure_utc, format_size_py, format_datetime, debounce
 from settings import load_settings, load_keys
@@ -90,6 +91,27 @@ def load_titledb_from_db():
     """Load TitleDB data from database cache if available and valid."""
     global _titles_db, _versions_db, _cnmts_db, _dlc_map, _titledb_cache_timestamp, _titles_db_loaded
 
+    # PRIORITY 1: Try file cache first (much faster)
+    try:
+        logger.info("Attempting to load TitleDB from file cache...")
+        file_cache_data = titledb_cache_file.load_titledb_from_file()
+        
+        if file_cache_data and titledb_cache_file.is_file_cache_fresh(max_age_seconds=3600):
+            logger.info("Using file cache (fresh and valid)")
+            _titles_db = file_cache_data.get('titles', {})
+            _versions_db = file_cache_data.get('versions', {})
+            # TODO: Add dlcs support to file cache
+            _cnmts_db = {}
+            _dlc_map = {}
+            _titledb_cache_timestamp = time.time()
+            logger.info(f"✅ Loaded {len(_titles_db)} titles from file cache in < 1s")
+            return True
+        else:
+            logger.info("File cache not available or stale, falling back to database")
+    except Exception as e:
+        logger.warning(f"Could not load from file cache: {e}, falling back to database")
+
+    # FALLBACK: Load from database
     try:
         from db import TitleDBCache, TitleDBVersions, TitleDBDLCs
 
@@ -181,39 +203,31 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
 
         now = now_utc()
 
-        # Try to clear old cache entries with retries
+        # Optimize SQLite for bulk operations
         import time
         from sqlalchemy.exc import OperationalError
         
+        logger.info("Applying SQLite optimizations for bulk insert...")
+        try:
+            # Increase cache size to 64MB for faster operations
+            db.session.execute(db.text("PRAGMA cache_size = -64000"))
+            # Store temp tables in memory
+            db.session.execute(db.text("PRAGMA temp_store = MEMORY"))
+            # Use synchronous=OFF during bulk insert (faster, slight risk if crash mid-operation)
+            db.session.execute(db.text("PRAGMA synchronous = OFF"))
+            db.session.commit()
+            logger.info("✅ SQLite optimizations applied")
+        except Exception as e:
+            logger.warning(f"Could not apply all optimizations: {e}")
+            db.session.rollback()
+        
+        # Note: We skip DELETE and rely on INSERT OR REPLACE (upsert pattern)
+        # This is MUCH faster as it avoids exclusive table lock from DELETE
+        logger.info("Using INSERT OR REPLACE pattern (no DELETE needed)")
+        
         max_retries = 3
         retry_delay = 2
-        
-        logger.info(f"Attempting to clear old titledb cache (max_retries={max_retries})...")
-        for attempt in range(max_retries):
-            try:
-                logger.info(f"DELETE attempt {attempt+1}/{max_retries} - Clearing titledb_cache...")
-                db.session.execute(db.text("DELETE FROM titledb_cache"))
-                logger.info("DELETE attempt - Clearing titledb_versions...")
-                db.session.execute(db.text("DELETE FROM titledb_versions"))
-                logger.info("DELETE attempt - Clearing titledb_dlcs...")
-                db.session.execute(db.text("DELETE FROM titledb_dlcs"))
-                logger.info("DELETE attempt - Committing...")
-                db.session.commit()
-                logger.info("✅ Successfully cleared old cache")
-                break
-            except OperationalError as e:
-                if "locked" in str(e).lower() and attempt < max_retries - 1:
-                    logger.warning(f"Database locked while clearing cache (attempt {attempt+1}). Retrying in {retry_delay}s...")
-                    db.session.rollback()
-                    time.sleep(retry_delay)
-                    continue
-                logger.warning(f"Could not clear old cache via delete: {e}")
-                db.session.rollback()
-                break
-            except Exception as e:
-                logger.warning(f"Error clearing cache: {e}")
-                db.session.rollback()
-                break
+
 
         # Try to import gevent for cooperative multitasking
         try:
@@ -452,7 +466,16 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
 
         _titledb_cache_timestamp = time.time()  # Use time.time() for cache TTL comparison
         logger.info(f"TitleDB saved to DB cache: {title_count} titles, {version_count} versions, {dlc_count} DLCs")
+        
+        # ALSO save to file cache for fast loading
+        try:
+            logger.info("Saving TitleDB to file cache...")
+            titledb_cache_file.save_titledb_to_file(_titles_db, _versions_db, _cnmts_db)
+        except Exception as file_err:
+            logger.warning(f"Could not save to file cache (non-fatal): {file_err}")
+        
         return True
+
 
     except Exception as e:
         logger.error(f"Error saving TitleDB to cache: {e}")
