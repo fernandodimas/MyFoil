@@ -1,4 +1,6 @@
 import hashlib
+import json
+import os
 from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC, LIBRARY_CACHE_FILE, ALLOWED_EXTENSIONS
 from db import db, Files, Apps, Titles, Libraries, logger, joinedload, Tag, app_files, get_libraries, get_all_titles_with_apps
 from metrics import FILES_IDENTIFIED, IDENTIFICATION_DURATION, LIBRARY_SIZE
