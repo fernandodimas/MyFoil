@@ -4,7 +4,7 @@ System Routes - Endpoints relacionados ao sistema (stats, backups, etc.)
 
 from flask import Blueprint, render_template, request, jsonify, Response, send_from_directory
 from flask_login import current_user
-from db import db, Apps, Titles, Libraries, Files, ActivityLog, get_libraries, get_all_unidentified_files, logger, joinedload
+from db import db, Apps, Titles, Libraries, Files, ActivityLog, get_libraries, get_all_unidentified_files, logger, joinedload, Webhook
 from settings import load_settings
 from auth import access_required, admin_account_created
 import titles
