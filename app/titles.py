@@ -887,6 +887,8 @@ def load_titledb(force=False, progress_callback=None):
                                     else:
                                         # Fields to merge/override from regional files
                                         # We want images and local names
+                                        # Fields to merge/override from regional files
+                                        # We want images and local names
                                         merge_fields = [
                                             "name", "description", "publisher", "releaseDate", 
                                             "category", "genre", "iconUrl", "bannerUrl", 
@@ -894,6 +896,11 @@ def load_titledb(force=False, progress_callback=None):
                                         ]
                                         for field in merge_fields:
                                             val = data.get(field)
+                                            # Special handling for images: Don't overwrite existing URL with None
+                                            if field in ["iconUrl", "bannerUrl", "screenshots", "frontBoxArt"]:
+                                                if not val:  # If new value is None/Empty, keep old
+                                                    continue
+                                            
                                             if val is not None and val != "":
                                                 # Avoid overwriting populated lists with empty ones
                                                 if isinstance(val, list) and len(val) == 0:
