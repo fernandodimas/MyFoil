@@ -20,7 +20,7 @@ except ImportError:
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 
-from constants import *
+from constants import TITLEDB_DIR, TITLEDB_DEFAULT_FILES, CONFIG_DIR
 from settings import load_settings
 from titledb_sources import TitleDBSourceManager
 from utils import format_datetime, now_utc, ensure_utc
