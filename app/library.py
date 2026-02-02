@@ -1,5 +1,5 @@
 import hashlib
-from constants import *
+from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC, LIBRARY_CACHE_FILE, ALLOWED_EXTENSIONS
 from db import *
 from metrics import FILES_IDENTIFIED, IDENTIFICATION_DURATION, LIBRARY_SIZE
 import titles as titles_lib
