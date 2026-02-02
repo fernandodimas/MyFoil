@@ -7,7 +7,7 @@ from metrics import FILES_IDENTIFIED, IDENTIFICATION_DURATION, LIBRARY_SIZE
 import titles as titles_lib
 import datetime
 from pathlib import Path
-from utils import format_size_py, now_utc, ensure_utc
+from utils import format_size_py, now_utc, ensure_utc, safe_write_json
 import threading
 from job_tracker import job_tracker
 
