@@ -227,11 +227,22 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                                 with rzf.open(target_zip_path) as fpin:
                                     with open(os.path.join(TITLEDB_DIR, filename), "wb") as fpout:
                                         while True:
-                                            chunk = fpin.read(65536)
-                                            if not chunk:
-                                                break
                                             fpout.write(chunk)
-                                results[filename] = True
+                                
+                                # Verify JSON validity immediately
+                                try:
+                                    import json
+                                    with open(os.path.join(TITLEDB_DIR, filename), "r", encoding="utf-8") as fchk:
+                                        json.load(fchk)
+                                    results[filename] = True
+                                except Exception as json_err:
+                                    logger.warning(f"Downloaded file {filename} is corrupted/invalid JSON, deleting: {json_err}")
+                                    try:
+                                        os.remove(os.path.join(TITLEDB_DIR, filename))
+                                    except:
+                                        pass
+                                    results[filename] = False
+
                             except Exception as ex:
                                 logger.error(f"Failed to extract {filename}: {ex}")
                                 results[filename] = False
