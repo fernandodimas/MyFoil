@@ -1290,10 +1290,14 @@ def generate_library(force=False):
                 logger.info("Library state changed, rebuilding cache.")
 
     logger.info(f"Generating library (force={force})...")
+    logger.info("generate_library: Loading TitleDB...")
     titles_lib.load_titledb()
+    logger.info("generate_library: TitleDB loaded.")
 
     # Get all Titles known to the system with their apps and files pre-loaded
+    logger.info("generate_library: Fetching titles from DB...")
     all_titles_data = get_all_titles_with_apps()
+    logger.info(f"generate_library: Fetched {len(all_titles_data)} titles. Processing...")
     games_info = []
 
     import gevent
