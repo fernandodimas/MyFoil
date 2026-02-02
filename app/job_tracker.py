@@ -200,58 +200,58 @@ class JobTracker:
         app = self._get_app()
         if not app: return
 
-            # Persist to DB (best effort)
-            try:
-                with app.app_context():
-                    from db import db, SystemJob
-                    job = SystemJob.query.get(job_id)
-                    if job:
-                        if total is not None:
-                            # Calculation mode
-                            current_val = current if current is not None else percent
-                            job.progress_percent = round((current_val / total * 100) if total > 0 else 0, 1)
-                        else:
-                            # Direct mode
-                            job.progress_percent = float(percent)
-                        
-                        if message:
-                            job.progress_message = message
-                        
-                        # Prepare data for emission BEFORE commit
-                        # This ensures users get update even if DB locks
-                        emit_data = job.to_dict()
-                        
-                        db.session.commit()
-                        
-            except Exception as e:
-                # DB errors shouldn't stop websocket updates
-                if "locked" not in str(e).lower():
-                    logger.error(f"DB error in update_progress: {e}")
+        # Persist to DB (best effort)
+        try:
+            with app.app_context():
+                from db import db, SystemJob
+                job = SystemJob.query.get(job_id)
+                if job:
+                    if total is not None:
+                        # Calculation mode
+                        current_val = current if current is not None else percent
+                        job.progress_percent = round((current_val / total * 100) if total > 0 else 0, 1)
+                    else:
+                        # Direct mode
+                        job.progress_percent = float(percent)
+                    
+                    if message:
+                        job.progress_message = message
+                    
+                    # Prepare data for emission BEFORE commit
+                    # This ensures users get update even if DB locks
+                    emit_data = job.to_dict()
+                    
+                    db.session.commit()
+                    
+        except Exception as e:
+            # DB errors shouldn't stop websocket updates
+            if "locked" not in str(e).lower():
+                logger.error(f"DB error in update_progress: {e}")
 
-            # Emit update using the data we just set (or manually constructed if DB failed)
-            # If we couldn't get 'emit_data' from DB object, construct minimal valid payload
-            try:
-                 if 'emit_data' not in locals():
-                     emit_data = {
-                        "id": job_id,
-                        "type": "unknown", # We might not know type here without reading DB
-                        "status": "running",
-                        "progress": {
-                            "percent": float(percent),
-                            "message": message or ""
-                        }
-                     }
-                 
-                 self.emitter("job_update", emit_data)
-            except Exception as emit_err:
-                 logger.debug(f"Failed to emit socket update: {emit_err}")
+        # Emit update using the data we just set (or manually constructed if DB failed)
+        # If we couldn't get 'emit_data' from DB object, construct minimal valid payload
+        try:
+             if 'emit_data' not in locals():
+                 emit_data = {
+                    "id": job_id,
+                    "type": "unknown", # We might not know type here without reading DB
+                    "status": "running",
+                    "progress": {
+                        "percent": float(percent),
+                        "message": message or ""
+                    }
+                 }
+             
+             self.emitter("job_update", emit_data)
+        except Exception as emit_err:
+             logger.debug(f"Failed to emit socket update: {emit_err}")
 
-            # Yield to other gevent co-routines
-            try:
-                import gevent
-                gevent.sleep(0)
-            except:
-                pass
+        # Yield to other gevent co-routines
+        try:
+            import gevent
+            gevent.sleep(0)
+        except:
+            pass
         except Exception as outer_e:
             logger.error(f"Unexpected error in update_progress: {outer_e}")
     
