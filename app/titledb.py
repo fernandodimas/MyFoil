@@ -44,12 +44,12 @@ def get_region_titles_file(app_settings: Dict) -> str:
     """Get the preferred region-specific titles filename"""
     region = app_settings.get("titles", {}).get("region", "US")
     language = app_settings.get("titles", {}).get("language", "en")
-    return f"titles.{region}.{language}.json"
+    return f"{region}.{language}.json"
 
 
 def get_region_titles_filenames(region: str, language: str) -> List[str]:
     """Get possible filenames for regional titles"""
-    return [f"titles.{region}.{language}.json", f"{region}.{language}.json"]
+    return [f"{region}.{language}.json", f"titles.{region}.{language}.json"]
 
 
 def get_version_hash() -> str:
