@@ -211,7 +211,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.execute("PRAGMA synchronous=NORMAL")
-    cursor.execute("PRAGMA busy_timeout=30000")  # 30 seconds timeout for locked DB
+    cursor.execute("PRAGMA busy_timeout=60000")  # 60 seconds timeout for locked DB
     cursor.close()
 
 
@@ -597,8 +597,12 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
         "connect_args": {
-            "timeout": 30  # SQLite busy timeout in seconds
-        }
+            "timeout": 60,  # Increased timeout for concurrent operations
+            "check_same_thread": False,  # Allow multi-threaded access
+        },
+        "pool_pre_ping": True,  # Verify connections before using
+        "pool_size": 10,  # Increase pool size for concurrent workers
+        "max_overflow": 20,  # Allow extra connections during high load
     }
 
     # Initialize components
