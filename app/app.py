@@ -495,8 +495,16 @@ def init_internal(app):
             watcher_thread.daemon = True
             watcher_thread.start()
 
-            # Setup paths but don't scan yet
-            library_paths = app_settings.get("library", {}).get("paths", [])
+            # Setup paths from Database (Source of Truth) instead of settings file
+            # This fixes synchronization issues where UI shows libs (from DB) but Watchdog doesn't see them (from YAML)
+            try:
+                libs_db = get_libraries()
+                library_paths = [lib.path for lib in libs_db]
+                logger.info(f"Loaded {len(library_paths)} library paths from Database for Watchdog.")
+            except Exception as e:
+                logger.error(f"Failed to load libraries from DB for Watchdog: {e}. Falling back to settings.")
+                library_paths = app_settings.get("library", {}).get("paths", [])
+
             init_libraries(app, state.watcher, library_paths)
             logger.info(f"Initialized {len(library_paths)} library paths")
 
