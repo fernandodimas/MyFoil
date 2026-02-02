@@ -1,3 +1,7 @@
+# Fix MonkeyPatchWarning and Threading errors by patching EARLY
+from gevent import monkey
+monkey.patch_all()
+
 from celery import Celery
 import os
 
