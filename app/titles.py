@@ -848,6 +848,19 @@ def load_titledb(force=False, progress_callback=None):
                     count = len(loaded) if isinstance(loaded, (dict, list)) else 0
                     if count > 0:
                         is_custom = filename == "custom.json"
+                else:
+                    # If loaded is None, parsing failed completely despite robust efforts
+                    # The file is likely garbage or severely truncated.
+                    # Delete it so it doesn't persist as a "zombie" error source.
+                    logger.warning(f"File {filename} is corrupted and unrecoverable. Deleting: {filepath}")
+                    try:
+                        os.remove(filepath)
+                        # Also remove associated .clean file if it exists
+                        clean_path = filepath + ".clean"
+                        if os.path.exists(clean_path):
+                            os.remove(clean_path)
+                    except Exception as e:
+                        logger.error(f"Failed to delete corrupted file {filename}: {e}")
                         # Convert list/dict to standardized dict keyed by TitleID
                         current_batch = {}
                         if isinstance(loaded, list):
