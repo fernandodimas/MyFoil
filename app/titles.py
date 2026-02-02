@@ -11,7 +11,7 @@ except ImportError:
     gevent = None
 
 import titledb
-from constants import *
+from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC, TITLEDB_DIR, TITLEDB_DEFAULT_FILES
 from utils import *
 from settings import *
 from pathlib import Path
