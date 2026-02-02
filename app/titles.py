@@ -218,7 +218,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
         # Deduplicate titles just in case (though dict keys should be unique)
         seen_titles = set()
         pending_entries = []
-        BATCH_SIZE = 2000
+        BATCH_SIZE = 500  # Reduced from 2000 to minimize SQLite lock duration
 
         # Iterate and save in chunks to keep memory usage low
         for i, (tid, data) in enumerate(_titles_db.items()):
@@ -268,9 +268,10 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                         break
                     except OperationalError as e:
                         if "locked" in str(e).lower() and attempt < max_retries - 1:
-                            logger.warning(f"DB locked during bulk save (attempt {attempt+1}). Retrying...")
+                            wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
+                            logger.warning(f"DB locked during bulk save (attempt {attempt+1}/{max_retries}). Retrying in {wait_time}s...")
                             db.session.rollback()
-                            time.sleep(retry_delay)
+                            time.sleep(wait_time)
                             continue
                         raise
                     except Exception as e:
@@ -314,9 +315,10 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                     break
                 except OperationalError as e:
                     if "locked" in str(e).lower() and attempt < max_retries - 1:
-                        logger.warning(f"DB locked during final bulk save (attempt {attempt+1})...")
+                        wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
+                        logger.warning(f"DB locked during final bulk save (attempt {attempt+1}/{max_retries}). Retrying in {wait_time}s...")
                         db.session.rollback()
-                        time.sleep(retry_delay)
+                        time.sleep(wait_time)
                         continue
                     raise
                 except Exception as e:
