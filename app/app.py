@@ -32,7 +32,7 @@ from constants import (
     MYFOIL_DB, BUILD_VERSION, CONFIG_DIR, PLUGINS_DIR, DATA_DIR
 )
 from settings import *
-from db import *
+from db import db, get_libraries, add_missing_apps_to_db, update_titles
 from i18n import I18n
 import titles
 import titledb
@@ -393,6 +393,7 @@ def update_titledb_job(force=False):
 
 def scan_library_job():
     """Scan library in background"""
+    logger.info(f"DEBUG: Entering scan_library_job (BUILD: {BUILD_VERSION})")
     with app.app_context():
         # Track job
         job_id = job_tracker.register_job("aggregate_scan")
@@ -427,9 +428,9 @@ def scan_library_job():
             with ACTIVE_SCANS.track_inprogress():
                 if CELERY_ENABLED:
                     from tasks import scan_all_libraries_async
-    
                     scan_all_libraries_async.delay()
                     logger.info("Scheduled library scan queued to Celery.")
+                    job_tracker.update_progress(job_id, 100, "Scan task queued to Celery.")
                 else:
                     from library import scan_library_path, identify_library_files
     
