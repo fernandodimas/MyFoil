@@ -577,9 +577,8 @@ def identify_library_files(library):
         # Prepare data for pool
         batch_data = [(f.id, f.filepath, f.filename) for f in files_to_identify]
         
-        # Increasing to 8 workers for speed since they are I/O bound
-        # The main loop handles DB writes sequentially
-        pool = Pool(8)
+        # Restore concurrency for Postgres (or optimized SQLite)
+        pool = Pool(4)
         
         processed_count = 0
         
@@ -679,14 +678,20 @@ def identify_library_files(library):
                     pass  # Use filename if game info unavailable
 
             # Frequent progress updates (UI feels faster)
-            # Frequent progress updates (UI feels faster)
-            # Update EVERY item to show realtime progress
-            progress = int((processed_count / nb_to_identify) * 100)
-            job_tracker.update_progress(job_id, progress, current=processed_count, total=nb_to_identify, message=f"Identifying: {display_name}")
-            gevent.sleep(0)  # Yield after progress update
+            # Throttle updates for large sets to prevent UI freeze
+            should_update_ui = True
+            if nb_to_identify > 500 and processed_count % 5 != 0:
+                 should_update_ui = False
+            if nb_to_identify > 2000 and processed_count % 20 != 0:
+                 should_update_ui = False
+                 
+            if should_update_ui or processed_count == nb_to_identify:
+                progress = int((processed_count / nb_to_identify) * 100)
+                job_tracker.update_progress(job_id, progress, current=processed_count, total=nb_to_identify, message=f"Identifying: {display_name}")
+                gevent.sleep(0)  # Yield after progress update
 
-            # Flush every 10 items for memory management
-            if processed_count % 10 == 0:
+            # Flush every 50 items for memory management (less frequent)
+            if processed_count % 50 == 0:
                 db.session.flush()
             
             # Less frequent commits (better DB performance)

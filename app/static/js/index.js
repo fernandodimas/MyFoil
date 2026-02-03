@@ -229,12 +229,15 @@ function renderCardView(items) {
 }
 
 // Socket listener for library updates
-if (typeof socket !== 'undefined' || (statusManager && statusManager.socket)) {
-    const s = socket || statusManager.socket;
-    s.on('library_updated', () => {
-        console.log('🔄 Library update event received from socket');
-        refreshLibrary();
-    });
+// Socket listener for library updates
+if (typeof window.socket !== 'undefined' || (typeof socket !== 'undefined') || (window.statusManager && window.statusManager.socket)) {
+    const s = window.socket || socket || window.statusManager.socket;
+    if (s) {
+        s.on('library_updated', () => {
+            console.log('🔄 Library update event received from socket');
+            refreshLibrary();
+        });
+    }
 }
 
 function renderIconView(items) {

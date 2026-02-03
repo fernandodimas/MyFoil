@@ -203,15 +203,15 @@ class TitleDBSourceManager:
         TitleDBSource(
             name="blawar/titledb (GitHub)",
             base_url="https://raw.githubusercontent.com/blawar/titledb/refs/heads/master",
-            priority=1,
+            priority=10,
             source_type="json",
         ),
-        TitleDBSource(name="tinfoil.media", base_url="https://tinfoil.media/repo/db", priority=3, source_type="json"),
+        TitleDBSource(name="tinfoil.media", base_url="https://tinfoil.media/repo/db", priority=1, source_type="json"),
         TitleDBSource(
             name="MyFoil (Legacy)",
             base_url="https://nightly.link/a1ex4/ownfoil/workflows/region_titles/master/titledb.zip",
             enabled=True,
-            priority=10,
+            priority=5,
             source_type="zip_legacy",
         ),
     ]

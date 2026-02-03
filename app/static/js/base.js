@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // WebSocket Global Listener
     if (typeof io !== 'undefined') {
-        const socket = io({
+        window.socket = io({
             transports: ['polling'],
             upgrade: false,
             reconnection: true,

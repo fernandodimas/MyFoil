@@ -211,9 +211,14 @@ logging.getLogger("alembic.runtime.migration").setLevel(logging.WARNING)
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     """Configure SQLite pragmas for better performance and concurrency"""
+    import sqlite3
+    if not isinstance(dbapi_connection, sqlite3.Connection):
+        return
+
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.execute("PRAGMA synchronous=NORMAL")
+    cursor.execute("PRAGMA foreign_keys=ON")
     cursor.execute("PRAGMA busy_timeout=180000")  # 3 minutes timeout for locked DB (increased from 60s)
     cursor.close()
 
@@ -473,7 +478,8 @@ def init_internal(app):
     try:
         with app.app_context():
             from utils import now_utc
-            from models import SystemJob, JobStatus, db
+            from db import SystemJob, db
+            from job_tracker import JobStatus
             stale = SystemJob.query.filter_by(status=JobStatus.RUNNING).all()
             if stale:
                 logger.warning(f"Startup: Resetting {len(stale)} stale RUNNING jobs to FAILED.")
@@ -639,14 +645,17 @@ def create_app():
     app.config["SECRET_KEY"] = get_or_create_secret_key()
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "connect_args": {
-            "timeout": 60,  # Increased timeout for concurrent operations
-            "check_same_thread": False,  # Allow multi-threaded access
-        },
         "pool_pre_ping": True,  # Verify connections before using
         "pool_size": 10,  # Increase pool size for concurrent workers
         "max_overflow": 20,  # Allow extra connections during high load
     }
+    
+    # Add SQLite specific options only if using SQLite
+    if "sqlite" in MYFOIL_DB:
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"]["connect_args"] = {
+            "timeout": 60,  # Increased timeout for concurrent operations
+            "check_same_thread": False,  # Allow multi-threaded access
+        }
 
     # Initialize components
     db.init_app(app)

@@ -1,6 +1,22 @@
 version: "3.8"
 
 services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: myfoil-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: myfoil
+      POSTGRES_PASSWORD: myfoilpassword
+      POSTGRES_DB: myfoil
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myfoil"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:7-alpine
     container_name: myfoil-redis
@@ -24,7 +40,11 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     environment:
+      - DATABASE_URL=postgresql://myfoil:myfoilpassword@postgres:5432/myfoil
+      - REDIS_URL=redis://redis:6379/0
       - PUID=1000
       - PGID=1000
       - TZ=America/Sao_Paulo
@@ -64,3 +84,6 @@ services:
       - /path/to/your/games:/games  # ⚠️ UPDATE THIS PATH!
       - ./config:/app/config
       - ./data:/app/data
+
+volumes:
+  postgres_data:

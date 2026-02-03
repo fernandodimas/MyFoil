@@ -107,17 +107,22 @@ def create_or_update_user(username, password, admin_access=False, shop_access=Fa
     Create a new user or update an existing user with the given credentials and access rights.
     """
     user = User.query.filter_by(user=username).first()
-    if user:
-        logger.info(f'Updating existing user {username}')
-        user.admin_access = admin_access
-        user.shop_access = shop_access
-        user.backup_access = backup_access
-        user.password = generate_password_hash(password, method='scrypt')
-    else:
-        logger.info(f'Creating new user {username}')
-        new_user = User(user=username, password=generate_password_hash(password, method='scrypt'), admin_access=admin_access, shop_access=shop_access, backup_access=backup_access)
-        db.session.add(new_user)
-    db.session.commit()
+    try:
+        if user:
+            logger.info(f'Updating existing user {username}')
+            user.admin_access = admin_access
+            user.shop_access = shop_access
+            user.backup_access = backup_access
+            user.password = generate_password_hash(password, method='pbkdf2:sha256')
+        else:
+            logger.info(f'Creating new user {username}')
+            new_user = User(user=username, password=generate_password_hash(password, method='pbkdf2:sha256'), admin_access=admin_access, shop_access=shop_access, backup_access=backup_access)
+            db.session.add(new_user)
+        db.session.commit()
+    except Exception as e:
+        logger.error(f"Error saving user {username}: {e}")
+        db.session.rollback()
+        raise e
 
 def init_user_from_environment(environment_name, admin=False):
     """
@@ -268,7 +273,11 @@ def signup_post():
         logger.info(f'Creating new user: {username} with sanitized data: {sanitize_sensitive_data(data)}')
 
         # create a new user with the form data. Hash the password so the plaintext version isn't saved.
-        create_or_update_user(username, password, admin_access, shop_access, backup_access)
+        try:
+            create_or_update_user(username, password, admin_access, shop_access, backup_access)
+        except Exception as e:
+            logger.error(f"Signup failed: {e}")
+            return jsonify({'success': False, 'message': str(e)}), 500
         
         logger.info(f'Successfully created user {username}.')
 

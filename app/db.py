@@ -435,6 +435,10 @@ def init_db(app):
         # Ensure foreign keys, WAL mode, and timeout are set when connection is opened
         @event.listens_for(db.engine, "connect")
         def set_sqlite_pragma(dbapi_connection, connection_record):
+            import sqlite3
+            if not isinstance(dbapi_connection, sqlite3.Connection):
+                 return
+
             cursor = dbapi_connection.cursor()
             cursor.execute("PRAGMA foreign_keys=ON;")
             # Enable WAL mode for better concurrent access
@@ -445,7 +449,10 @@ def init_db(app):
 
         # create or migrate database
         if "db" not in sys.argv:
-            if not os.path.exists(DB_FILE):
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            if not inspector.has_table("files"):
+                logger.info("Initializing database tables...")
                 db.create_all()
                 command.stamp(get_alembic_cfg(), "head")
                 logger.info("Database created and stamped to the latest migration version.")

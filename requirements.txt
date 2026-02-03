@@ -28,3 +28,4 @@ google-auth-httplib2
 google-api-python-client
 dropbox
 gunicorn
+psycopg2-binary>=2.9.9
