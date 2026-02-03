@@ -203,16 +203,23 @@ class JobTracker:
                     from db import db, SystemJob
                     job = SystemJob.query.get(job_id)
                     if job:
-                        if total is not None:
-                            # Calculation mode
-                            current_val = current if current is not None else percent
-                            job.progress_percent = round((current_val / total * 100) if total > 0 else 0, 1)
-                        else:
-                            # Direct mode
-                            job.progress_percent = float(percent)
+                        # Defensive type conversion
+                        try:
+                            if total is not None:
+                                total_val = float(total)
+                                current_val = float(current if current is not None else percent)
+                                job.progress_percent = round((current_val / total_val * 100) if total_val > 0 else 0, 1)
+                            else:
+                                # Direct mode
+                                job.progress_percent = float(percent)
+                        except (ValueError, TypeError):
+                            # Fallback if types are weird
+                            logger.warning(f"Invalid progress types for job {job_id}: percent={percent}, total={total}, current={current}")
+                            if isinstance(percent, (int, float)):
+                                job.progress_percent = float(percent)
                         
                         if message:
-                            job.progress_message = message
+                            job.progress_message = str(message)
                         
                         # Prepare data for emission BEFORE commit
                         emit_data = job.to_dict()

@@ -431,7 +431,7 @@ def scan_library_job():
                     from tasks import scan_all_libraries_async
                     scan_all_libraries_async.delay()
                     logger.info("Scheduled library scan queued to Celery.")
-                    job_tracker.update_progress(job_id, 100, "Scan task queued to Celery.")
+                    job_tracker.update_progress(job_id, 100, message="Scan task queued to Celery.")
                 else:
                     from library import scan_library_path, identify_library_files
     
