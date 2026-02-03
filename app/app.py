@@ -1,6 +1,7 @@
 """
 MyFoil - Enhanced Nintendo Switch Library Manager
 Application Factory e Inicialização
+# Force rebuild for import fix
 """
 
 from gevent import monkey
