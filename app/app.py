@@ -431,7 +431,7 @@ def scan_library_job():
                     scan_all_libraries_async.delay()
                     logger.info("Scheduled library scan queued to Celery.")
                 else:
-                    from library import scan_library_path, identify_library_files, get_libraries
+                    from library import scan_library_path, identify_library_files
     
                     libraries = get_libraries()
                     logger.info(f"Found {len(libraries)} libraries to scan")
