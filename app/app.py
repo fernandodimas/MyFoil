@@ -84,8 +84,9 @@ except ImportError:
 
 # Import additional modules for functions
 from auth import admin_account_created
+from db import log_activity
 from library import generate_library, scan_library_path, identify_library_files
-from utils import now_utc
+from utils import now_utc, ColoredFormatter
 from file_watcher import Watcher
 import threading
 import datetime
