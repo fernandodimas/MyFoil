@@ -438,6 +438,10 @@ def identify_single_file(filepath):
         logger.info(f"Identifying single file: {file_obj.filename}")
         identification, success, contents, error = titles_lib.identify_file(filepath)
         
+        if not success:
+             logger.warning(f"Failed to identify file (skipping): {filepath} - Error: {error}")
+             return False
+
         if success and contents and not error:
             # Clear old associations before adding new ones
             if file_obj.apps:

@@ -511,10 +511,9 @@ def init_internal(app):
 
     # Start file watcher
     print("DEBUG: init_internal starting watcher...", flush=True)
-    try:
-        from library import start_watcher
-    except ImportError:
-        logger.warning("Could not import start_watcher. File watching might be disabled.")
+    # Start file watcher
+    print("DEBUG: init_internal starting watcher...", flush=True)
+    # start_watcher legacy check removed as it is handled in stage2_watchdog
 
     # Staged initialization to prevent CPU spike killing Gunicorn worker
     def stage1_cache():

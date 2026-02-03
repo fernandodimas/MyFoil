@@ -1131,6 +1131,21 @@ def get_game_info(title_id):
             if not res["iconUrl"] and res["bannerUrl"]:
                 res["iconUrl"] = res["bannerUrl"]
 
+            # Sanitize name to remove "Nintendo Switch 2 Edition" nonsense if present
+            name = res.get("name")
+            if name:
+                replacements = [
+                    " – Nintendo Switch™ 2 Edition",
+                    " - Nintendo Switch™ 2 Edition",
+                    " – Nintendo Switch 2 Edition",
+                    " - Nintendo Switch 2 Edition",
+                    " Nintendo Switch 2 Edition",
+                ]
+                for r in replacements:
+                    if r in name:
+                        name = name.replace(r, "")
+                res["name"] = name.strip()
+
             return res
 
         # If not found, try to find parent BASE game if this is a DLC/UPD
