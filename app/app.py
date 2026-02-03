@@ -32,8 +32,8 @@ from constants import (
     APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC,
     MYFOIL_DB, BUILD_VERSION, CONFIG_DIR, PLUGINS_DIR, DATA_DIR
 )
-from settings import *
-from db import db, get_libraries
+from settings import load_settings, reload_conf
+import db
 from i18n import I18n
 import titles
 import titledb
@@ -83,16 +83,13 @@ except ImportError:
     CELERY_ENABLED = False
 
 # Import additional modules for functions
-from db import *
-from settings import *
-from auth import *
-from library import *
-from utils import *
+from auth import admin_account_created
+from library import generate_library, scan_library_path, identify_library_files
+from utils import now_utc
 from file_watcher import Watcher
 import threading
 import datetime
 from datetime import timedelta
-from utils import now_utc
 
 # Global variables
 app_settings = {}
@@ -433,9 +430,7 @@ def scan_library_job():
                     logger.info("Scheduled library scan queued to Celery.")
                     job_tracker.update_progress(job_id, 100, message="Scan task queued to Celery.")
                 else:
-                    from library import scan_library_path, identify_library_files
-    
-                    libraries = get_libraries()
+                    libraries = db.get_libraries()
                     logger.info(f"Found {len(libraries)} libraries to scan")
                     for i, lib in enumerate(libraries):
                         try:
@@ -454,7 +449,7 @@ def scan_library_job():
                 # No need to call post_library_change here as scan_library_path now does it
             log_activity("library_scan_completed")
             logger.info("Library scan job completed successfully.")
-            job_tracker.complete_job(job_id, {"total_libraries": len(get_libraries())})
+            job_tracker.complete_job(job_id, {"total_libraries": len(db.get_libraries())})
         except Exception as e:
             logger.error(f"Error during library scan job: {e}")
             log_activity("library_scan_failed", details={"error": str(e)})

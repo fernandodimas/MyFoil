@@ -288,7 +288,11 @@ def scan_library_path(library_path):
     lib_name = os.path.basename(library_path) or library_path
     job_tracker.update_progress(job_id, 1, 4, f"[{lib_name}] Reading disk files...")
     _, files = titles_lib.getDirsAndFiles(library_path)
-    logger.info(f"Found {len(files)} files on disk in {library_path}")
+    
+    if not files:
+        logger.warning(f"No files found in {library_path}. Please check if the folder is correctly mounted in Docker.")
+    else:
+        logger.info(f"Found {len(files)} files on disk in {library_path}")
 
     job_tracker.update_progress(job_id, 2, 4, f"[{lib_name}] Comparing with database...")
     filepaths_in_library = get_library_file_paths(library_id)
@@ -1107,7 +1111,15 @@ def get_game_info_item(tid, title_data):
     # Base info from TitleDB
     info = titles_lib.get_game_info(tid)
     if not info:
-        info = {"name": f"Unknown ({tid})", "iconUrl": "", "publisher": "Unknown"}
+        # Fallback: find a filename from associated files if possible
+        display_name = f"Unknown ({tid})"
+        if all_title_apps:
+            # Try to find a file from any app associated with this title
+            for app_meta in all_title_apps:
+                if app_meta.get('files') and len(app_meta['files']) > 0:
+                    display_name = os.path.basename(app_meta['files'][0]['filepath'])
+                    break
+        info = {"name": display_name, "iconUrl": "", "publisher": "Unknown"}
 
     game = info.copy()
     game["title_id"] = tid
