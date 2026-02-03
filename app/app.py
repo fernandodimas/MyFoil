@@ -22,7 +22,7 @@ logging.getLogger("socketio.server").setLevel(logging.WARNING)
 logging.getLogger("werkzeug").setLevel(logging.WARNING)
 
 # Core Flask imports
-from flask import Flask
+from flask import Flask, render_template, Blueprint, jsonify
 from flask_socketio import SocketIO
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -83,10 +83,15 @@ except ImportError:
     CELERY_ENABLED = False
 
 # Import additional modules for functions
-from auth import admin_account_created
-from db import log_activity
+from auth import (
+    admin_account_created,
+    access_required,
+    auth_blueprint,
+    login_manager
+)
+from db import User, log_activity
 from library import generate_library, scan_library_path, identify_library_files
-from utils import now_utc, ColoredFormatter
+from utils import now_utc, ColoredFormatter, FilterRemoveDateFromWerkzeugLogs
 from file_watcher import Watcher
 import threading
 import datetime
