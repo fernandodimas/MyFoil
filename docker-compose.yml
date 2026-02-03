@@ -11,6 +11,8 @@ services:
       POSTGRES_DB: myfoil
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myfoil -d myfoil"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -21,6 +23,8 @@ services:
     image: redis:7-alpine
     container_name: myfoil-redis
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
