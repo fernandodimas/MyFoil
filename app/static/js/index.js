@@ -147,6 +147,15 @@ function renderLibrary() {
 function refreshLibrary() {
     console.log("Refreshing library data...");
 
+    // Check for build version change to clear cache
+    const currentBuild = window.BUILD_VERSION || '';
+    const lastBuild = localStorage.getItem('myfoil_last_version');
+    if (lastBuild && lastBuild !== currentBuild) {
+        console.log("Build version changed, clearing local cache...");
+        localStorage.removeItem('myfoil_library_cache');
+    }
+    localStorage.setItem('myfoil_last_version', currentBuild);
+
     // Show loading indicator
     $('#loadingIndicator').removeClass('is-hidden');
     $('#libraryContainer').empty();

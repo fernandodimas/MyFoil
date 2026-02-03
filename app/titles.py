@@ -11,7 +11,8 @@ except ImportError:
     gevent = None
 
 import titledb
-import titledb_cache_file
+# import titledb_cache_file  # REMOVED: File cache deprecated
+print("DEBUG: titles.py imported", flush=True)
 from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC, TITLEDB_DIR, TITLEDB_DEFAULT_FILES, ALLOWED_EXTENSIONS, CONFIG_DIR
 from utils import now_utc, ensure_utc, format_size_py, format_datetime, debounce
 from settings import load_settings, load_keys
@@ -76,6 +77,7 @@ _cnmts_db = None
 _titles_db = None
 _versions_db = None
 _dlc_map = {}
+_dlcs_by_base_id = {}  # New optimization: {base_id: [dlc_id1, dlc_id2, ...]}
 _loaded_titles_file = None  # Track which titles file was loaded
 _titledb_cache_timestamp = None  # Timestamp when TitleDB is last loaded
 _titledb_cache_ttl = 3600  # TTL in seconds (1 hour default)
@@ -89,27 +91,10 @@ def get_titles_count():
 # Database cache functions for TitleDB
 def load_titledb_from_db():
     """Load TitleDB data from database cache if available and valid."""
-    global _titles_db, _versions_db, _cnmts_db, _dlc_map, _titledb_cache_timestamp, _titles_db_loaded
+    global _titles_db, _versions_db, _cnmts_db, _dlc_map, _dlcs_by_base_id, _titledb_cache_timestamp, _titles_db_loaded
 
-    # PRIORITY 1: Try file cache first (much faster)
-    try:
-        logger.info("Attempting to load TitleDB from file cache...")
-        file_cache_data = titledb_cache_file.load_titledb_from_file()
-        
-        if file_cache_data and titledb_cache_file.is_file_cache_fresh(max_age_seconds=3600):
-            logger.info("Using file cache (fresh and valid)")
-            _titles_db = file_cache_data.get('titles', {})
-            _versions_db = file_cache_data.get('versions', {})
-            # TODO: Add dlcs support to file cache
-            _cnmts_db = {}
-            _dlc_map = {}
-            _titledb_cache_timestamp = time.time()
-            logger.info(f"✅ Loaded {len(_titles_db)} titles from file cache in < 1s")
-            return True
-        else:
-            logger.info("File cache not available or stale, falling back to database")
-    except Exception as e:
-        logger.warning(f"Could not load from file cache: {e}, falling back to database")
+    # Database-only loading logic (Removed File Cache Priority)
+    logger.info("Loading TitleDB from PostgreSQL database...")
 
     # FALLBACK: Load from database
     try:
@@ -117,11 +102,14 @@ def load_titledb_from_db():
 
         # Check if cache tables exist
         try:
+            print("DEBUG: Checking TitleDBCache count...", flush=True)
             cache_count = TitleDBCache.query.count()
+            print(f"DEBUG: TitleDBCache count: {cache_count}", flush=True)
             if cache_count == 0:
                 logger.info("TitleDB cache is empty, will load from files")
                 return False
-        except Exception:
+        except Exception as e:
+            print(f"DEBUG: TitleDBCache count failed: {e}", flush=True)
             logger.warning("TitleDB cache tables don't exist yet")
             return False
 
@@ -147,6 +135,7 @@ def load_titledb_from_db():
         # Load DLCs from cache and build index + REVERSE MAP
         _cnmts_db = {}
         _dlc_map = {}
+        _dlcs_by_base_id = {}
         cached_dlcs = TitleDBDLCs.query.all()
         for entry in cached_dlcs:
             if not entry.base_title_id or not entry.dlc_app_id:
@@ -154,15 +143,22 @@ def load_titledb_from_db():
             base_tid = entry.base_title_id.lower()
             dlc_app_id = entry.dlc_app_id.upper()
 
-            # Build CNMT-style structure for compatibility
-            if base_tid not in _cnmts_db:
-                _cnmts_db[base_tid] = {}
-            _cnmts_db[base_tid][dlc_app_id] = {
+            # Build CNMT-style structure for compatibility (Keyed by DLC ID)
+            dlc_id_lower = dlc_app_id.lower()
+            if dlc_id_lower not in _cnmts_db:
+                _cnmts_db[dlc_id_lower] = {}
+            _cnmts_db[dlc_id_lower]["0"] = {  # Version dummy
                 "titleType": 130,  # DLC type
                 "otherApplicationId": base_tid,
             }
             # Populate reverse map
             _dlc_map[dlc_app_id] = base_tid
+            
+            # Populate optimization index
+            if base_tid not in _dlcs_by_base_id:
+                _dlcs_by_base_id[base_tid] = []
+            if dlc_app_id not in _dlcs_by_base_id[base_tid]:
+                _dlcs_by_base_id[base_tid].append(dlc_app_id)
 
         _titles_db_loaded = True
         _titledb_cache_timestamp = time.time()
@@ -642,21 +638,39 @@ def robust_json_load(filepath):
 
 
 def getDirsAndFiles(path):
-    entries = os.listdir(path)
+    """
+    Find all files with allowed extensions in path recursively.
+    Uses os.scandir for better performance and yields to gevent to keep server responsive.
+    """
     allFiles = []
     allDirs = []
 
-    for entry in entries:
-        if entry.startswith("._"):
-            continue
-        fullPath = os.path.join(path, entry)
-        if os.path.isdir(fullPath):
-            allDirs.append(fullPath)
-            dirs, files = getDirsAndFiles(fullPath)
-            allDirs += dirs
-            allFiles += files
-        elif "." + fullPath.split(".")[-1].lower() in ALLOWED_EXTENSIONS:
-            allFiles.append(fullPath)
+    try:
+        # Avoid blocking the event loop for too long
+        if gevent:
+            gevent.sleep(0.001) 
+        
+        with os.scandir(path) as it:
+            for i, entry in enumerate(it):
+                if gevent and i % 50 == 0:
+                    gevent.sleep(0.001)
+                
+                if entry.name.startswith("._"):
+                    continue
+                
+                if entry.is_dir(follow_symlinks=False):
+                    fullPath = entry.path
+                    allDirs.append(fullPath)
+                    dirs, files = getDirsAndFiles(fullPath)
+                    allDirs += dirs
+                    allFiles += files
+                elif entry.is_file():
+                    ext = "." + entry.name.split(".")[-1].lower()
+                    if ext in ALLOWED_EXTENSIONS:
+                        allFiles.append(entry.path)
+    except Exception as e:
+        logger.error(f"Error scanning directory {path}: {e}")
+
     return allDirs, allFiles
 
 
@@ -671,12 +685,47 @@ def get_version_from_filename(filename):
 
 
 def get_title_id_from_app_id(app_id, app_type):
-    base_id = app_id[:-3]
-    if app_type == APP_TYPE_UPD:
-        title_id = base_id + "000"
-    elif app_type == APP_TYPE_DLC:
-        title_id = hex(int(base_id, base=16) - 1)[2:].rjust(len(base_id), "0") + "000"
-    return title_id.upper()
+    """
+    Switch IDs use a 16-char hex format.
+    Standard: [TitleID 13 hex] [Suffix 3 hex]
+    Suffix: 000=Base, 800=Update, 001-7FF=DLC
+    
+    Heuristic: Most DLCs share the same 13-hex prefix as the Base game.
+    However, some publishers use an offset (usually the 13th digit).
+    If the 13th digit is ODD, the base game often has that digit as (digit - 1).
+    """
+    app_id = app_id.upper()
+    prefix = app_id[:-3]
+    
+    # 1. Check Standard Heuristic (Prefix + 000)
+    std_id = prefix + "000"
+    
+    # 2. Check Even/Odd Heuristic (Only if it might be an offset)
+    # The 13th character is prefix[-1]
+    char_13 = prefix[-1]
+    try:
+        val = int(char_13, 16)
+        # If it's a DLC or UPDATE and the 13th digit is ODD
+        if (app_type == APP_TYPE_DLC or app_type == APP_TYPE_UPD) and (val % 2 != 0):
+            even_char = hex(val - 1)[2:].upper()
+            even_id = prefix[:-1] + even_char + "000"
+            
+            # If we have TitleDB loaded, we can verify which one is a valid Base Title
+            global _titles_db
+            if _titles_db:
+                # If std_id exists as a BASE title, it's probably the right one
+                if std_id.lower() in _titles_db:
+                    return std_id
+                # If even_id exists but std_id doesn't, even_id is ALMOST CERTAINLY the parent
+                if even_id.lower() in _titles_db:
+                    return even_id
+            
+            # Default fallback for odd DLC: the even parent is much more common than a phantom odd parent
+            return even_id
+    except:
+        pass
+
+    return std_id
 
 
 def get_file_size(filepath):
@@ -766,298 +815,57 @@ def identify_appId(app_id):
 
 
 def load_titledb(force=False, progress_callback=None):
-    global _cnmts_db
-    global _titles_db
-    global _versions_db
-    global _versions_txt_db
-    global identification_in_progress_count
     global _titles_db_loaded
     global _titledb_cache_timestamp
     global _titledb_cache_ttl
-
-    identification_in_progress_count += 1
+    global _titles_db
+    global _versions_db
+    global _cnmts_db
+    global _dlc_map
+    global _dlcs_by_base_id
 
     # Verificar se o cache expirou (TTL)
     current_time = time.time()
     cache_expired = False
     if _titledb_cache_timestamp is not None:
-        # Obter TTL das configurações se disponível
         try:
             app_settings = load_settings()
             _titledb_cache_ttl = app_settings.get("titledb", {}).get("cache_ttl", 3600)
         except Exception:
-            pass  # Use default if settings unavailable
+            pass
 
         elapsed = current_time - _titledb_cache_timestamp
         if elapsed > _titledb_cache_ttl:
             cache_expired = True
-            logger.info(f"TitleDB cache expired (TTL: {_titledb_cache_ttl}s, elapsed: {elapsed:.0f}s). Reloading...")
+            logger.info(f"TitleDB cache expired. Reloading...")
 
     if force or cache_expired:
         _titles_db_loaded = False
         _titledb_cache_timestamp = None
 
-    if not _titles_db_loaded:
-        # Priority 1: Try loading from database cache (fast - < 100ms)
-        if is_db_cache_valid():
-            if progress_callback:
-                progress_callback("Carregando do cache interno...", 10)
-            
-            if load_titledb_from_db():
-                identification_in_progress_count -= 1
-                return
+    if _titles_db_loaded:
+        return
 
-        logger.info("Loading TitleDBs into memory...")
-        if progress_callback:
-            progress_callback("Iniciando leitura de arquivos...", 15)
-
-        # Ensure TitleDB directory exists
-        try:
-            os.makedirs(TITLEDB_DIR, exist_ok=True)
-        except Exception as e:
-            logger.warning(f"Could not create TitleDB directory: {e}")
-
-        # Diagnostic: List files in TitleDB dir
-        try:
-            files = os.listdir(TITLEDB_DIR)
-            logger.info(f"Files in TitleDB directory: {', '.join(files)}")
-        except Exception as e:
-            logger.warning(f"Could not list TitleDB directory: {e}")
-
-        app_settings = load_settings()
-
-        _cnmts_db = robust_json_load(os.path.join(TITLEDB_DIR, "cnmts.json"))
-        
-        if gevent:
-            gevent.sleep(0.01)
-
-        # Database fallback chain: Region -> US/en -> Generic titles.json
-        region = app_settings.get("titles", {}).get("region", "US")
-        language = app_settings.get("titles", {}).get("language", "en")
-        
-        # 1. Base files that provide structural data
-        load_order = ["titles.json"]
-        
-        # 2. Collect ALL available regional files
-        import re
-        all_db_files = []
-        try:
-            all_db_files = os.listdir(TITLEDB_DIR)
-        except (OSError, FileNotFoundError) as e:
-            logger.warning(f"Cannot list TitleDB directory: {e}")
-            
-        regional_pattern = re.compile(r"^(titles\.)?[A-Z]{2}\.[a-z]{2}\.json$")
-        
-        # Primary regional preferences
-        primary_prefs = titledb.get_region_titles_filenames(region, language)
-        if region != "US":
-             primary_prefs += ["titles.US.en.json", "US.en.json"]
-             
-        # 2. Collect ALL available regional files
-        # Separate primary found from others
-        found_primary = [f for f in all_db_files if f in primary_prefs]
-        # Sort such that the highest priority file (lowest index) is loaded LAST
-        found_primary.sort(key=lambda x: primary_prefs.index(x), reverse=True)
-        
-        other_regionals = [f for f in all_db_files if regional_pattern.match(f) and f not in primary_prefs]
-        
-        # 3. Build logical load order
-        # Step A: Master titles.json (lowest priority metadata)
-        # Step B: All other regional files (as fallbacks)
-        # Step C: Primary regional files (highest priority regional)
-        # Step D: custom.json (absolute priority)
-        
-        for f in sorted(other_regionals):
-            if f not in load_order:
-                load_order.append(f)
-                
-        for f in found_primary:
-            if f not in load_order:
-                load_order.append(f)
-        
-        load_order.append("custom.json")
-        
-        _titles_db = {}
-        global _loaded_titles_file
-        _loaded_titles_file = []  # Track files actually successfully loaded
-
-        logger.info(f"TitleDB Load Order: {', '.join(load_order)}")
-
-        total_files = len(load_order)
-        for i, filename in enumerate(load_order):
-            if progress_callback:
-                progress = 20 + int((i / total_files) * 60)
-                progress_callback(f"Processando {filename}...", progress)
-                
-            filepath = os.path.join(TITLEDB_DIR, filename)
-            # Skip corrupted files
-            if filename.endswith(".corrupted") or filepath.endswith(".corrupted"):
-                continue
-                
-            if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
-                logger.info(f"Loading TitleDB: {filename}...")
-                loaded = robust_json_load(filepath)
-                
-                if gevent: gevent.sleep(0.01) # Yield after load
-                
-                if loaded:
-                    count = len(loaded) if isinstance(loaded, (dict, list)) else 0
-                    if count > 0:
-                        is_custom = filename == "custom.json"
-                        
-                        # Convert list/dict to standardized dict keyed by TitleID
-                        current_batch = {}
-                        if isinstance(loaded, list):
-                            for item in loaded:
-                                if isinstance(item, dict) and "id" in item and item["id"]:
-                                    current_batch[item["id"].upper()] = item
-                        elif isinstance(loaded, dict):
-                            # Improved handling for dicts where keys might be NSUIDs (like raw regional files)
-                            for k, v in loaded.items():
-                                if not isinstance(v, dict): continue
-                                
-                                # Priority: Use the "id" field if it looks like a TitleID, fallback to key
-                                obj_id = v.get("id")
-                                if obj_id and isinstance(obj_id, str) and len(obj_id) == 16:
-                                    tid = obj_id.upper()
-                                else:
-                                    tid = str(k).upper()
-                                
-                                # Standardize ID to 16 chars upper
-                                if len(tid) == 16:
-                                    current_batch[tid] = v
-                        
-                        # MERGE logic: Overwrite names/descriptions but keep existing metadata
-                        # Optimization: Yield every 1000 items to prevent worker timeout
-                        if not _titles_db:
-                            _titles_db = current_batch
-                        else:
-                            j = 0
-                            for tid, data in current_batch.items():
-                                j += 1
-                                if j % 1000 == 0:
-                                    if gevent: gevent.sleep(0.001)
-                                        
-                                if tid in _titles_db:
-                                    if is_custom:
-                                        _titles_db[tid].update(data)
-                                    else:
-                                        # Fields to merge/override from regional files
-                                        # We want images and local names
-                                        merge_fields = [
-                                            "name", "description", "publisher", "releaseDate", 
-                                            "category", "genre", "iconUrl", "bannerUrl", 
-                                            "screenshots", "nsuId"
-                                        ]
-                                        for field in merge_fields:
-                                            val = data.get(field)
-                                            # Special handling for images: Don't overwrite existing URL with None
-                                            if field in ["iconUrl", "bannerUrl", "screenshots", "frontBoxArt"]:
-                                                if not val:  # If new value is None/Empty, keep old
-                                                    continue
-                                            
-                                            if val is not None and val != "":
-                                                # Avoid overwriting populated lists with empty ones
-                                                if isinstance(val, list) and len(val) == 0:
-                                                    continue
-                                                _titles_db[tid][field] = val
-                                else:
-                                    _titles_db[tid] = data
-                        
-                        _loaded_titles_file.append(filename)
-                        logger.info(f"SUCCESS: Merged {count} items from {filename} {'(AS OVERRIDE)' if is_custom else ''}")
-                
-                else:
-                    # If loaded is None, parsing failed completely despite robust efforts
-                    # The file is likely garbage or severely truncated.
-                    # Delete it so it doesn't persist as a "zombie" error source.
-                    logger.warning(f"File {filename} is corrupted and unrecoverable. Deleting: {filepath}")
-                    try:
-                        os.remove(filepath)
-                        # Also remove associated .clean file if it exists
-                        clean_path = filepath + ".clean"
-                        if os.path.exists(clean_path):
-                            os.remove(clean_path)
-                    except Exception as e:
-                        logger.error(f"Failed to delete corrupted file {filename}: {e}")
-                    logger.warning(f"Could not parse {filename}, skipping...")
-
-
-        if _titles_db:
-            # Our _titles_db is already keyed by TitleID (upper) due to the merge logic above.
-            # We just need to ensure everything is indexed correctly.
-            logger.info(f"TitleDB loaded and indexed: {len(_titles_db)} unique titles.")
-
-        if not _titles_db:
-            logger.warning("TitleDB is empty. Triggering automatic update from sources...")
-            if progress_callback:
-                progress_callback("Baixando TitleDB (banco vazio)...", 30)
-            
-            # Try to update from sources
-            try:
-                # Use module function with required settings
-                titledb.update_titledb(app_settings, force=True)
-            except Exception as ex:
-                logger.error(f"Auto-update failed: {ex}")
-
-            # Reload to see if we got files now
-            # We can recurse once or just try to load files again
-            # For safety, let's just try to reload from newly downloaded files
-            try:
-                # ... Simple logic to reload files into _titles_db ...
-                # Re-run file loading logic ? A bit complex to duplicate code.
-                # Let's just trust that next run or next loop will catch it, 
-                # OR we implement a simple reload here if critical.
-                pass
-            except:
-                pass
-
-            if not _titles_db:
-                # One last attempt: maybe the update worked but we need to load the files?
-                # The code below (Regional Logic) hasn't run yet if we failed early?
-                # Actually, this block is AT THE END of the function.
-                # Wait, if _titles_db is empty here, it means we scanned the DIR and found nothing.
-                # If update_titledb() downloaded files, we need to SCAN THE DIR AGAIN.
-                
-                # Let's try to reload files quickly
-                if os.listdir(TITLEDB_DIR):
-                    logger.info("Files downloaded. Please restart or wait for reload.")
-                    # Ideally we should loop back, but for now let's just warn
-                
-                logger.error("CRITICAL: Failed to load any TitleDB (empty). Game identification will be limited.")
-                _titles_db = {}
-
-        _versions_db_path = os.path.join(TITLEDB_DIR, "versions.json")
-        # Skip corrupted versions.json
-        if os.path.exists(_versions_db_path) and not _versions_db_path.endswith(".corrupted"):
-            _versions_db = robust_json_load(_versions_db_path) or {}
-        else:
-            _versions_db = {}
-        _cnmts_db = _cnmts_db or {}
-
+    logger.info("Loading TitleDB from database...")
+    if progress_callback:
+        progress_callback("Carregando banco de dados de títulos...", 10)
+    
+    if load_titledb_from_db():
         _titles_db_loaded = True
-        _titledb_cache_timestamp = time.time()  # Use Unix timestamp for consistency
-        logger.info(f"TitleDBs loaded. Cache TTL: {_titledb_cache_ttl}s")
-
-        # Save to database cache for fast loading next time
-        source_files = {}
-        for f in _loaded_titles_file:
-            source_files[f.lower().replace(".json", "")] = f
-        
-        if progress_callback:
-            progress_callback("Salvando cache no banco de dados...", 80)
-            
-        save_titledb_to_db(source_files, progress_callback=progress_callback)
-
-        # Sync metadata to database if loaded
-        if _titles_db:
-            try:
-                sync_titles_to_db()
-            except Exception as e:
-                logger.error(f"Failed to sync TitleDB to database: {e}")
-
-
-@debounce(30)
+        logger.info(f"TitleDB loaded successfully from DB.")
+        # Trigger sync to Database Titles table (metadata tracker)
+        try:
+            sync_titles_to_db()
+        except Exception as sync_err:
+            logger.warning(f"Metadata sync after load failed: {sync_err}")
+    else:
+        logger.warning("Failed to load TitleDB from database (or empty).")
+        # Ensure we have empty dicts at least
+        if _titles_db is None: _titles_db = {}
+        if _versions_db is None: _versions_db = {}
+        if _cnmts_db is None: _cnmts_db = {}
+        if _dlc_map is None: _dlc_map = {}
+        _titles_db_loaded = True # Mark as loaded even if empty to prevent retries loop
 def unload_titledb():
     global _cnmts_db
     global _titles_db
@@ -1381,8 +1189,11 @@ def get_game_latest_version(all_existing_versions):
 def get_all_existing_versions(titleid):
     global _versions_db
 
+    if not _titles_db_loaded:
+        load_titledb()
+
     if _versions_db is None:
-        logger.warning("versions_db is not loaded. Call load_titledb first.")
+        logger.warning("versions_db is not loaded.")
         return []
 
     if not titleid:
@@ -1451,39 +1262,59 @@ def get_app_id_version_from_versions_txt(app_id):
 
 
 def get_all_existing_dlc(title_id):
-    global _cnmts_db
+    global _cnmts_db, _dlcs_by_base_id
     if _cnmts_db is None:
         logger.error("cnmts_db is not loaded. Call load_titledb first.")
         return []
 
     if not title_id:
         return []
+        
     title_id = title_id.lower()
+    
+    # Priority 1: Use optimization index if available
+    if _dlcs_by_base_id and title_id in _dlcs_by_base_id:
+        return _dlcs_by_base_id[title_id]
+
+    # Fallback: Sequential scan
     dlcs = []
-    for app_id in _cnmts_db.keys():
-        # Ensure we iterate over versions (0, 65536, etc)
-        app_versions = _cnmts_db[app_id]
-        if isinstance(app_versions, dict):
-            for version_key, version_description in app_versions.items():
+    for app_id, versions in _cnmts_db.items():
+        if isinstance(versions, dict):
+            for version_key, version_description in versions.items():
                 if (
                     version_description.get("titleType") == 130
                     and version_description.get("otherApplicationId") == title_id
                 ):
-                    if app_id.upper() not in dlcs:
-                        dlcs.append(app_id.upper())
+                    app_id_upper = app_id.upper()
+                    if app_id_upper not in dlcs:
+                        dlcs.append(app_id_upper)
+                    break
     return dlcs
 
 
 def get_loaded_titles_file():
-    """Return the currently loaded titles filename(s)"""
-    global _loaded_titles_file
-    if isinstance(_loaded_titles_file, list):
-        # Prefer showing the most specific/regional file if multiple were merged
-        for f in reversed(_loaded_titles_file):
-            if f and "." in f and any(ext in f.lower() for ext in [".br", "pt", "pt.json", "br.json"]):
-                return f
-        return _loaded_titles_file[-1] if _loaded_titles_file else "None"
-    return _loaded_titles_file or "None"
+    """Return the currently loaded titles filename(s) from Database"""
+    try:
+        from db import TitleDBCache, db
+        # Get distinct sources
+        with db.session.no_autoflush: 
+             # Use distinct to get unique source filenames
+             sources = db.session.query(TitleDBCache.source).distinct().all()
+        
+        source_names = [s[0] for s in sources if s[0]]
+        
+        if not source_names:
+            return "Database (Empty)"
+            
+        # Filter out common base files to show regional interest
+        regional = [s for s in source_names if "titles" not in s and "versions" not in s and "cnmts" not in s and "languages" not in s]
+        if regional:
+             return ", ".join(sorted(regional))
+             
+        return ", ".join(sorted(source_names))
+    except Exception as e:
+        logger.warning(f"Error getting loaded titles file: {e}")
+        return "Database (Error)"
 
 
 def get_custom_title_info(title_id):

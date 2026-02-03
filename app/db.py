@@ -1,16 +1,17 @@
+import os
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
 from sqlalchemy import event
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.dialects.sqlite import insert  # Use postgresql if using PostgreSQL
+from sqlalchemy.dialects.postgresql import insert
 from flask_migrate import Migrate, upgrade
 from alembic.runtime.migration import MigrationContext
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from flask_login import UserMixin
 from alembic import command
-import os
+
 import sys
 import shutil
 import logging
@@ -79,7 +80,7 @@ class Files(db.Model):
     folder = db.Column(db.String)
     filename = db.Column(db.String, nullable=False)
     extension = db.Column(db.String)
-    size = db.Column(db.Integer)
+    size = db.Column(db.BigInteger)
     compressed = db.Column(db.Boolean, default=False)
     multicontent = db.Column(db.Boolean, default=False)
     nb_content = db.Column(db.Integer, default=0)
@@ -170,7 +171,7 @@ class TitleDBVersions(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title_id = db.Column(db.String(16), nullable=False, index=True)
     version = db.Column(db.Integer, nullable=False)
-    release_date = db.Column(db.String(8))  # YYYYMMDD
+    release_date = db.Column(db.String(10))  # YYYY-MM-DD or YYYYMMDD
 
     __table_args__ = (db.Index("idx_title_version", "title_id", "version"),)
 
@@ -200,7 +201,7 @@ class Apps(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title_id = db.Column(db.Integer, db.ForeignKey("titles.id", ondelete="CASCADE"), nullable=False)
     app_id = db.Column(db.String, index=True)  # Index for faster lookups
-    app_version = db.Column(db.String)
+    app_version = db.Column(db.BigInteger)
     app_type = db.Column(db.String, index=True)  # Index for filtering by type
     owned = db.Column(db.Boolean, default=False, index=True)  # Index for owned filter
 
@@ -219,7 +220,7 @@ class Apps(db.Model):
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user = db.Column(db.String(100), unique=True)
-    password = db.Column(db.String(100))
+    password = db.Column(db.String(255))
     admin_access = db.Column(db.Boolean)
     shop_access = db.Column(db.Boolean)
     backup_access = db.Column(db.Boolean)
@@ -896,6 +897,7 @@ def get_all_titles_with_apps():
         .options(joinedload(Titles.apps).joinedload(Apps.files), joinedload(Titles.tags))
         .all()
     )
+    logger.info(f"get_all_titles_with_apps: Found {len(titles)} titles in DB.")
 
     results = []
     for t in titles:

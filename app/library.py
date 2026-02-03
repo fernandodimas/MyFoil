@@ -19,6 +19,7 @@ from pathlib import Path
 from utils import format_size_py, now_utc, ensure_utc, safe_write_json
 import threading
 from job_tracker import job_tracker
+import gevent
 
 # Session-level cache
 _LIBRARY_CACHE = None
@@ -207,6 +208,8 @@ def add_files_to_library(library, files):
 
     # Otimização: Agrupar operações e usar flush() ao invés de commit imediato
     for n, filepath in enumerate(files):
+        if n % 10 == 0:
+            gevent.sleep(0.001)
         file = filepath.replace(library_path, "")
         logger.debug(f"Processing file ({n + 1}/{nb_to_identify}): {file}")  # Changed to debug to reduce noise
 
@@ -282,23 +285,32 @@ def scan_library_path(library_path):
         job_tracker.fail_job(job_id, f"Path does not exist: {library_path}")
         return
         
-    job_tracker.update_progress(job_id, 1, 4, "Reading disk files...")
+    lib_name = os.path.basename(library_path) or library_path
+    job_tracker.update_progress(job_id, 1, 4, f"[{lib_name}] Reading disk files...")
     _, files = titles_lib.getDirsAndFiles(library_path)
     logger.info(f"Found {len(files)} files on disk in {library_path}")
 
-    job_tracker.update_progress(job_id, 2, 4, "Comparing with database...")
+    job_tracker.update_progress(job_id, 2, 4, f"[{lib_name}] Comparing with database...")
     filepaths_in_library = get_library_file_paths(library_id)
     logger.info(f"Found {len(filepaths_in_library)} files in database for library_id={library_id}")
 
     # 1. Add new files
     new_files = [f for f in files if f not in filepaths_in_library]
-    logger.info(f"Found {len(new_files)} new files to add")
-    
     if new_files:
-        job_tracker.update_progress(job_id, 3, 4, f"Adding {len(new_files)} new files...")
-        if len(new_files) > 0:
-            logger.info(f"Adding new files (showing first 5): {new_files[:5]}")
-        add_files_to_library(library_id, new_files)
+        logger.info(f"Found {len(new_files)} new files to add")
+        total_new = len(new_files)
+        for n, filepath in enumerate(new_files):
+             if n % 10 == 0 or n == total_new - 1:
+                 progress_msg = f"[{lib_name}] Adding new files: {n+1}/{total_new}"
+                 job_tracker.update_progress(job_id, 3, 4, progress_msg)
+                 gevent.sleep(0)
+             
+             # Actually add files (wrapped in small batches or handled by the function)
+             add_files_to_library(library_id, [filepath]) 
+             
+             # Yield frequently
+             if n % 5 == 0:
+                 gevent.sleep(0)
 
     # 2. Remove deleted files
     deleted_files = [f for f in filepaths_in_library if f not in files]
@@ -311,16 +323,17 @@ def scan_library_path(library_path):
             logger.info(f"Job {job_id} was cancelled by user, stopping scan")
             return
         
+        total_del = len(deleted_files)
         for n, filepath in enumerate(deleted_files):
             # Check if job was cancelled (fast in-memory check)
             if job_tracker.is_cancelled(job_id):
                 logger.info(f"Job {job_id} was cancelled by user, stopping scan")
                 return
             
-            # Yield to other gevent co-routines frequently
-            if n % 10 == 0:
-                import gevent
-                gevent.sleep(0.01)
+            if n % 10 == 0 or n == total_del - 1:
+                progress_msg = f"[{lib_name}] Removing deleted files: {n+1}/{total_del}"
+                job_tracker.update_progress(job_id, 3, 4, progress_msg)
+                gevent.sleep(0)
 
             try:
                 file_obj = Files.query.filter_by(filepath=filepath).first()
@@ -341,7 +354,7 @@ def scan_library_path(library_path):
     # Log summary
     logger.info(f"Scan complete for {library_path}: {len(new_files)} added, {len(deleted_files)} removed")
     
-    job_tracker.update_progress(job_id, 4, 4, "Finalizing and updating status...")
+    job_tracker.update_progress(job_id, 4, 4, f"[{lib_name}] Finalizing and updating status...")
     
     # CRITICAL FIX for Issue #1: Always trigger post_library_change if files changed
     # This ensures badges/filters update after manual scan
@@ -544,7 +557,8 @@ def identify_library_files(library):
     
     job_id = f"identify_{library_id}_{int(time.time())}"
     job_tracker.start_job(job_id, JobType.FILE_IDENTIFICATION, f"Identifying files in {os.path.basename(library_path)}")
-    job_tracker.update_progress(job_id, 0, current=0, total=nb_to_identify)
+    lib_name = os.path.basename(library_path) or library_path
+    job_tracker.update_progress(job_id, 0, current=0, total=nb_to_identify, message=f"[{lib_name}] Starting identification...")
     
     if nb_to_identify == 0:
         job_tracker.complete_job(job_id, "No files to identify")
@@ -601,65 +615,82 @@ def identify_library_files(library):
             processed_count += 1
             
             # Retrieve DB object freshly for this session/thread
-            file_obj = get_file_from_db(file_id)
-            if not file_obj:
-                continue
+            try:
+                file_obj = get_file_from_db(file_id)
+                if not file_obj:
+                    continue
 
-            if error == "File not found":
-                logger.warning(f"File {filename} no longer exists during identification cleanup.")
-                remove_file_from_apps(file_id)
-                Files.query.filter_by(id=file_id).delete(synchronize_session=False)
-            
-            elif success and file_contents:
-                # Clear old associations
-                remove_file_from_apps(file_id)
-
-                # Increment metrics
-                FILES_IDENTIFIED.labels(
-                    app_type="multiple" if len(file_contents) > 1 else file_contents[0]["type"]
-                ).inc()
+                if error == "File not found":
+                    logger.warning(f"File {filename} no longer exists during identification cleanup.")
+                    remove_file_from_apps(file_id)
+                    Files.query.filter_by(id=file_id).delete(synchronize_session=False)
                 
-                # Add title IDs to DB
-                title_ids = list(dict.fromkeys([c["title_id"] for c in file_contents]))
-                for title_id in title_ids:
-                    add_title_id_in_db(title_id)
+                elif success and file_contents:
+                    # Clear old associations
+                    remove_file_from_apps(file_id)
 
-                nb_content = 0
-                for file_content in file_contents:
-                    title_id_in_db = get_title_id_db_id(file_content["title_id"])
+                    # Increment metrics
+                    try:
+                        FILES_IDENTIFIED.labels(
+                            app_type="multiple" if len(file_contents) > 1 else file_contents[0]["type"]
+                        ).inc()
+                    except:
+                        pass
                     
-                    # Check/Create App
-                    update_or_create_app_and_link_file(
-                        file_content["app_id"],
-                        file_content["version"],
-                        file_content["type"],
-                        title_id_in_db,
-                        file_obj
-                    )
-                    nb_content += 1
+                    # Add title IDs to DB
+                    title_ids = list(dict.fromkeys([c["title_id"] for c in file_contents]))
+                    for title_id in title_ids:
+                        add_title_id_in_db(title_id)
 
-                if nb_content > 1:
-                    file_obj.multicontent = True
-                file_obj.nb_content = nb_content
-                file_obj.identified = True
-                file_obj.identification_error = None
+                    nb_content = 0
+                    for file_content in file_contents:
+                        title_id_in_db = get_title_id_db_id(file_content["title_id"])
+                        
+                        # Check/Create App
+                        update_or_create_app_and_link_file(
+                            file_content["app_id"],
+                            file_content["version"],
+                            file_content["type"],
+                            title_id_in_db,
+                            file_obj
+                        )
+                        nb_content += 1
+
+                    if nb_content > 1:
+                        file_obj.multicontent = True
+                    file_obj.nb_content = nb_content
+                    file_obj.identified = True
+                    file_obj.identification_error = None
+                    
+                    logger.info(f"Identified {filename} ({nb_content} content)")
+                else:
+                    # Failure case
+                    logger.warning(f"Error identifying file {filename}: {error}")
+                    file_obj.identification_error = error
+                    file_obj.identified = False
+
+                if identification_type:
+                    file_obj.identification_type = identification_type
+
+                file_obj.identification_attempts += 1
+                file_obj.last_attempt = now_utc()
                 
-                logger.info(f"Identified {filename} ({nb_content} content)")
-            else:
-                # Failure case
-                logger.warning(f"Error identifying file {filename}: {error}")
-                file_obj.identification_error = error
-                file_obj.identified = False
+                current_titledb_ts = titles_lib.get_titledb_cache_timestamp()
+                if current_titledb_ts:
+                    file_obj.titledb_version = str(current_titledb_ts)
 
-            if identification_type:
-                file_obj.identification_type = identification_type
-
-            file_obj.identification_attempts += 1
-            file_obj.last_attempt = now_utc()
+                # Commit IMMEDIATELLY per file as requested
+                db.session.commit()
             
-            current_titledb_ts = titles_lib.get_titledb_cache_timestamp()
-            if current_titledb_ts:
-                file_obj.titledb_version = str(current_titledb_ts)
+            except Exception as e:
+                logger.error(f"Error processing identification result for {filename}: {e}")
+                db.session.rollback()
+                # Toast notification attempting
+                try:
+                    from app import socketio
+                    socketio.emit("notification", {"title": "Error", "message": f"Falha ao salvar {filename}: {str(e)}", "type": "error"}, namespace="/")
+                except:
+                    pass
 
             # More frequent yields to keep system responsive
             if processed_count % 10 == 0:
@@ -687,19 +718,20 @@ def identify_library_files(library):
                  
             if should_update_ui or processed_count == nb_to_identify:
                 progress = int((processed_count / nb_to_identify) * 100)
-                job_tracker.update_progress(job_id, progress, current=processed_count, total=nb_to_identify, message=f"Identifying: {display_name}")
+                lib_name = os.path.basename(library_path) or library_path
+                if display_name != filename:
+                    msg = f"[{lib_name}] {processed_count}/{nb_to_identify}: {display_name} ({filename})"
+                else:
+                    msg = f"[{lib_name}] {processed_count}/{nb_to_identify}: {filename}"
+                    
+                job_tracker.update_progress(job_id, progress, current=processed_count, total=nb_to_identify, message=msg)
                 gevent.sleep(0)  # Yield after progress update
 
-            # Flush every 50 items for memory management (less frequent)
-            if processed_count % 50 == 0:
-                db.session.flush()
-            
-            # Less frequent commits (better DB performance)
-            if processed_count % 200 == 0:
-                db.session.commit()
-
-        # Final commit
-        db.session.commit()
+        # Final commit (just in case)
+        try:
+            db.session.commit()
+        except:
+             db.session.rollback()
         pool.join()
 
         job_tracker.complete_job(job_id, f"Identified {processed_count} files")
@@ -839,7 +871,8 @@ def update_titles():
     # Auto-heal: Ensure apps with files are marked as owned
     # This fixes cases where files were linked but 'owned' flag wasn't updated due to bugs
     try:
-        db.session.execute(db.text("UPDATE apps SET owned = 1 WHERE id IN (SELECT app_id FROM app_files) AND owned = 0"))
+        # FIX: PostgreSQL requires boolean comparison (owned = true), not integer (owned = 1)
+        db.session.execute(db.text("UPDATE apps SET owned = true WHERE id IN (SELECT app_id FROM app_files) AND owned = false"))
         db.session.commit()
     except Exception as e:
         logger.warning(f"Auto-heal owned status failed: {e}")
@@ -885,22 +918,16 @@ def update_titles():
         # check up_to_date - consider current max owned vs max available
         up_to_date = max_owned_version >= max_available_version
 
-        # check complete - latest version of all available DLC are owned
-        dlc_apps = [app for app in title.apps if app.app_type == APP_TYPE_DLC]
-
-        if not dlc_apps:
-            # No DLC available, consider complete
+        # check complete - check against TitleDB known DLCs
+        all_possible_dlc_ids = [d.upper() for d in titles_lib.get_all_existing_dlc(title_id)]
+        all_possible_dlc_ids = [d for d in all_possible_dlc_ids if d != title_id.upper()]
+        
+        if not all_possible_dlc_ids:
             complete = True
         else:
-            # Group DLC by app_id and find latest version for each from TitleDB
-            # Actually, we should check if we OWN the latest version of each DLC that TitleDB knows about
-            # or at least if we own ANY version of each DLC.
-            
-            # Simple approach: if we own at least one file for each DLC app record we have
-            complete = all(any(len(aid.files) > 0 for aid in title.apps if aid.app_id == d.app_id) for d in dlc_apps if d.owned)
-            # Refined: Check if we own the latest version of each DLC known in TitleDB
-            # For now, let's keep it simple: have we all DLCs?
-            complete = all(a.owned and len(a.files) > 0 for a in dlc_apps)
+            owned_dlc_ids = set([a.app_id.upper() for a in title.apps 
+                                 if a.app_type == APP_TYPE_DLC and a.owned and len(a.files) > 0])
+            complete = all(d in owned_dlc_ids for d in all_possible_dlc_ids)
 
         if title.up_to_date != up_to_date:
             logger.info(f"Title {title_id} update status changed: {title.up_to_date} -> {up_to_date}")
@@ -979,9 +1006,9 @@ def compute_apps_hash():
     apps = get_all_apps()
 
     # Sort apps with safe handling of None values
-    for app in sorted(apps, key=lambda x: (x["app_id"] or "", x["app_version"] or "")):
+    for app in sorted(apps, key=lambda x: (x["app_id"] or "", str(x.get("app_version") or ""))):
         hash_md5.update((app["app_id"] or "").encode())
-        hash_md5.update((app["app_version"] or "").encode())
+        hash_md5.update(str(app.get("app_version") or "").encode())
         hash_md5.update((app["app_type"] or "").encode())
         hash_md5.update(str(app["owned"] or False).encode())
         hash_md5.update((app["title_id"] or "").encode())
@@ -1057,12 +1084,20 @@ def invalidate_library_cache():
 
 def get_game_info_item(tid, title_data):
     """Generate a single game item for the library list"""
-    # All apps for this title (already pre-loaded in title_data['apps'])
-    all_title_apps = title_data["apps"]
+    try:
+        # All apps for this title (already pre-loaded in title_data['apps'])
+        all_title_apps = title_data.get("apps", [])
 
-    # We only show games that have at least one OWNED app in the library
-    owned_apps = [a for a in all_title_apps if a.get("owned")]
-    if not owned_apps:
+        # We only show games that have at least one OWNED app in the library
+        owned_apps = [a for a in all_title_apps if a.get("owned")]
+        if not owned_apps:
+            return None
+
+        # Filter: Only show Base Title IDs (ending in 000) as primary entries in the dashboard
+        if not str(tid).upper().endswith("000"):
+            return None
+    except Exception as e:
+        logger.error(f"Error in get_game_info_item for {tid}: {e}")
         return None
 
     # Base info from TitleDB
@@ -1112,8 +1147,15 @@ def get_game_info_item(tid, title_data):
 
     game["has_latest_version"] = game["owned_version"] >= game["latest_version_available"]
 
-    all_possible_dlc_ids = titles_lib.get_all_existing_dlc(tid)
-    owned_dlc_ids = list(set([a["app_id"] for a in all_title_apps if a["app_type"] == APP_TYPE_DLC and a["owned"]]))
+    # Determine if ALL possible DLCs are owned
+    all_possible_dlc_ids = [d.upper() for d in titles_lib.get_all_existing_dlc(tid)]
+    # We only count as owned if there's actually a file attached
+    owned_dlc_ids = list(set([a["app_id"].upper() for a in all_title_apps 
+                              if a["app_type"] == APP_TYPE_DLC and a["owned"] and len(a.get("files_info", [])) > 0]))
+    
+    # Filter out self-mapping if it somehow appeared
+    all_possible_dlc_ids = [d for d in all_possible_dlc_ids if d != tid.upper()]
+    
     game["has_all_dlcs"] = all(d in owned_dlc_ids for d in all_possible_dlc_ids) if all_possible_dlc_ids else True
 
     # Check for redundant updates (more than 1 update file)
@@ -1233,27 +1275,41 @@ def get_game_info_item(tid, title_data):
                 game.setdefault("screenshots", []).append(s)
 
     update_apps = [a for a in all_title_apps if a["app_type"] == APP_TYPE_UPD]
-    version_release_dates = {v["version"]: v["release_date"] for v in available_versions}
-
+    update_apps_by_version = {int(a["app_version"]): a for a in update_apps}
+    
     version_list = []
-    for upd in update_apps:
-        v_int = int(upd["app_version"])
-        if v_int == 0:
-            continue  # Skip base version in updates list
-        version_list.append(
-            {
+    # Include all versions found in versions.json
+    for v_info in available_versions:
+        v_int = v_info["version"]
+        if v_int == 0: continue
+        
+        upd_app = update_apps_by_version.get(v_int)
+        version_list.append({
+            "version": v_int,
+            "owned": upd_app["owned"] if upd_app else False,
+            "release_date": v_info["release_date"] or "Unknown",
+            "files": upd_app.get("files", []) if upd_app and upd_app["owned"] else []
+        })
+    
+    # Also include any owned updates that might NOT be in versions.json (rare but possible)
+    for v_int, upd_app in update_apps_by_version.items():
+        if v_int not in [v["version"] for v in version_list] and v_int != 0:
+            version_list.append({
                 "version": v_int,
-                "owned": upd["owned"],
-                "release_date": version_release_dates.get(v_int, "Unknown"),
-                "files": upd.get("files", []) if upd["owned"] else [],
-            }
-        )
+                "owned": upd_app["owned"],
+                "release_date": "Unknown",
+                "files": upd_app.get("files", []) if upd_app["owned"] else []
+            })
 
-    game["updates"] = sorted(version_list, key=lambda x: x["version"])
+    game["updates"] = sorted(version_list, key=lambda x: x["version"], reverse=True)
 
-    # DLC details
+    # DLC details for the JSON response
     dlcs_by_id = {}
     for dlc_id in all_possible_dlc_ids:
+        # Filter out self-mapping
+        if dlc_id == tid.upper():
+            continue
+            
         dlcs_by_id[dlc_id] = {
             "app_id": dlc_id,
             "name": titles_lib.get_game_info(dlc_id).get("name", f"DLC {dlc_id}"),
@@ -1264,8 +1320,12 @@ def get_game_info_item(tid, title_data):
 
     dlc_apps = [a for a in all_title_apps if a["app_type"] == APP_TYPE_DLC]
     for dlc_app in dlc_apps:
-        aid = dlc_app["app_id"]
-        v = int(dlc_app["app_version"])
+        aid = dlc_app["app_id"].upper()
+        # Skip base title if it appears as DLC
+        if aid == tid.upper():
+            continue
+            
+        v = int(dlc_app["app_version"] or 0)
         if aid not in dlcs_by_id:
             dlcs_by_id[aid] = {
                 "app_id": aid,
@@ -1274,7 +1334,9 @@ def get_game_info_item(tid, title_data):
                 "latest_version": 0,
                 "owned_version": 0,
             }
-        if dlc_app["owned"]:
+        
+        # Mark as owned only if it has files
+        if dlc_app["owned"] and len(dlc_app.get("files_info", [])) > 0:
             dlcs_by_id[aid]["owned"] = True
             dlcs_by_id[aid]["owned_version"] = max(dlcs_by_id[aid]["owned_version"], v)
         dlcs_by_id[aid]["latest_version"] = max(dlcs_by_id[aid]["latest_version"], v)
@@ -1314,14 +1376,19 @@ def generate_library(force=False):
     games_info = []
 
     import gevent
+    processed_count = 0
     for idx, title_data in enumerate(all_titles_data):
         game = get_game_info_item(title_data["title_id"], title_data)
         if game:
             games_info.append(game)
+            processed_count += 1
         
         # Yield every 50 games to keep server responsive
         if idx % 50 == 0:
+            logger.info(f"generate_library: Processed {idx}/{len(all_titles_data)} titles. Found {len(games_info)} games so far.")
             gevent.sleep(0)
+    
+    logger.info(f"generate_library: Finished processing Titles. Total games found: {len(games_info)}")
 
     sorted_library = sorted(games_info, key=lambda x: x.get("name", "Unrecognized") or "Unrecognized")
 
@@ -1340,6 +1407,13 @@ def generate_library(force=False):
     LIBRARY_SIZE.set(total_size)
 
     logger.info(f"Generating library done. Found {len(games_info)} games used for response.")
+    
+    # Emit notification with game count
+    try:
+        from app import socketio
+        socketio.emit("notification", {"title": "Library Updated", "message": f"Biblioteca atualizada: {len(games_info)} jogos encontrados.", "type": "info"}, namespace="/")
+    except:
+        pass
     
     if len(games_info) == 0:
         # Diagnostic: Why is it empty?

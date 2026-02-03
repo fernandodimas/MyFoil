@@ -27,9 +27,9 @@
     "enabled": true,
     "priority": 1,
     "source_type": "json",
-    "last_success": "2026-02-02T23:02:11.170156+00:00",
+    "last_success": "2026-02-03T13:53:39.490551+00:00",
     "last_error": null,
-    "remote_date": "2026-02-02T08:35:21+00:00",
+    "remote_date": "2026-02-03T08:35:54+00:00",
     "is_fetching": false
   }
 ]

@@ -406,12 +406,12 @@ def scan_library_job():
 
         logger.info("Starting library scan job...")
         
-        # Check if there are already active scan jobs
+        # Check if there are already other active scan jobs
         active_jobs = job_tracker.get_active_jobs()
-        active_scan_jobs = [j for j in active_jobs if j.get('type') in ['library_scan', 'aggregate_scan', 'file_identification']]
+        active_scan_jobs = [j for j in active_jobs if j.get('type') in ['library_scan', 'aggregate_scan', 'file_identification'] and j.get('id') != job_id]
         
         if active_scan_jobs:
-            logger.warning(f"Skipping library scan: {len(active_scan_jobs)} scan job(s) already in progress.")
+            logger.warning(f"Skipping library scan: {len(active_scan_jobs)} other scan job(s) already in progress.")
             job_tracker.fail_job(job_id, f"{len(active_scan_jobs)} scan job(s) already running")
             return
         
@@ -436,14 +436,18 @@ def scan_library_job():
                     libraries = get_libraries()
                     logger.info(f"Found {len(libraries)} libraries to scan")
                     for i, lib in enumerate(libraries):
-                        job_tracker.update_progress(job_id, i + 1, len(libraries), f"Scanning {lib.path}...")
-                        logger.info(f"Scanning library: {lib.path}")
-                        scan_library_path(lib.path)
-    
-                        job_tracker.update_progress(job_id, i + 1, len(libraries), f"Identifying files in {lib.path}...")
-                        logger.info(f"Scan complete for {lib.path}, starting identification")
-                        identify_library_files(lib.path)
-                        logger.info(f"Identification complete for {lib.path}")
+                        try:
+                            job_tracker.update_progress(job_id, i + 1, len(libraries), f"Scanning {lib.path}...")
+                            logger.info(f"Scanning library: {lib.path}")
+                            scan_library_path(lib.path)
+        
+                            job_tracker.update_progress(job_id, i + 1, len(libraries), f"Identifying files in {lib.path}...")
+                            logger.info(f"Scan complete for {lib.path}, starting identification")
+                            identify_library_files(lib.path)
+                            logger.info(f"Identification complete for {lib.path}")
+                        except Exception as lib_err:
+                            logger.error(f"Error scanning library {lib.path}: {lib_err}")
+                            continue
     
                 # No need to call post_library_change here as scan_library_path now does it
             log_activity("library_scan_completed")
@@ -475,6 +479,7 @@ def init_internal(app):
     global watcher_thread
 
     # Cleanup stale jobs first (Reset stuck 'RUNNING' jobs from previous session)
+    print("DEBUG: init_internal cleaning stale jobs...", flush=True)
     try:
         with app.app_context():
             from utils import now_utc
@@ -493,15 +498,19 @@ def init_internal(app):
 
     # Load TitleDB cache on startup (CRITICAL for versions_db)
     # This prevents "Call load_titledb first" errors during scans
+    print("DEBUG: init_internal loading titledb...", flush=True)
     try:
         with app.app_context():
             logger.info("Startup: Loading TitleDB cache...")
             import titles
             titles.load_titledb()
+            print("DEBUG: init_internal titledb loaded.", flush=True)
     except Exception as e:
+        print(f"DEBUG: init_internal titledb failed: {e}", flush=True)
         logger.error(f"Startup: Failed to load TitleDB: {e}")
 
     # Start file watcher
+    print("DEBUG: init_internal starting watcher...", flush=True)
     try:
         from library import start_watcher
     except ImportError:
@@ -533,10 +542,25 @@ def init_internal(app):
             watcher_thread.daemon = True
             watcher_thread.start()
 
-            # Setup paths from Database (Source of Truth) instead of settings file
-            # This fixes synchronization issues where UI shows libs (from DB) but Watchdog doesn't see them (from YAML)
+            # Setup paths from Database (Source of Truth)
+            # Sync YAML -> DB if DB is empty but YAML has paths (Migration scenario)
             try:
                 libs_db = get_libraries()
+                yaml_paths = app_settings.get("library", {}).get("paths", [])
+                
+                db_paths = set(lib.path for lib in libs_db)
+                changes_made = False
+                
+                for p in yaml_paths:
+                    if p not in db_paths:
+                        logger.info(f"Syncing path from YAML to DB: {p}")
+                        from library import add_library
+                        add_library(p)
+                        changes_made = True
+                
+                if changes_made:
+                    libs_db = get_libraries() # Refresh
+
                 library_paths = [lib.path for lib in libs_db]
                 logger.info(f"Loaded {len(library_paths)} library paths from Database for Watchdog.")
             except Exception as e:
@@ -758,7 +782,9 @@ def create_app():
         job_tracker.init_app(app)
 
         # Initialize file watcher and libraries
+        print("DEBUG: Calling init_internal...", flush=True)
         init_internal(app)
+        print("DEBUG: init_internal done.", flush=True)
 
         # Initialize plugins
         plugin_manager = get_plugin_manager(PLUGINS_DIR, app)
@@ -782,5 +808,6 @@ app = create_app()
 if __name__ == "__main__":
     logger.info(f"Build Version: {BUILD_VERSION}")
     logger.info("Starting server on port 8465...")
+    print("DEBUG: calling socketio.run...", flush=True)
     socketio.run(app, debug=True, use_reloader=False, host="0.0.0.0", port=8465, allow_unsafe_werkzeug=True)
     logger.info("Shutting down server...")

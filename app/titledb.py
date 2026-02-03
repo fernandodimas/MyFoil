@@ -24,6 +24,10 @@ from constants import TITLEDB_DIR, TITLEDB_DEFAULT_FILES, CONFIG_DIR
 from settings import load_settings
 from titledb_sources import TitleDBSourceManager
 from utils import format_datetime, now_utc, ensure_utc
+from db import db, TitleDBCache, TitleDBVersions, TitleDBDLCs
+import json
+
+from sqlalchemy.dialects.postgresql import insert
 
 # Retrieve main logger
 logger = logging.getLogger("main")
@@ -127,6 +131,119 @@ def download_titledb_file(filename: str, force: bool = False, silent_404: bool =
             logger.debug(f"{filename} not found (404), skipping silently")
         else:
             logger.warning(f"Failed to download {filename}: {error}")
+        return False
+        
+def process_and_store_json(filename: str, source_name: str) -> bool:
+    """Read downloaded JSON file and store in Database"""
+    filepath = os.path.join(TITLEDB_DIR, filename)
+    if not os.path.exists(filepath):
+        logger.warning(f"File {filepath} not found for processing")
+        return False
+
+    try:
+        logger.info(f"Processing {filename} for database storage...")
+        with open(filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+        # 1. VERSIONS
+        if "versions" in filename:
+            logger.info(f"Storing {len(data)} version entries...")
+            # Ideally we'd truncate/replace or upsert. For now, let's upsert batch.
+            # Truncating is faster for full updates:
+            # db.session.query(TitleDBVersions).delete()
+            # But let's stick to upsert to be safe with partial data?
+            # Actually versions.json is usually global. Let's truncate for now to avoid stale data.
+            db.session.query(TitleDBVersions).delete()
+            
+            bulk_data = []
+            for tid, v_dict in data.items():
+                for version, date in v_dict.items():
+                    bulk_data.append({
+                        "title_id": tid,
+                        "version": int(version),
+                        "release_date": str(date)
+                    })
+            
+            if bulk_data:
+                db.session.bulk_insert_mappings(TitleDBVersions, bulk_data)
+                db.session.commit()
+            return True
+
+        # 2. CNMTS (DLCs and Updates mapping)
+        elif "cnmts" in filename:
+            logger.info(f"Storing {len(data)} DLC (CNMT) entries...")
+            db.session.query(TitleDBDLCs).delete()
+            
+            bulk_data = []
+            for tid, versions in data.items():
+                for v_str, info in versions.items():
+                    base_tid = info.get("otherApplicationId")
+                    title_type = info.get("titleType")
+                    if base_tid and title_type == 130: # ONLY DLC
+                        bulk_data.append({
+                            "base_title_id": base_tid,
+                            "dlc_app_id": tid
+                        })
+                    # Also include the title itself in the reverse map if it's a DLC
+                    elif title_type == 130:
+                        # Some DLCs don't have otherApplicationId? Rare but possible
+                        pass
+            
+            # Deduplicate entries (same base and DLC can appear multiple times for different versions)
+            unique_bulk = {}
+            for item in bulk_data:
+                key = (item["base_title_id"], item["dlc_app_id"])
+                unique_bulk[key] = item
+            
+            bulk_data = list(unique_bulk.values())
+            
+            if bulk_data:
+                db.session.bulk_insert_mappings(TitleDBDLCs, bulk_data)
+                db.session.commit()
+            return True
+
+        # 3. TITLES (titles.json, US.en.json, etc)
+        else:
+            logger.info(f"Storing {len(data)} title entries from {filename}...")
+            import gevent
+            
+            # Use batches for performance and to prevent long locks/freezes
+            batch_size = 500
+            items = list(data.items())
+            total = len(items)
+            
+            for i in range(0, total, batch_size):
+                # Yield to keep server responsive
+                gevent.sleep(0.01)
+                
+                batch = items[i:i+batch_size]
+                values = []
+                for tid, tdata in batch:
+                    values.append({
+                        "title_id": tid,
+                        "data": tdata,
+                        "source": filename,
+                        "updated_at": now_utc()
+                    })
+                
+                # Bulk UPSERT using PostgreSQL syntax
+                stmt = insert(TitleDBCache).values(values)
+                upsert_stmt = stmt.on_conflict_do_update(
+                    index_elements=['title_id'],
+                    set_=dict(data=stmt.excluded.data, source=stmt.excluded.source, updated_at=stmt.excluded.updated_at)
+                )
+                db.session.execute(upsert_stmt)
+                
+                # Commit every few batches to keep transactions small
+                if i % (batch_size * 4) == 0:
+                    db.session.commit()
+            
+            db.session.commit()
+            return True
+
+    except Exception as e:
+        logger.error(f"Failed to process {filename}: {e}", exc_info=True)
+        db.session.rollback()
         return False
 
 
@@ -248,6 +365,9 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                                 with rzf.open(target_zip_path) as fpin:
                                     with open(os.path.join(TITLEDB_DIR, filename), "wb") as fpout:
                                         while True:
+                                            chunk = fpin.read(65536)
+                                            if not chunk:
+                                                break
                                             fpout.write(chunk)
                                 
                                 # Verify JSON validity immediately
@@ -280,6 +400,15 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                         results[f] = True
 
                 source_manager.save_sources()
+                source_manager.save_sources()
+                
+                # PROCESS LEGACY FILES (If we ever support legacy zip again)
+                # For now just return results, but we probably should process them if we downloaded them.
+                # Assuming download_titledb_legacy extracts them to disk:
+                for fname, success in results.items():
+                    if success and fname.endswith('.json'):
+                        process_and_store_json(fname, source.name)
+
                 return results  # Success!
             except Exception as e:
                 logger.error(f"Legacy update from {source.name} failed: {e}")
@@ -293,7 +422,11 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                 log_tdb(f"Downloading core files from {source.name}...", 3)
                 core_files = ["cnmts.json", "versions.json", "languages.json"]
                 for filename in core_files:
-                    results[filename] = download_titledb_file(filename, force=force)
+                    if download_titledb_file(filename, force=force):
+                        results[filename] = True
+                        process_and_store_json(filename, source.name)
+                    else:
+                        results[filename] = False
 
                 # PRIORITY: Try to download the region-specific file based on settings FIRST
                 region = app_settings["titles"].get("region", "US")
@@ -307,6 +440,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                     if download_titledb_file(region_filename, force=force, silent_404=True):
                         region_success = True
                         results[region_filename] = True
+                        process_and_store_json(region_filename, source.name)
                         break
 
                 results["region_titles"] = region_success
@@ -315,6 +449,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                 if not region_success:
                     logger.warning(f"Region-specific files {region_filenames} not available, trying titles.json as fallback...")
                     download_titledb_file("titles.json", force=force, silent_404=True)
+                    process_and_store_json("titles.json", source.name)
 
                 if all(results.get(f) for f in core_files):
                     source.last_success = now_utc()

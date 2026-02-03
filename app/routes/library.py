@@ -4,7 +4,11 @@ Library Routes - Endpoints relacionados à biblioteca de jogos
 
 from flask import Blueprint, request, jsonify
 from sqlalchemy import func, and_, case
-from db import db, Apps, Titles, Libraries, Files, get_libraries, logger, app_files
+from db import (
+    db, Apps, Titles, Libraries, Files, get_libraries, logger, app_files,
+    TitleMetadata, TitleTag, Tag, WishlistIgnore
+)
+from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC
 from settings import load_settings
 from auth import access_required
 import titles
@@ -35,9 +39,9 @@ def library_api():
     MAX_PER_PAGE = 1000  # Limite máximo configurável
     per_page = min(max(1, per_page), MAX_PER_PAGE)  # Limitar ao máximo configurável
 
-    # generate_library will use cache if force=False (default)
     lib_data = library.generate_library()
     total_items = len(lib_data)
+    logger.info(f"Library API returning {total_items} items. Page: {page}, Per Page: {per_page}")
 
     # Calcular paginação
     total_pages = (total_items + per_page - 1) // per_page  # Ceiling division
@@ -566,44 +570,60 @@ def app_info_api(id):
 
     # Updates and DLCs (for detailed listing)
     available_versions = titles.get_all_existing_versions(tid)
+    # Updates list: Include ALL available versions from TitleDB
     version_release_dates = {v["version"]: v["release_date"] for v in available_versions}
-
+    
     # Ensure v0 has the base game release date in YYYY-MM-DD format
     base_release_date = info.get("release_date", "")
     if base_release_date and len(str(base_release_date)) == 8 and str(base_release_date).isdigit():
-        # Format YYYYMMDD to YYYY-MM-DD
         formatted_date = f"{str(base_release_date)[:4]}-{str(base_release_date)[4:6]}-{str(base_release_date)[6:]}"
-        # Update info for the main response
         info["release_date"] = formatted_date
-        # Set for v0
         version_release_dates[0] = formatted_date
     elif base_release_date:
         version_release_dates[0] = base_release_date
+    else:
+        version_release_dates[0] = "Unknown"
 
     update_apps = [a for a in all_title_apps if a["app_type"] == APP_TYPE_UPD]
+    update_apps_by_version = {int(a["app_version"]): a for a in update_apps}
+    
     updates_list = []
-    for upd in update_apps:
-        v_int = int(upd["app_version"])
-        if v_int == 0:
-            continue  # Skip base version in updates history
-
-        # Get file IDs for owned updates
+    # 1. Add all versions from TitleDB
+    for v_info in available_versions:
+        v_int = v_info["version"]
+        if v_int == 0: continue
+        
+        upd_app = update_apps_by_version.get(v_int)
         files = []
-        if upd["owned"]:
-            app_model = db.session.get(Apps, upd["id"])
+        if upd_app and upd_app["owned"]:
+            app_model = db.session.get(Apps, upd_app["id"])
             for f in app_model.files:
-                if f.id in seen_file_ids_in_modal:
-                    continue
+                if f.id in seen_file_ids_in_modal: continue
                 files.append({"id": f.id, "filename": f.filename, "size_formatted": format_size_py(f.size)})
-
-        updates_list.append(
-            {
+        
+        updates_list.append({
+            "version": v_int,
+            "owned": upd_app["owned"] if upd_app else False,
+            "release_date": v_info["release_date"] or "Unknown",
+            "files": files
+        })
+        
+    # 2. Add any owned updates not in TitleDB
+    for v_int, upd_app in update_apps_by_version.items():
+        if v_int not in [v["version"] for v in updates_list] and v_int != 0:
+            files = []
+            if upd_app["owned"]:
+                app_model = db.session.get(Apps, upd_app["id"])
+                for f in app_model.files:
+                    if f.id in seen_file_ids_in_modal: continue
+                    files.append({"id": f.id, "filename": f.filename, "size_formatted": format_size_py(f.size)})
+            
+            updates_list.append({
                 "version": v_int,
-                "owned": upd["owned"],
-                "release_date": version_release_dates.get(v_int, "Unknown"),
-                "files": files,
-            }
-        )
+                "owned": upd_app["owned"],
+                "release_date": "Unknown",
+                "files": files
+            })
 
     # DLCs
     dlc_ids = titles.get_all_existing_dlc(tid)
@@ -616,6 +636,10 @@ def app_info_api(id):
         dlc_apps_grouped[aid].append(a)
 
     for dlc_id in dlc_ids:
+        # Filter out self-mappings
+        if str(dlc_id).upper() == tid.upper():
+            continue
+            
         apps_for_dlc = dlc_apps_grouped.get(dlc_id, [])
         owned = any(a["owned"] for a in apps_for_dlc)
         files = []
@@ -640,7 +664,7 @@ def app_info_api(id):
                 "name": dlc_info.get("name", f"DLC {dlc_id}"),
                 "owned": owned,
                 "release_date": dlc_info.get("release_date", ""),
-                "files": files,  # Includes filename and id, let's ensure filepath is there too if needed
+                "files": files,
             }
         )
 

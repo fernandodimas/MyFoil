@@ -50,6 +50,7 @@
         window.currentUser = "{{ current_user.user if current_user.is_authenticated else '' }}";
         window.isAdmin = {{ 'true' if current_user.is_authenticated and current_user.admin_access else 'false' }};
         window.DEBUG_MODE = {{ 'true' if config.get('DEBUG', False) else 'false' }};
+        window.BUILD_VERSION = "{{ build_version }}";
 
         // Apply theme immediately to avoid flicker
         const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
