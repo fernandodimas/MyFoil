@@ -32,7 +32,7 @@ from constants import (
     MYFOIL_DB, BUILD_VERSION, CONFIG_DIR, PLUGINS_DIR, DATA_DIR
 )
 from settings import *
-from db import db, get_libraries, add_missing_apps_to_db, update_titles
+from db import db, get_libraries
 from i18n import I18n
 import titles
 import titledb
