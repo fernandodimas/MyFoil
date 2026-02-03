@@ -978,7 +978,7 @@ def identify_file(filepath):
                         title_id = app_id
                     contents.append((title_id, app_type, app_id, version))
         except Exception as e:
-            logger.error(f"Could not identify file {filepath} from metadata: {e}")
+            logger.warning(f"Could not identify file {filepath} from metadata (this is common if keys are missing): {e}")
             error = str(e)
             success = False
 

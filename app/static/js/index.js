@@ -353,29 +353,31 @@ function applyFilters() {
 
         let hasNonIgnoredUpdates = false;
         if (g.has_base && !g.has_latest_version) {
-            const ownedVersion = parseInt(g.owned_version) || 0;
-            const latestVersion = parseInt(g.latest_version_available) || 0;
-            let allUpdatesIgnored = true;
-            for (let v = ownedVersion + 1; v <= latestVersion; v++) {
-                if (!ignoredUpdates[v.toString()]) {
-                    allUpdatesIgnored = false;
-                    break;
-                }
+            // Check based on the updates list from the server
+            if (g.updates && Array.isArray(g.updates)) {
+                const ownedVersion = parseInt(g.owned_version) || 0;
+                hasNonIgnoredUpdates = g.updates.some(u => {
+                    const v = parseInt(u.version);
+                    return v > ownedVersion && !u.owned && !ignoredUpdates[v.toString()];
+                });
+            } else {
+                // Fallback to basic comparison if updates list is missing (unlikely)
+                hasNonIgnoredUpdates = true;
             }
-            hasNonIgnoredUpdates = !allUpdatesIgnored;
         }
         g.has_non_ignored_updates = hasNonIgnoredUpdates;
 
         let hasNonIgnoredDlcs = false;
         if (g.has_base && g.dlcs && Array.isArray(g.dlcs)) {
             hasNonIgnoredDlcs = g.dlcs.some(dlc => {
-                const isIgnored = ignoredDlcs[dlc.app_id];
+                const isIgnored = ignoredDlcs[dlc.app_id.toUpperCase()] || ignoredDlcs[dlc.app_id.toLowerCase()];
                 const isNotOwned = !dlc.owned;
                 return isNotOwned && !isIgnored;
             });
         }
         g.has_non_ignored_dlcs = hasNonIgnoredDlcs;
 
+        // Determine status color for UI
         if (!g.has_base) {
             g.status_color = 'orange';
             g.status_score = 0;
