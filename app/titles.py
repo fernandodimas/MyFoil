@@ -1097,6 +1097,27 @@ def get_game_info(title_id):
             # Case-insensitive fallback
             info = _titles_db.get(search_id.upper()) or _titles_db.get(search_id.lower())
 
+        # 3. Deep Scan Fallback: If Key lookup failed, search inside values
+        # Some JSON sources might key by NSUID or other IDs, but the "id" field usually holds the TitleID
+        if not info:
+            search_id_upper = search_id.upper()
+            for data in _titles_db.values():
+                if not isinstance(data, dict):
+                    continue
+                
+                # Check 'id' (TitleID)
+                data_id = str(data.get("id", "")).upper()
+                if data_id == search_id_upper:
+                    info = data
+                    break
+                
+                # Check 'nsuId' (Decimal ID)
+                # Only check if search_id looks like decimal? Or just string compare
+                data_nsuid = str(data.get("nsuId", "") or data.get("nsuid", ""))
+                if data_nsuid == search_id:
+                    info = data
+                    break
+
         if info and isinstance(info, dict):
             res = {
                 "name": info.get("name") or "Unknown Title",
