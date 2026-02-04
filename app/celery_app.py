@@ -44,6 +44,15 @@ def make_celery(app_name=__name__):
         enable_utc=True,
     )
     
+    # Auto-flush Redis on startup if requested (prevents stale tasks)
+    try:
+        import redis
+        r = redis.from_url(redis_url)
+        r.flushall()
+        logger.info("Redis flushed on startup (CLEAN SLATE)")
+    except Exception as e:
+        logger.warning(f"Could not flush Redis: {e}")
+
     return celery
 
 celery = make_celery('myfoil')
