@@ -414,18 +414,26 @@ def scan_library_job():
 
         with state.titledb_update_lock:
             if state.is_titledb_update_running:
-                logger.info("Skipping library scan: update_titledb job is in progress.")
-                job_tracker.fail_job(job_id, "TitleDB update in progress")
-                return
+                # Double check with job_tracker if there is REALLY a job running
+                active_jobs = job_tracker.get_active_jobs()
+                active_titledb_jobs = [j for j in active_jobs if j.get('type') == 'titledb_update']
+                
+                if not active_titledb_jobs:
+                    logger.warning("state.is_titledb_update_running was True but no active job found in DB. Resetting flag.")
+                    state.is_titledb_update_running = False
+                else:
+                    logger.info(f"Skipping library scan: TitleDB update job {active_titledb_jobs[0]['id']} is in progress.")
+                    job_tracker.fail_job(job_id, "TitleDB update in progress")
+                    return
 
-        logger.info("Starting library scan job...")
+        logger.info(f"Starting library scan job (Job ID: {job_id})")
         
         # Check if there are already other active scan jobs
         active_jobs = job_tracker.get_active_jobs()
         active_scan_jobs = [j for j in active_jobs if j.get('type') in ['library_scan', 'aggregate_scan', 'file_identification'] and j.get('id') != job_id]
         
         if active_scan_jobs:
-            logger.warning(f"Skipping library scan: {len(active_scan_jobs)} other scan job(s) already in progress.")
+            logger.warning(f"Skipping library scan: {len(active_scan_jobs)} other scan job(s) already in progress ({[j['id'] for j in active_scan_jobs]}).")
             job_tracker.fail_job(job_id, f"{len(active_scan_jobs)} scan job(s) already running")
             return
         
