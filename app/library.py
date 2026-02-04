@@ -792,24 +792,53 @@ def identify_library_files(library):
             pool.kill()
 
 def update_or_create_app_and_link_file(app_id, version, app_type, title_id_db, file_obj):
-    existing_app = get_app_by_id_and_version(app_id, version)
-    if existing_app:
-        if not existing_app.owned:
-            existing_app.owned = True
-
-        if file_obj not in existing_app.files:
-            existing_app.files.append(file_obj)
-    else:
-        new_app = Apps(
-            app_id=app_id,
-            app_version=version,
-            app_type=app_type,
-            owned=True,
-            title_id=title_id_db,
-        )
-        db.session.add(new_app)
-        db.session.flush() 
-        new_app.files.append(file_obj)
+    # Retry loop for deadlocks
+    for attempt in range(5):
+        try:
+            with db.session.no_autoflush:
+                existing_app = get_app_by_id_and_version(app_id, version)
+                if existing_app:
+                    if not existing_app.owned:
+                        existing_app.owned = True
+            
+                    if file_obj not in existing_app.files:
+                        existing_app.files.append(file_obj)
+                else:
+                    new_app = Apps(
+                        app_id=app_id,
+                        app_version=version,
+                        app_type=app_type,
+                        owned=True,
+                        title_id=title_id_db,
+                    )
+                    db.session.add(new_app)
+                    try:
+                        db.session.flush()
+                    except Exception:
+                        # If flush fails due to race condition (another thread created it), check again
+                        db.session.rollback()
+                        existing_app = get_app_by_id_and_version(app_id, version)
+                        if existing_app:
+                            if file_obj not in existing_app.files:
+                                existing_app.files.append(file_obj)
+                        else:
+                            raise # Re-raise if it wasn't a race condition
+                            
+                    if new_app in db.session:
+                        new_app.files.append(file_obj)
+                
+                # Small yield to reduce contention
+                gevent.sleep(0.01)
+                break # Success
+                
+        except Exception as e:
+            if "deadlock" in str(e).lower() and attempt < 4:
+                db.session.rollback()
+                logger.warning(f"Deadlock detected creating app {app_id}, retrying ({attempt+1}/5)...")
+                time.sleep(0.1 * (attempt + 1))
+                continue
+            else:
+                raise e
 
 
 def add_missing_apps_to_db():
