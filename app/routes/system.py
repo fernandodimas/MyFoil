@@ -182,8 +182,20 @@ def scan_library_api():
     active_scans = [j for j in active_jobs if j.get("type") in ["library_scan", "aggregate_scan"]]
 
     if active_scans:
-        logger.info("Skipping scan_library_api call: Scan already in progress")
+        logger.info(f"Skipping scan_library_api call: Scan already in progress (job {active_scans[0]['id']})")
         return jsonify({"success": False, "message": "A scan is already in progress", "errors": []})
+
+    # TitleDB Lock Check
+    import state
+    with state.titledb_update_lock:
+        if state.is_titledb_update_running:
+            active_titledb_jobs = [j for j in active_jobs if j.get('type') == 'titledb_update']
+            if not active_titledb_jobs:
+                logger.warning("scan_library_api: state.is_titledb_update_running was True but no active job found. Resetting flag.")
+                state.is_titledb_update_running = False
+            else:
+                logger.info(f"Skipping scan_library_api: TitleDB update job {active_titledb_jobs[0]['id']} is in progress.")
+                return jsonify({"success": False, "message": "TitleDB update in progress", "errors": []})
 
     success = True
     errors = []
@@ -246,9 +258,9 @@ def scan_library_api():
             
             scan_thread = threading.Thread(target=run_scan_background, daemon=True, name="LibraryScan")
             scan_thread.start()
-            logger.info("Background scan thread launched successfully")
+            logger.info(f"Background scan thread launched successfully (daemonized)")
             
-            return jsonify({"success": True, "async": False, "message": "Scan started in background thread", "errors": []})
+            return jsonify({"success": True, "async": False, "message": f"Scan started in background thread {'(all)' if path is None else '(path='+path+')'}", "errors": []})
     except Exception as e:
         errors.append(str(e))
         success = False
