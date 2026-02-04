@@ -991,15 +991,21 @@ def identify_file(filepath):
             success = False
 
     if contents:
-        contents = [
-            {
-                "title_id": c[0],
-                "app_id": c[2],
-                "type": c[1],
-                "version": c[3],
-            }
-            for c in contents
-        ]
+        # Check if contents is already a list of dicts (from fallback or newer logic)
+        if isinstance(contents[0], dict):
+            # Already in dict format, just ensure keys exist
+            pass
+        else:
+            # Convert from tuples (title_id, app_type, app_id, version)
+            contents = [
+                {
+                    "title_id": c[0],
+                    "app_id": c[2],
+                    "type": c[1],
+                    "version": c[3],
+                }
+                for c in contents
+            ]
 
     # IMPORTANT: Even if keys failed, we still want to return a result
     # if filename identification worked

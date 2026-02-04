@@ -14,6 +14,7 @@ from socket_helper import get_socketio_emitter
 from app_services.rating_service import update_game_metadata
 
 import logging
+from celery.signals import worker_process_init
 
 # Configure structlog for Celery workers to ensure we see output
 structlog.configure(
@@ -80,6 +81,13 @@ def create_app_context():
     return app
 
 
+@worker_process_init.connect
+def init_worker(**kwargs):
+    """Dispose of shared engine after fork to avoid 'synchronization lost' errors"""
+    with flask_app.app_context():
+        db.engine.dispose()
+        logger.info("worker_process_initialized", msg="Engine pool disposed after fork")
+
 flask_app = create_app_context()
 
 # NOTE: Emitter is configured INSIDE each task to ensure fresh connection
@@ -96,8 +104,12 @@ def scan_library_async(library_path):
         logger.info("task_execution_started", task="scan_library_async", library_path=library_path)
         job_tracker.set_emitter(get_socketio_emitter())
         
-        job_id = f"scan_{int(time.time())}"
-        logger.info("job_tracking_started", job_id=job_id, type="LIBRARY_SCAN")
+        # Concurrency check
+        active_jobs = job_tracker.get_active_jobs()
+        if any(j.get('type') == JobType.LIBRARY_SCAN and j.get('id') != job_id for j in active_jobs):
+            logger.warning("Another library scan is already in progress. Skipping.")
+            return False
+
         job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, f"Scanning {library_path}")
 
         try:
@@ -186,6 +198,13 @@ def scan_all_libraries_async():
         job_tracker.set_emitter(get_socketio_emitter())
 
         job_id = f"scan_all_{int(time.time())}"
+        
+        # Concurrency check
+        active_jobs = job_tracker.get_active_jobs()
+        if any(j.get('type') == JobType.LIBRARY_SCAN and j.get('id') != job_id for j in active_jobs):
+             logger.warning("Another library scan is already in progress. Skipping.")
+             return False
+
         logger.info("job_tracking_started", job_id=job_id, type="LIBRARY_SCAN")
         job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, "Scanning all libraries")
 

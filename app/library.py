@@ -198,14 +198,19 @@ def init_libraries(app, watcher, paths):
 
 def add_files_to_library(library, files):
     nb_to_identify = len(files)
-    if isinstance(library, int) or library.isdigit():
+    if isinstance(library, int):
         library_id = library
-        library_path = get_library_path(library_id)
+    elif isinstance(library, str) and library.isdigit():
+        library_id = int(library)
     else:
+        # It's likely a path string
         library_path = library
         library_id = get_library_id(library_path)
 
     library_path = get_library_path(library_id)
+    if not library_path:
+        logger.error(f"Could not determine path for library_id={library_id}")
+        return
 
     files_added = 0
     files_updated = 0
@@ -216,7 +221,10 @@ def add_files_to_library(library, files):
     for n, filepath in enumerate(files):
         if n % 10 == 0:
             gevent.sleep(0.001)
-        file = filepath.replace(library_path, "")
+        if library_path and isinstance(library_path, str):
+            file = filepath.replace(library_path, "")
+        else:
+            file = os.path.basename(filepath)
         logger.debug(f"Processing file ({n + 1}/{nb_to_identify}): {file}")  # Changed to debug to reduce noise
 
         try:
@@ -232,14 +240,11 @@ def add_files_to_library(library, files):
             # Check if file already exists
             existing_file = Files.query.filter_by(filepath=filepath).first()
             if existing_file:
-                logger.info(f"File already exists in DB, updating info/status: {file}")
+                logger.debug(f"File already exists in DB, updating info/status: {file}")
                 # Update size and force re-identification
                 existing_file.size = file_info["size"]
                 existing_file.identified = False
                 files_updated += 1
-                
-                # Otimização: se o arquivo já existia, talvez queiramos manter o titledb_version antigo até identificá-lo novamente?
-                # Sim, deixamos o worker de identificação atualizar isso.
             else:
                 logger.info(f"New file found, adding to DB: {file}")
                 new_file = Files(
@@ -253,7 +258,7 @@ def add_files_to_library(library, files):
                 db.session.add(new_file)
                 files_added += 1
             
-            # Otimização: Usar flush() ao invés de commit imediato para logs
+            # Flush to catch UniqueViolation early in the loop
             db.session.flush()
 
             log_activity(
@@ -262,7 +267,13 @@ def add_files_to_library(library, files):
                 details={"filename": file_info["filename"], "size": file_info["size"]},
             )
         except Exception as e:
-            logger.error(f"Validation failed for {file}: {str(e)}")
+            # Handle specific DB errors like UniqueViolation to keep the scan moving
+            if "UniqueViolation" in str(e) or "duplicate key" in str(e).lower():
+                logger.warning(f"File {file} already exists (concurrent scan?). Skipping.")
+                db.session.rollback()
+            else:
+                logger.error(f"Error processing file {file}: {str(e)}")
+                db.session.rollback()
             continue
 
         # Otimização: Commit a cada 100 arquivos para reduzir overhead de transações
@@ -561,8 +572,11 @@ def identify_single_file(filepath):
 
 
 def identify_library_files(library):
-    if isinstance(library, int) or library.isdigit():
+    if isinstance(library, int):
         library_id = library
+        library_path = get_library_path(library_id)
+    elif isinstance(library, str) and library.isdigit():
+        library_id = int(library)
         library_path = get_library_path(library_id)
     else:
         library_path = library

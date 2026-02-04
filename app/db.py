@@ -847,7 +847,7 @@ def add_library(library_path):
 
 
 def delete_library(library):
-    if not (isinstance(library, int) or library.isdigit()):
+    if not (isinstance(library, int) or (isinstance(library, str) and library.isdigit())):
         library = get_library_id(library)
 
     db.session.delete(get_library(library))
