@@ -1195,7 +1195,7 @@ def get_game_info_item(tid, title_data):
     game["id"] = tid  # For display on card as game ID
 
     # Owned version considers Base and Updates
-    owned_versions = [int(a["app_version"]) for a in all_title_apps if a.get("owned")]
+    owned_versions = [int(a["app_version"] or 0) for a in all_title_apps if a.get("owned")]
     game["owned_version"] = max(owned_versions) if owned_versions else 0
     game["display_version"] = str(game["owned_version"])
 
