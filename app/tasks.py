@@ -69,6 +69,14 @@ def create_app_context():
     from job_tracker import job_tracker
     job_tracker.init_app(app)
 
+    try:
+        with app.app_context():
+            from db import log_activity
+            db_type = "PostgreSQL" if "postgresql" in app.config["SQLALCHEMY_DATABASE_URI"] else "SQLite"
+            log_activity("worker_startup", details={"db_type": db_type})
+    except Exception as e:
+        print(f"FAILED to log worker startup: {e}")
+
     return app
 
 

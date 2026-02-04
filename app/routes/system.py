@@ -204,10 +204,14 @@ def scan_library_api():
         if CELERY_ENABLED:
             if path is None:
                 scan_all_libraries_async.delay()
-                logger.info("Triggered asynchronous full library scan.")
+                logger.info("Triggered asynchronous full library scan (Celery).")
+                from db import log_activity
+                log_activity("library_scan_queued", details={"path": "all", "source": "api"})
             else:
                 scan_library_async.delay(path)
-                logger.info(f"Triggered asynchronous library scan for: {path}")
+                logger.info(f"Triggered asynchronous library scan for: {path} (Celery)")
+                from db import log_activity
+                log_activity("library_scan_queued", details={"path": path, "source": "api"})
             return jsonify({"success": True, "async": True, "errors": []})
         else:
             # Synchronous mode - Use daemon thread to avoid worker timeout
