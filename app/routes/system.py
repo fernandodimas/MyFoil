@@ -167,6 +167,18 @@ def set_language(lang):
     return jsonify({"success": False, "error": "Invalid language"}), 400
 
 
+@system_bp.route("/jobs/reset", methods=["POST"])
+@access_required("admin")
+def reset_jobs_api():
+    """Reset manual de todos os jobs travados"""
+    from job_tracker import job_tracker
+    try:
+        job_tracker.cleanup_stale_jobs()
+        return jsonify({"success": True, "message": "Todos os jobs foram resetados com sucesso."})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Erro ao resetar jobs: {e}"}), 500
+
+
 @system_bp.route("/library/scan", methods=["POST"])
 @access_required("admin")
 def scan_library_api():

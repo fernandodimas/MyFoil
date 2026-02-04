@@ -55,6 +55,34 @@ class JobTracker:
         self.emitter = emitter
         logger.debug("JobTracker emitter set")
 
+    def cleanup_stale_jobs(self):
+        """Reset jobs stuck in RUNNING or SCHEDULED to FAILED (intended for startup)"""
+        app = self._get_app()
+        if not app: return
+
+        try:
+            with app.app_context():
+                from db import SystemJob, db
+                from utils import now_utc
+                stale = SystemJob.query.filter(SystemJob.status.in_([JobStatus.RUNNING, JobStatus.SCHEDULED])).all()
+                if stale:
+                    logger.warning(f"Startup: Resetting {len(stale)} stale RUNNING/SCHEDULED jobs to FAILED.")
+                    for j in stale:
+                        j.status = JobStatus.FAILED
+                        j.completed_at = now_utc()
+                        j.error = "System restart or critical error during execution"
+                    db.session.commit()
+                    
+                # Also reset in-memory state flags if we can find them
+                try:
+                    import state
+                    state.is_titledb_update_running = False
+                    state.scan_in_progress = False
+                except ImportError:
+                    pass
+        except Exception as e:
+            logger.error(f"Error during JobTracker stale cleanup: {e}")
+
     def _get_app(self):
         # 1. Stored app instance
         if self.app:

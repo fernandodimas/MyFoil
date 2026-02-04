@@ -512,23 +512,9 @@ def init_internal(app):
     """Initialize internal components"""
     global watcher_thread
 
-    # Cleanup stale jobs first (Reset stuck 'RUNNING' jobs from previous session)
-    print("DEBUG: init_internal cleaning stale jobs...", flush=True)
-    try:
-        with app.app_context():
-            from utils import now_utc
-            from db import SystemJob, db
-            from job_tracker import JobStatus
-            stale = SystemJob.query.filter_by(status=JobStatus.RUNNING).all()
-            if stale:
-                logger.warning(f"Startup: Resetting {len(stale)} stale RUNNING jobs to FAILED.")
-                for j in stale:
-                    j.status = JobStatus.FAILED
-                    j.completed_at = now_utc()
-                    j.error = "System restart during execution"
-                db.session.commit()
-    except Exception as e:
-        logger.error(f"Error checking stale jobs: {e}")
+    # Cleanup stale jobs first (Reset stuck 'RUNNING'/'SCHEDULED' jobs from previous session)
+    from job_tracker import job_tracker
+    job_tracker.cleanup_stale_jobs()
 
     # Load TitleDB cache on startup (CRITICAL for versions_db)
     # This prevents "Call load_titledb first" errors during scans
