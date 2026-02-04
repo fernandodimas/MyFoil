@@ -17,8 +17,11 @@ class Watcher:
         self.directories = set()  # Use a set to store directories
         self.callback = callback
         self.event_handler = Handler(self.callback, watcher=self)
-        self.observer = PollingObserver()
+        # Use PollingObserver with faster timeout for Docker volumes
+        # Default timeout is 1 second, we reduce to 0.5s for better responsiveness
+        self.observer = PollingObserver(timeout=0.5)
         self.scheduler_map = {}
+        logger.info("[WATCHDOG-INIT] Created PollingObserver with 0.5s timeout for Docker volume compatibility")
         
         # Health monitoring attributes
         self.last_event_time = None
@@ -323,7 +326,7 @@ class Handler(FileSystemEventHandler):
         self._check_file_stability()
 
     def on_any_event(self, event):
-        logger.debug(f"Watchdog event detected: {event.event_type} - {event.src_path}")
+        logger.info(f"[WATCHDOG-EVENT] RAW event detected: {event.event_type} - {event.src_path}")
         found = False
         for directory in self.directories:
             is_src_in = event.src_path.startswith(directory)
