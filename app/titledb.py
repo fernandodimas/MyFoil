@@ -219,8 +219,14 @@ def process_and_store_json(filename: str, source_name: str) -> bool:
                 batch = items[i:i+batch_size]
                 values = []
                 for tid, tdata in batch:
+                    # Logic to handle NSUID keys in regional files (BR.pt.json, US.en.json)
+                    # If tid is decimal/NSUID but data has hex 'id', use the hex ID
+                    actual_tid = tid
+                    if len(tid) < 16 and isinstance(tdata, dict) and tdata.get("id"):
+                        actual_tid = tdata["id"]
+                    
                     values.append({
-                        "title_id": tid,
+                        "title_id": actual_tid,
                         "data": tdata,
                         "source": filename,
                         "updated_at": now_utc()
