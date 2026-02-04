@@ -1097,7 +1097,7 @@ def get_game_info(title_id):
             # Case-insensitive fallback
             info = _titles_db.get(search_id.upper()) or _titles_db.get(search_id.lower())
 
-        if info:
+        if info and isinstance(info, dict):
             res = {
                 "name": info.get("name") or "Unknown Title",
                 "bannerUrl": info.get("bannerUrl") or info.get("banner_url") or "",
@@ -1361,6 +1361,9 @@ def search_titledb_by_name(query):
 
     # Simple iteration - could be optimized with an index if needed but for <20k items it's fine
     for tid, data in _titles_db.items():
+        if not isinstance(data, dict):
+            continue
+            
         name = data.get("name", "")
         if name and query in name.lower():
             results.append(
@@ -1499,6 +1502,9 @@ def sync_titles_to_db(force=False):
         for tid, title in db_titles_map.items():
             if tid in _titles_db:
                 tdb_info = _titles_db[tid]
+                
+                if not isinstance(tdb_info, dict):
+                    continue
                 
                 # Only update if NOT custom
                 if not title.is_custom:
