@@ -193,7 +193,19 @@ formatter = ColoredFormatter(
 handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(formatter)
 
-logging.basicConfig(level=logging.INFO, handlers=[handler])
+# Add File Handler for persistent debug logging
+ensure_data_dir = os.path.join(os.getcwd(), 'data')
+if not os.path.exists(ensure_data_dir):
+    try:
+        os.makedirs(ensure_data_dir)
+    except:
+        pass
+
+file_handler = logging.FileHandler(os.path.join(ensure_data_dir, 'debug.log'))
+file_handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s (%(module)s) %(message)s"))
+file_handler.setLevel(logging.DEBUG)
+
+logging.basicConfig(level=logging.DEBUG, handlers=[handler, file_handler])
 
 structlog.configure(
     processors=[

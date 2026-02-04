@@ -964,11 +964,14 @@ def identify_file(filepath):
     if Keys.keys_loaded:
         identification = "cnmt"
         try:
+            logger.debug(f"Attempting CNMT identification for {filename}")
             cnmt_contents = identify_file_from_cnmt(filepath)
             if not cnmt_contents:
+                logger.debug(f"No CNMT content found for {filename}")
                 error = "No content found in NCA containers."
                 success = False
             else:
+                logger.debug(f"CNMT found for {filename}: {cnmt_contents}")
                 for content in cnmt_contents:
                     app_type, app_id, version = content
                     if app_type != APP_TYPE_BASE:
@@ -1011,8 +1014,10 @@ def identify_file(filepath):
     # if filename identification worked
     if not contents and not success:
         # Fallback to filename identification if CNMT failed
+        logger.debug(f"Falling back to filename identification for {filename}")
         app_id, title_id, app_type, version, error = identify_file_from_filename(filename)
         if title_id:
+            logger.debug(f"Filename identification success for {filename}: {title_id}")
             contents = [
                 {
                     "title_id": title_id,

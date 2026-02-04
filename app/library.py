@@ -627,6 +627,7 @@ def identify_library_files(library):
             
             return (file_id, filepath, filename, success, file_contents, error, identification)
         except Exception as e:
+            logger.error(f"Worker identification error for {filename}: {str(e)}")
             return (file_id, filepath, filename, False, None, str(e), None)
 
     try:
@@ -721,8 +722,13 @@ def identify_library_files(library):
                 if current_titledb_ts:
                     file_obj.titledb_version = str(current_titledb_ts)
 
-                # Commit IMMEDIATELLY per file as requested
-                db.session.commit()
+                # Flush instead of commit for performance, commit in batches
+                db.session.flush()
+
+                # Optimization: Commit every 50 files or on completion
+                if processed_count % 50 == 0:
+                    db.session.commit()
+                    logger.debug(f"Batch commit at {processed_count} files")
             
             except Exception as e:
                 logger.error(f"Error processing identification result for {filename}: {e}")
