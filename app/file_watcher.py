@@ -280,12 +280,16 @@ class Handler(FileSystemEventHandler):
             if dest_filename.startswith("._"):
                 return
 
-        logger.info(f"Watchdog detected event: {source_event.event_type} - {source_event.src_path}")
+        logger.info(f"[WATCHDOG-DEBUG] Event detected: {source_event.event_type} - {source_event.src_path}")
+        logger.info(f"[WATCHDOG-DEBUG] Directory: {directory}, Watcher present: {self.watcher is not None}")
         
         # Update last event timestamp for health monitoring
         if self.watcher:
             from datetime import datetime
             self.watcher.last_event_time = datetime.now()
+            logger.info(f"[WATCHDOG-DEBUG] Updated last_event_time to {self.watcher.last_event_time}")
+        else:
+            logger.warning("[WATCHDOG-DEBUG] Watcher reference is None, cannot update last_event_time")
 
         library_event = SimpleNamespace(
             type=source_event.event_type,
@@ -300,13 +304,14 @@ class Handler(FileSystemEventHandler):
             library_event.type = "deleted"
 
         if library_event.type == "deleted":
-            logger.info(f"Watchdog: File deleted - {library_event.src_path}")
+            logger.info(f"[WATCHDOG-DEBUG] Processing DELETE event for {library_event.src_path}")
             self._raw_callback([library_event])
         
         elif library_event.type == "created":
-            logger.info(f"Watchdog: File created - {library_event.src_path}")
+            logger.info(f"[WATCHDOG-DEBUG] Processing CREATE event - tracking file: {library_event.src_path}")
             # Track file on create for stability
             self._track_file(library_event)
+            logger.info(f"[WATCHDOG-DEBUG] File added to tracking, calling debounced check")
             self.debounced_check_final()
 
         else:
