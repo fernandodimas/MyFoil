@@ -1510,14 +1510,22 @@ def sync_titles_to_db(force=False):
                     set_if_not_empty(title, "name", tdb_info.get("name"))
                     set_if_not_empty(title, "description", tdb_info.get("description"))
                     set_if_not_empty(title, "publisher", tdb_info.get("publisher"))
-                    set_if_not_empty(title, "icon_url", tdb_info.get("iconUrl"))
-                    set_if_not_empty(title, "banner_url", tdb_info.get("bannerUrl"))
+                    
+                    # Visuals - Try both camelCase (blawar) and snake_case (standard JSONs)
+                    icon = tdb_info.get("iconUrl") or tdb_info.get("icon_url")
+                    set_if_not_empty(title, "icon_url", icon)
+                    
+                    banner = tdb_info.get("bannerUrl") or tdb_info.get("banner_url")
+                    set_if_not_empty(title, "banner_url", banner)
 
-                    cat = tdb_info.get("category", [])
+                    cat = tdb_info.get("category") or tdb_info.get("genre")
                     if cat:
-                        title.category = ",".join(cat) if isinstance(cat, list) else cat
+                        title.category = ",".join(cat) if isinstance(cat, list) else str(cat)
 
-                    set_if_not_empty(title, "release_date", tdb_info.get("releaseDate"))
+                    # Date - Try both
+                    release = tdb_info.get("releaseDate") or tdb_info.get("release_date")
+                    set_if_not_empty(title, "release_date", release)
+                    
                     if tdb_info.get("size"):
                         title.size = tdb_info.get("size")
                         

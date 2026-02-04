@@ -104,6 +104,8 @@ def scan_library_async(library_path):
         logger.info("task_execution_started", task="scan_library_async", library_path=library_path)
         job_tracker.set_emitter(get_socketio_emitter())
         
+        job_id = f"scan_{os.path.basename(library_path)}_{int(time.time())}"
+        
         # Concurrency check
         active_jobs = job_tracker.get_active_jobs()
         if any(j.get('type') == JobType.LIBRARY_SCAN and j.get('id') != job_id for j in active_jobs):
@@ -121,7 +123,7 @@ def scan_library_async(library_path):
 
             # 2. Scan for new files
             job_tracker.update_progress(job_id, 30, message="Scanning folders...")
-            scan_library_path(library_path)
+            scan_library_path(library_path, job_id=job_id)
 
             # 3. Identify new/unidentified files
             job_tracker.update_progress(job_id, 60, message="Identifying files...")
@@ -216,11 +218,17 @@ def scan_all_libraries_async():
 
             libraries = get_libraries()
             total = len(libraries)
+            
+            if total == 0:
+                logger.warning("No libraries configured for scan.")
+                job_tracker.complete_job(job_id, "No libraries configured")
+                return True
+
             for i, lib in enumerate(libraries):
                 msg = f"Scanning {lib.path}"
                 job_tracker.update_progress(job_id, 20 + int((i/total)*60), message=msg)
                 logger.info("scanning_path", path=lib.path)
-                scan_library_path(lib.path)
+                scan_library_path(lib.path, job_id=job_id)
                 identify_library_files(lib.path)
 
             # Atualizar títulos e gerar biblioteca

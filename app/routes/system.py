@@ -14,6 +14,9 @@ import os
 from utils import format_size_py, now_utc, ensure_utc
 from metrics import generate_latest, CONTENT_TYPE_LATEST
 from constants import BUILD_VERSION, TITLEDB_DIR
+import redis
+import state
+from celery_app import celery as celery_app
 
 system_bp = Blueprint("system", __name__, url_prefix="/api")
 
@@ -174,9 +177,82 @@ def reset_jobs_api():
     from job_tracker import job_tracker
     try:
         job_tracker.cleanup_stale_jobs()
-        return jsonify({"success": True, "message": "Todos os jobs foram resetados com sucesso."})
+        # Reset memory flags
+        state.is_titledb_update_running = False
+        state.scan_in_progress = False
+        return jsonify({"success": True, "message": "Todos os jobs e flags de memória foram resetados com sucesso."})
     except Exception as e:
         return jsonify({"success": False, "message": f"Erro ao resetar jobs: {e}"}), 500
+
+
+@system_bp.route("/system/redis/reset", methods=["POST"])
+@access_required("admin")
+def reset_redis_api():
+    """Flush Redis database and purge Celery tasks"""
+    try:
+        redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+        r = redis.from_url(redis_url)
+        r.flushdb()
+        
+        # Also purge Celery tasks
+        count = celery_app.control.purge()
+        
+        return jsonify({
+            "success": True, 
+            "message": f"Redis resetado e {count} tarefas removidas da fila Celery.",
+            "purged_count": count
+        })
+    except Exception as e:
+        logger.error(f"Error resetting Redis: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@system_bp.route("/system/queue", methods=["GET"])
+@access_required("admin")
+def get_queue_status_api():
+    """Get Celery queue status and active tasks"""
+    try:
+        i = celery_app.control.inspect()
+        active = i.active() or {}
+        reserved = i.reserved() or {}
+        scheduled = i.scheduled() or {}
+        
+        return jsonify({
+            "active": active,
+            "reserved": reserved,
+            "scheduled": scheduled,
+            "broker": celery_app.connection().as_uri()
+        })
+    except Exception as e:
+        logger.error(f"Error fetching queue status: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@system_bp.route("/system/titledb/test", methods=["POST"])
+@access_required("admin")
+def test_titledb_sync_api():
+    """Run TitleDB update synchronously and return detailed results"""
+    from titledb import update_titledb
+    from settings import load_settings
+    
+    settings = load_settings()
+    try:
+        # Run synchronously
+        success = update_titledb(settings, force=True)
+        
+        # Check cache count
+        count = Titles.query.count()
+        cache_count = TitleDBCache.query.count()
+        
+        return jsonify({
+            "success": success,
+            "titles_in_db": count,
+            "titledb_cache_count": cache_count,
+            "message": "Sincronização do TitleDB concluída (Sync)." if success else "Sincronização falhou ou foi parcial."
+        })
+    except Exception as e:
+        logger.error(f"Error during TitleDB test sync: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
 
 
 @system_bp.route("/library/scan", methods=["POST"])
@@ -239,28 +315,35 @@ def scan_library_api():
             
             def run_scan_background():
                 """Background scan thread with proper app context"""
+                from job_tracker import job_tracker, JobType
+                import time
+                
+                job_id = f"manual_scan_{int(time.time())}"
+                
                 try:
-                    logger.info(f"Background thread started - creating app context")
+                    logger.info(f"Background thread started - creating app context (job_id={job_id})")
                     # Use the captured app instance to create context
                     with app_instance.app_context():
-                        logger.info(f"Background scan executing (path={path})")
+                        job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, f"Starting manual scan...")
                         
                         if path is None:
                             # Scan all libraries
-                            libraries = Libraries.query.all()
+                            from db import get_libraries
+                            libraries = get_libraries()
                             logger.info(f"Scanning {len(libraries)} libraries")
                             for lib in libraries:
                                 logger.debug(f"Scanning library: {lib.path}")
-                                scan_library_path(lib.path)
+                                scan_library_path(lib.path, job_id=job_id)
                                 identify_library_files(lib.path)
                         else:
                             logger.info(f"Scanning single library: {path}")
-                            scan_library_path(path)
+                            scan_library_path(path, job_id=job_id)
                             identify_library_files(path)
                         
                         logger.info("Running post_library_change...")
                         post_library_change()
                         logger.info("Background scan completed successfully")
+                        job_tracker.complete_job(job_id, "Manual scan completed")
                         
                 except Exception as e:
                     logger.error(f"Background scan failed: {e}", exc_info=True)

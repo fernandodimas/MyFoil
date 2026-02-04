@@ -288,15 +288,16 @@ def add_files_to_library(library, files):
     logger.info(f"add_files_to_library complete: {files_added} files added, {files_updated} files updated")
 
 
-def scan_library_path(library_path):
+def scan_library_path(library_path, job_id=None):
     cleanup_metadata_files(library_path)
     library_id = get_library_id(library_path)
     
-    # Register and start job
-    job_id = job_tracker.register_job('library_scan', {'library_path': library_path})
-    job_tracker.start_job(job_id)
+    # Register and start job if not provided
+    if not job_id:
+        job_id = job_tracker.register_job('library_scan', {'library_path': library_path})
+        job_tracker.start_job(job_id)
     
-    logger.info(f"Scanning library path {library_path} (library_id={library_id})...")
+    logger.info(f"Scanning library path {library_path} (library_id={library_id}, job_id={job_id})...")
     if not os.path.isdir(library_path):
         error_msg = f"Path '{library_path}' is not a directory or doesn't exist."
         logger.warning(error_msg)
@@ -315,70 +316,90 @@ def scan_library_path(library_path):
         pass
 
     lib_name = os.path.basename(library_path) or library_path
-    job_tracker.update_progress(job_id, 1, 4, f"[{lib_name}] Reading disk files...")
+    job_tracker.update_progress(job_id, 10, message=f"[{lib_name}] Reading disk files...")
     _, files = titles_lib.getDirsAndFiles(library_path)
     
     if not files:
-        logger.warning(f"No files found in {library_path}. Please check if the folder is correctly mounted and has valid extensions (.nsp, .nsz, .xci, .xcz).")
+        logger.warning(f"No files found in {library_path}.")
         from db import log_activity
-        log_activity("library_scan_empty", details={"path": library_path, "msg": "No valid files found (.nsp, .nsz, .xci, .xcz)"})
+        log_activity("library_scan_empty", details={"path": library_path})
     else:
         logger.info(f"Found {len(files)} files on disk in {library_path}")
 
-    job_tracker.update_progress(job_id, 2, 4, f"[{lib_name}] Comparing with database...")
-    filepaths_in_library = get_library_file_paths(library_id)
-    logger.info(f"Found {len(filepaths_in_library)} files in database for library_id={library_id}")
+    job_tracker.update_progress(job_id, 20, message=f"[{lib_name}] Comparing with database...")
+    
+    # Get all files for this library (path and size) for efficient comparison
+    db_files = Files.query.filter_by(library_id=library_id).all()
+    db_files_map = {f.filepath: f for f in db_files}
+    filepaths_in_library = set(db_files_map.keys())
 
-    # 1. Add new files
-    new_files = [f for f in files if f not in filepaths_in_library]
+    # 1. Detect New vs Updated vs Deleted
+    new_files = []
+    updated_files = [] # Files where size changed
+    for filepath in files:
+        if filepath not in filepaths_in_library:
+            new_files.append(filepath)
+        else:
+            # Check if size changed (indicates replacement)
+            try:
+                disk_size = os.path.getsize(filepath)
+                if disk_size != db_files_map[filepath].size:
+                    logger.info(f"File size changed for {filepath} ({db_files_map[filepath].size} -> {disk_size}). Marking for re-identification.")
+                    updated_files.append(filepath)
+            except OSError:
+                continue
+
+    # 1a. Handle Changed Files (Reset identified status)
+    if updated_files:
+        for filepath in updated_files:
+            file_obj = db_files_map[filepath]
+            file_obj.size = os.path.getsize(filepath)
+            file_obj.identified = False
+            file_obj.identification_error = "File size changed, pending re-identification"
+        db.session.commit()
+        logger.info(f"Reset identification status for {len(updated_files)} changed files")
+
+    # 1b. Add NEW files
     if new_files:
         logger.info(f"Found {len(new_files)} new files to add")
         total_new = len(new_files)
         for n, filepath in enumerate(new_files):
              if n % 10 == 0 or n == total_new - 1:
                  progress_msg = f"[{lib_name}] Adding new files: {n+1}/{total_new}"
-                 job_tracker.update_progress(job_id, 3, 4, progress_msg)
+                 job_tracker.update_progress(job_id, 30 + int((n/total_new)*20), message=progress_msg)
                  gevent.sleep(0)
              
-             # Actually add files (wrapped in small batches or handled by the function)
              add_files_to_library(library_id, [filepath]) 
-             
-             # Yield frequently
              if n % 5 == 0:
                  gevent.sleep(0)
 
     # 2. Remove deleted files
-    deleted_files = [f for f in filepaths_in_library if f not in files]
+    disk_files_set = set(files)
+    deleted_files = [f for f in filepaths_in_library if f not in disk_files_set]
 
     if deleted_files:
-        # Check if job was cancelled
-        from db import SystemJob
-        job_db = SystemJob.query.get(job_id)
-        if job_db and job_db.status == "failed":
+        if job_tracker.is_cancelled(job_id):
             logger.info(f"Job {job_id} was cancelled by user, stopping scan")
             return
         
         total_del = len(deleted_files)
         for n, filepath in enumerate(deleted_files):
-            # Check if job was cancelled (fast in-memory check)
             if job_tracker.is_cancelled(job_id):
                 logger.info(f"Job {job_id} was cancelled by user, stopping scan")
                 return
             
             if n % 10 == 0 or n == total_del - 1:
                 progress_msg = f"[{lib_name}] Removing deleted files: {n+1}/{total_del}"
-                job_tracker.update_progress(job_id, 3, 4, progress_msg)
+                job_tracker.update_progress(job_id, 60 + int((n/total_del)*20), message=progress_msg)
                 gevent.sleep(0)
 
             try:
-                file_obj = Files.query.filter_by(filepath=filepath).first()
-                if file_obj:
-                    remove_file_from_apps(file_obj.id)
-                    db.session.delete(file_obj)
+                file_obj = db_files_map[filepath]
+                remove_file_from_apps(file_obj.id)
+                db.session.delete(file_obj)
             except Exception as e:
                 logger.error(f"Error removing deleted file {filepath}: {e}")
 
-            # Commit periodically to avoid huge transactions
             if (n + 1) % 50 == 0:
                 db.session.commit()
 
@@ -387,18 +408,17 @@ def scan_library_path(library_path):
     set_library_scan_time(library_id)
     
     # Log summary
-    logger.info(f"Scan complete for {library_path}: {len(new_files)} added, {len(deleted_files)} removed")
+    logger.info(f"Scan complete for {library_path}: {len(new_files)} added, {len(updated_files)} changed, {len(deleted_files)} removed")
     
-    job_tracker.update_progress(job_id, 4, 4, f"[{lib_name}] Finalizing and updating status...")
+    job_tracker.update_progress(job_id, 90, message=f"[{lib_name}] Finalizing and updating status...")
     
-    # CRITICAL FIX for Issue #1: Always trigger post_library_change if files changed
-    # This ensures badges/filters update after manual scan
-    if new_files or deleted_files:
+    if new_files or updated_files or deleted_files:
         logger.info("Triggering post-scan library update to refresh badges and filters")
         post_library_change()
         
     job_tracker.complete_job(job_id, {
         'files_added': len(new_files),
+        'files_updated': len(updated_files),
         'files_removed': len(deleted_files),
         'total_files': len(files)
     })

@@ -40,6 +40,7 @@
                                     style="font-size: 0.6rem;">BETA</span></a></li>
                         <li><a data-target="APIs"><i class="bi bi-cloud-arrow-down-fill mr-2"></i> APIs Externas</a>
                         </li>
+                        <li><a data-target="System"><i class="bi bi-cpu-fill mr-2"></i> Sistema</a></li>
                         <li><a data-target="Help"><i class="bi bi-question-circle mr-2"></i> Ajuda</a></li>
                     </ul>
                 </aside>
@@ -1177,6 +1178,96 @@
                                 </button>
                             </div>
                         </div>
+                    </section>
+
+                    <!-- System Section -->
+                    <section id="section-System" class="settings-section is-hidden">
+                        <div class="card box shadow-sm mb-5">
+                            <header class="card-header border-none shadow-none">
+                                <p class="card-header-title has-text-primary">
+                                    <i class="bi bi-cpu-fill mr-2"></i> Diagnóstico e Manutenção do Sistema
+                                </p>
+                            </header>
+                            <div class="card-content pt-0">
+                                <div class="columns is-multiline">
+                                    <div class="column is-6">
+                                        <div class="box is-shadowless border p-4">
+                                            <h4 class="title is-6 mb-3"><i class="bi bi-lightning-charge-fill has-text-warning mr-2"></i> Ações Rápidas</h4>
+                                            <div class="buttons">
+                                                <button class="button is-danger is-light is-small" onclick="resetJobs()">
+                                                    <i class="bi bi-arrow-counterclockwise mr-2"></i> Resetar Jobs & Flags
+                                                </button>
+                                                <button class="button is-danger is-dark is-small" onclick="resetRedis()">
+                                                    <i class="bi bi-trash mr-2"></i> Resetar Redis (Fila/Cache)
+                                                </button>
+                                            </div>
+                                            <p class="is-size-7 opacity-70 mt-2">Use o reset de jobs se o scan parecer travado. O reset do Redis limpa todas as tarefas pendentes na fila Celery.</p>
+                                        </div>
+                                    </div>
+                                    <div class="column is-6">
+                                        <div class="box is-shadowless border p-4">
+                                            <h4 class="title is-6 mb-3"><i class="bi bi-database-check has-text-success mr-2"></i> Testes de Sincronismo</h4>
+                                            <div class="buttons">
+                                                <button class="button is-info is-small" id="btnTestTitleDB" onclick="testTitleDBSync()">
+                                                    <i class="bi bi-play-fill mr-2"></i> Testar Sync TitleDB (Sync)
+                                                </button>
+                                            </div>
+                                            <p class="is-size-7 opacity-70 mt-2">Executa o algoritmo de download e sincronização do TitleDB de forma síncrona, retornando o resultado imediato.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="box is-shadowless border p-4 mt-4">
+                                    <h4 class="title is-6 mb-3">
+                                        <i class="bi bi-list-task has-text-info mr-2"></i> Status da Fila (Celery)
+                                        <button class="button is-ghost is-small float-right" onclick="refreshQueueStatus()">
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                        </button>
+                                    </h4>
+                                    <div id="queueStatusDisplay" class="is-size-7 font-mono overflow-auto" style="max-height: 300px; background: #f8f9fa; padding: 10px;">
+                                        Clique em atualizar para ver as tarefas...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <script>
+                            function resetJobs() {
+                                if(!confirm("Deseja resetar todos os jobs travados e as flags de memória?")) return;
+                                fetch('/api/jobs/reset', {method: 'POST'})
+                                    .then(r => r.json())
+                                    .then(data => alert(data.message || "Sucesso"));
+                            }
+
+                            function resetRedis() {
+                                if(!confirm("CUIDADO: Isso irá limpar todo o banco do Redis e a fila de processamento. Continuar?")) return;
+                                fetch('/api/system/redis/reset', {method: 'POST'})
+                                    .then(r => r.json())
+                                    .then(data => alert(data.message || "Sucesso"));
+                            }
+
+                            function testTitleDBSync() {
+                                const btn = document.getElementById('btnTestTitleDB');
+                                btn.classList.add('is-loading');
+                                fetch('/api/system/titledb/test', {method: 'POST'})
+                                    .then(r => r.json())
+                                    .then(data => {
+                                        alert(data.message + "\nTítulos: " + data.titles_in_db + "\nCache: " + data.titledb_cache_count);
+                                    })
+                                    .finally(() => btn.classList.remove('is-loading'));
+                            }
+
+                            function refreshQueueStatus() {
+                                const display = document.getElementById('queueStatusDisplay');
+                                display.innerHTML = "Carregando status da fila...";
+                                fetch('/api/system/queue')
+                                    .then(r => r.json())
+                                    .then(data => {
+                                        display.innerHTML = JSON.stringify(data, null, 2).replace(/\n/g, '<br>').replace(/ /g, '&nbsp;');
+                                    })
+                                    .catch(err => display.innerHTML = "Erro: " + err);
+                            }
+                        </script>
                     </section>
 
                     <!-- Help Section -->

@@ -437,12 +437,21 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                     else:
                         results[filename] = False
 
-                # PRIORITY: Try to download the region-specific file based on settings FIRST
+                # 1. Always attempt to download titles.json FIRST (Global coverage)
+                # We do this first so its basic metadata can be overwritten by richer regional data
+                log_tdb("Downloading global titles.json for full coverage...", 5)
+                if download_titledb_file("titles.json", force=force, silent_404=True):
+                    process_and_store_json("titles.json", source.name)
+                    results["titles.json"] = True
+                else:
+                    results["titles.json"] = False
+
+                # 2. PRIORITY: Try to download the region-specific file based on settings
                 region = app_settings["titles"].get("region", "US")
                 language = app_settings["titles"].get("language", "en")
                 region_filenames = get_region_titles_filenames(region, language)
 
-                log_tdb(f"Downloading regional titles ({region}.{language})...", 5)
+                log_tdb(f"Downloading regional titles ({region}.{language})...", 6)
                 region_success = False
                 for region_filename in region_filenames:
                     logger.info(f"Attempting to download region-specific file: {region_filename}")
@@ -452,13 +461,15 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                         process_and_store_json(region_filename, source.name)
                         break
 
-                results["region_titles"] = region_success
+                # 3. FALLBACK REGION: If the primary region failed and isn't US.en, try US.en as it's the most complete
+                if not region_success and (region != "US" or language != "en"):
+                    logger.info("Primary regional title download failed, trying US.en.json as fallback...")
+                    if download_titledb_file("US.en.json", force=force, silent_404=True):
+                        region_success = True
+                        results["US.en.json"] = True
+                        process_and_store_json("US.en.json", source.name)
 
-                # Always attempt to download titles.json for full global coverage
-                log_tdb("Downloading global titles.json for full coverage...", 6)
-                if download_titledb_file("titles.json", force=force, silent_404=True):
-                    process_and_store_json("titles.json", source.name)
-                    results["titles.json"] = True
+                results["region_titles"] = region_success
 
                 if all(results.get(f) for f in core_files):
                     source.last_success = now_utc()
@@ -523,6 +534,10 @@ def update_titledb(app_settings: Dict, force: bool = False) -> bool:
             import titles
 
             titles.load_titledb(force=True)
+            
+            # CRITICAL: Sync metadata to the Titles table so games don't remain "Unknown"
+            logger.info("Syncing TitleDB metadata to database...")
+            titles.sync_titles_to_db()
 
         if success_count == total_count:
             job_tracker.complete_job(job_id, f"Updated {success_count}/{total_count} files")
