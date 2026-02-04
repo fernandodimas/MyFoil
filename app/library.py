@@ -287,16 +287,30 @@ def scan_library_path(library_path):
     
     logger.info(f"Scanning library path {library_path} (library_id={library_id})...")
     if not os.path.isdir(library_path):
-        logger.warning(f"Library path {library_path} does not exists.")
-        job_tracker.fail_job(job_id, f"Path does not exist: {library_path}")
+        error_msg = f"Path '{library_path}' is not a directory or doesn't exist."
+        logger.warning(error_msg)
+        from db import log_activity
+        log_activity("library_scan_error", details={"path": library_path, "error": error_msg})
+        job_tracker.fail_job(job_id, error_msg)
         return
         
+    try:
+        # Check permissions
+        if not os.access(library_path, os.R_OK):
+            logger.warning(f"No read permission for {library_path}")
+            from db import log_activity
+            log_activity("library_scan_error", details={"path": library_path, "error": "Permission denied (no read access)"})
+    except:
+        pass
+
     lib_name = os.path.basename(library_path) or library_path
     job_tracker.update_progress(job_id, 1, 4, f"[{lib_name}] Reading disk files...")
     _, files = titles_lib.getDirsAndFiles(library_path)
     
     if not files:
-        logger.warning(f"No files found in {library_path}. Please check if the folder is correctly mounted in Docker.")
+        logger.warning(f"No files found in {library_path}. Please check if the folder is correctly mounted and has valid extensions (.nsp, .nsz, .xci, .xcz).")
+        from db import log_activity
+        log_activity("library_scan_empty", details={"path": library_path, "msg": "No valid files found (.nsp, .nsz, .xci, .xcz)"})
     else:
         logger.info(f"Found {len(files)} files on disk in {library_path}")
 

@@ -264,7 +264,9 @@ def scan_library_api():
     except Exception as e:
         errors.append(str(e))
         success = False
-        logger.error(f"Error during library scan: {e}")
+        from db import log_activity
+        log_activity("library_scan_failed", details={"path": path, "error": str(e)})
+        logger.error(f"Error during library scan api call: {e}")
 
     resp = {"success": success, "errors": errors}
     return jsonify(resp)
