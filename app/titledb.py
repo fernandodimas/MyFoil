@@ -259,6 +259,9 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
 
     results = {}
     
+    # Ensure TitleDB directory exists
+    os.makedirs(TITLEDB_DIR, exist_ok=True)
+    
     # Migration: Rename legacy titledb files (titles.XX.yy.json -> XX.yy.json)
     try:
         import glob
