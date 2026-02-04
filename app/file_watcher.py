@@ -333,8 +333,9 @@ class Handler(FileSystemEventHandler):
             is_dest_in = hasattr(event, 'dest_path') and event.dest_path and event.dest_path.startswith(directory)
             
             if is_src_in or is_dest_in:
+                logger.info(f"[WATCHDOG-EVENT] Event matched directory {directory}, processing...")
                 self.collect_event(event, directory)
                 found = True
                 break
         if not found:
-            logger.debug(f"Event src_path {event.src_path} doesn't match any monitored directory: {self.directories}")
+            logger.info(f"[WATCHDOG-EVENT] Event {event.src_path} NOT in tracked directories {list(self.directories)}, ignoring.")
