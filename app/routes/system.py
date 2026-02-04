@@ -255,6 +255,49 @@ def test_titledb_sync_api():
         return jsonify({"success": False, "message": str(e)}), 500
 
 
+@system_bp.route("/system/watchdog/status", methods=["GET"])
+@access_required("admin")
+def watchdog_status_api():
+    """Get watchdog status and health information"""
+    try:
+        if hasattr(state, 'watcher') and state.watcher:
+            status = state.watcher.get_status()
+            return jsonify({
+                "success": True,
+                **status
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "running": False,
+                "message": "Watchdog not initialized"
+            })
+    except Exception as e:
+        logger.error(f"Error fetching watchdog status: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
+@system_bp.route("/system/watchdog/restart", methods=["POST"])
+@access_required("admin")
+def restart_watchdog_api():
+    """Manually restart the watchdog observer"""
+    try:
+        if hasattr(state, 'watcher') and state.watcher:
+            success = state.watcher.restart()
+            return jsonify({
+                "success": success,
+                "message": "Watchdog reiniciado com sucesso." if success else "Falha ao reiniciar watchdog."
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "Watchdog not initialized"
+            }), 400
+    except Exception as e:
+        logger.error(f"Error restarting watchdog: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+
 @system_bp.route("/library/scan", methods=["POST"])
 @access_required("admin")
 def scan_library_api():

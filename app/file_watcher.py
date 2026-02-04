@@ -6,6 +6,7 @@ from watchdog.observers.polling import PollingObserver
 from watchdog.events import FileSystemEventHandler
 from types import SimpleNamespace
 import logging
+import threading
 
 # Retrieve main logger
 logger = logging.getLogger("main")
@@ -15,19 +16,152 @@ class Watcher:
     def __init__(self, callback):
         self.directories = set()  # Use a set to store directories
         self.callback = callback
-        self.event_handler = Handler(self.callback)
+        self.event_handler = Handler(self.callback, watcher=self)
         self.observer = PollingObserver()
         self.scheduler_map = {}
+        
+        # Health monitoring attributes
+        self.last_event_time = None
+        self.error_count = 0
+        self.last_error = None
+        self.restart_count = 0
+        self.is_running = False
+        self._health_check_thread = None
+        self._stop_health_check = threading.Event()
 
     def run(self):
-        self.observer.start()
-        logger.debug("Successfully started observer.")
+        """Start observer and health monitoring"""
+        try:
+            self.observer.start()
+            self.is_running = True
+            logger.info("Watchdog observer started successfully.")
+            
+            # Start health check thread
+            self._start_health_monitoring()
+        except Exception as e:
+            self.is_running = False
+            self.error_count += 1
+            self.last_error = str(e)
+            logger.error(f"Failed to start watchdog observer: {e}")
+            raise
 
     def stop(self):
-        logger.debug("Stopping observer...")
-        self.observer.stop()
-        self.observer.join()
-        logger.debug("Successfully stopped observer.")
+        """Stop observer and health monitoring"""
+        logger.debug("Stopping watchdog observer...")
+        
+        # Stop health monitoring first
+        self._stop_health_check.set()
+        if self._health_check_thread and self._health_check_thread.is_alive():
+            self._health_check_thread.join(timeout=5)
+        
+        # Stop observer
+        try:
+            self.observer.stop()
+            self.observer.join(timeout=10)
+            self.is_running = False
+            logger.info("Watchdog observer stopped successfully.")
+        except Exception as e:
+            logger.error(f"Error stopping observer: {e}")
+
+    def _start_health_monitoring(self):
+        """Start background health check thread"""
+        if self._health_check_thread and self._health_check_thread.is_alive():
+            return
+        
+        self._stop_health_check.clear()
+        self._health_check_thread = threading.Thread(target=self._health_check_loop, daemon=True)
+        self._health_check_thread.start()
+        logger.debug("Watchdog health monitoring started.")
+
+    def _health_check_loop(self):
+        """Background thread that monitors observer health and auto-restarts if needed"""
+        check_interval = 30  # Check every 30 seconds
+        
+        while not self._stop_health_check.is_set():
+            try:
+                # Check if observer is alive
+                if self.is_running and not self.observer.is_alive():
+                    logger.error("Watchdog observer died unexpectedly! Attempting auto-restart...")
+                    self._auto_restart()
+                
+            except Exception as e:
+                logger.error(f"Error in watchdog health check: {e}")
+            
+            # Wait for next check (allows early exit on stop)
+            self._stop_health_check.wait(timeout=check_interval)
+
+    def _auto_restart(self):
+        """Attempt to restart the observer"""
+        max_retries = 3
+        base_delay = 5
+        
+        if self.restart_count >= max_retries:
+            logger.error(f"Watchdog auto-restart failed after {max_retries} attempts. Manual intervention required.")
+            self.is_running = False
+            self.last_error = f"Auto-restart failed after {max_retries} attempts"
+            return
+        
+        try:
+            # Stop old observer
+            try:
+                self.observer.stop()
+                self.observer.join(timeout=5)
+            except:
+                pass
+            
+            # Create new observer
+            self.observer = PollingObserver()
+            
+            # Re-schedule all directories
+            old_scheduler_map = self.scheduler_map.copy()
+            self.scheduler_map = {}
+            
+            for directory in list(self.directories):
+                try:
+                    if os.path.exists(directory):
+                        task = self.observer.schedule(self.event_handler, directory, recursive=True)
+                        self.scheduler_map[directory] = task
+                        logger.debug(f"Re-scheduled {directory} after restart")
+                except Exception as e:
+                    logger.error(f"Failed to re-schedule {directory}: {e}")
+            
+            # Start new observer
+            self.observer.start()
+            self.is_running = True
+            self.restart_count += 1
+            
+            logger.info(f"Watchdog observer auto-restarted successfully (attempt {self.restart_count}/{max_retries})")
+            
+        except Exception as e:
+            self.restart_count += 1
+            self.error_count += 1
+            self.last_error = str(e)
+            self.is_running = False
+            logger.error(f"Failed to auto-restart watchdog (attempt {self.restart_count}/{max_retries}): {e}")
+            
+            # Exponential backoff before next health check tries again
+            time.sleep(base_delay * (2 ** self.restart_count))
+
+    def restart(self):
+        """Manually restart the observer (for API endpoint)"""
+        logger.info("Manual watchdog restart requested...")
+        self.restart_count = 0  # Reset counter for manual restart
+        self.stop()
+        time.sleep(2)  # Brief pause
+        self.run()
+        return self.is_running
+
+    def get_status(self):
+        """Get current watchdog status for monitoring"""
+        return {
+            "running": self.is_running,
+            "observer_alive": self.observer.is_alive() if self.is_running else False,
+            "directories": list(self.directories),
+            "last_event_time": self.last_event_time.isoformat() if self.last_event_time else None,
+            "error_count": self.error_count,
+            "last_error": self.last_error,
+            "restart_count": self.restart_count,
+        }
 
     def add_directory(self, directory):
         if directory not in self.directories:
@@ -35,34 +169,47 @@ class Watcher:
                 logger.warning(f"Directory {directory} does not exist, not added to watchdog.")
                 return False
             logger.info(f"Adding directory {directory} to watchdog.")
-            task = self.observer.schedule(self.event_handler, directory, recursive=True)
-            self.scheduler_map[directory] = task
-            self.directories.add(directory)
-            self.event_handler.add_directory(directory)
-            return True
+            try:
+                task = self.observer.schedule(self.event_handler, directory, recursive=True)
+                self.scheduler_map[directory] = task
+                self.directories.add(directory)
+                self.event_handler.add_directory(directory)
+                return True
+            except Exception as e:
+                logger.error(f"Failed to add directory {directory} to watchdog: {e}")
+                self.error_count += 1
+                self.last_error = str(e)
+                return False
         return False
 
     def remove_directory(self, directory):
         logger.debug(f"Removing {directory} from watchdog monitoring...")
         if directory in self.directories:
-            if directory in self.scheduler_map:
-                self.observer.unschedule(self.scheduler_map[directory])
-                del self.scheduler_map[directory]
-            self.directories.remove(directory)
-            logger.info(f"Removed {directory} from watchdog monitoring.")
-            return True
+            try:
+                if directory in self.scheduler_map:
+                    self.observer.unschedule(self.scheduler_map[directory])
+                    del self.scheduler_map[directory]
+                self.directories.remove(directory)
+                logger.info(f"Removed {directory} from watchdog monitoring.")
+                return True
+            except Exception as e:
+                logger.error(f"Error removing directory {directory}: {e}")
+                self.error_count += 1
+                self.last_error = str(e)
+                return False
         else:
             logger.info(f"{directory} not in watchdog, nothing to do.")
         return False
 
 
 class Handler(FileSystemEventHandler):
-    def __init__(self, callback, stability_duration=5):
+    def __init__(self, callback, stability_duration=3, watcher=None):
         self._raw_callback = callback  # Callback to invoke for stable files
         self.directories = []
-        self.stability_duration = stability_duration  # Stability duration in seconds
+        self.stability_duration = stability_duration  # Stability duration in seconds (reduced from 5 to 3)
         self.tracked_files = {}  # Tracks files being copied
         self.debounced_check_final = self._debounce(self._check_file_stability, stability_duration)
+        self.watcher = watcher  # Reference to parent watcher for event tracking
 
     def add_directory(self, directory):
         if directory not in self.directories:
@@ -134,6 +281,11 @@ class Handler(FileSystemEventHandler):
                 return
 
         logger.info(f"Watchdog detected event: {source_event.event_type} - {source_event.src_path}")
+        
+        # Update last event timestamp for health monitoring
+        if self.watcher:
+            from datetime import datetime
+            self.watcher.last_event_time = datetime.now()
 
         library_event = SimpleNamespace(
             type=source_event.event_type,

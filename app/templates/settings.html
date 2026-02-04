@@ -1192,39 +1192,73 @@
                                 <div class="columns is-multiline">
                                     <div class="column is-6">
                                         <div class="box is-shadowless border p-4">
-                                            <h4 class="title is-6 mb-3"><i class="bi bi-lightning-charge-fill has-text-warning mr-2"></i> Ações Rápidas</h4>
+                                            <h4 class="title is-6 mb-3"><i
+                                                    class="bi bi-lightning-charge-fill has-text-warning mr-2"></i> Ações
+                                                Rápidas</h4>
                                             <div class="buttons">
-                                                <button class="button is-danger is-light is-small" onclick="resetJobs()">
-                                                    <i class="bi bi-arrow-counterclockwise mr-2"></i> Resetar Jobs & Flags
+                                                <button class="button is-danger is-light is-small"
+                                                    onclick="resetJobs()">
+                                                    <i class="bi bi-arrow-counterclockwise mr-2"></i> Resetar Jobs &
+                                                    Flags
                                                 </button>
-                                                <button class="button is-danger is-dark is-small" onclick="resetRedis()">
+                                                <button class="button is-danger is-dark is-small"
+                                                    onclick="resetRedis()">
                                                     <i class="bi bi-trash mr-2"></i> Resetar Redis (Fila/Cache)
                                                 </button>
                                             </div>
-                                            <p class="is-size-7 opacity-70 mt-2">Use o reset de jobs se o scan parecer travado. O reset do Redis limpa todas as tarefas pendentes na fila Celery.</p>
+                                            <p class="is-size-7 opacity-70 mt-2">Use o reset de jobs se o scan parecer
+                                                travado. O reset do Redis limpa todas as tarefas pendentes na fila
+                                                Celery.</p>
                                         </div>
                                     </div>
                                     <div class="column is-6">
                                         <div class="box is-shadowless border p-4">
-                                            <h4 class="title is-6 mb-3"><i class="bi bi-database-check has-text-success mr-2"></i> Testes de Sincronismo</h4>
+                                            <h4 class="title is-6 mb-3"><i
+                                                    class="bi bi-database-check has-text-success mr-2"></i> Testes de
+                                                Sincronismo</h4>
                                             <div class="buttons">
-                                                <button class="button is-info is-small" id="btnTestTitleDB" onclick="testTitleDBSync()">
+                                                <button class="button is-info is-small" id="btnTestTitleDB"
+                                                    onclick="testTitleDBSync()">
                                                     <i class="bi bi-play-fill mr-2"></i> Testar Sync TitleDB (Sync)
                                                 </button>
                                             </div>
-                                            <p class="is-size-7 opacity-70 mt-2">Executa o algoritmo de download e sincronização do TitleDB de forma síncrona, retornando o resultado imediato.</p>
+                                            <p class="is-size-7 opacity-70 mt-2">Executa o algoritmo de download e
+                                                sincronização do TitleDB de forma síncrona, retornando o resultado
+                                                imediato.</p>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="box is-shadowless border p-4 mt-4">
                                     <h4 class="title is-6 mb-3">
-                                        <i class="bi bi-list-task has-text-info mr-2"></i> Status da Fila (Celery)
-                                        <button class="button is-ghost is-small float-right" onclick="refreshQueueStatus()">
+                                        <i class="bi bi-eye-fill has-text-primary mr-2"></i> Status do Watchdog
+                                        (Detecçãoautomática de arquivos)
+                                        <button class="button is-ghost is-small float-right"
+                                            onclick="refreshWatchdogStatus()">
                                             <i class="bi bi-arrow-clockwise"></i>
                                         </button>
                                     </h4>
-                                    <div id="queueStatusDisplay" class="is-size-7 font-mono overflow-auto" style="max-height: 300px; background: #f8f9fa; padding: 10px;">
+                                    <div id="watchdogStatusDisplay" class="mb-3">
+                                        <p class="is-size-7">Carregando status...</p>
+                                    </div>
+                                    <div class="buttons">
+                                        <button class="button is-warning is-small" id="btnRestartWatchdog"
+                                            onclick="restartWatchdog()">
+                                            <i class="bi bi-arrow-counterclockwise mr-2"></i> Reiniciar Watchdog
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="box is-shadowless border p-4 mt-4">
+                                    <h4 class="title is-6 mb-3">
+                                        <i class="bi bi-list-task has-text-info mr-2"></i> Status da Fila (Celery)
+                                        <button class="button is-ghost is-small float-right"
+                                            onclick="refreshQueueStatus()">
+                                            <i class="bi bi-arrow-clockwise"></i>
+                                        </button>
+                                    </h4>
+                                    <div id="queueStatusDisplay" class="is-size-7 font-mono overflow-auto"
+                                        style="max-height: 300px; background: #f8f9fa; padding: 10px;">
                                         Clique em atualizar para ver as tarefas...
                                     </div>
                                 </div>
@@ -1233,15 +1267,15 @@
 
                         <script>
                             function resetJobs() {
-                                if(!confirm("Deseja resetar todos os jobs travados e as flags de memória?")) return;
-                                fetch('/api/jobs/reset', {method: 'POST'})
+                                if (!confirm("Deseja resetar todos os jobs travados e as flags de memória?")) return;
+                                fetch('/api/jobs/reset', { method: 'POST' })
                                     .then(r => r.json())
                                     .then(data => alert(data.message || "Sucesso"));
                             }
 
                             function resetRedis() {
-                                if(!confirm("CUIDADO: Isso irá limpar todo o banco do Redis e a fila de processamento. Continuar?")) return;
-                                fetch('/api/system/redis/reset', {method: 'POST'})
+                                if (!confirm("CUIDADO: Isso irá limpar todo o banco do Redis e a fila de processamento. Continuar?")) return;
+                                fetch('/api/system/redis/reset', { method: 'POST' })
                                     .then(r => r.json())
                                     .then(data => alert(data.message || "Sucesso"));
                             }
@@ -1249,7 +1283,7 @@
                             function testTitleDBSync() {
                                 const btn = document.getElementById('btnTestTitleDB');
                                 btn.classList.add('is-loading');
-                                fetch('/api/system/titledb/test', {method: 'POST'})
+                                fetch('/api/system/titledb/test', { method: 'POST' })
                                     .then(r => r.json())
                                     .then(data => {
                                         alert(data.message + "\nTítulos: " + data.titles_in_db + "\nCache: " + data.titledb_cache_count);
@@ -1267,6 +1301,86 @@
                                     })
                                     .catch(err => display.innerHTML = "Erro: " + err);
                             }
+
+                            function refreshWatchdogStatus() {
+                                const display = document.getElementById('watchdogStatusDisplay');
+                                display.innerHTML = "<p class='is-size-7'>Carregando...</p>";
+
+                                fetch('/api/system/watchdog/status')
+                                    .then(r => r.json())
+                                    .then(data => {
+                                        if (data.success && data.running) {
+                                            const statusColor = data.observer_alive ? 'has-text-success' : 'has-text-danger';
+                                            const statusIcon = data.observer_alive ? 'check-circle-fill' : 'exclamation-triangle-fill';
+                                            const statusText = data.observer_alive ? 'Rodando' : 'Parado/Erro';
+
+                                            let html = `
+                                                <p class="is-size-7 mb-2">
+                                                    <strong>Status:</strong> 
+                                                    <i class="bi bi-${statusIcon} ${statusColor}"></i> 
+                                                    <span class="${statusColor}">${statusText}</span>
+                                                </p>
+                                                <p class="is-size-7 mb-2"><strong>Diretórios Monitorados:</strong> ${data.directories.length}</p>
+                                            `;
+
+                                            if (data.directories.length > 0) {
+                                                html += '<ul class="is-size-7 ml-4">';
+                                                data.directories.forEach(dir => {
+                                                    html += `<li>${dir}</li>`;
+                                                });
+                                                html += '</ul>';
+                                            }
+
+                                            if (data.last_event_time) {
+                                                html += `<p class="is-size-7 mt-2"><strong>Último Evento:</strong> ${new Date(data.last_event_time).toLocaleString('pt-BR')}</p>`;
+                                            }
+
+                                            if (data.error_count > 0) {
+                                                html += `<p class="is-size-7 mt-2 has-text-warning"><strong>Erros:</strong> ${data.error_count}</p>`;
+                                                if (data.last_error) {
+                                                    html += `<p class="is-size-7 has-text-danger">Último erro: ${data.last_error}</p>`;
+                                                }
+                                            }
+
+                                            if (data.restart_count > 0) {
+                                                html += `<p class="is-size-7 mt-2 has-text-info"><strong>Auto-Reinicializações:</strong> ${data.restart_count}</p>`;
+                                            }
+
+                                            display.innerHTML = html;
+                                        } else {
+                                            display.innerHTML = `<p class="is-size-7 has-text-danger"><i class="bi bi-x-circle-fill"></i> Watchdog não inicializado ou parado</p>`;
+                                        }
+                                    })
+                                    .catch(err => {
+                                        display.innerHTML = `<p class="is-size-7 has-text-danger">Erro ao buscar status: ${err}</p>`;
+                                    });
+                            }
+
+                            function restartWatchdog() {
+                                if (!confirm("Reiniciar o watchdog? Ele será parado e iniciado novamente.")) return;
+
+                                const btn = document.getElementById('btnRestartWatchdog');
+                                btn.classList.add('is-loading');
+
+                                fetch('/api/system/watchdog/restart', { method: 'POST' })
+                                    .then(r => r.json())
+                                    .then(data => {
+                                        alert(data.message || "Operação concluída");
+                                        refreshWatchdogStatus();
+                                    })
+                                    .catch(err => alert("Erro: " + err))
+                                    .finally(() => btn.classList.remove('is-loading'));
+                            }
+
+                            // Auto-refresh watchdog status when tab is opened
+                            document.addEventListener('DOMContentLoaded', () => {
+                                const systemTab = document.querySelector('[data-target="System"]');
+                                if (systemTab) {
+                                    systemTab.addEventListener('click', () => {
+                                        setTimeout(refreshWatchdogStatus, 200);
+                                    });
+                                }
+                            });
                         </script>
                     </section>
 
