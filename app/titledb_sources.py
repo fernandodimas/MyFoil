@@ -10,7 +10,7 @@ import logging
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timezone
 from pathlib import Path
-from utils import format_datetime, ensure_utc
+from utils import format_datetime, ensure_utc, now_utc
 
 logger = logging.getLogger("main")
 
@@ -276,14 +276,19 @@ class TitleDBSourceManager:
             logger.error(f"Error saving TitleDB sources: {e}")
 
     def get_active_sources(self) -> List[TitleDBSource]:
-        """Get enabled sources sorted by priority (asc), then by most recent remote date (desc)"""
+        """Get enabled sources sorted by priority (asc) or by most recent remote date (desc)"""
         active = [s for s in self.sources if s.enabled]
         
+        # Load settings to check auto_use_latest
+        try:
+            from settings import load_settings
+            app_settings = load_settings()
+            auto_use_latest = app_settings.get("titles", {}).get("auto_use_latest", False)
+        except:
+            auto_use_latest = False
+            
         def sort_key(s):
-            # Priority: Lower is better (0 comes before 1)
-            prio = s.priority
             # Freshness: Newer is better (larger timestamp)
-            # We negate it because sorted is ascending by default
             if s.remote_date:
                 try:
                     remote_ts = ensure_utc(s.remote_date).timestamp()
@@ -291,7 +296,16 @@ class TitleDBSourceManager:
                     remote_ts = 0
             else:
                 remote_ts = 0
-            return (prio, -remote_ts)
+                
+            # Priority: Lower is better (0 comes before 1)
+            prio = s.priority
+            
+            if auto_use_latest and remote_ts > 0:
+                # If auto-use latest is ON, freshness comes FIRST
+                return (-remote_ts, prio)
+            else:
+                # Default: Priority comes FIRST
+                return (prio, -remote_ts)
 
         return sorted(active, key=sort_key)
 
@@ -416,8 +430,15 @@ class TitleDBSourceManager:
 
     def get_sources_status(self) -> List[Dict]:
         """Get status of all sources using cached dates"""
+        # Load settings to check auto_use_latest
+        try:
+            from settings import load_settings
+            app_settings = load_settings()
+            auto_use_latest = app_settings.get("titles", {}).get("auto_use_latest", False)
+        except:
+            auto_use_latest = False
+
         def sort_key(s):
-            prio = s.priority
             if s.remote_date:
                 try:
                     remote_ts = ensure_utc(s.remote_date).timestamp()
@@ -425,7 +446,13 @@ class TitleDBSourceManager:
                     remote_ts = 0
             else:
                 remote_ts = 0
-            return (prio, -remote_ts, s.name)
+                
+            prio = s.priority
+            
+            if auto_use_latest and remote_ts > 0:
+                return (-remote_ts, prio, s.name)
+            else:
+                return (prio, -remote_ts, s.name)
 
         sorted_sources = sorted(self.sources, key=sort_key)
         return [s.to_dict() for s in sorted_sources]
