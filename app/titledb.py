@@ -448,11 +448,11 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
 
                 results["region_titles"] = region_success
 
-                # Only try titles.json if region failed, as a last resort
-                if not region_success:
-                    logger.warning(f"Region-specific files {region_filenames} not available, trying titles.json as fallback...")
-                    download_titledb_file("titles.json", force=force, silent_404=True)
+                # Always attempt to download titles.json for full global coverage
+                log_tdb("Downloading global titles.json for full coverage...", 6)
+                if download_titledb_file("titles.json", force=force, silent_404=True):
                     process_and_store_json("titles.json", source.name)
+                    results["titles.json"] = True
 
                 if all(results.get(f) for f in core_files):
                     source.last_success = now_utc()
