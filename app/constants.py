@@ -26,11 +26,11 @@ TITLEDB_DEFAULT_FILES = [
 
 MYFOIL_DB = os.environ.get("DATABASE_URL", "sqlite:///" + DB_FILE)
 
-BUILD_VERSION = '20260204_1006'
+BUILD_VERSION = '20260204_1013'
 
 DEFAULT_SETTINGS = {
     "library": {
-        "paths": ["/games"],
+        "paths": [],
     },
     "titles": {
         "language": "en",
