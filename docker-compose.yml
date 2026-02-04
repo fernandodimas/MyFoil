@@ -54,7 +54,8 @@ services:
       - TZ=America/Sao_Paulo
       - REDIS_URL=redis://redis:6379/0
     volumes:
-      - /path/to/your/games:/games # ⚠️ UPDATE THIS PATH!
+      - /path/to/your/games:/games # ⚠️ UPDATE THIS! Path to your game files
+      - /path/to/your/externo:/externo # ⚠️ UPDATE THIS! Path to your external drive
       - ./config:/app/config
       - ./data:/app/data
     ports:
@@ -87,6 +88,7 @@ services:
       - TZ=America/Sao_Paulo
     volumes:
       - /path/to/your/games:/games # Same as myfoil service
+      - /path/to/your/externo:/externo # Same as myfoil service
       - ./config:/app/config
       - ./data:/app/data
     healthcheck:
