@@ -108,10 +108,16 @@ def add_library_complete(app, watcher, path):
         add_library(path)
 
         # Add to watchdog - Handle cases where watcher is None (e.g. from tests or API quirks)
-        if watcher:
-             watcher.add_directory(path)
-        elif hasattr(app, 'watcher') and app.watcher:
-             app.watcher.add_directory(path)
+        target_watcher = watcher
+        if not target_watcher:
+            if hasattr(app, 'watcher') and app.watcher:
+                target_watcher = app.watcher
+            else:
+                import state
+                target_watcher = getattr(state, 'watcher', None)
+
+        if target_watcher:
+             target_watcher.add_directory(path)
         else:
              logger.warning(f"Could not add {path} to watchdog: No watcher instance found.")
 
