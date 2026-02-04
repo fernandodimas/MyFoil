@@ -88,9 +88,10 @@ from auth import (
     admin_account_created,
     access_required,
     auth_blueprint,
-    login_manager
+    login_manager,
+    init_users
 )
-from db import User, log_activity
+from db import User, log_activity, init_db
 from library import (
     generate_library, 
     scan_library_path, 
