@@ -279,11 +279,9 @@ def fetch_metadata_for_all_games_async():
 def update_titledb_async(force=False):
     """Update TitleDB in background"""
     with flask_app.app_context():
-        import logging
         from titledb import update_titledb
         from settings import load_settings
         
-        logger = logging.getLogger("main")
         logger.info("task_execution_started", task="update_titledb_async")
         
         # Reload settings to ensure we have the latest (e.g. new sources)
