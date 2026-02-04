@@ -177,6 +177,13 @@ class Watcher:
                 self.scheduler_map[directory] = task
                 self.directories.add(directory)
                 self.event_handler.add_directory(directory)
+                
+                # Diagnostic: verify observer is alive and schedule worked
+                logger.info(f"[WATCHDOG-DIAG] Scheduled observer for {directory}")
+                logger.info(f"[WATCHDOG-DIAG] Observer is_alive: {self.observer.is_alive()}")
+                logger.info(f"[WATCHDOG-DIAG] Observer emitters count: {len(self.observer.emitters)}")
+                logger.info(f"[WATCHDOG-DIAG] Total directories monitored: {len(self.directories)}")
+                
                 return True
             except Exception as e:
                 logger.error(f"Failed to add directory {directory} to watchdog: {e}")
