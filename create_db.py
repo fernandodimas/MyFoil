@@ -2,7 +2,7 @@ import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 def create_db():
-    dsn = "postgresql://myfoil:myfoilpassword@192.168.16.250:5432/postgres"
+    dsn = "postgresql://myfoil:myfoilpassword@193.123.107.250:5432/postgres"
     try:
         conn = psycopg2.connect(dsn)
         conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)

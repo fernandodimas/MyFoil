@@ -163,8 +163,8 @@ def login():
     # Import here to avoid circular dependency
     from app import limiter
     
-    # Apply rate limiting: 5 login attempts per minute per IP
-    @limiter.limit("5 per minute")
+    # Apply rate limiting: 20 login attempts per minute per IP (Increased for better UX)
+    @limiter.limit("20 per minute")
     def _rate_limited_login():
         if request.method == "GET":
             next_url = request.args.get('next', '')
