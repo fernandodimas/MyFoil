@@ -33,7 +33,8 @@ from constants import (
     MYFOIL_DB, BUILD_VERSION, CONFIG_DIR, PLUGINS_DIR, DATA_DIR
 )
 from settings import load_settings, reload_conf
-import db
+from db import db, migrate
+import db as db_module
 from i18n import I18n
 import titles
 import titledb
@@ -90,8 +91,16 @@ from auth import (
     login_manager
 )
 from db import User, log_activity
-from library import generate_library, scan_library_path, identify_library_files
-from utils import now_utc, ColoredFormatter, FilterRemoveDateFromWerkzeugLogs
+from library import (
+    generate_library, 
+    scan_library_path, 
+    identify_library_files,
+    add_missing_apps_to_db,
+    update_titles,
+    init_libraries,
+    invalidate_library_cache
+)
+from utils import now_utc, ColoredFormatter, FilterRemoveDateFromWerkzeugLogs, get_or_create_secret_key
 from file_watcher import Watcher
 import threading
 import datetime
@@ -368,7 +377,6 @@ def update_titledb_job(force=False):
 
             # Step 4: Optional Library identification
             # We only do this if specifically needed, or we do it faster
-            from library import get_libraries, invalidate_library_cache
             
             # Instead of full identification of every file (which is slow),
             # we just invalidate the cache so new titles appear, 
@@ -436,7 +444,7 @@ def scan_library_job():
                     logger.info("Scheduled library scan queued to Celery.")
                     job_tracker.update_progress(job_id, 100, message="Scan task queued to Celery.")
                 else:
-                    libraries = db.get_libraries()
+                    libraries = db_module.get_libraries()
                     logger.info(f"Found {len(libraries)} libraries to scan")
                     for i, lib in enumerate(libraries):
                         try:
@@ -455,7 +463,7 @@ def scan_library_job():
                 # No need to call post_library_change here as scan_library_path now does it
             log_activity("library_scan_completed")
             logger.info("Library scan job completed successfully.")
-            job_tracker.complete_job(job_id, {"total_libraries": len(db.get_libraries())})
+            job_tracker.complete_job(job_id, {"total_libraries": len(db_module.get_libraries())})
         except Exception as e:
             logger.error(f"Error during library scan job: {e}")
             log_activity("library_scan_failed", details={"error": str(e)})
@@ -547,7 +555,7 @@ def init_internal(app):
             # Setup paths from Database (Source of Truth)
             # Sync YAML -> DB if DB is empty but YAML has paths (Migration scenario)
             try:
-                libs_db = get_libraries()
+                libs_db = db_module.get_libraries()
                 yaml_paths = app_settings.get("library", {}).get("paths", [])
                 
                 db_paths = set(lib.path for lib in libs_db)
@@ -556,12 +564,11 @@ def init_internal(app):
                 for p in yaml_paths:
                     if p not in db_paths:
                         logger.info(f"Syncing path from YAML to DB: {p}")
-                        from library import add_library
-                        add_library(p)
+                        db_module.add_library(p)
                         changes_made = True
                 
                 if changes_made:
-                    libs_db = get_libraries() # Refresh
+                    libs_db = db_module.get_libraries() # Refresh
 
                 library_paths = [lib.path for lib in libs_db]
                 logger.info(f"Loaded {len(library_paths)} library paths from Database for Watchdog.")
@@ -612,7 +619,7 @@ def check_initial_scan(app):
     # ...
     # We call the jobs in background threads as before
     with app.app_context():
-        libs = get_libraries()
+        libs = db_module.get_libraries()
         critical_files = ["cnmts.json", "versions.json"]
         import os
         from constants import TITLEDB_DIR
