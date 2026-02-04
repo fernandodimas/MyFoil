@@ -1226,7 +1226,7 @@ def get_game_info_item(tid, title_data):
 
     # Calculate owned version correctly (only apps with files)
     owned_apps_with_files = [a for a in all_title_apps if a["owned"] and len(a.get("files_info", [])) > 0]
-    owned_versions = [int(a["app_version"]) for a in owned_apps_with_files]
+    owned_versions = [int(a["app_version"] or 0) for a in owned_apps_with_files]
     game["owned_version"] = max(owned_versions) if owned_versions else 0
     game["display_version"] = str(game["owned_version"])
 
@@ -1360,7 +1360,7 @@ def get_game_info_item(tid, title_data):
                 game.setdefault("screenshots", []).append(s)
 
     update_apps = [a for a in all_title_apps if a["app_type"] == APP_TYPE_UPD]
-    update_apps_by_version = {int(a["app_version"]): a for a in update_apps}
+    update_apps_by_version = {int(a["app_version"] or 0): a for a in update_apps}
     
     version_list = []
     # Include all versions found in versions.json
