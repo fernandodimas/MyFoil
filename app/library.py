@@ -1654,3 +1654,70 @@ def reidentify_all_files_job():
             job_tracker.fail_job(job_id, str(e))
             return False
 
+
+def version_to_string(version_num):
+    """
+    Convert version number to human-readable string format.
+    
+    Args:
+        version_num: Integer version number (e.g., 131072)
+    
+    Returns:
+        String in format "major.minor.patch" (e.g., "2.0.0")
+    """
+    if not version_num or version_num == 0:
+        return "0.0.0"
+    
+    major = (version_num >> 26) & 0x3F
+    minor = (version_num >> 20) & 0x3F
+    patch = (version_num >> 16) & 0xF
+    return f"{major}.{minor}.{patch}"
+
+
+def get_pending_update_info(title_id):
+    """
+    Get information about the latest available update for a game.
+    
+    Args:
+        title_id: Game title ID (hex format)
+    
+    Returns:
+        Dictionary with version info, or None if no updates available:
+        {
+            "version": 196608,
+            "version_string": "3.0.0",
+            "update_id": "010012345ABC800",
+            "release_date": "2021-11-04"
+        }
+    """
+    import titles as titles_lib
+    
+    try:
+        # Get all available versions from TitleDB
+        available_versions = titles_lib.get_all_existing_versions(title_id)
+        
+        if not available_versions:
+            return None
+        
+        # Sort by version number (descending) to get latest
+        sorted_versions = sorted(available_versions, key=lambda v: v.get("version", 0), reverse=True)
+        latest = sorted_versions[0]
+        
+        # Calculate update app ID (title_id with 800 suffix for updates)
+        # Remove trailing zeros and add '800'
+        base_id = title_id.upper().rstrip('0')
+        update_id = base_id + '800'
+        
+        # Convert version number to string (e.g., 131072 -> "2.0.0")
+        version_string = version_to_string(latest.get("version", 0))
+        
+        return {
+            "version": latest.get("version", 0),
+            "version_string": version_string,
+            "update_id": update_id,
+            "release_date": latest.get("releaseDate") or latest.get("release_date") or "Unknown"
+        }
+    except Exception as e:
+        logger.error(f"Error getting pending update info for {title_id}: {e}")
+        return None
+

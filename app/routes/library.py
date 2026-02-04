@@ -274,6 +274,99 @@ def search_library_api():
     return jsonify({"count": len(results), "results": results})
 
 
+@library_bp.route("/library/outdated-games")
+@access_required("shop")
+def outdated_games_api():
+    """
+    API endpoint que retorna jogos com atualizações pendentes.
+    
+    Returns:
+        JSON com lista de jogos que não possuem a última atualização disponível,
+        incluindo informações sobre a versão pendente e data de lançamento.
+    """
+    # Pagination parameters
+    limit = request.args.get("limit", 100, type=int)
+    offset = request.args.get("offset", 0, type=int)
+    
+    # Validate parameters
+    limit = min(max(1, limit), 500)  # Max 500 per request
+    offset = max(0, offset)
+    
+    try:
+        # Query titles that are NOT up to date but HAVE the base game
+        outdated_titles = Titles.query.filter(
+            Titles.up_to_date == False,
+            Titles.have_base == True
+        ).limit(limit).offset(offset).all()
+        
+        # Get total count for pagination
+        total_count = Titles.query.filter(
+            Titles.up_to_date == False,
+            Titles.have_base == True
+        ).count()
+        
+        games_list = []
+        for title in outdated_titles:
+            try:
+                # Get current owned version
+                owned_apps = Apps.query.filter(
+                    Apps.title_id == title.id,
+                    Apps.owned == True
+                ).all()
+                
+                current_version = max(
+                    [app.app_version for app in owned_apps if app.app_version],
+                    default=0
+                )
+                
+                # Get pending update info
+                pending_info = library.get_pending_update_info(title.title_id)
+                
+                if not pending_info:
+                    # Skip if no update info available
+                    continue
+                
+                # Only include if there's actually a newer version
+                if pending_info["version"] <= current_version:
+                    continue
+                
+                game_entry = {
+                    "id": title.title_id,
+                    "nsuid": title.nsuid or "Unknown",
+                    "name": title.name or f"Unknown ({title.title_id})",
+                    "current_version": current_version,
+                    "current_version_string": library.version_to_string(current_version),
+                    "pending_update": {
+                        "version": pending_info["version"],
+                        "version_string": pending_info["version_string"],
+                        "update_id": pending_info["update_id"],
+                        "release_date": pending_info["release_date"]
+                    }
+                }
+                
+                games_list.append(game_entry)
+                
+            except Exception as e:
+                logger.error(f"Error processing outdated game {title.title_id}: {e}")
+                continue
+        
+        return jsonify({
+            "success": True,
+            "count": len(games_list),
+            "total": total_count,
+            "limit": limit,
+            "offset": offset,
+            "games": games_list
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching outdated games: {e}")
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+
+
 @library_bp.route("/stats/overview")
 @access_required("shop")
 def get_stats_overview():
