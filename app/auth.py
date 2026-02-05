@@ -42,21 +42,26 @@ def access_required(access: str):
             if request.authorization:
                 success, error, is_admin = basic_auth(request)
                 if success:
-                    # For Basic Auth, we need to check permissions manually since current_user isn't set
-                    # basic_auth verifies credentials and shop access
-                    # If access='admin' is required, we check is_admin
                     if access == 'admin' and not is_admin:
                          return 'Forbidden', 403
                     return f(*args, **kwargs)
+
+            # 3. Try Bearer Token Authentication
+            token_valid, _, user_obj = check_api_token(request)
+            if token_valid:
+                # Check permissions using the user object linked to the token
+                if not user_obj.has_access(access):
+                    return 'Forbidden', 403
+                return f(*args, **kwargs)
             
-            # 3. Public access check
+            # 4. Public access check
             if access == 'shop':
                 from settings import load_settings
                 settings = load_settings()
                 if settings.get('shop/public_profile', False):
                      return f(*args, **kwargs)
 
-            # 4. Failed
+            # 5. Failed
             return login_manager.unauthorized()
         return decorated_view
     return _access_required
@@ -93,22 +98,37 @@ def basic_auth(request):
 
     username = auth.username
     password = auth.password
-    user = User.query.filter_by(user=username).first()
-    if user is None:
-        success = False
-        error = f'Unknown user "{username}".'
-    
-    elif not check_password_hash(user.password, password):
-        success = False
-        error = f'Incorrect password for user "{username}".'
-
-    elif not user.has_shop_access():
-        success = False
-        error = f'User "{username}" does not have access to the shop.'
-
     else:
         is_admin = user.has_admin_access()
     return success, error, is_admin
+
+def check_api_token(request):
+    """
+    Validate Bearer token from Authorization header.
+    Returns: (success, error, user_object)
+    """
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return False, "Missing or invalid token", None
+    
+    token_str = auth_header.split(" ")[1]
+    
+    # We need to import ApiToken inside here or rely on 'from db import *' at top
+    # Assuming 'ApiToken' is available via 'from db import *'
+    token = ApiToken.query.filter_by(token=token_str).first()
+    
+    if token:
+        # Update last used timestamp
+        try:
+            from utils import now_utc
+            token.last_used = now_utc()
+            db.session.commit()
+        except:
+            pass # Don't fail auth just because of timestamp update error
+            
+        return True, None, token.user
+        
+    return False, "Invalid token", None
 
 auth_blueprint = Blueprint('auth', __name__)
 
