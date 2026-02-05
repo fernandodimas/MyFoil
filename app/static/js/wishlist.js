@@ -34,66 +34,35 @@ async function loadWishlist() {
         if (!tbody) return;
 
         if (items.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" class="has-text-centered p-6 opacity-50 italic">${t("Sua wishlist está vazia")}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" class="has-text-centered p-6 opacity-50 italic">${t("Sua wishlist está vazia")}</td></tr>`;
             return;
         }
 
         tbody.innerHTML = '';
 
         for (const item of items) {
-            let gameName = item.title_id;
-            let iconUrl = '/static/img/no-icon.png';
             let statusHtml = t('Desconhecido');
             let statusClass = 'has-text-grey';
 
-            try {
-                const gRes = await fetch(`/api/app_info/${item.title_id}`);
-                if (gRes.ok) {
-                    const gData = await gRes.json();
-                    gameName = gData.name || item.title_id;
-                    iconUrl = gData.iconUrl || iconUrl;
+            const rawDate = String(item.release_date || '');
+            const releaseDateStr = rawDate.replace(/-/g, '').slice(0, 8);
+            const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
 
-                    const rawDate = String(gData.release_date || '');
-                    const releaseDateStr = rawDate.replace(/-/g, '');
-                    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-
-                    if (releaseDateStr && releaseDateStr > todayStr) {
-                        statusHtml = t('Em Breve');
-                        statusClass = 'has-text-info';
-                    } else if (releaseDateStr) {
-                        statusHtml = t('Lançado');
-                        statusClass = 'has-text-success';
-                    }
-                }
-            } catch (e) {
-                console.error("Failed to fetch game details", e);
+            if (releaseDateStr && releaseDateStr > todayStr) {
+                statusHtml = t('Em Breve');
+                statusClass = 'has-text-info';
+            } else if (releaseDateStr) {
+                statusHtml = t('Lançado');
+                statusClass = 'has-text-success';
             }
 
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td class="p-1 has-text-centered is-vcentered">
-                    <img src="${iconUrl}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;">
+                    <img src="${item.iconUrl || '/static/img/no-icon.png'}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;" onerror="this.src='/static/img/no-icon.png'">
                 </td>
                 <td class="is-vcentered">
-                    <strong class="is-size-7-mobile is-clickable" onclick="showGameDetails('${item.title_id}')">${escapeHtml(gameName)}</strong>
-                    <p class="is-size-7 font-mono opacity-50">${escapeHtml(item.title_id)}</p>
-                </td>
-                <td class="is-vcentered">
-                    <div class="field has-addons">
-                        <div class="control">
-                            <button class="button is-small is-rounded is-light py-0 px-2" onclick="changePriority('${item.title_id}', ${item.priority - 1})" ${item.priority <= 0 ? 'disabled' : ''}>
-                                <i class="bi bi-chevron-down"></i>
-                            </button>
-                        </div>
-                        <div class="control">
-                            <span class="button is-small is-static px-3 is-size-7">${getPriorityLabel(item.priority)}</span>
-                        </div>
-                        <div class="control">
-                            <button class="button is-small is-rounded is-light py-0 px-2" onclick="changePriority('${item.title_id}', ${item.priority + 1})" ${item.priority >= 3 ? 'disabled' : ''}>
-                                <i class="bi bi-chevron-up"></i>
-                            </button>
-                        </div>
-                    </div>
+                    <strong class="is-size-7-mobile is-clickable" onclick="showGameDetails('${item.title_id}')">${escapeHtml(item.name || 'Unknown')}</strong>
                 </td>
                 <td class="is-vcentered font-mono is-size-7 opacity-70">
                     ${new Date(item.added_date).toLocaleDateString()}
@@ -103,7 +72,7 @@ async function loadWishlist() {
                 </td>
                 <td class="is-vcentered has-text-right">
                     <div class="buttons is-justify-content-flex-end">
-                        <button class="button is-small is-ghost has-text-danger" onclick="removeFromWishlist('${item.title_id}')" title="${t('Remover')}">
+                        <button class="button is-small is-ghost has-text-danger" onclick="removeFromWishlist(${item.id})" title="${t('Remover')}">
                             <i class="bi bi-trash"></i>
                         </button>
                     </div>
@@ -114,11 +83,11 @@ async function loadWishlist() {
     } catch (e) {
         console.error(e);
         const tbody = document.getElementById('wishlistBody');
-        if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="has-text-centered has-text-danger p-6">${t('Erro ao carregar wishlist')}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="has-text-centered has-text-danger p-6">${t('Erro ao carregar wishlist')}</td></tr>`;
     }
 }
 
-function removeFromWishlist(tid) {
+function removeFromWishlist(itemId) {
     confirmAction({
         title: t('Remover da Wishlist'),
         message: t('Deseja realmente remover este item da sua lista de desejos?'),
@@ -126,7 +95,7 @@ function removeFromWishlist(tid) {
         confirmClass: 'is-danger',
         onConfirm: async () => {
             try {
-                const res = await fetch(`/api/wishlist/${tid}`, { method: 'DELETE' });
+                const res = await fetch(`/api/wishlist/${itemId}`, { method: 'DELETE' });
                 if (res.ok) {
                     showToast(t('Item removido da wishlist'), 'success');
                     loadWishlist();
@@ -183,8 +152,15 @@ function searchTitleDBForWishlist() {
             let html = '<div class="list">';
             results.slice(0, 10).forEach(game => {
                 const safeName = escapeHtml(game.name);
+                const gameData = JSON.stringify({
+                    title_id: game.id,
+                    name: game.name,
+                    icon_url: game.iconUrl,
+                    banner_url: game.bannerUrl
+                }).replace(/'/g, "\\'");
+
                 html += `
-                    <div class="list-item is-clickable" onclick="addGameToWishlistFromTitleDB('${game.id}', '${safeName.replace(/'/g, "\\'")}')">
+                    <div class="list-item is-clickable" onclick='addGameToWishlistWithData(${gameData})'>
                         <div class="media">
                             ${game.iconUrl ? `<div class="media-left"><figure class="image is-48x48"><img src="${game.iconUrl}" style="border-radius: 8px;"></figure></div>` : ''}
                             <div class="media-content">
@@ -221,15 +197,15 @@ function searchTitleDBForWishlist() {
     }, 300);
 }
 
-function addGameToWishlistFromTitleDB(titleId, titleName) {
+function addGameToWishlistWithData(data) {
     $.ajax({
         url: '/api/wishlist',
         type: 'POST',
         contentType: 'application/json',
-        data: JSON.stringify({ title_id: titleId }),
+        data: JSON.stringify(data),
         success: (res) => {
             if (res.success) {
-                showToast(`"${titleName}" ${t('adicionado à wishlist!')}`, 'success');
+                showToast(`"${data.name}" ${t('adicionado à wishlist!')}`, 'success');
                 closeModal('addToWishlistModal');
                 loadWishlist();
             } else {

@@ -148,7 +148,7 @@ function renderCardView(games, container) {
                     <div class="date-badge">
                         <i class="bi bi-calendar-check mr-1"></i> ${game.release_date_formatted}
                     </div>
-                    <button class="button is-small is-dark is-rounded border-none shadow-sm" style="position: absolute; top: 8px; right: 8px; z-index: 10; opacity: 0.8;" onclick="event.stopPropagation(); addToWishlistByName('${safeNameJs}', {release_date: '${releaseDate}', id: '${game.id}'})" title="Adicionar à Wishlist">
+                    <button class="button is-small is-dark is-rounded border-none shadow-sm" style="position: absolute; top: 8px; right: 8px; z-index: 10; opacity: 0.8;" onclick="event.stopPropagation(); addToWishlistByName('${safeNameJs}', {release_date: '${releaseDate}', id: '${game.id}', icon_url: '${game.cover_url}', banner_url: '${game.screenshots?.[0]?.url || ''}'})" title="Adicionar à Wishlist">
                         <i class="bi bi-heart"></i>
                     </button>
                 </div>
@@ -191,7 +191,7 @@ function renderListView(games, container) {
             </td>
             <td class="is-vcentered has-text-centered font-mono is-size-7">${game.release_date_formatted}</td>
             <td class="is-vcentered has-text-right p-3">
-                <button class="button is-small is-light" onclick="event.stopPropagation(); addToWishlistByName('${game.name.replace(/'/g, "\\'")}', {release_date: '${game.release_date || ""}', id: '${game.id}'})">
+                <button class="button is-small is-light" onclick="event.stopPropagation(); addToWishlistByName('${game.name.replace(/'/g, "\\'")}', {release_date: '${game.release_date || ""}', id: '${game.id}', icon_url: '${game.cover_url}', banner_url: '${game.screenshots?.[0]?.url || ''}'})">
                     <i class="bi bi-heart mr-1"></i> Wishlist
                 </button>
             </td>
@@ -245,7 +245,7 @@ function showUpcomingDetails(index) {
                         
                         <hr class="my-4 opacity-10">
                         
-                        <button class="button is-primary is-fullwidth" onclick="addToWishlistByName('${game.name.replace(/'/g, "\\'")}', {release_date: '${game.release_date || ""}', id: '${game.id}'})">
+                        <button class="button is-primary is-fullwidth" onclick="addToWishlistByName('${game.name.replace(/'/g, "\\'")}', {release_date: '${game.release_date || ""}', id: '${game.id}', icon_url: '${game.cover_url}', banner_url: '${game.screenshots?.[0]?.url || ''}'})">
                             <i class="bi bi-heart-fill mr-1"></i> Wishlist
                         </button>
                     </div>
@@ -285,10 +285,6 @@ function addToWishlistByName(name, fallbackData = null) {
     const btn = $(event.currentTarget);
     btn.addClass('is-loading');
 
-    const trySearch = (query) => {
-        return $.getJSON(`/api/titledb/search?q=${encodeURIComponent(query)}`);
-    };
-
     const addViaApi = (postData, successMsg) => {
         $.ajax({
             url: '/api/wishlist',
@@ -312,49 +308,59 @@ function addToWishlistByName(name, fallbackData = null) {
         });
     };
 
-    const proceedToAdd = (results) => {
-        // Encontrar correspondência exata ou usar o primeiro resultado
-        const match = results.find(r => r.name.toLowerCase() === name.toLowerCase()) || results[0];
-        addViaApi({ title_id: match.id }, `"${match.name}" ${t('adicionado à wishlist!')}`);
+    if (fallbackData) {
+        // Para a página de Upcoming, enviamos os dados diretamente sem buscar no TitleDB
+        const postData = {
+            title_id: `UPCOMING_${fallbackData.id || Date.now()}`,
+            name: name,
+            release_date: fallbackData.release_date || "",
+            icon_url: fallbackData.icon_url || "",
+            banner_url: fallbackData.banner_url || ""
+        };
+        addViaApi(postData, `"${name}" ${t('adicionado à wishlist!')}`);
+        return;
+    }
+
+    // Fallback para outros lugares que usem apenas o nome
+    const trySearch = (query) => {
+        return $.getJSON(`/api/titledb/search?q=${encodeURIComponent(query)}`);
     };
 
-    const fallbackToAddWithoutSearch = () => {
-        if (fallbackData) {
-            debugLog(`Adicionando sem busca no TitleDB: ${name}`);
-            const postData = {
-                title_id: `UPCOMING_${fallbackData.id || Date.now()}`,
-                name: name,
-                release_date: fallbackData.release_date || ""
-            };
-            addViaApi(postData, `"${name}" ${t('adicionado à wishlist (sem metadados TitleDB)')}`);
-        } else {
-            btn.removeClass('is-loading');
-            showToast(t('Jogo não encontrado no TitleDB. Redirecionando para busca manual...'), 'info');
-            window.location.href = `/wishlist?search=${encodeURIComponent(name)}`;
-        }
+    const proceedToAdd = (results) => {
+        const match = results.find(r => r.name.toLowerCase() === name.toLowerCase()) || results[0];
+        addViaApi({
+            title_id: match.id,
+            name: match.name,
+            icon_url: match.iconUrl,
+            banner_url: match.bannerUrl
+        }, `"${match.name}" ${t('adicionado à wishlist!')}`);
     };
 
     trySearch(name).done(results => {
         if (results && results.length > 0) {
             proceedToAdd(results);
         } else {
-            // Fallback: tenta a primeira parte do nome se contiver delimitadores (ex: ":", "-", "|")
             const parts = name.split(/[:\-|]/);
             if (parts.length > 1 && parts[0].trim().length >= 3) {
                 const shorterName = parts[0].trim();
-                debugLog(`Sem resultados para "${name}", tentando fallback: "${shorterName}"`);
                 trySearch(shorterName).done(fallbackResults => {
                     if (fallbackResults && fallbackResults.length > 0) {
                         proceedToAdd(fallbackResults);
                     } else {
-                        fallbackToAddWithoutSearch();
+                        btn.removeClass('is-loading');
+                        showToast(t('Jogo não encontrado no TitleDB'), 'info');
                     }
-                }).fail(fallbackToAddWithoutSearch);
+                }).fail(() => {
+                    btn.removeClass('is-loading');
+                });
             } else {
-                fallbackToAddWithoutSearch();
+                btn.removeClass('is-loading');
+                showToast(t('Jogo não encontrado no TitleDB'), 'info');
             }
         }
-    }).fail(fallbackToAddWithoutSearch);
+    }).fail(() => {
+        btn.removeClass('is-loading');
+    });
 }
 
 function debounce(func, wait) {

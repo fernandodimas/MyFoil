@@ -279,9 +279,11 @@ class Wishlist(db.Model):
     priority = db.Column(db.Integer, default=0)  # 0-5
     notes = db.Column(db.Text)
     
-    # Novos campos para jogos não identificados no TitleDB (ex: Upcoming)
+    # Novos campos para tornar a wishlist independente do TitleDB
     name = db.Column(db.String)
     release_date = db.Column(db.String)
+    icon_url = db.Column(db.String)
+    banner_url = db.Column(db.String)
 
     # Preferências de ignored (novas colunas)
     ignore_dlc = db.Column(db.Boolean, default=False)

@@ -15,51 +15,44 @@ wishlist_bp = Blueprint("wishlist", __name__, url_prefix="/api")
 @wishlist_bp.route("/wishlist")
 @login_required
 def get_wishlist():
-    """Obtém lista de wishlist do usuário logado - Otimizado com batch queries"""
+    """Obtém lista de wishlist do usuário logado - Agora independente do TitleDB"""
     from constants import APP_TYPE_BASE
 
-    # Buscar todos os itens da wishlist
-    items = Wishlist.query.filter_by(user_id=current_user.id).order_by(Wishlist.priority.desc()).all()
+    # Buscar todos os itens da wishlist (ordenados por data de adição)
+    items = Wishlist.query.filter_by(user_id=current_user.id).order_by(Wishlist.added_date.desc()).all()
 
     if not items:
         return jsonify([])
 
-    # Coletar todos os title_ids
-    title_ids = [item.title_id for item in items]
+    # Coletar todos os title_ids para verificar se já possui na biblioteca
+    title_ids = [item.title_id for item in items if item.title_id]
 
-    # BUSCA EM BATCH: Verificar se usuário possui os jogos na biblioteca (1 query única com JOIN)
-    owned_entries = db.session.query(Titles.title_id).join(Apps).filter(
-        Titles.title_id.in_(title_ids), 
-        Apps.app_type == APP_TYPE_BASE, 
-        Apps.owned == True
-    ).all()
-
-    # Criar mapa para lookup rápido O(1)
-    owned_map = {row[0]: True for row in owned_entries}
+    # Verificar se usuário possui os jogos na biblioteca
+    owned_map = {}
+    if title_ids:
+        owned_entries = db.session.query(Titles.title_id).join(Apps).filter(
+            Titles.title_id.in_(title_ids), 
+            Apps.app_type == APP_TYPE_BASE, 
+            Apps.owned == True
+        ).all()
+        owned_map = {row[0]: True for row in owned_entries}
 
     result = []
     for item in items:
-        # Lookup no mapa (sem query adicional)
-        owned = owned_map.get(item.title_id, False)
-
-        # Se o jogo já está na biblioteca, não mostrar na wishlist (nova regra)
-        if owned:
+        # Se o jogo já está na biblioteca, não mostrar na wishlist
+        if item.title_id and owned_map.get(item.title_id):
             continue
-
-        # Obter informações do título (do cache TitleDB, sem query)
-        title_info = titles.get_game_info(item.title_id) or {}
 
         result.append(
             {
                 "id": item.id,
                 "title_id": item.title_id,
-                "name": title_info.get("name") or item.name or f"Unknown ({item.title_id})",
-                "iconUrl": title_info.get("iconUrl"),
-                "bannerUrl": title_info.get("bannerUrl"),
-                "release_date": title_info.get("releaseDate") or item.release_date,
-                "priority": item.priority,
+                "name": item.name or f"Unknown ({item.title_id})",
+                "iconUrl": item.icon_url or "/static/img/no-icon.png",
+                "bannerUrl": item.banner_url,
+                "release_date": item.release_date,
                 "added_date": item.added_date.isoformat() if item.added_date else None,
-                "owned": False, # Se chegou aqui, owned é obrigatoriamente False
+                "owned": False,
             }
         )
 
@@ -71,39 +64,40 @@ def get_wishlist():
 def add_to_wishlist():
     """Adiciona jogo à wishlist"""
     data = request.json
+    name = data.get("name")
     title_id = data.get("title_id")
 
-    if not title_id:
-        return jsonify({"success": False, "error": "title_id é obrigatório"}), 400
+    if not name and not title_id:
+        return jsonify({"success": False, "error": "Nome ou title_id é obrigatório"}), 400
 
-    existing = Wishlist.query.filter_by(user_id=current_user.id, title_id=title_id).first()
-    if existing:
-        return jsonify({"success": False, "error": "Jogo já está na wishlist"}), 400
+    # Evitar duplicatas por title_id se presente
+    if title_id:
+        existing = Wishlist.query.filter_by(user_id=current_user.id, title_id=title_id).first()
+        if existing:
+            return jsonify({"success": False, "error": "Jogo já está na wishlist"}), 400
 
-    # Verificar se o jogo já está na biblioteca (usando JOIN com Titles)
-    from constants import APP_TYPE_BASE
-    owned = Apps.query.join(Titles).filter(
-        Titles.title_id == title_id, 
-        Apps.app_type == APP_TYPE_BASE, 
-        Apps.owned == True
-    ).first()
-    
-    if owned:
-        return jsonify({"success": False, "error": "Jogo já está na sua biblioteca"}), 400
-
-    priority = data.get("priority", 0)
-    priority = max(0, min(5, priority))
-    
-    # Metadados opcionais (para jogos não encontrados no TitleDB)
-    name = data.get("name")
-    release_date = data.get("release_date")
+        # Verificar se está na biblioteca
+        from constants import APP_TYPE_BASE
+        owned = Apps.query.join(Titles).filter(
+            Titles.title_id == title_id, 
+            Apps.app_type == APP_TYPE_BASE, 
+            Apps.owned == True
+        ).first()
+        if owned:
+            return jsonify({"success": False, "error": "Jogo já está na sua biblioteca"}), 400
+    elif name:
+        # Evitar duplicatas por nome se não tiver title_id
+        existing = Wishlist.query.filter_by(user_id=current_user.id, name=name).first()
+        if existing:
+            return jsonify({"success": False, "error": "Jogo já está na wishlist"}), 400
 
     item = Wishlist(
         user_id=current_user.id, 
         title_id=title_id, 
-        priority=priority,
         name=name,
-        release_date=release_date
+        release_date=data.get("release_date"),
+        icon_url=data.get("icon_url"),
+        banner_url=data.get("banner_url")
     )
     db.session.add(item)
     db.session.commit()
@@ -114,26 +108,15 @@ def add_to_wishlist():
 @wishlist_bp.route("/wishlist/<title_id>", methods=["PUT"])
 @login_required
 def update_wishlist_item(title_id):
-    """Atualiza prioridade de um item da wishlist"""
-    data = request.json
-    priority = data.get("priority", 0)
-    priority = max(0, min(5, priority))
-
-    item = Wishlist.query.filter_by(user_id=current_user.id, title_id=title_id).first()
-    if not item:
-        return jsonify({"success": False, "error": "Item não encontrado"}), 404
-
-    item.priority = priority
-    db.session.commit()
-
+    """Atualiza um item da wishlist (Priority removida)"""
     return jsonify({"success": True})
 
 
-@wishlist_bp.route("/wishlist/<title_id>", methods=["DELETE"])
+@wishlist_bp.route("/wishlist/<int:item_id>", methods=["DELETE"])
 @login_required
-def remove_from_wishlist(title_id):
-    """Remove item da wishlist"""
-    item = Wishlist.query.filter_by(user_id=current_user.id, title_id=title_id).first()
+def remove_from_wishlist(item_id):
+    """Remove item da wishlist pelo ID do banco"""
+    item = Wishlist.query.filter_by(user_id=current_user.id, id=item_id).first()
     if not item:
         return jsonify({"success": False, "error": "Item não encontrado"}), 404
 
@@ -155,12 +138,10 @@ def export_wishlist():
         if format_type == "json":
             result = []
             for item in items:
-                title_info = titles.get_game_info(item.title_id) or {}
                 result.append(
                     {
                         "title_id": item.title_id,
-                        "name": title_info.get("name", "Unknown"),
-                        "priority": item.priority,
+                        "name": item.name or "Unknown",
                         "added_date": item.added_date.isoformat() if item.added_date else None,
                     }
                 )
@@ -169,14 +150,12 @@ def export_wishlist():
         elif format_type == "csv":
             output = StringIO()
             writer = csv.writer(output)
-            writer.writerow(["title_id", "name", "priority", "added_date"])
+            writer.writerow(["title_id", "name", "added_date"])
             for item in items:
-                title_info = titles.get_game_info(item.title_id) or {}
                 writer.writerow(
                     [
-                        item.title_id,
-                        title_info.get("name", "Unknown"),
-                        item.priority,
+                        item.title_id or "",
+                        item.name or "Unknown",
                         item.added_date.isoformat() if item.added_date else "",
                     ]
                 )
@@ -189,11 +168,10 @@ def export_wishlist():
         elif format_type == "html":
             html = "<html><head><title>Wishlist Export</title></head><body>"
             html += "<h1>Wishlist</h1>"
-            html += '<table border="1"><tr><th>Title ID</th><th>Name</th><th>Priority</th><th>Added Date</th></tr>'
+            html += '<table border="1"><tr><th>Name</th><th>Added Date</th></tr>'
             for item in items:
-                title_info = titles.get_game_info(item.title_id) or {}
-                html += f"<tr><td>{item.title_id}</td><td>{title_info.get('name', 'Unknown')}</td>"
-                html += f"<td>{item.priority}</td><td>{item.added_date}</td></tr>"
+                html += f"<tr><td>{item.name or 'Unknown'}</td>"
+                html += f"<td>{item.added_date}</td></tr>"
             html += "</table></body></html>"
             return Response(html, mimetype="text/html")
 
