@@ -1072,7 +1072,8 @@ def remove_titles_without_owned_apps():
     owned_titles_subquery = db.session.query(Apps.title_id).filter(Apps.owned == True).distinct().subquery()
     
     # Find Titles that are NOT in the owned_titles_subquery
-    titles_to_delete_query = db.session.query(Titles).filter(~Titles.id.in_(owned_titles_subquery))
+    # Use select() explicitly to avoid SAWarning
+    titles_to_delete_query = db.session.query(Titles).filter(~Titles.id.in_(db.select(owned_titles_subquery.c.title_id)))
     
     titles_to_delete = [t.id for t in titles_to_delete_query.all()]
     titles_removed = len(titles_to_delete)
