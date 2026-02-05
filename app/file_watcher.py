@@ -35,6 +35,15 @@ class Watcher:
     def run(self):
         """Start observer and health monitoring"""
         try:
+            # IMPORTANT: Re-initialize observer if it was stopped.
+            # Watchdog observers are threads and cannot be restarted once stopped.
+            if self.observer is None or not self.observer.is_alive():
+                 self.observer = PollingObserver(timeout=0.5)
+                 # Re-schedule all directories
+                 for directory in self.directories:
+                     task = self.observer.schedule(self.event_handler, directory, recursive=True)
+                     self.scheduler_map[directory] = task
+            
             self.observer.start()
             self.is_running = True
             logger.info("Watchdog observer started successfully.")
@@ -46,6 +55,8 @@ class Watcher:
             self.error_count += 1
             self.last_error = str(e)
             logger.error(f"Failed to start watchdog observer: {e}")
+            # Reset observer so it can be recreated on next attempt
+            self.observer = None
             raise
 
     def stop(self):
@@ -59,12 +70,15 @@ class Watcher:
         
         # Stop observer
         try:
-            self.observer.stop()
-            self.observer.join(timeout=10)
+            if self.observer:
+                self.observer.stop()
+                self.observer.join(timeout=10)
             self.is_running = False
             logger.info("Watchdog observer stopped successfully.")
         except Exception as e:
             logger.error(f"Error stopping observer: {e}")
+        finally:
+            self.observer = None # Clear it so run() recreates it
 
     def _start_health_monitoring(self):
         """Start background health check thread"""

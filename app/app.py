@@ -20,6 +20,8 @@ flask.cli.show_server_banner = lambda *args: None
 logging.getLogger("engineio.server").setLevel(logging.WARNING)
 logging.getLogger("socketio.server").setLevel(logging.WARNING)
 logging.getLogger("werkzeug").setLevel(logging.WARNING)
+logging.getLogger("geventwebsocket.handler").setLevel(logging.WARNING)
+logging.getLogger("geventwebsocket.server").setLevel(logging.WARNING)
 
 # Core Flask imports
 from flask import Flask, render_template, Blueprint, jsonify
