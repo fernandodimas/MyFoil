@@ -4,7 +4,7 @@ Wishlist Routes - Endpoints para gerenciar lista de desejos
 
 from flask import Blueprint, jsonify, request, Response
 from flask_login import current_user, login_required
-from db import db, Apps, Wishlist, WishlistIgnore
+from db import db, Apps, Titles, Wishlist, WishlistIgnore
 import titles
 import csv
 from io import StringIO
@@ -27,13 +27,15 @@ def get_wishlist():
     # Coletar todos os title_ids
     title_ids = [item.title_id for item in items]
 
-    # BUSCA EM BATCH: Verificar se usuário possui os jogos na biblioteca (1 query única)
-    owned_entries = Apps.query.filter(
-        Apps.title_id.in_(title_ids), Apps.app_type == APP_TYPE_BASE, Apps.owned == True
+    # BUSCA EM BATCH: Verificar se usuário possui os jogos na biblioteca (1 query única com JOIN)
+    owned_entries = db.session.query(Titles.title_id).join(Apps).filter(
+        Titles.title_id.in_(title_ids), 
+        Apps.app_type == APP_TYPE_BASE, 
+        Apps.owned == True
     ).all()
 
     # Criar mapa para lookup rápido O(1)
-    owned_map = {entry.title_id: True for entry in owned_entries}
+    owned_map = {row[0]: True for row in owned_entries}
 
     result = []
     for item in items:
@@ -77,9 +79,14 @@ def add_to_wishlist():
     if existing:
         return jsonify({"success": False, "error": "Jogo já está na wishlist"}), 400
 
-    # Verificar se o jogo já está na biblioteca
+    # Verificar se o jogo já está na biblioteca (usando JOIN com Titles)
     from constants import APP_TYPE_BASE
-    owned = Apps.query.filter_by(title_id=title_id, app_type=APP_TYPE_BASE, owned=True).first()
+    owned = Apps.query.join(Titles).filter(
+        Titles.title_id == title_id, 
+        Apps.app_type == APP_TYPE_BASE, 
+        Apps.owned == True
+    ).first()
+    
     if owned:
         return jsonify({"success": False, "error": "Jogo já está na sua biblioteca"}), 400
 
