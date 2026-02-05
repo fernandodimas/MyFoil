@@ -1347,6 +1347,7 @@ def get_game_info_item(tid, title_data):
 
     # Merge enriched metadata from TitleMetadata table for library cards
     from db import TitleMetadata
+    # API Genres and Tags
     remote_meta = TitleMetadata.query.filter_by(title_id=tid).all()
     for meta in remote_meta:
         if meta.rating and not game.get("metacritic_score"):
@@ -1357,45 +1358,48 @@ def get_game_info_item(tid, title_data):
             game["rawg_rating"] = meta.rating / 20.0
         
         # API Genres and Tags
-        if meta.genres:
+        if meta.genres and isinstance(meta.genres, list):
             existing_cats = set(game.get("category", []) if isinstance(game.get("category"), list) else [])
             for g in meta.genres:
-                if g not in existing_cats:
+                if g and g not in existing_cats:
                     game.setdefault("category", []).append(g)
 
-        if meta.tags:
+        if meta.tags and isinstance(meta.tags, list):
             existing_tags = set(game.get("tags", []) if isinstance(game.get("tags"), list) else [])
             for t in meta.tags:
-                if t not in existing_tags:
+                if t and t not in existing_tags:
                     game.setdefault("tags", []).append(t)
 
     # API Genres and Tags from Title Object (fallback/merged)
-    api_genres = title_data.get("genres_json") or []
-    if api_genres:
+    api_genres = title_data.get("genres_json")
+    if api_genres and isinstance(api_genres, list):
         existing_cats = set(game.get("category", []) if isinstance(game.get("category"), list) else [])
         for g in api_genres:
-            if g not in existing_cats:
+            if g and g not in existing_cats:
                 game.setdefault("category", []).append(g)
 
-    api_tags = title_data.get("tags_json") or []
-    if api_tags:
+    api_tags = title_data.get("tags_json")
+    if api_tags and isinstance(api_tags, list):
         existing_tags = set(game.get("tags", []) if isinstance(game.get("tags"), list) else [])
         for t in api_tags:
-            if t not in existing_tags:
+            if t and t not in existing_tags:
                 game.setdefault("tags", []).append(t)
 
     # API Screenshots
-    api_screenshots = title_data.get("screenshots_json") or []
-    if api_screenshots:
+    api_screenshots = title_data.get("screenshots_json")
+    if api_screenshots and isinstance(api_screenshots, list):
         # Normalize existing screenshots to URLs for comparison
         existing_urls = set()
-        for s in game.get("screenshots", []):
-            if isinstance(s, dict):
-                existing_urls.add(s.get("url"))
-            elif isinstance(s, str):
-                existing_urls.add(s)
+        current_screenshots = game.get("screenshots", [])
+        if isinstance(current_screenshots, list):
+            for s in current_screenshots:
+                if isinstance(s, dict):
+                    existing_urls.add(s.get("url"))
+                elif isinstance(s, str):
+                    existing_urls.add(s)
 
         for s in api_screenshots:
+            if not s: continue
             s_url = s.get("url") if isinstance(s, dict) else s
             if s_url and s_url not in existing_urls:
                 game.setdefault("screenshots", []).append(s)
