@@ -755,8 +755,12 @@ def get_all_titles_api():
 @access_required("shop")
 def get_game_custom_info(tid):
     """Obter informações customizadas do jogo"""
-    info = titles.get_custom_title_info(tid)
-    return jsonify({"success": True, "data": info})
+    try:
+        info = titles.get_custom_title_info(tid)
+        return jsonify({"success": True, "data": info})
+    except Exception as e:
+        logger.error(f"Error in get_game_custom_info for {tid}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @system_bp.route("/games/<tid>/custom", methods=["POST"])

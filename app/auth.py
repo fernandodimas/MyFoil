@@ -58,7 +58,7 @@ def access_required(access: str):
             if access == 'shop':
                 from settings import load_settings
                 settings = load_settings()
-                if settings.get('shop/public_profile', False):
+                if settings.get('shop', {}).get('public_profile', False):
                      return f(*args, **kwargs)
 
             # 5. Failed
