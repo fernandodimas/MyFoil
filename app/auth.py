@@ -32,19 +32,32 @@ def access_required(access: str):
                 # Auth disabled, request ok
                 return f(*args, **kwargs)
 
-            if not current_user.is_authenticated:
-                # return unauthorized_json()
-                # Check for public profile setting
-                if access == 'shop':
-                    from settings import load_settings
-                    settings = load_settings()
-                    if settings.get('shop/public_profile', False):
-                        return f(*args, **kwargs)
-                return login_manager.unauthorized()
+            # 1. Try Session Authentication (Browser)
+            if current_user.is_authenticated:
+                if not current_user.has_access(access):
+                    return 'Forbidden', 403
+                return f(*args, **kwargs)
 
-            if not current_user.has_access(access):
-                return 'Forbidden', 403
-            return f(*args, **kwargs)
+            # 2. Try Basic Authentication (API/Automation)
+            if request.authorization:
+                success, error, is_admin = basic_auth(request)
+                if success:
+                    # For Basic Auth, we need to check permissions manually since current_user isn't set
+                    # basic_auth verifies credentials and shop access
+                    # If access='admin' is required, we check is_admin
+                    if access == 'admin' and not is_admin:
+                         return 'Forbidden', 403
+                    return f(*args, **kwargs)
+            
+            # 3. Public access check
+            if access == 'shop':
+                from settings import load_settings
+                settings = load_settings()
+                if settings.get('shop/public_profile', False):
+                     return f(*args, **kwargs)
+
+            # 4. Failed
+            return login_manager.unauthorized()
         return decorated_view
     return _access_required
 
