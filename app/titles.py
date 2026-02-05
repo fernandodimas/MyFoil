@@ -1023,7 +1023,7 @@ def identify_file(filepath):
     if not contents and not success:
         # Fallback to filename identification if CNMT failed
         logger.debug(f"Falling back to filename identification for {filename}")
-        app_id, title_id, app_type, version, error = identify_file_from_filename(filename)
+        app_id, title_id, app_type, version, f_error = identify_file_from_filename(filename)
         if title_id:
             logger.debug(f"Filename identification success for {filename}: {title_id}")
             contents = [
@@ -1035,7 +1035,12 @@ def identify_file(filepath):
                 }
             ]
             identification = "filename"
-            success = True  # Consider it a success if we got something from filename
+            success = True  
+            error = "" # Success in fallback should clear the error
+
+    # Final cleanup of the error string if we found something
+    if contents and success:
+        error = ""
 
     return identification, success, contents, error
 

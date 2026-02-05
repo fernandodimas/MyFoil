@@ -106,6 +106,7 @@ flask_app = create_app_context()
 @celery.task(name="tasks.scan_library_async")
 def scan_library_async(library_path):
     """Full library scan in background"""
+    logger.info("SCAN_LIBRARY_TASK_RECEIVED", path=library_path)
     with flask_app.app_context():
         import time
         
@@ -207,7 +208,7 @@ def scan_all_libraries_async():
         import time
 
         # Recreate emitter fresh for THIS task execution
-        logger.info("task_execution_started", task="scan_all_libraries_async")
+        logger.info("SCAN_ALL_LIBRARIES_TASK_STARTING")
         job_tracker.set_emitter(get_socketio_emitter())
 
         job_id = f"scan_all_{int(time.time())}"
