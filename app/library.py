@@ -500,7 +500,7 @@ def identify_single_file(filepath):
         
         # Identify file
         logger.info(f"Identifying single file: {file_obj.filename}")
-        identification, success, contents, error = titles_lib.identify_file(filepath)
+        identification, success, contents, error, suggested_name = titles_lib.identify_file(filepath)
         
         if not success:
              logger.warning(f"Failed to identify file (skipping): {filepath} - Error: {error}")
@@ -514,7 +514,7 @@ def identify_single_file(filepath):
             # Add title IDs to database
             title_ids = list(dict.fromkeys([c["title_id"] for c in contents]))
             for title_id in title_ids:
-                add_title_id_in_db(title_id)
+                add_title_id_in_db(title_id, name=suggested_name)
             
             # Create Apps records
             nb_content = 0
@@ -652,7 +652,7 @@ def identify_library_files(library):
 
             # Heavy I/O/CPU operation
             # This runs in OS thread. If it's CPU intensive, it holds GIL.
-            identification, success, file_contents, error = titles_lib.identify_file(filepath)
+            identification, success, file_contents, error, suggested_name = titles_lib.identify_file(filepath)
             
             # CRITICAL: Sleep briefly to force GIL release so MainThread (gevent loop) can run
             # Reduced to 10ms to improve speed while maintaining responsiveness
@@ -661,10 +661,10 @@ def identify_library_files(library):
             # Gevent yield (for good measure, though running in thread)
             gevent.sleep(0)
             
-            return (file_id, filepath, filename, success, file_contents, error, identification)
+            return (file_id, filepath, filename, success, file_contents, error, identification, suggested_name)
         except Exception as e:
             logger.error(f"Worker identification error for {filename}: {str(e)}")
-            return (file_id, filepath, filename, False, None, str(e), None)
+            return (file_id, filepath, filename, False, None, str(e), None, None)
 
     try:
         # Prepare data for pool
@@ -689,7 +689,7 @@ def identify_library_files(library):
                 return
 
             # Unpack result
-            file_id, filepath, filename, success, file_contents, error, identification_type = result
+            file_id, filepath, filename, success, file_contents, error, identification_type, suggested_name = result
 
             processed_count += 1
             
@@ -719,7 +719,7 @@ def identify_library_files(library):
                     # Add title IDs to DB
                     title_ids = list(dict.fromkeys([c["title_id"] for c in file_contents]))
                     for title_id in title_ids:
-                        add_title_id_in_db(title_id)
+                        add_title_id_in_db(title_id, name=suggested_name)
 
                     nb_content = 0
                     for file_content in file_contents:
@@ -1217,14 +1217,19 @@ def get_game_info_item(tid, title_data):
     # Base info from TitleDB
     info = titles_lib.get_game_info(tid)
     if not info:
-        # Fallback: find a filename from associated files if possible
-        display_name = f"Unknown ({tid})"
-        if all_title_apps:
-            # Try to find a file from any app associated with this title
-            for app_meta in all_title_apps:
-                if app_meta.get('files') and len(app_meta['files']) > 0:
-                    display_name = os.path.basename(app_meta['files'][0]['filepath'])
-                    break
+        # Fallback 1: Use name from database (could be suggested name from identification)
+        db_name = title_data.get("name")
+        if db_name and "Unknown" not in db_name:
+            display_name = db_name
+        else:
+            # Fallback 2: find a filename from associated files if possible
+            display_name = f"Unknown ({tid})"
+            if all_title_apps:
+                # Try to find a file from any app associated with this title
+                for app_meta in all_title_apps:
+                    if app_meta.get('files') and len(app_meta['files']) > 0:
+                        display_name = os.path.basename(app_meta['files'][0]['filepath'])
+                        break
         info = {"name": display_name, "iconUrl": "", "publisher": "Unknown"}
 
     game = info.copy()

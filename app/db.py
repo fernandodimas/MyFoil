@@ -278,6 +278,10 @@ class Wishlist(db.Model):
     added_date = db.Column(db.DateTime, default=now_utc)
     priority = db.Column(db.Integer, default=0)  # 0-5
     notes = db.Column(db.Text)
+    
+    # Novos campos para jogos não identificados no TitleDB (ex: Upcoming)
+    name = db.Column(db.String)
+    release_date = db.Column(db.String)
 
     # Preferências de ignored (novas colunas)
     ignore_dlc = db.Column(db.Boolean, default=False)
@@ -580,6 +584,27 @@ def init_db(app):
                     if modified:
                         conn.commit()
                         logger.info("Database schema updated with new metadata columns.")
+
+                    # Check wishlist table columns (2026-02-05)
+                    wishlist_cols = [c["name"] for c in inspector.get_columns("wishlist")]
+                    wishlist_extra_cols = [
+                        ("name", "TEXT"),
+                        ("release_date", "TEXT"),
+                    ]
+                    
+                    wishlist_extra_modified = False
+                    for col_name, col_type in wishlist_extra_cols:
+                        if col_name not in wishlist_cols:
+                            logger.info(f"Adding missing column {col_name} to wishlist table...")
+                            try:
+                                conn.execute(text(f"ALTER TABLE wishlist ADD COLUMN {col_name} {col_type}"))
+                                wishlist_extra_modified = True
+                            except Exception as e:
+                                logger.error(f"Failed to add column {col_name} to wishlist: {e}")
+                    
+                    if wishlist_extra_modified:
+                        conn.commit()
+                        logger.info("Database schema updated with wishlist metadata columns.")
 
                     # Check wishlist table columns (2026-01-16)
                     wishlist_cols = [c["name"] for c in inspector.get_columns("wishlist")]
@@ -937,17 +962,24 @@ def get_title_id_db_id(title_id):
     return None
 
 
-def add_title_id_in_db(title_id):
+def add_title_id_in_db(title_id, name=None):
     existing_title = Titles.query.filter_by(title_id=title_id).first()
 
     if not existing_title:
         try:
-            new_title = Titles(title_id=title_id, added_at=now_utc())
+            new_title = Titles(title_id=title_id, added_at=now_utc(), name=name)
             db.session.add(new_title)
             db.session.flush()
         except Exception:
             db.session.rollback()
             # Race condition or error, try to fetch again if needed
+            existing_title = Titles.query.filter_by(title_id=title_id).first()
+            if existing_title and name and not existing_title.name:
+                existing_title.name = name
+                db.session.commit()
+    elif name and not existing_title.name:
+        existing_title.name = name
+        db.session.commit()
             pass
 
 

@@ -763,8 +763,13 @@ def identify_appId(app_id):
 
     global _cnmts_db, _dlc_map
     if _cnmts_db is None:
-        logger.error("cnmts_db is not loaded. Call load_titledb first.")
-        return None, None
+        # Heuristic fallback if DB is not loaded
+        if app_id.endswith("000"):
+            return app_id.upper(), APP_TYPE_BASE
+        elif app_id.endswith("800"):
+            return get_title_id_from_app_id(app_id, APP_TYPE_UPD), APP_TYPE_UPD
+        else:
+            return get_title_id_from_app_id(app_id, APP_TYPE_DLC), APP_TYPE_DLC
 
     # Strategy 1: Direct lookup in cnmts_db (usually keyed by Base Title ID)
     if app_id in _cnmts_db:
@@ -1041,8 +1046,16 @@ def identify_file(filepath):
     # Final cleanup of the error string if we found something
     if contents and success:
         error = ""
+        
+    # Extract suggested name from filename (part before first bracket)
+    suggested_name = None
+    if contents and success:
+        # "Game Name [ID][v0].nsp" -> "Game Name"
+        name_part = filename.split('[')[0].strip()
+        if name_part and name_part != filename:
+            suggested_name = name_part
 
-    return identification, success, contents, error
+    return identification, success, contents, error, suggested_name
 
 
 def get_game_info(title_id):

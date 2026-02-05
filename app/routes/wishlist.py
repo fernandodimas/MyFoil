@@ -53,9 +53,10 @@ def get_wishlist():
             {
                 "id": item.id,
                 "title_id": item.title_id,
-                "name": title_info.get("name", f"Unknown ({item.title_id})"),
+                "name": title_info.get("name") or item.name or f"Unknown ({item.title_id})",
                 "iconUrl": title_info.get("iconUrl"),
                 "bannerUrl": title_info.get("bannerUrl"),
+                "release_date": title_info.get("releaseDate") or item.release_date,
                 "priority": item.priority,
                 "added_date": item.added_date.isoformat() if item.added_date else None,
                 "owned": False, # Se chegou aqui, owned é obrigatoriamente False
@@ -92,8 +93,18 @@ def add_to_wishlist():
 
     priority = data.get("priority", 0)
     priority = max(0, min(5, priority))
+    
+    # Metadados opcionais (para jogos não encontrados no TitleDB)
+    name = data.get("name")
+    release_date = data.get("release_date")
 
-    item = Wishlist(user_id=current_user.id, title_id=title_id, priority=priority)
+    item = Wishlist(
+        user_id=current_user.id, 
+        title_id=title_id, 
+        priority=priority,
+        name=name,
+        release_date=release_date
+    )
     db.session.add(item)
     db.session.commit()
 

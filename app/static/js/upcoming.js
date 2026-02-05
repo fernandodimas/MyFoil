@@ -136,6 +136,7 @@ function renderCardView(games, container) {
         const genres = (game.genres || []).map(g => `<span class="tag is-dark is-light is-size-7 mr-1 mb-1">${g.name}</span>`).join('');
 
         const safeNameJs = game.name.replace(/'/g, "\\'");
+        const releaseDate = game.release_date || "";
         const card = document.createElement('div');
         card.className = 'grid-item';
         card.innerHTML = `
@@ -147,7 +148,7 @@ function renderCardView(games, container) {
                     <div class="date-badge">
                         <i class="bi bi-calendar-check mr-1"></i> ${game.release_date_formatted}
                     </div>
-                    <button class="button is-small is-dark is-rounded border-none shadow-sm" style="position: absolute; top: 8px; right: 8px; z-index: 10; opacity: 0.8;" onclick="event.stopPropagation(); addToWishlistByName('${safeNameJs}')" title="Adicionar à Wishlist">
+                    <button class="button is-small is-dark is-rounded border-none shadow-sm" style="position: absolute; top: 8px; right: 8px; z-index: 10; opacity: 0.8;" onclick="event.stopPropagation(); addToWishlistByName('${safeNameJs}', {release_date: '${releaseDate}', id: '${game.id}'})" title="Adicionar à Wishlist">
                         <i class="bi bi-heart"></i>
                     </button>
                 </div>
@@ -190,7 +191,7 @@ function renderListView(games, container) {
             </td>
             <td class="is-vcentered has-text-centered font-mono is-size-7">${game.release_date_formatted}</td>
             <td class="is-vcentered has-text-right p-3">
-                <button class="button is-small is-light" onclick="event.stopPropagation(); addToWishlistByName('${game.name.replace(/'/g, "\\'")}')">
+                <button class="button is-small is-light" onclick="event.stopPropagation(); addToWishlistByName('${game.name.replace(/'/g, "\\'")}', {release_date: '${game.release_date || ""}', id: '${game.id}'})">
                     <i class="bi bi-heart mr-1"></i> Wishlist
                 </button>
             </td>
@@ -244,7 +245,7 @@ function showUpcomingDetails(index) {
                         
                         <hr class="my-4 opacity-10">
                         
-                        <button class="button is-primary is-fullwidth" onclick="addToWishlistByName('${game.name.replace(/'/g, "\\'")}')">
+                        <button class="button is-primary is-fullwidth" onclick="addToWishlistByName('${game.name.replace(/'/g, "\\'")}', {release_date: '${game.release_date || ""}', id: '${game.id}'})">
                             <i class="bi bi-heart-fill mr-1"></i> Wishlist
                         </button>
                     </div>
@@ -280,7 +281,7 @@ function showUpcomingDetails(index) {
     openModal('upcomingDetailsModal');
 }
 
-function addToWishlistByName(name) {
+function addToWishlistByName(name, fallbackData = null) {
     const btn = $(event.currentTarget);
     btn.addClass('is-loading');
 
@@ -288,35 +289,49 @@ function addToWishlistByName(name) {
         return $.getJSON(`/api/titledb/search?q=${encodeURIComponent(query)}`);
     };
 
-    const proceedToAdd = (results) => {
-        btn.removeClass('is-loading');
-        // Encontrar correspondência exata ou usar o primeiro resultado
-        const match = results.find(r => r.name.toLowerCase() === name.toLowerCase()) || results[0];
-
+    const addViaApi = (postData, successMsg) => {
         $.ajax({
             url: '/api/wishlist',
             type: 'POST',
             contentType: 'application/json',
-            data: JSON.stringify({ title_id: match.id }),
+            data: JSON.stringify(postData),
             success: (res) => {
+                btn.removeClass('is-loading');
                 if (res.success) {
-                    showToast(`"${match.name}" ${t('adicionado à wishlist!')}`, 'success');
+                    showToast(successMsg, 'success');
                     btn.removeClass('is-dark').addClass('is-danger').html('<i class="bi bi-heart-fill"></i>');
                 } else {
                     showToast(res.error || t('Erro ao adicionar'), 'error');
                 }
             },
             error: (xhr) => {
+                btn.removeClass('is-loading');
                 const error = xhr.responseJSON?.error || t('Erro ao adicionar');
                 showToast(error, 'error');
             }
         });
     };
 
-    const redirectToManualSearch = () => {
-        btn.removeClass('is-loading');
-        showToast(t('Jogo não encontrado no TitleDB. Redirecionando para busca manual...'), 'info');
-        window.location.href = `/wishlist?search=${encodeURIComponent(name)}`;
+    const proceedToAdd = (results) => {
+        // Encontrar correspondência exata ou usar o primeiro resultado
+        const match = results.find(r => r.name.toLowerCase() === name.toLowerCase()) || results[0];
+        addViaApi({ title_id: match.id }, `"${match.name}" ${t('adicionado à wishlist!')}`);
+    };
+
+    const fallbackToAddWithoutSearch = () => {
+        if (fallbackData) {
+            debugLog(`Adicionando sem busca no TitleDB: ${name}`);
+            const postData = {
+                title_id: `UPCOMING_${fallbackData.id || Date.now()}`,
+                name: name,
+                release_date: fallbackData.release_date || ""
+            };
+            addViaApi(postData, `"${name}" ${t('adicionado à wishlist (sem metadados TitleDB)')}`);
+        } else {
+            btn.removeClass('is-loading');
+            showToast(t('Jogo não encontrado no TitleDB. Redirecionando para busca manual...'), 'info');
+            window.location.href = `/wishlist?search=${encodeURIComponent(name)}`;
+        }
     };
 
     trySearch(name).done(results => {
@@ -332,14 +347,14 @@ function addToWishlistByName(name) {
                     if (fallbackResults && fallbackResults.length > 0) {
                         proceedToAdd(fallbackResults);
                     } else {
-                        redirectToManualSearch();
+                        fallbackToAddWithoutSearch();
                     }
-                }).fail(redirectToManualSearch);
+                }).fail(fallbackToAddWithoutSearch);
             } else {
-                redirectToManualSearch();
+                fallbackToAddWithoutSearch();
             }
         }
-    }).fail(redirectToManualSearch);
+    }).fail(fallbackToAddWithoutSearch);
 }
 
 function debounce(func, wait) {
