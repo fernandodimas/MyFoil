@@ -175,11 +175,10 @@ function searchTitleDBForWishlist() {
 
     clearTimeout(wishlistSearchTimeout);
     wishlistSearchTimeout = setTimeout(() => {
-        $.getJSON(`/api/titledb/search?q=${encodeURIComponent(query)}`, (results) => {
-            if (!results || results.length === 0) {
-                $('#wishlistSearchResults').html(`<p class="has-text-centered py-4 opacity-50">${t('Nenhum jogo encontrado')}</p>`);
-                return;
-            }
+        const trySearch = (q) => $.getJSON(`/api/titledb/search?q=${encodeURIComponent(q)}`);
+
+        const renderResults = (results) => {
+            if (!results || results.length === 0) return false;
 
             let html = '<div class="list">';
             results.slice(0, 10).forEach(game => {
@@ -198,6 +197,24 @@ function searchTitleDBForWishlist() {
             });
             html += '</div>';
             $('#wishlistSearchResults').html(html);
+            return true;
+        };
+
+        trySearch(query).done(results => {
+            if (!renderResults(results)) {
+                // Fallback: try shorter query if it contains delimiters
+                const parts = query.split(/[:\-|]/);
+                if (parts.length > 1 && parts[0].trim().length >= 3) {
+                    const shorter = parts[0].trim();
+                    trySearch(shorter).done(fallbackResults => {
+                        if (!renderResults(fallbackResults)) {
+                            $('#wishlistSearchResults').html(`<p class="has-text-centered py-4 opacity-50">${t('Nenhum jogo encontrado')}</p>`);
+                        }
+                    });
+                } else {
+                    $('#wishlistSearchResults').html(`<p class="has-text-centered py-4 opacity-50">${t('Nenhum jogo encontrado')}</p>`);
+                }
+            }
         }).fail(() => {
             $('#wishlistSearchResults').html(`<p class="has-text-centered py-4 has-text-danger">${t('Erro ao buscar. Verifique o console.')}</p>`);
         });

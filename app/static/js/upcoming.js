@@ -135,6 +135,7 @@ function renderCardView(games, container) {
     games.forEach((game, index) => {
         const genres = (game.genres || []).map(g => `<span class="tag is-dark is-light is-size-7 mr-1 mb-1">${g.name}</span>`).join('');
 
+        const safeNameJs = game.name.replace(/'/g, "\\'");
         const card = document.createElement('div');
         card.className = 'grid-item';
         card.innerHTML = `
@@ -146,7 +147,7 @@ function renderCardView(games, container) {
                     <div class="date-badge">
                         <i class="bi bi-calendar-check mr-1"></i> ${game.release_date_formatted}
                     </div>
-                    <button class="button is-small is-dark is-rounded border-none shadow-sm" style="position: absolute; top: 8px; right: 8px; z-index: 10; opacity: 0.8;" onclick="event.stopPropagation(); addToWishlistByName('${game.name}')" title="Adicionar à Wishlist">
+                    <button class="button is-small is-dark is-rounded border-none shadow-sm" style="position: absolute; top: 8px; right: 8px; z-index: 10; opacity: 0.8;" onclick="event.stopPropagation(); addToWishlistByName('${safeNameJs}')" title="Adicionar à Wishlist">
                         <i class="bi bi-heart"></i>
                     </button>
                 </div>
@@ -189,7 +190,7 @@ function renderListView(games, container) {
             </td>
             <td class="is-vcentered has-text-centered font-mono is-size-7">${game.release_date_formatted}</td>
             <td class="is-vcentered has-text-right p-3">
-                <button class="button is-small is-light" onclick="event.stopPropagation(); addToWishlistByName('${game.name}')">
+                <button class="button is-small is-light" onclick="event.stopPropagation(); addToWishlistByName('${game.name.replace(/'/g, "\\'")}')">
                     <i class="bi bi-heart mr-1"></i> Wishlist
                 </button>
             </td>
@@ -243,7 +244,7 @@ function showUpcomingDetails(index) {
                         
                         <hr class="my-4 opacity-10">
                         
-                        <button class="button is-primary is-fullwidth" onclick="addToWishlistByName('${game.name}')">
+                        <button class="button is-primary is-fullwidth" onclick="addToWishlistByName('${game.name.replace(/'/g, "\\'")}')">
                             <i class="bi bi-heart-fill mr-1"></i> Wishlist
                         </button>
                     </div>
@@ -281,41 +282,64 @@ function showUpcomingDetails(index) {
 
 function addToWishlistByName(name) {
     const btn = $(event.currentTarget);
-    const originalHtml = btn.html();
     btn.addClass('is-loading');
 
-    $.getJSON(`/api/titledb/search?q=${encodeURIComponent(name)}`, (results) => {
-        btn.removeClass('is-loading');
-        if (results && results.length > 0) {
-            // Find a close match
-            const match = results.find(r => r.name.toLowerCase() === name.toLowerCase()) || results[0];
+    const trySearch = (query) => {
+        return $.getJSON(`/api/titledb/search?q=${encodeURIComponent(query)}`);
+    };
 
-            $.ajax({
-                url: '/api/wishlist',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ title_id: match.id }),
-                success: (res) => {
-                    if (res.success) {
-                        showToast(`"${match.name}" ${t('adicionado à wishlist!')}`, 'success');
-                        btn.removeClass('is-dark').addClass('is-danger').html('<i class="bi bi-heart-fill"></i>');
-                    } else {
-                        showToast(res.error || t('Erro ao adicionar'), 'error');
-                    }
-                },
-                error: (xhr) => {
-                    const error = xhr.responseJSON?.error || t('Erro ao adicionar');
-                    showToast(error, 'error');
-                }
-            });
-        } else {
-            showToast(t('Jogo não encontrado no TitleDB. Redirecionando para busca manual...'), 'info');
-            window.location.href = `/wishlist?search=${encodeURIComponent(name)}`;
-        }
-    }).fail(() => {
+    const proceedToAdd = (results) => {
         btn.removeClass('is-loading');
+        // Encontrar correspondência exata ou usar o primeiro resultado
+        const match = results.find(r => r.name.toLowerCase() === name.toLowerCase()) || results[0];
+
+        $.ajax({
+            url: '/api/wishlist',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ title_id: match.id }),
+            success: (res) => {
+                if (res.success) {
+                    showToast(`"${match.name}" ${t('adicionado à wishlist!')}`, 'success');
+                    btn.removeClass('is-dark').addClass('is-danger').html('<i class="bi bi-heart-fill"></i>');
+                } else {
+                    showToast(res.error || t('Erro ao adicionar'), 'error');
+                }
+            },
+            error: (xhr) => {
+                const error = xhr.responseJSON?.error || t('Erro ao adicionar');
+                showToast(error, 'error');
+            }
+        });
+    };
+
+    const redirectToManualSearch = () => {
+        btn.removeClass('is-loading');
+        showToast(t('Jogo não encontrado no TitleDB. Redirecionando para busca manual...'), 'info');
         window.location.href = `/wishlist?search=${encodeURIComponent(name)}`;
-    });
+    };
+
+    trySearch(name).done(results => {
+        if (results && results.length > 0) {
+            proceedToAdd(results);
+        } else {
+            // Fallback: tenta a primeira parte do nome se contiver delimitadores (ex: ":", "-", "|")
+            const parts = name.split(/[:\-|]/);
+            if (parts.length > 1 && parts[0].trim().length >= 3) {
+                const shorterName = parts[0].trim();
+                debugLog(`Sem resultados para "${name}", tentando fallback: "${shorterName}"`);
+                trySearch(shorterName).done(fallbackResults => {
+                    if (fallbackResults && fallbackResults.length > 0) {
+                        proceedToAdd(fallbackResults);
+                    } else {
+                        redirectToManualSearch();
+                    }
+                }).fail(redirectToManualSearch);
+            } else {
+                redirectToManualSearch();
+            }
+        }
+    }).fail(redirectToManualSearch);
 }
 
 function debounce(func, wait) {
