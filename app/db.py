@@ -932,16 +932,23 @@ def get_title(title_id):
 
 def get_title_id_db_id(title_id):
     title = get_title(title_id)
-    return title.id
+    if title:
+        return title.id
+    return None
 
 
 def add_title_id_in_db(title_id):
     existing_title = Titles.query.filter_by(title_id=title_id).first()
 
     if not existing_title:
-        new_title = Titles(title_id=title_id, added_at=now_utc())
-        db.session.add(new_title)
-        db.session.flush()
+        try:
+            new_title = Titles(title_id=title_id, added_at=now_utc())
+            db.session.add(new_title)
+            db.session.flush()
+        except Exception:
+            db.session.rollback()
+            # Race condition or error, try to fetch again if needed
+            pass
 
 
 def backfill_added_at_for_existing_titles():

@@ -1152,7 +1152,9 @@ def debug_files_api():
                 "filepath": f.filepath,
                 "folder": f.folder,
                 "identified": f.identified,
-                "size": f.size
+                "size": f.size,
+                "error": f.identification_error,
+                "attempts": f.identification_attempts
             })
             
         return jsonify({

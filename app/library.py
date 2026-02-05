@@ -518,6 +518,13 @@ def identify_single_file(filepath):
                 )
                 
                 title_id_in_db = get_title_id_db_id(file_content["title_id"])
+                if not title_id_in_db:
+                    # Retry adding it
+                    add_title_id_in_db(file_content["title_id"])
+                    title_id_in_db = get_title_id_db_id(file_content["title_id"])
+                
+                if not title_id_in_db:
+                     raise Exception(f"Failed to find or create DB record for Title ID {file_content['title_id']}")
                 
                 # Check if app already exists
                 existing_app = get_app_by_id_and_version(
