@@ -557,9 +557,14 @@ def init_internal(app):
         logger.info("Init Stage 2: initializing Watchdog...")
         with app.app_context():
             state.watcher = Watcher(on_library_change)
-            watcher_thread = threading.Thread(target=state.watcher.run)
-            watcher_thread.daemon = True
-            watcher_thread.start()
+            
+            # Start observer FIRST, before adding directories
+            # This ensures observer.is_alive() == True when directories are scheduled
+            state.watcher.run()
+            
+            # Give observer 500ms to fully start
+            import time
+            time.sleep(0.5)
 
             # Setup paths from Database (Source of Truth)
             # Sync YAML -> DB if DB is empty but YAML has paths (Migration scenario)
@@ -585,6 +590,7 @@ def init_internal(app):
                 logger.error(f"Failed to load libraries from DB for Watchdog: {e}. Falling back to settings.")
                 library_paths = app_settings.get("library", {}).get("paths", [])
 
+            # NOW add directories to the running observer
             init_libraries(app, state.watcher, library_paths)
             logger.info(f"Initialized {len(library_paths)} library paths")
 
