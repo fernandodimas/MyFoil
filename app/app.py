@@ -91,7 +91,7 @@ from auth import (
     login_manager,
     init_users
 )
-from db import User, log_activity, init_db
+from db import User, log_activity, init_db, delete_file_by_filepath, file_exists_in_db, update_file_path
 from library import (
     generate_library, 
     scan_library_path, 
@@ -99,7 +99,9 @@ from library import (
     add_missing_apps_to_db,
     update_titles,
     init_libraries,
-    invalidate_library_cache
+    invalidate_library_cache,
+    add_files_to_library,
+    post_library_change
 )
 from utils import now_utc, ColoredFormatter, FilterRemoveDateFromWerkzeugLogs, get_or_create_secret_key
 from file_watcher import Watcher
