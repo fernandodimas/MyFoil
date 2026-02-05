@@ -1135,6 +1135,34 @@ def cancel_job(job_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@system_bp.route("/files/debug", methods=["GET"])
+@access_required("admin")
+def debug_files_api():
+    """Diagnostic endpoint to see what's in the files table"""
+    try:
+        from db import Files
+        count = Files.query.count()
+        last_files = Files.query.order_by(Files.id.desc()).limit(20).all()
+        
+        files_data = []
+        for f in last_files:
+            files_data.append({
+                "id": f.id,
+                "filename": f.filename,
+                "filepath": f.filepath,
+                "folder": f.folder,
+                "identified": f.identified,
+                "size": f.size
+            })
+            
+        return jsonify({
+            "total_count": count,
+            "last_20_files": files_data
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @system_bp.route("/system/jobs/cleanup", methods=["POST"])
 @access_required("admin")
 def cleanup_jobs_api():

@@ -285,7 +285,7 @@ class LibraryService:
         update_apps = [a for a in all_title_apps if a["app_type"] == APP_TYPE_UPD]
         updates_list = []
         for upd in update_apps:
-            v_int = int(upd["app_version"])
+            v_int = int(upd.get("app_version") or 0)
             if v_int == 0:
                 continue
 
@@ -350,7 +350,7 @@ class LibraryService:
                 "id": tid,
                 "app_id": tid,
                 "title_id": tid,
-                "owned_version": max((int(a["app_version"]) for a in all_title_apps if a["owned"]), default=0),
+                "owned_version": max((int(a.get("app_version") or 0) for a in all_title_apps if a["owned"]), default=0),
                 "display_version": result["owned_version"],
                 "has_base": title_obj.have_base,
                 "has_latest_version": title_obj.up_to_date,

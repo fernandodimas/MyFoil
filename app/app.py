@@ -782,11 +782,11 @@ def create_app():
     # SocketIO event handlers
     @socketio.on("connect")
     def handle_connect():
-        logger.info("Client connected")
+        pass
 
     @socketio.on("disconnect")
     def handle_disconnect():
-        logger.info("Client disconnected")
+        pass
 
     # Global initialization
     with app.app_context():

@@ -23,13 +23,13 @@ def get_socketio_emitter():
              return _socketio_emitter
     
     redis_url = os.environ.get("REDIS_URL")
-    logger.info(f"[SocketIO PID:{pid}] Creating new emitter with REDIS_URL={redis_url}")
+    logger.debug(f"[SocketIO PID:{pid}] Creating new emitter with REDIS_URL={redis_url}")
     
     if redis_url:
         try:
             # Create SocketIO client with message queue for cross-process communication
             # Use short timeouts to avoid hanging the task if Redis is briefly down
-            logger.info(f"[SocketIO PID:{pid}] Initializing SocketIO client...")
+            logger.debug(f"[SocketIO PID:{pid}] Initializing SocketIO client...")
             client = SocketIO(message_queue=redis_url, socketio_path='socket.io')
             
             def broadcast_emit(event, data, *args, **kwargs):
@@ -37,16 +37,15 @@ def get_socketio_emitter():
                 kwargs['namespace'] = '/'  # EXPLICIT namespace
                 
                 pid = os.getpid()
-                logger.info(f"[SocketIO PID:{pid}] 📤 Emitting event '{event}' to namespace='/', data={type(data).__name__}")
+                logger.debug(f"[SocketIO PID:{pid}] 📤 Emitting event '{event}' to namespace='/', data={type(data).__name__}")
                 
                 try:
                     client.emit(event, data, *args, **kwargs)
-                    logger.info(f"[SocketIO PID:{pid}] ✅ Successfully emitted '{event}' (namespace='/')")
                 except Exception as e:
                     logger.error(f"[SocketIO PID:{pid}] ❌ Emit failed for '{event}': {e}", exc_info=True)
             
             _socketio_emitter = broadcast_emit
-            logger.info(f"[SocketIO PID:{pid}] ✅ Broadcast emitter created successfully (Redis: {redis_url})")
+            logger.debug(f"[SocketIO PID:{pid}] ✅ Broadcast emitter created successfully (Redis: {redis_url})")
         except Exception as e:
             logger.error(f"[SocketIO PID:{pid}] ❌ Failed to create SocketIO emitter: {e}", exc_info=True)
             # Don't cache the no-op permanently so we can retry next time

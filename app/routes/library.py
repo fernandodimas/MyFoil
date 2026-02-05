@@ -678,7 +678,7 @@ def app_info_api(id):
         version_release_dates[0] = "Unknown"
 
     update_apps = [a for a in all_title_apps if a["app_type"] == APP_TYPE_UPD]
-    update_apps_by_version = {int(a["app_version"]): a for a in update_apps}
+    update_apps_by_version = {int(a.get("app_version") or 0): a for a in update_apps}
     
     updates_list = []
     # 1. Add all versions from TitleDB
@@ -820,7 +820,7 @@ def app_info_api(id):
     result["screenshots"] = info.get("screenshots", [])
 
     # Calculate corrected owned version considering all owned apps (Base + Update)
-    owned_versions = [int(a["app_version"]) for a in all_title_apps if a["owned"]]
+    owned_versions = [int(a.get("app_version") or 0) for a in all_title_apps if a["owned"]]
     result["owned_version"] = max(owned_versions) if owned_versions else 0
     result["display_version"] = result["owned_version"]
 
