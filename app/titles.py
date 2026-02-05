@@ -655,6 +655,14 @@ def getDirsAndFiles(path):
                 if gevent and i % 50 == 0:
                     gevent.sleep(0.001)
                 
+                if entry.name == ".DS_Store":
+                    try:
+                        os.remove(entry.path)
+                        logger.info(f"Deleted .DS_Store: {entry.path}")
+                    except OSError:
+                        pass
+                    continue
+
                 if entry.name.startswith("._"):
                     continue
                 

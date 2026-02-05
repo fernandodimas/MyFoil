@@ -84,7 +84,7 @@ def cleanup_metadata_files(path):
     deleted_count = 0
     for root, dirs, files in os.walk(path):
         for file in files:
-            if file.startswith("._"):
+            if file.startswith("._") or file == ".DS_Store":
                 try:
                     os.remove(os.path.join(root, file))
                     deleted_count += 1
