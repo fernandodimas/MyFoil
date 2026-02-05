@@ -980,7 +980,6 @@ def add_title_id_in_db(title_id, name=None):
     elif name and not existing_title.name:
         existing_title.name = name
         db.session.commit()
-            pass
 
 
 def backfill_added_at_for_existing_titles():
