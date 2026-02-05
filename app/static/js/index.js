@@ -223,6 +223,7 @@ function renderCardView(items) {
                                 <span class="is-size-7 opacity-70 font-mono">${game.size_formatted || '--'}</span>
                             </div>
                             <div class="is-flex gap-1 is-justify-content-end ml-auto">
+                                ${game.has_redundant_updates ? `<span class="tag tag-redundant has-text-weight-bold is-small">${t('REDUNDANT')}</span>` : ''}
                                 ${game.has_non_ignored_updates ? `<span class="tag tag-update has-text-weight-bold is-small">${t('UPDATE')}</span>` : ''}
                                 ${game.has_non_ignored_dlcs ? `<span class="tag tag-dlc has-text-weight-bold is-small">${t('DLC')}</span>` : ''}
                             </div>
@@ -278,6 +279,7 @@ function renderIconView(items) {
                                  class="lazy-image p-0" 
                                  style="object-fit: cover; width: 100%; height: 100%; opacity: 0; transition: opacity 0.3s;">
                             <div class="status-indicator position-absolute">
+                                ${game.has_redundant_updates ? `<span class="tag tag-redundant is-tiny" style="position: absolute; top: -35px; right: -5px; font-size: 0.5rem; padding: 0 4px; border-radius: 4px;">${t('R')}</span>` : ''}
                                 <span class="status-dot ${statusDotClass}"></span>
                             </div>
                         </figure>
@@ -321,7 +323,7 @@ function renderListView(items) {
                 <td class="p-1 has-text-centered"><img src="${game.iconUrl || '/static/img/no-icon.png'}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;"></td>
                 <td class="is-vcentered">
                     <strong class="is-size-7-mobile">${game.name || 'Unknown'}</strong>
-                    ${game.has_redundant_updates ? `<span class="tag tag-redundant ml-2 has-text-weight-bold">${t('X-UPD')}</span>` : ''}
+                    ${game.has_redundant_updates ? `<span class="tag tag-redundant ml-2 has-text-weight-bold">${t('REDUNDANT')}</span>` : ''}
                 </td>
                 <td class="font-mono is-size-7 is-vcentered">${game.id || '--'}</td>
                 <td class="is-vcentered has-text-centered"><span class="tag is-light is-small">v${game.display_version || '0'}</span></td>

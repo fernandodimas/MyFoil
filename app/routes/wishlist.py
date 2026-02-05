@@ -40,6 +40,10 @@ def get_wishlist():
         # Lookup no mapa (sem query adicional)
         owned = owned_map.get(item.title_id, False)
 
+        # Se o jogo já está na biblioteca, não mostrar na wishlist (nova regra)
+        if owned:
+            continue
+
         # Obter informações do título (do cache TitleDB, sem query)
         title_info = titles.get_game_info(item.title_id) or {}
 
@@ -52,7 +56,7 @@ def get_wishlist():
                 "bannerUrl": title_info.get("bannerUrl"),
                 "priority": item.priority,
                 "added_date": item.added_date.isoformat() if item.added_date else None,
-                "owned": owned,
+                "owned": False, # Se chegou aqui, owned é obrigatoriamente False
             }
         )
 
@@ -72,6 +76,12 @@ def add_to_wishlist():
     existing = Wishlist.query.filter_by(user_id=current_user.id, title_id=title_id).first()
     if existing:
         return jsonify({"success": False, "error": "Jogo já está na wishlist"}), 400
+
+    # Verificar se o jogo já está na biblioteca
+    from constants import APP_TYPE_BASE
+    owned = Apps.query.filter_by(title_id=title_id, app_type=APP_TYPE_BASE, owned=True).first()
+    if owned:
+        return jsonify({"success": False, "error": "Jogo já está na sua biblioteca"}), 400
 
     priority = data.get("priority", 0)
     priority = max(0, min(5, priority))

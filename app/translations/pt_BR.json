@@ -180,5 +180,6 @@
     "libraries": "bibliotecas",
     "library": "biblioteca",
     "No libraries configured": "Nenhuma biblioteca configurada",
-    "Last Processing": "Último processamento"
+    "Last Processing": "Último processamento",
+    "REDUNDANT": "REDUNDANTE"
 }

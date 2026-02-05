@@ -280,7 +280,42 @@ function showUpcomingDetails(index) {
 }
 
 function addToWishlistByName(name) {
-    window.location.href = `/wishlist?search=${encodeURIComponent(name)}`;
+    const btn = $(event.currentTarget);
+    const originalHtml = btn.html();
+    btn.addClass('is-loading');
+
+    $.getJSON(`/api/titledb/search?q=${encodeURIComponent(name)}`, (results) => {
+        btn.removeClass('is-loading');
+        if (results && results.length > 0) {
+            // Find a close match
+            const match = results.find(r => r.name.toLowerCase() === name.toLowerCase()) || results[0];
+
+            $.ajax({
+                url: '/api/wishlist',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ title_id: match.id }),
+                success: (res) => {
+                    if (res.success) {
+                        showToast(`"${match.name}" ${t('adicionado à wishlist!')}`, 'success');
+                        btn.removeClass('is-dark').addClass('is-danger').html('<i class="bi bi-heart-fill"></i>');
+                    } else {
+                        showToast(res.error || t('Erro ao adicionar'), 'error');
+                    }
+                },
+                error: (xhr) => {
+                    const error = xhr.responseJSON?.error || t('Erro ao adicionar');
+                    showToast(error, 'error');
+                }
+            });
+        } else {
+            showToast(t('Jogo não encontrado no TitleDB. Redirecionando para busca manual...'), 'info');
+            window.location.href = `/wishlist?search=${encodeURIComponent(name)}`;
+        }
+    }).fail(() => {
+        btn.removeClass('is-loading');
+        window.location.href = `/wishlist?search=${encodeURIComponent(name)}`;
+    });
 }
 
 function debounce(func, wait) {

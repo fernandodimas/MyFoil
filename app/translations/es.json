@@ -170,5 +170,6 @@
     "library": "biblioteca",
     "No libraries configured": "No hay bibliotecas configuradas",
     "Total on Disk": "Total en disco",
-    "Custom Tags": "Etiquetas personalizadas"
+    "Custom Tags": "Etiquetas personalizadas",
+    "REDUNDANT": "REDUNDANTE"
 }

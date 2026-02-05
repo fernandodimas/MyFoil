@@ -265,12 +265,14 @@ function showGameDetails(id) {
                                 </div>
                             </div>
                             <hr class="my-4 opacity-5"/>
+                            ${!game.owned ? `
                             <div class="wishlist-section mb-2">
                                 <button id="btnWishlist" class="button is-fullwidth is-small is-light" onclick="toggleWishlist('${escapeHtml(game.id)}')">
                                     <span class="icon"><i class="bi bi-heart"></i></span>
                                     <span>${t('Wishlist')}</span>
                                 </button>
                             </div>
+                            ` : ''}
 
                             ${game.owned ? `
                             <div class="mt-2">

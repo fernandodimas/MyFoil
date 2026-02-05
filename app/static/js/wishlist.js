@@ -45,9 +45,6 @@ async function loadWishlist() {
             let iconUrl = '/static/img/no-icon.png';
             let statusHtml = t('Desconhecido');
             let statusClass = 'has-text-grey';
-            let ownedHtml = '--';
-            let ownedClass = 'opacity-50';
-            let owned = false;
 
             try {
                 const gRes = await fetch(`/api/app_info/${item.title_id}`);
@@ -55,15 +52,6 @@ async function loadWishlist() {
                     const gData = await gRes.json();
                     gameName = gData.name || item.title_id;
                     iconUrl = gData.iconUrl || iconUrl;
-                    owned = gData.owned || false;
-
-                    if (owned) {
-                        ownedHtml = t('Sim');
-                        ownedClass = 'has-text-success';
-                    } else {
-                        ownedHtml = t('Não');
-                        ownedClass = 'has-text-grey-lighter';
-                    }
 
                     const rawDate = String(gData.release_date || '');
                     const releaseDateStr = rawDate.replace(/-/g, '');
@@ -110,19 +98,11 @@ async function loadWishlist() {
                 <td class="is-vcentered font-mono is-size-7 opacity-70">
                     ${new Date(item.added_date).toLocaleDateString()}
                 </td>
-                <td class="is-vcentered has-text-centered ${ownedClass} has-text-weight-bold is-size-7">
-                    ${ownedHtml}
-                </td>
                 <td class="is-vcentered ${statusClass} has-text-weight-bold is-size-7">
                     ${statusHtml}
                 </td>
                 <td class="is-vcentered has-text-right">
                     <div class="buttons is-justify-content-flex-end">
-                        ${owned ? `
-                            <button class="button is-small is-ghost has-text-grey mr-1" onclick="editGameMetadata('${item.title_id}')" title="${t('Editar Dados')}">
-                                <i class="bi bi-pencil"></i>
-                            </button>
-                        ` : ''}
                         <button class="button is-small is-ghost has-text-danger" onclick="removeFromWishlist('${item.title_id}')" title="${t('Remover')}">
                             <i class="bi bi-trash"></i>
                         </button>
