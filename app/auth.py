@@ -341,6 +341,34 @@ def signup_post():
     return _rate_limited_signup()
 
 
+@auth_blueprint.route('/change_password', methods=['POST'])
+@login_required
+def change_password():
+    data = request.json
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    confirm_password = data.get('confirm_password')
+
+    if not current_password or not new_password or not confirm_password:
+        return jsonify({'success': False, 'error': 'Todos os campos são obrigatórios.'}), 400
+
+    if new_password != confirm_password:
+        return jsonify({'success': False, 'error': 'As senhas não coincidem.'}), 400
+
+    if not check_password_hash(current_user.password, current_password):
+        return jsonify({'success': False, 'error': 'Senha atual incorreta.'}), 400
+
+    try:
+        current_user.password = generate_password_hash(new_password, method='pbkdf2:sha256')
+        db.session.commit()
+        logger.info(f'Senha alterada com sucesso para o usuário {current_user.user}')
+        return jsonify({'success': True, 'message': 'Senha alterada com sucesso!'})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Erro ao alterar senha para {current_user.user}: {e}')
+        return jsonify({'success': False, 'error': 'Erro interno ao salvar nova senha.'}), 500
+
+
 @auth_blueprint.route('/logout')
 @login_required
 def logout():

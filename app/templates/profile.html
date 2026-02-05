@@ -19,12 +19,52 @@
               {{ t('Welcome') }}, {{ current_user.user if current_user.is_authenticated else 'Guest' }}!
             </h2>
 
-            <p class="subtitle is-6 opacity-50 mb-6">
-              {{ t('Profile management and personal settings coming soon.') }}
-            </p>
+            <div class="has-text-left mt-6">
+              <h3 class="subtitle is-5 has-text-weight-bold mb-4">
+                <span class="icon mr-2"><i class="bi bi-shield-lock"></i></span>
+                {{ t('Segurança') }}
+              </h3>
+
+              <form id="changePasswordForm">
+                <div class="field">
+                  <label class="label is-size-7">{{ t('Senha Atual') }}</label>
+                  <div class="control has-icons-left">
+                    <input class="input is-rounded" type="password" id="currentPassword" required
+                      placeholder="••••••••">
+                    <span class="icon is-small is-left"><i class="bi bi-key"></i></span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="label is-size-7">{{ t('Nova Senha') }}</label>
+                  <div class="control has-icons-left">
+                    <input class="input is-rounded" type="password" id="newPassword" required placeholder="••••••••">
+                    <span class="icon is-small is-left"><i class="bi bi-lock"></i></span>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="label is-size-7">{{ t('Confirmar Nova Senha') }}</label>
+                  <div class="control has-icons-left">
+                    <input class="input is-rounded" type="password" id="confirmPassword" required
+                      placeholder="••••••••">
+                    <span class="icon is-small is-left"><i class="bi bi-check-circle"></i></span>
+                  </div>
+                </div>
+
+                <div class="field mt-5">
+                  <button type="submit" class="button is-primary is-fullwidth is-rounded has-text-weight-bold"
+                    id="btnChangePassword">
+                    {{ t('Alterar Senha') }}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <hr class="my-6 opacity-10">
 
             <div class="buttons is-centered">
-              <a href="/" class="button is-primary is-outlined">
+              <a href="/" class="button is-ghost is-small opacity-50">
                 <span class="icon"><i class="bi bi-arrow-left"></i></span>
                 <span>{{ t('Back to Library') }}</span>
               </a>
@@ -35,4 +75,50 @@
     </div>
   </div>
 </section>
+
+<script>
+  document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const current_password = document.getElementById('currentPassword').value;
+    const new_password = document.getElementById('newPassword').value;
+    const confirm_password = document.getElementById('confirmPassword').value;
+    const btn = document.getElementById('btnChangePassword');
+
+    if (new_password !== confirm_password) {
+      showToast("{{ t('As senhas não coincidem.') }}", 'error');
+      return;
+    }
+
+    btn.classList.add('is-loading');
+
+    try {
+      const response = await fetch('/change_password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          current_password,
+          new_password,
+          confirm_password
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        showToast("{{ t('Senha alterada com sucesso!') }}", 'success');
+        document.getElementById('changePasswordForm').reset();
+      } else {
+        showToast(result.error || "{{ t('Erro ao alterar senha.') }}", 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("{{ t('Erro de conexão com o servidor.') }}", 'error');
+    } finally {
+      btn.classList.remove('is-loading');
+    }
+  });
+</script>
 {% endblock %}
