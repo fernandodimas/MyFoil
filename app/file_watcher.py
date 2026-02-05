@@ -244,8 +244,12 @@ class Handler(FileSystemEventHandler):
             event.timestamp = time.time()
             self.tracked_files[file_path] = event
         else:
-            self.tracked_files[file_path].size = current_size
-            self.tracked_files[file_path].timestamp = time.time()
+            # Only reset timer if size changed
+            # This prevents infinite loops where PollingObserver fires continuous 'modified' events
+            # even if the file is static (common in Docker volumes)
+            if current_size != self.tracked_files[file_path].size:
+                self.tracked_files[file_path].size = current_size
+                self.tracked_files[file_path].timestamp = time.time()
 
     def _check_file_stability(self):
         """Check for stable files and invoke the callback."""
