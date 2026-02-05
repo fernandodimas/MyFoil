@@ -337,3 +337,15 @@ def update_titledb_async(force=False):
         settings = load_settings()
         
         return update_titledb(settings, force=force)
+
+
+@celery.task(name="tasks.fetch_all_metadata_async")
+def fetch_all_metadata_async(force=False):
+    """Comprehensive metadata fetch using MetadataFetcher service"""
+    with flask_app.app_context():
+        from metadata_service import metadata_fetcher
+        logger.info("task_execution_started", task="fetch_all_metadata_async", force=force)
+        try:
+            return metadata_fetcher.fetch_all_metadata(force=force)
+        finally:
+            db.session.remove()

@@ -1081,15 +1081,36 @@ def trigger_metadata_fetch():
     """Trigger manual metadata fetch for all games"""
     from metadata_service import metadata_fetcher
     import threading
-
+    from flask import current_app, request
+    from app import CELERY_ENABLED
+    
     data = request.json or {}
     force = data.get("force", False)
+    
+    if CELERY_ENABLED:
+        from tasks import fetch_all_metadata_async
+        fetch_all_metadata_async.apply_async(args=[force])
+        logger.info("Queued async metadata fetch (Celery)")
+        return jsonify({"success": True, "message": "Metadata fetch queued in background (Celery)"})
+    else:
+        app_instance = current_app._get_current_object()
 
-    thread = threading.Thread(target=lambda: metadata_fetcher.fetch_all_metadata(force=force))
-    thread.daemon = True
-    thread.start()
+        def run_metadata_fetch():
+            with app_instance.app_context():
+                try:
+                    metadata_fetcher.fetch_all_metadata(force=force)
+                except Exception as e:
+                    logger.error(f"Background metadata fetch failed: {e}")
+                finally:
+                    from db import db
+                    db.session.remove()
 
-    return jsonify({"success": True, "message": "Metadata fetch started in background"})
+        thread = threading.Thread(target=run_metadata_fetch, name="MetadataFetch")
+        thread.daemon = True
+        thread.start()
+        logger.info("Background metadata fetch thread started (no Celery)")
+
+        return jsonify({"success": True, "message": "Metadata fetch started in background thread"})
 
 
 @system_bp.route("/system/metadata/status", methods=["GET"])
