@@ -592,6 +592,8 @@ def init_db(app):
                     wishlist_extra_cols = [
                         ("name", "TEXT"),
                         ("release_date", "TEXT"),
+                        ("icon_url", "TEXT"),
+                        ("banner_url", "TEXT"),
                     ]
                     
                     wishlist_extra_modified = False
