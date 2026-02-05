@@ -6,7 +6,7 @@ from flask import Blueprint, request, jsonify
 from sqlalchemy import func, and_, case
 from db import (
     db, Apps, Titles, Libraries, Files, get_libraries, logger, app_files,
-    TitleMetadata, TitleTag, Tag, WishlistIgnore
+    TitleMetadata, TitleTag, Tag, WishlistIgnore, TitleDBCache
 )
 from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC
 from settings import load_settings

@@ -698,8 +698,9 @@ def create_app():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
         "pool_pre_ping": True,  # Verify connections before using
-        "pool_size": 10,  # Increase pool size for concurrent workers
-        "max_overflow": 20,  # Allow extra connections during high load
+        "pool_size": 20,  # Increase pool size for concurrent workers
+        "max_overflow": 30,  # Allow extra connections during high load
+        "pool_recycle": 3600, # Recycle connections every hour
     }
     
     # Add SQLite specific options only if using SQLite

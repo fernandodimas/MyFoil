@@ -1067,22 +1067,21 @@ def has_owned_apps(title_id):
 
 
 def remove_titles_without_owned_apps():
-    """Remove titles that have no owned apps - Otimizado com bulk delete"""
-    titles_removed = 0
-    titles = get_all_titles()
+    """Remove titles that have no owned apps - Optimized using a single subquery"""
+    # Join Titles with Apps that are owned
+    owned_titles_subquery = db.session.query(Apps.title_id).filter(Apps.owned == True).distinct().subquery()
+    
+    # Find Titles that are NOT in the owned_titles_subquery
+    titles_to_delete_query = db.session.query(Titles).filter(~Titles.id.in_(owned_titles_subquery))
+    
+    titles_to_delete = [t.id for t in titles_to_delete_query.all()]
+    titles_removed = len(titles_to_delete)
 
-    # Otimização: Coletar IDs para bulk delete ao invés de deletar um por um
-    titles_to_delete = []
-    for title in titles:
-        if not has_owned_apps(title.title_id):
-            logger.debug(f"Removing title {title.title_id} - no owned apps remaining")
-            titles_to_delete.append(title.id)
-            titles_removed += 1
-
-    # Bulk delete
     if titles_to_delete:
-        Titles.query.filter(Titles.id.in_(titles_to_delete)).delete(synchronize_session=False)
-        db.session.flush()  # Otimização: usar flush ao invés de commit imediato
+        logger.info(f"Removing {titles_removed} titles with no owned apps remaining")
+        # Bulk delete the titles
+        db.session.query(Titles).filter(Titles.id.in_(titles_to_delete)).delete(synchronize_session=False)
+        db.session.commit()
 
     return titles_removed
 

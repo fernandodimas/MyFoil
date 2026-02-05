@@ -187,6 +187,8 @@ def identify_file_async(filepath):
         except Exception as e:
             job_tracker.fail_job(job_id, str(e))
             return False
+        finally:
+            db.session.remove()
 
 
 @celery.task(name="tasks.scan_all_libraries_async")
@@ -247,6 +249,8 @@ def scan_all_libraries_async():
             logger.exception("task_execution_failed", task="scan_all_libraries_async", error=str(e))
             job_tracker.fail_job(job_id, str(e))
             return False
+        finally:
+            db.session.remove()
 
 
 @celery.task(name="tasks.fetch_metadata_for_game_async")

@@ -23,6 +23,7 @@ import gevent
 
 # Session-level cache
 _LIBRARY_CACHE = None
+_LIBRARY_CACHE_HASH = None
 _CACHE_LOCK = threading.Lock()
 
 ALLOWED_EXTENSIONS = {".nsp", ".nsz", ".xci", ".xcz"}
@@ -1173,9 +1174,10 @@ def load_library_from_disk():
 
 
 def invalidate_library_cache():
-    global _LIBRARY_CACHE
+    global _LIBRARY_CACHE, _LIBRARY_CACHE_HASH
     with _CACHE_LOCK:
         _LIBRARY_CACHE = None
+        _LIBRARY_CACHE_HASH = None
         # Also remove disk cache so it's forced to re-generate
         cache_path = Path(LIBRARY_CACHE_FILE)
         if cache_path.exists():
@@ -1459,23 +1461,25 @@ def get_game_info_item(tid, title_data):
 
 def generate_library(force=False):
     """Generate the game library grouped by TitleID, using cached version if unchanged"""
-    global _LIBRARY_CACHE
+    global _LIBRARY_CACHE, _LIBRARY_CACHE_HASH
+
+    current_db_hash = compute_apps_hash()
 
     if not force:
         with _CACHE_LOCK:
-            # Check if memory cache exists AND is still valid for the current DB state
-            if _LIBRARY_CACHE and is_library_unchanged():
+            # Check if memory cache exists AND matches the current DB state
+            if _LIBRARY_CACHE and _LIBRARY_CACHE_HASH == current_db_hash:
                 return _LIBRARY_CACHE
 
-            # If not in memory or DB changed, try loading from disk and VALIDATE hash
-            if is_library_unchanged():
-                saved_library = load_library_from_disk()
-                if saved_library and "library" in saved_library:
-                    _LIBRARY_CACHE = saved_library["library"]
-                    logger.info("Library loaded from disk cache.")
-                    return _LIBRARY_CACHE
-            else:
-                logger.info("Library state changed or disks/DB out of sync, rebuilding cache.")
+            # If not in memory matching DB, try loading from disk and VALIDATE hash
+            saved_library = load_library_from_disk()
+            if saved_library and saved_library.get("hash") == current_db_hash:
+                _LIBRARY_CACHE = saved_library["library"]
+                _LIBRARY_CACHE_HASH = current_db_hash
+                logger.info("Library loaded from disk cache.")
+                return _LIBRARY_CACHE
+            
+            logger.info("Library state changed or disks/DB out of sync, rebuilding cache.")
 
     logger.info(f"Generating library (force={force})...")
     logger.info("generate_library: Loading TitleDB...")
@@ -1505,12 +1509,13 @@ def generate_library(force=False):
 
     sorted_library = sorted(games_info, key=lambda x: x.get("name", "Unrecognized") or "Unrecognized")
 
-    library_data = {"hash": compute_apps_hash(), "library": sorted_library}
+    library_data = {"hash": current_db_hash, "library": sorted_library}
 
     save_library_to_disk(library_data)
 
     with _CACHE_LOCK:
         _LIBRARY_CACHE = sorted_library
+        _LIBRARY_CACHE_HASH = current_db_hash
 
     titles_lib.identification_in_progress_count -= 1
     titles_lib.unload_titledb()
