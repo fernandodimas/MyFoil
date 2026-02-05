@@ -1080,196 +1080,114 @@ def get_game_info(title_id, silent=False):
     if search_id in _game_info_cache:
         return _game_info_cache[search_id]
 
-    # 1. Try to get from database first (including custom edits)
-    try:
-        db_title = Titles.query.filter_by(title_id=search_id).first()
-        if db_title and (db_title.name or db_title.is_custom):
-            # Get screenshots from TitleDB
-            screenshots = []
-            if not _titles_db:
-                load_titledb()
-            if _titles_db:
-                info = _titles_db.get(search_id)
-                if info:
-                    screenshots = info.get("screenshots", []) or []
+    # Initialize empty info
+    res = {
+        "name": f"Unknown ({title_id})",
+        "bannerUrl": "",
+        "iconUrl": "",
+        "id": search_id,
+        "category": [],
+        "release_date": "",
+        "size": 0,
+        "publisher": "--",
+        "description": "",
+        "nsuid": "",
+        "is_custom": False,
+        "screenshots": [],
+    }
 
-            # If we have basic info or it's custom, return it
-            res = {
-                "name": db_title.name or "Unknown Title",
-                "bannerUrl": db_title.banner_url or "",
-                "iconUrl": db_title.icon_url or "",
-                "id": db_title.title_id,
-                "category": db_title.category.split(",") if db_title.category else [],
-                "release_date": format_release_date(db_title.release_date),
-                "size": db_title.size or 0,
-                "publisher": db_title.publisher or "Nintendo",
-                "description": db_title.description or "",
-                "nsuid": db_title.nsuid or "",
-                "is_custom": db_title.is_custom,
-                "screenshots": screenshots,
-            }
-            _game_info_cache[search_id] = res
-            return res
-    except Exception as e:
-        if not silent:
-            logger.error(f"Error querying database for game info {search_id}: {e}")
-
-    # 2. Fallback to Memory/JSON TitleDB
+    # 1. Try to get from Memory/JSON TitleDB first (High quality metadata)
     if not _titles_db:
         load_titledb()
 
-    if not _titles_db:
-        return {
-            "name": f"Unknown ({title_id})",
-            "bannerUrl": "",
-            "iconUrl": "",
-            "id": title_id,
-            "category": [],
-            "release_date": "",
-            "size": 0,
-            "publisher": "--",
-            "description": "Database not loaded. Please update TitleDB in settings.",
-        }
-
-    try:
+    info = None
+    if _titles_db:
         info = _titles_db.get(search_id)
         if not info:
             # Case-insensitive fallback
             info = _titles_db.get(search_id.upper()) or _titles_db.get(search_id.lower())
 
-        # 3. Deep Scan Fallback: If Key lookup failed, search inside values
-        # Some JSON sources might key by NSUID or other IDs, but the "id" field usually holds the TitleID
+        # Deep Scan Fallback: If Key lookup failed, search inside values
         if not info:
             search_id_upper = search_id.upper()
             for data in _titles_db.values():
-                if not isinstance(data, dict):
-                    continue
-                
-                # Check 'id' (TitleID)
-                data_id = str(data.get("id", "")).upper()
-                if data_id == search_id_upper:
+                if not isinstance(data, dict): continue
+                if str(data.get("id", "")).upper() == search_id_upper:
                     info = data
                     break
-                
-                # Check 'nsuId' (Decimal ID)
-                # Only check if search_id looks like decimal? Or just string compare
-                data_nsuid = str(data.get("nsuId", "") or data.get("nsuid", ""))
-                if data_nsuid == search_id:
-                    info = data
-                    break
-
+        
         if info and isinstance(info, dict):
-            res = {
-                "name": info.get("name") or "Unknown Title",
+            res.update({
+                "name": info.get("name") or res["name"],
                 "bannerUrl": info.get("bannerUrl") or info.get("banner_url") or "",
                 "iconUrl": info.get("iconUrl") or info.get("icon_url") or "",
-                "id": info.get("id") or title_id,
-                "category": info.get("category", [])
-                if isinstance(info.get("category"), list)
-                else [info.get("category")]
-                if info.get("category")
-                else [],
+                "category": info.get("category", []) if isinstance(info.get("category"), list) else ([info.get("category")] if info.get("category") else []),
                 "release_date": format_release_date(info.get("releaseDate") or info.get("release_date")),
                 "size": info.get("size") or 0,
                 "publisher": info.get("publisher") or "Nintendo",
                 "description": info.get("description") or "",
                 "nsuid": info.get("nsuid") or info.get("nsuId") or "",
                 "screenshots": info.get("screenshots", []),
-            }
+            })
 
-            # DLC/Update Icon Fallback: Only if icon is strictly missing
-            if not res["iconUrl"] and not search_id.endswith("000"):
-                possible_base_ids = [search_id[:-3] + "000"]
-                try:
-                    # For DLCs, the base ID is often (DLC_PREFIX - 1) + 000
-                    prefix = search_id[:-3]
-                    base_prefix = hex(int(prefix, 16) - 1)[2:].upper().rjust(13, "0")
-                    possible_base_ids.append(base_prefix + "000")
-                except (ValueError, IndexError):
-                    pass  # Invalid hex format
-
-                for bid in possible_base_ids:
-                    # Avoid infinite recursion
-                    if bid == search_id:
-                        continue
-                    base_info = get_game_info(bid, silent=True)
-                    if base_info and base_info.get("iconUrl") and not base_info["name"].startswith("Unknown"):
-                        res["iconUrl"] = base_info["iconUrl"]
-                        res["bannerUrl"] = res["bannerUrl"] or base_info.get("bannerUrl")
-                        logger.debug(f"Inherited visuals from base game {bid} for {search_id}")
-                        break
-
-            # Fallback: Use Banner as Icon if Icon is still missing
-            if not res["iconUrl"] and res["bannerUrl"]:
-                res["iconUrl"] = res["bannerUrl"]
-
-            # Sanitize name to remove "Nintendo Switch 2 Edition" nonsense if present
-            name = res.get("name")
-            if name:
-                replacements = [
-                    " – Nintendo Switch™ 2 Edition",
-                    " - Nintendo Switch™ 2 Edition",
-                    " – Nintendo Switch 2 Edition",
-                    " - Nintendo Switch 2 Edition",
-                    " Nintendo Switch 2 Edition",
-                ]
-                for r in replacements:
-                    if r in name:
-                        name = name.replace(r, "")
-                res["name"] = name.strip()
-
-            _game_info_cache[search_id] = res
-            return res
-
-        # If not found, try to find parent BASE game if this is a DLC/UPD
-        if not search_id.endswith("000"):
-            possible_base_ids = [search_id[:-3] + "000"]
-            try:
-                prefix = search_id[:-3]
-                base_prefix = hex(int(prefix, 16) - 1)[2:].upper().rjust(13, "0")
-                possible_base_ids.append(base_prefix + "000")
-            except (ValueError, IndexError):
-                pass  # Invalid hex format
-
-            for bid in possible_base_ids:
-                if not silent:
-                    logger.debug(f"ID {search_id} not found, attempting fallback to base {bid}")
-                base_info = get_game_info(bid, silent=True)
-                if base_info and not base_info["name"].startswith("Unknown"):
-                    return {
-                        "name": f"{base_info['name']} [DLC/UPD]",
-                        "bannerUrl": base_info["bannerUrl"],
-                        "iconUrl": base_info["iconUrl"],
-                        "id": title_id,
-                        "category": base_info["category"],
-                        "release_date": base_info["release_date"],
-                        "size": 0,
-                        "publisher": base_info["publisher"],
-                        "description": f"Informação estendida do jogo base: {base_info['name']}",
-                        "nsuid": base_info.get("nsuid", ""),
-                    }
-                    _game_info_cache[search_id] = res
-                    return res
-
-        raise Exception(f"ID {search_id} not found in database")
+    # 2. Overwrite/Merge with Database info (Customizations/Suggested names)
+    try:
+        db_title = Titles.query.filter_by(title_id=search_id).first()
+        if db_title:
+            # Only override name if it's custom or if we don't have a good TitleDB name
+            if db_title.is_custom or (db_title.name and ("Unknown" in res["name"] or not info)):
+                res["name"] = db_title.name
+            
+            # Icons and banners (Merge strategy: DB takes priority if present)
+            if db_title.icon_url: res["iconUrl"] = db_title.icon_url
+            if db_title.banner_url: res["bannerUrl"] = db_title.banner_url
+            
+            # Other fields
+            if db_title.description: res["description"] = db_title.description
+            if db_title.publisher: res["publisher"] = db_title.publisher
+            if db_title.release_date: res["release_date"] = format_release_date(db_title.release_date)
+            if db_title.size: res["size"] = db_title.size
+            if db_title.nsuid: res["nsuid"] = db_title.nsuid
+            if db_title.category: res["category"] = db_title.category.split(",")
+            res["is_custom"] = db_title.is_custom or False
+            
     except Exception as e:
         if not silent:
-            logger.debug(f"Identification failed for {title_id}: {e}")
-        safe_id = str(title_id).upper() if title_id else "UNKNOWN"
-        return {
-            "name": f"Unknown ({title_id})",
-            "bannerUrl": "",
-            "iconUrl": "",
-            "id": safe_id,
-            "category": [],
-            "release_date": "",
-            "size": 0,
-            "publisher": "--",
-            "description": "ID não encontrado no banco de dados. Por favor, atualize o TitleDB nas configurações.",
-            "nsuid": "",
-        }
-        _game_info_cache[search_id] = res
-        return res
+            logger.error(f"Error merging database info for {search_id}: {e}")
+
+    # 3. Final Heuristics & Fallbacks
+    
+    # DLC/Update Icon Fallback: Only if icon is strictly missing
+    if not res["iconUrl"] and not search_id.endswith("000"):
+        possible_base_ids = [search_id[:-3] + "000"]
+        try:
+            prefix = search_id[:-3]
+            base_prefix = hex(int(prefix, 16) - 1)[2:].upper().rjust(13, "0")
+            possible_base_ids.append(base_prefix + "000")
+        except: pass
+
+        for bid in possible_base_ids:
+            if bid == search_id: continue
+            base_info = get_game_info(bid, silent=True)
+            if base_info and base_info.get("iconUrl") and not base_info["name"].startswith("Unknown"):
+                res["iconUrl"] = base_info["iconUrl"]
+                res["bannerUrl"] = res["bannerUrl"] or base_info.get("bannerUrl")
+                break
+
+    # Use Banner as Icon if Icon is still missing
+    if not res["iconUrl"] and res["bannerUrl"]:
+        res["iconUrl"] = res["bannerUrl"]
+
+    # Sanitize name
+    name = res.get("name")
+    if name:
+        for r in [" – Nintendo Switch™ 2 Edition", " - Nintendo Switch™ 2 Edition", " – Nintendo Switch 2 Edition", " - Nintendo Switch 2 Edition", " Nintendo Switch 2 Edition"]:
+            name = name.replace(r, "")
+        res["name"] = name.strip()
+
+    # Save to Cache and return
+    _game_info_cache[search_id] = res
+    return res
 
 
 def get_update_number(version):
