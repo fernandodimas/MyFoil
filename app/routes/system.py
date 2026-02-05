@@ -531,7 +531,7 @@ def delete_file_api(file_id):
         if file_obj.apps:
             title_ids = list(set([a.title.title_id for a in file_obj.apps if a.title]))
 
-        from library import delete_file_from_db_and_disk
+        from db import delete_file_from_db_and_disk
 
         success, error = delete_file_from_db_and_disk(file_id)
 

@@ -1463,10 +1463,11 @@ def generate_library(force=False):
 
     if not force:
         with _CACHE_LOCK:
-            if _LIBRARY_CACHE:
+            # Check if memory cache exists AND is still valid for the current DB state
+            if _LIBRARY_CACHE and is_library_unchanged():
                 return _LIBRARY_CACHE
 
-            # Try loading from disk and VALIDATE hash
+            # If not in memory or DB changed, try loading from disk and VALIDATE hash
             if is_library_unchanged():
                 saved_library = load_library_from_disk()
                 if saved_library and "library" in saved_library:
@@ -1474,7 +1475,7 @@ def generate_library(force=False):
                     logger.info("Library loaded from disk cache.")
                     return _LIBRARY_CACHE
             else:
-                logger.info("Library state changed, rebuilding cache.")
+                logger.info("Library state changed or disks/DB out of sync, rebuilding cache.")
 
     logger.info(f"Generating library (force={force})...")
     logger.info("generate_library: Loading TitleDB...")
