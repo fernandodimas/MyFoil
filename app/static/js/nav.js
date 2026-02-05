@@ -25,19 +25,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function checkProcessStatus() {
     $.getJSON('/api/status', function (data) {
-        const indicator = $('#processIndicator');
-        const text = $('#processText');
+        const indicator = $('#systemStatusIndicator');
+        const text = $('#statusText');
+        const icon = $('#statusIcon');
+
         if (!indicator.length || !text.length) return;
 
-        if (data.scanning || data.updating_titledb) {
-            indicator.removeClass('is-hidden');
+        if (data.scanning || data.updating_titledb || data.fetching_metadata) {
+            indicator.addClass('is-active');
             if (data.updating_titledb) {
                 text.text(t('Atualizando TitleDB...'));
+                icon.html('<i class="bi bi-arrow-repeat spin has-text-primary"></i>');
             } else if (data.scanning) {
                 text.text(t('Escaneando Biblioteca...'));
+                icon.html('<i class="bi bi-arrow-repeat spin has-text-info"></i>');
+            } else if (data.fetching_metadata) {
+                text.text(t('Buscando Metadados...'));
+                icon.html('<i class="bi bi-stars spin has-text-warning"></i>');
             }
         } else {
-            indicator.addClass('is-hidden');
+            indicator.removeClass('is-active');
+            text.text('System Idle');
+            icon.html('<i class="bi bi-check-circle has-text-success"></i>');
         }
     });
 }

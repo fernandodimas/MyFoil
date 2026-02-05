@@ -667,6 +667,7 @@ def process_status_api():
     """Status do sistema"""
     # Get status from state module safely (avoid circular import)
     import state
+    from db import SystemJob
 
     watching = 0
     if state.watcher is not None:
@@ -675,10 +676,27 @@ def process_status_api():
         except:
             pass
 
+    # Also check DB for active jobs to support Celery workers report
+    has_active_scan = SystemJob.query.filter(
+        SystemJob.job_type == 'library_scan', 
+        SystemJob.status == 'running'
+    ).first() is not None
+    
+    has_active_tdb = SystemJob.query.filter(
+        SystemJob.job_type == 'titledb_update', 
+        SystemJob.status == 'running'
+    ).first() is not None
+    
+    has_active_metadata = SystemJob.query.filter(
+        SystemJob.job_type.like('%metadata_fetch%'), 
+        SystemJob.status == 'running'
+    ).first() is not None
+
     return jsonify(
         {
-            "scanning": state.scan_in_progress,
-            "updating_titledb": state.is_titledb_update_running,
+            "scanning": state.scan_in_progress or has_active_scan,
+            "updating_titledb": state.is_titledb_update_running or has_active_tdb,
+            "fetching_metadata": has_active_metadata,
             "watching": watching > 0,
             "libraries": watching,
         }
