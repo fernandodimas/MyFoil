@@ -178,11 +178,9 @@ class Watcher:
                 self.directories.add(directory)
                 self.event_handler.add_directory(directory)
                 
+                
                 # Diagnostic: verify observer is alive and schedule worked
-                logger.info(f"[WATCHDOG-DIAG] Scheduled observer for {directory}")
-                logger.info(f"[WATCHDOG-DIAG] Observer is_alive: {self.observer.is_alive()}")
-                logger.info(f"[WATCHDOG-DIAG] Observer emitters count: {len(self.observer.emitters)}")
-                logger.info(f"[WATCHDOG-DIAG] Total directories monitored: {len(self.directories)}")
+                logger.debug(f"Added observer for {directory}, is_alive: {self.observer.is_alive()}")
                 
                 return True
             except Exception as e:
@@ -290,16 +288,9 @@ class Handler(FileSystemEventHandler):
             if dest_filename.startswith("._"):
                 return
 
-        logger.info(f"[WATCHDOG-DEBUG] Event detected: {source_event.event_type} - {source_event.src_path}")
-        logger.info(f"[WATCHDOG-DEBUG] Directory: {directory}, Watcher present: {self.watcher is not None}")
-        
-        # Update last event timestamp for health monitoring
         if self.watcher:
             from datetime import datetime
             self.watcher.last_event_time = datetime.now()
-            logger.info(f"[WATCHDOG-DEBUG] Updated last_event_time to {self.watcher.last_event_time}")
-        else:
-            logger.warning("[WATCHDOG-DEBUG] Watcher reference is None, cannot update last_event_time")
 
         library_event = SimpleNamespace(
             type=source_event.event_type,
@@ -314,14 +305,13 @@ class Handler(FileSystemEventHandler):
             library_event.type = "deleted"
 
         if library_event.type == "deleted":
-            logger.info(f"[WATCHDOG-DEBUG] Processing DELETE event for {library_event.src_path}")
+            logger.info(f"Watchdog: File deleted - {library_event.src_path}")
             self._raw_callback([library_event])
         
         elif library_event.type == "created":
-            logger.info(f"[WATCHDOG-DEBUG] Processing CREATE event - tracking file: {library_event.src_path}")
+            logger.info(f"Watchdog: File created, tracking stability - {library_event.src_path}")
             # Track file on create for stability
             self._track_file(library_event)
-            logger.info(f"[WATCHDOG-DEBUG] File added to tracking, calling debounced check")
             self.debounced_check_final()
 
         else:
@@ -333,16 +323,14 @@ class Handler(FileSystemEventHandler):
         self._check_file_stability()
 
     def on_any_event(self, event):
-        logger.info(f"[WATCHDOG-EVENT] RAW event detected: {event.event_type} - {event.src_path}")
+        # logger.debug(f"RAW event: {event.event_type} - {event.src_path}")
         found = False
         for directory in self.directories:
             is_src_in = event.src_path.startswith(directory)
             is_dest_in = hasattr(event, 'dest_path') and event.dest_path and event.dest_path.startswith(directory)
             
             if is_src_in or is_dest_in:
-                logger.info(f"[WATCHDOG-EVENT] Event matched directory {directory}, processing...")
+                # logger.debug(f"Event matched directory {directory}, processing...")
                 self.collect_event(event, directory)
                 found = True
                 break
-        if not found:
-            logger.info(f"[WATCHDOG-EVENT] Event {event.src_path} NOT in tracked directories {list(self.directories)}, ignoring.")
