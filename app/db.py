@@ -1155,7 +1155,15 @@ def remove_missing_files_from_db():
         # List to keep track of IDs to be deleted
         ids_to_delete = []
 
-        for file_entry in files:
+        for i, file_entry in enumerate(files):
+            # Yield to other greenlets occasionally
+            if i % 100 == 0:
+                try:
+                    import gevent
+                    gevent.sleep(0)
+                except:
+                    pass
+
             # Check if the file exists on disk
             if not os.path.exists(file_entry.filepath):
                 # If the file does not exist, mark this entry for deletion

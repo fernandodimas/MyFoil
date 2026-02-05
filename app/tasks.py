@@ -83,8 +83,17 @@ def create_app_context():
 
 @worker_process_init.connect
 def init_worker(**kwargs):
-    """Dispose of shared engine after fork to avoid 'synchronization lost' errors"""
+    """Initialize worker process resources after fork"""
+    # Load encryption keys in the worker process
+    try:
+        from settings import load_keys
+        load_keys()
+        logger.info("worker_process_init", msg="Encryption keys loaded in worker")
+    except Exception as e:
+        logger.error("worker_process_init_failed", error=str(e))
+
     with flask_app.app_context():
+        # Clear engine pool to avoid connection sharing between forks
         db.engine.dispose()
         logger.info("worker_process_initialized", msg="Engine pool disposed after fork")
 

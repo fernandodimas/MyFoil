@@ -44,14 +44,18 @@ def make_celery(app_name=__name__):
         enable_utc=True,
     )
     
-    # Auto-flush Redis on startup if requested (prevents stale tasks)
-    try:
-        import redis
-        r = redis.from_url(redis_url)
-        r.flushall()
-        logger.info("Redis flushed on startup (CLEAN SLATE)")
-    except Exception as e:
-        logger.warning(f"Could not flush Redis: {e}")
+    # Auto-flush Redis ONLY if explicitly requested via environment variable
+    # This prevents accidental clearing of the task queue on every app restart
+    if os.environ.get("FLUSH_REDIS_ON_STARTUP", "false").lower() == "true":
+        try:
+            import redis
+            r = redis.from_url(redis_url)
+            r.flushall()
+            logger.info("Redis flushed on startup (CLEAN SLATE requested)")
+        except Exception as e:
+            logger.warning(f"Could not flush Redis: {e}")
+    else:
+        logger.debug("Skipping Redis flush (default behavior)")
 
     return celery
 

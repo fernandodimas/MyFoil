@@ -337,7 +337,15 @@ def scan_library_path(library_path, job_id=None):
     # 1. Detect New vs Updated vs Deleted
     new_files = []
     updated_files = [] # Files where size changed
-    for filepath in files:
+    for i, filepath in enumerate(files):
+        # Yield to other greenlets occasionally
+        if i % 100 == 0:
+            try:
+                import gevent
+                gevent.sleep(0)
+            except:
+                pass
+
         if filepath not in filepaths_in_library:
             new_files.append(filepath)
         else:
