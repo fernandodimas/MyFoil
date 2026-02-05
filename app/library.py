@@ -1317,8 +1317,7 @@ def get_game_info_item(tid, title_data):
     # Tags from Title object
     game["tags"] = title_data.get("tags", [])
 
-    # Screenshots from TitleDB
-    info = titles_lib.get_game_info(tid)
+    # Screenshots from TitleDB (already available in info from step 1218)
     game["screenshots"] = info.get("screenshots", []) if info else []
 
     # Files and details
@@ -1439,7 +1438,7 @@ def get_game_info_item(tid, title_data):
             
         dlcs_by_id[dlc_id] = {
             "app_id": dlc_id,
-            "name": titles_lib.get_game_info(dlc_id).get("name", f"DLC {dlc_id}"),
+            "name": titles_lib.get_game_info(dlc_id, silent=True).get("name", f"DLC {dlc_id}"),
             "owned": False,
             "latest_version": 0,
             "owned_version": 0,
@@ -1456,7 +1455,7 @@ def get_game_info_item(tid, title_data):
         if aid not in dlcs_by_id:
             dlcs_by_id[aid] = {
                 "app_id": aid,
-                "name": titles_lib.get_game_info(aid).get("name", f"DLC {aid}"),
+                "name": titles_lib.get_game_info(aid, silent=True).get("name", f"DLC {aid}"),
                 "owned": False,
                 "latest_version": 0,
                 "owned_version": 0,

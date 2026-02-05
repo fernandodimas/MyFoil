@@ -81,6 +81,7 @@ _dlcs_by_base_id = {}  # New optimization: {base_id: [dlc_id1, dlc_id2, ...]}
 _loaded_titles_file = None  # Track which titles file was loaded
 _titledb_cache_timestamp = None  # Timestamp when TitleDB is last loaded
 _titledb_cache_ttl = 3600  # TTL in seconds (1 hour default)
+_game_info_cache = {}  # In-memory cache for get_game_info results
 
 
 def get_titles_count():
@@ -893,11 +894,16 @@ def unload_titledb():
         return
 
     logger.info("Unloading TitleDBs from memory...")
+    global _cnmts_db
+    global _titles_db
+    global _versions_db
+    global _game_info_cache
     _cnmts_db = None
     _titles_db = None
     _versions_db = None
     _titles_db_loaded = False
     _titledb_cache_timestamp = None  # Limpar timestamp do cache
+    _game_info_cache = {}  # Clear cache on unload
     logger.info("TitleDBs unloaded.")
 
 
@@ -1058,16 +1064,21 @@ def identify_file(filepath):
     return identification, success, contents, error, suggested_name
 
 
-def get_game_info(title_id):
+def get_game_info(title_id, silent=False):
     from db import Titles
 
-    global _titles_db
+    global _titles_db, _game_info_cache
 
     if title_id is None:
-        logger.error("get_game_info called with title_id=None")
+        if not silent:
+            logger.error("get_game_info called with title_id=None")
         return None
 
     search_id = str(title_id).upper()
+    
+    # 0. Check Cache
+    if search_id in _game_info_cache:
+        return _game_info_cache[search_id]
 
     # 1. Try to get from database first (including custom edits)
     try:
@@ -1083,7 +1094,7 @@ def get_game_info(title_id):
                     screenshots = info.get("screenshots", []) or []
 
             # If we have basic info or it's custom, return it
-            return {
+            res = {
                 "name": db_title.name or "Unknown Title",
                 "bannerUrl": db_title.banner_url or "",
                 "iconUrl": db_title.icon_url or "",
@@ -1097,8 +1108,11 @@ def get_game_info(title_id):
                 "is_custom": db_title.is_custom,
                 "screenshots": screenshots,
             }
+            _game_info_cache[search_id] = res
+            return res
     except Exception as e:
-        logger.error(f"Error querying database for game info {search_id}: {e}")
+        if not silent:
+            logger.error(f"Error querying database for game info {search_id}: {e}")
 
     # 2. Fallback to Memory/JSON TitleDB
     if not _titles_db:
@@ -1178,7 +1192,7 @@ def get_game_info(title_id):
                     # Avoid infinite recursion
                     if bid == search_id:
                         continue
-                    base_info = get_game_info(bid)
+                    base_info = get_game_info(bid, silent=True)
                     if base_info and base_info.get("iconUrl") and not base_info["name"].startswith("Unknown"):
                         res["iconUrl"] = base_info["iconUrl"]
                         res["bannerUrl"] = res["bannerUrl"] or base_info.get("bannerUrl")
@@ -1204,6 +1218,7 @@ def get_game_info(title_id):
                         name = name.replace(r, "")
                 res["name"] = name.strip()
 
+            _game_info_cache[search_id] = res
             return res
 
         # If not found, try to find parent BASE game if this is a DLC/UPD
@@ -1217,8 +1232,9 @@ def get_game_info(title_id):
                 pass  # Invalid hex format
 
             for bid in possible_base_ids:
-                logger.debug(f"ID {search_id} not found, attempting fallback to base {bid}")
-                base_info = get_game_info(bid)
+                if not silent:
+                    logger.debug(f"ID {search_id} not found, attempting fallback to base {bid}")
+                base_info = get_game_info(bid, silent=True)
                 if base_info and not base_info["name"].startswith("Unknown"):
                     return {
                         "name": f"{base_info['name']} [DLC/UPD]",
@@ -1232,10 +1248,13 @@ def get_game_info(title_id):
                         "description": f"Informação estendida do jogo base: {base_info['name']}",
                         "nsuid": base_info.get("nsuid", ""),
                     }
+                    _game_info_cache[search_id] = res
+                    return res
 
         raise Exception(f"ID {search_id} not found in database")
     except Exception as e:
-        logger.debug(f"Identification failed for {title_id}: {e}")
+        if not silent:
+            logger.debug(f"Identification failed for {title_id}: {e}")
         safe_id = str(title_id).upper() if title_id else "UNKNOWN"
         return {
             "name": f"Unknown ({title_id})",
@@ -1249,6 +1268,8 @@ def get_game_info(title_id):
             "description": "ID não encontrado no banco de dados. Por favor, atualize o TitleDB nas configurações.",
             "nsuid": "",
         }
+        _game_info_cache[search_id] = res
+        return res
 
 
 def get_update_number(version):
