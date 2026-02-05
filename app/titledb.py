@@ -232,8 +232,21 @@ def process_and_store_json(filename: str, source_name: str) -> bool:
                         "updated_at": now_utc()
                     })
                 
+                
+                # Deduplicate entries in values list by title_id
+                # Keep the LAST entry seen (usually safest assumption if source order implies recency/precedence)
+                unique_values = {}
+                for v in values:
+                    unique_values[v["title_id"]] = v
+                
+                # Convert back to list
+                deduplicated_values = list(unique_values.values())
+
+                if not deduplicated_values:
+                    continue
+
                 # Bulk UPSERT using PostgreSQL syntax
-                stmt = insert(TitleDBCache).values(values)
+                stmt = insert(TitleDBCache).values(deduplicated_values)
                 upsert_stmt = stmt.on_conflict_do_update(
                     index_elements=['title_id'],
                     set_=dict(data=stmt.excluded.data, source=stmt.excluded.source, updated_at=stmt.excluded.updated_at)
