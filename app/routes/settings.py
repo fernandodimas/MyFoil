@@ -615,3 +615,70 @@ def apis_settings_api():
 
     reload_conf()
     return jsonify({"success": True})
+
+
+@settings_bp.route("/settings/tokens", methods=["GET"])
+@access_required("admin")
+def get_tokens_api():
+    """Get all API tokens"""
+    from db import ApiToken
+    tokens = ApiToken.query.options(db.joinedload(ApiToken.user)).all()
+    return jsonify([{
+        "id": t.id,
+        "name": t.name,
+        "user_id": t.user_id,
+        "user_name": t.user.user if t.user else "Unknown",
+        "created_at": format_datetime(t.created_at),
+        "last_used": format_datetime(t.last_used),
+        "prefix": t.token[:8] + "..."
+    } for t in tokens])
+
+
+@settings_bp.route("/settings/tokens", methods=["POST"])
+@access_required("admin")
+def create_token_api():
+    """Create a new API token"""
+    import secrets
+    from db import ApiToken
+    
+    data = request.json
+    name = data.get("name")
+    user_id = data.get("user_id") or current_user.id
+    
+    if not name:
+        return jsonify({"success": False, "error": "Name is required"}), 400
+        
+    token_str = secrets.token_hex(32)
+    
+    new_token = ApiToken(
+        user_id=user_id,
+        name=name,
+        token=token_str
+    )
+    
+    try:
+        db.session.add(new_token)
+        db.session.commit()
+        return jsonify({
+            "success": True, 
+            "token": token_str,
+            "id": new_token.id,
+            "name": new_token.name
+        })
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error creating token: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@settings_bp.route("/settings/tokens/<int:id>", methods=["DELETE"])
+@access_required("admin")
+def delete_token_api(id):
+    """Revoke an API token"""
+    from db import ApiToken
+    token = db.session.get(ApiToken, id)
+    if token:
+        db.session.delete(token)
+        db.session.commit()
+        return jsonify({"success": True})
+    return jsonify({"success": False, "error": "Token not found"}), 404
