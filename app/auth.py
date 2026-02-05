@@ -98,6 +98,19 @@ def basic_auth(request):
 
     username = auth.username
     password = auth.password
+    user = User.query.filter_by(user=username).first()
+    if user is None:
+        success = False
+        error = f'Unknown user "{username}".'
+    
+    elif not check_password_hash(user.password, password):
+        success = False
+        error = f'Incorrect password for user "{username}".'
+
+    elif not user.has_shop_access():
+        success = False
+        error = f'User "{username}" does not have access to the shop.'
+
     else:
         is_admin = user.has_admin_access()
     return success, error, is_admin
