@@ -1295,8 +1295,10 @@ def get_game_info_item(tid, title_data):
     for a in all_title_apps:
         if a["app_type"] == APP_TYPE_UPD and a["owned"]:
             for f in a.get("files_info", []):
-                if not f.get("error"):
-                    update_files.append(f)
+                # Skip files with explicit errors or that are not identified
+                if f.get("error") or not f.get("identified") or not f.get("path"):
+                    continue
+                update_files.append(f)
     
     game["updates_count"] = len(update_files)
     game["has_redundant_updates"] = game["updates_count"] > 1
@@ -1329,7 +1331,7 @@ def get_game_info_item(tid, title_data):
     game["tags"] = title_data.get("tags", [])
 
     # Screenshots from TitleDB (already available in info from step 1218)
-    game["screenshots"] = info.get("screenshots", []) if info else []
+    game["screenshots"] = (info.get("screenshots") or []) if info else []
 
     # Files and details
     game["base_files"] = []
@@ -1409,7 +1411,7 @@ def get_game_info_item(tid, title_data):
     if api_screenshots and isinstance(api_screenshots, list):
         # Normalize existing screenshots to URLs for comparison
         existing_urls = set()
-        current_screenshots = game.get("screenshots", [])
+        current_screenshots = (game.get("screenshots") or [])
         if isinstance(current_screenshots, list):
             for s in current_screenshots:
                 if isinstance(s, dict):

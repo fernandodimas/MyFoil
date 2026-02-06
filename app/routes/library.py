@@ -629,6 +629,7 @@ def get_stats_overview():
 @access_required("shop")
 def app_info_api(id):
     """Informações detalhadas de um jogo específico"""
+    logger.info(f"API: Requested app_info for {id} (v1626)")
     # Try to get by TitleID first (hex string)
     tid = str(id).upper()
     title_obj = Titles.query.filter_by(title_id=tid).first()
@@ -907,7 +908,8 @@ def app_info_api(id):
 
             # Screenshots
             if meta.screenshots:
-                existing_ss = set(s if isinstance(s, str) else s.get("url") for s in (result.get("screenshots") or []))
+                logger.debug(f"Merging snapshots from meta for {tid}")
+                existing_ss = set(s if isinstance(s, str) else (s.get("url") if s else None) for s in (result.get("screenshots") or []))
                 for ss in meta.screenshots:
                     url = ss if isinstance(ss, str) else ss.get("url")
                     if url not in existing_ss:
@@ -919,7 +921,7 @@ def app_info_api(id):
         if title_obj.tags_json:
             result["tags"] = list(set((result.get("tags") or []) + (title_obj.tags_json or [])))
         if title_obj.screenshots_json:
-            existing_ss = set(s if isinstance(s, str) else s.get("url") for s in (result.get("screenshots") or []))
+            existing_ss = set(s if isinstance(s, str) else (s.get("url") if s else None) for s in (result.get("screenshots") or []))
             for ss in title_obj.screenshots_json:
                 url = ss if isinstance(ss, str) else ss.get("url")
                 if url not in existing_ss:

@@ -1135,7 +1135,7 @@ def get_game_info(title_id, silent=False):
                 "publisher": info.get("publisher") or "Nintendo",
                 "description": info.get("description") or "",
                 "nsuid": info.get("nsuid") or info.get("nsuId") or "",
-                "screenshots": info.get("screenshots", []),
+                "screenshots": info.get("screenshots") or [],
             })
 
     # 2. Overwrite/Merge with Database info (Customizations/Suggested names)

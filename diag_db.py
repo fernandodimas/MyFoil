@@ -1,45 +1,39 @@
 
 import os
 import sys
-import logging
+from flask import Flask
 
-# Setup basic logging to stdout
-logging.basicConfig(level=logging.INFO)
+# Add 'app' directory to sys.path
+sys.path.append(os.path.join(os.getcwd(), 'app'))
 
-# Add 'app' to sys.path
-sys.path.append(os.path.abspath('app'))
+from app import create_app
+from db import db, Files, Apps, Titles
 
-try:
-    from app import app, CELERY_ENABLED
-    from db import db, Files, Libraries
-    import state
+app = create_app()
 
+def list_titles():
     with app.app_context():
-        print(f"CELERY_ENABLED: {CELERY_ENABLED}")
-        print(f"DATABASE_URL: {os.environ.get('DATABASE_URL', 'NOT SET')}")
+        print("Listing all titles in DB...")
+        titles = Titles.query.limit(20).all()
+        for t in titles:
+            print(f"ID: {t.id}, TitleID: {t.title_id}, Name: {t.name}")
         
-        # Check active scans
-        from job_tracker import job_tracker
-        active_jobs = job_tracker.get_active_jobs()
-        print(f"ACTIVE JOBS: {active_jobs}")
-        
-        # Check TitleDB lock
-        print(f"TITLED B UPDATE RUNNING: {state.is_titledb_update_running}")
-        
-        # Check Libraries
-        libs = Libraries.query.all()
-        print(f"LIBRARIES IN DB: {[(l.id, l.path) for l in libs]}")
-        
-        # Check Files
-        files_count = Files.query.count()
-        print(f"TOTAL FILES IN DB: {files_count}")
-        
-        skyrim_files = Files.query.filter(Files.filename.contains('Skyrim')).all()
-        print(f"SKYRIM FILES IN DB: {len(skyrim_files)}")
-        for f in skyrim_files:
-            print(f"  ID: {f.id}, Filename: {f.filename}, Folder: {f.folder}, Identified: {f.identified}, Path: {f.filepath}")
+        # Now search for those specific ones
+        tids = ["0100453019AA8000", "0100965017338000", "01005270232F2000", "0100FA401961E000", "01009A5021534000"]
+        for tid in tids:
+            # Case insensitive search
+            title = Titles.query.filter(Titles.title_id.ilike(f"%{tid}%")).first()
+            if title:
+                print(f"\nFOUND TITLE: {title.name} ({title.title_id})")
+                apps = Apps.query.filter_by(title_id=title.id).all()
+                for app_obj in apps:
+                    print(f"  App: {app_obj.app_id} (Type: {app_obj.app_type}, Version: {app_obj.app_version})")
+                    for f in app_obj.files:
+                        print(f"    File: {f.filename}")
+                        print(f"      Identified: {f.identified}")
+                        print(f"      Error: {f.identification_error}")
+            else:
+                print(f"\nTitle ID {tid} not found with ilike.")
 
-except Exception as e:
-    print(f"DIAGNOSTIC FAILED: {e}")
-    import traceback
-    traceback.print_exc()
+if __name__ == "__main__":
+    list_titles()

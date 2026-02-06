@@ -954,7 +954,7 @@ def get_all_titles_with_apps():
             a_dict = to_dict(a)
             # Include both for compatibility
             a_dict["files"] = [f.filepath for f in a.files]
-            a_dict["files_info"] = [{"path": f.filepath, "size": f.size, "id": f.id, "error": f.identification_error} for f in a.files]
+            a_dict["files_info"] = [{"path": f.filepath, "size": f.size, "id": f.id, "error": f.identification_error, "identified": f.identified} for f in a.files]
             t_dict["apps"].append(a_dict)
         t_dict["tags"] = [tag.name for tag in t.tags]
         results.append(t_dict)
