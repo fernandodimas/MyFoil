@@ -744,19 +744,35 @@ function useMetadataFromDataAttr(elementId) {
 }
 
 function useMetadata(item) {
+    if (!item) return;
+
+    // Store full original data for merging during save
     $('#editMetaFullData').val(JSON.stringify(item));
 
-    if (item.name) $('#editMetaName').val(item.name);
-    if (item.publisher) $('#editMetaPublisher').val(item.publisher);
-    if (item.description) $('#editMetaDescription').val(item.description);
-    if (item.iconUrl) $('#editMetaIcon').val(item.iconUrl);
-    if (item.bannerUrl) $('#editMetaBanner').val(item.bannerUrl);
-    if (item.category || item.genre) $('#editMetaGenre').val(Array.isArray(item.category) ? item.category.join(', ') : (item.category || item.genre || ''));
-    if (item.releaseDate || item.release_date) $('#editMetaRelease').val(item.releaseDate || item.release_date);
-    if (item.size) $('#editMetaSize').val(item.size);
-    if (item.nsuId || item.nsuid) $('#editMetaNsuid').val(item.nsuId || item.nsuid);
+    // Basic fields
+    const setVal = (id, val) => {
+        if (val !== undefined && val !== null) $(id).val(val);
+    };
 
-    showToast(t('Metadados carregados! Todos os campos serão salvos.'), 'info');
+    setVal('#editMetaName', item.name);
+    setVal('#editMetaPublisher', item.publisher);
+    setVal('#editMetaDescription', item.description);
+    setVal('#editMetaIcon', item.iconUrl || item.icon_url);
+    setVal('#editMetaBanner', item.bannerUrl || item.banner_url);
+
+    // Genre/Category handling
+    const category = item.category || item.genre || [];
+    setVal('#editMetaGenre', Array.isArray(category) ? category.join(', ') : category);
+
+    // Release Date handling
+    const relDate = item.releaseDate || item.release_date;
+    setVal('#editMetaRelease', relDate);
+
+    // NSUID and Size
+    setVal('#editMetaNsuid', item.nsuId || item.nsuid);
+    setVal('#editMetaSize', item.size);
+
+    showToast(t('Metadados carregados! Todos os campos foram preenchidos.'), 'info');
 }
 
 // Keyboard Navigation for Game Details Modal

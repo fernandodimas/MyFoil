@@ -1391,13 +1391,16 @@ def save_custom_title_info(title_id, data):
     data should contain: name, description, publisher, iconUrl, bannerUrl, ...
     """
     from db import db, Titles
+    import os
+    import json
 
     global _titles_db
 
     if not title_id or not data:
         return False, "Missing TitleID or Data"
 
-    title_id = title_id.upper()
+    title_id = str(title_id).upper()
+    logger.info(f"Saving custom info for {title_id}...")
 
     # 1. Update Database
     try:
@@ -1406,58 +1409,80 @@ def save_custom_title_info(title_id, data):
             db_title = Titles(title_id=title_id)
             db.session.add(db_title)
 
-        db_title.name = data.get("name", db_title.name)
-        db_title.description = data.get("description", db_title.description)
-        db_title.publisher = data.get("publisher", db_title.publisher)
-        db_title.icon_url = data.get("iconUrl", db_title.icon_url)
-        db_title.banner_url = data.get("bannerUrl", db_title.banner_url)
-        db_title.category = (
-            ",".join(data.get("category"))
-            if isinstance(data.get("category"), list)
-            else data.get("category", db_title.category)
-        )
-        db_title.release_date = data.get("releaseDate", data.get("release_date", db_title.release_date))
-        db_title.size = data.get("size", db_title.size)
-        db_title.nsuid = data.get("nsuid", db_title.nsuid)
-        db_title.is_custom = True
+        # Helper to safely update field if present in data
+        def update_field(field_name, attr_name=None):
+            if not attr_name: attr_name = field_name
+            if field_name in data and data[field_name] is not None:
+                setattr(db_title, attr_name, data[field_name])
 
+        update_field("name")
+        update_field("description")
+        update_field("publisher")
+        update_field("iconUrl", "icon_url")
+        update_field("bannerUrl", "banner_url")
+        update_field("nsuid")
+        
+        if "size" in data:
+            try:
+                db_title.size = int(data["size"])
+            except (ValueError, TypeError):
+                pass
+
+        # Handle category/genre list
+        cat_data = data.get("category") or data.get("genre")
+        if cat_data:
+            if isinstance(cat_data, list):
+                db_title.category = ",".join([str(c) for c in cat_data if c])
+            else:
+                db_title.category = str(cat_data)
+
+        # Handle release date
+        rel_date = data.get("releaseDate") or data.get("release_date")
+        if rel_date:
+            db_title.release_date = str(rel_date)
+            
+        db_title.is_custom = True
         db.session.commit()
         logger.info(f"Saved custom info to database for {title_id}")
     except Exception as e:
         logger.error(f"Error saving custom info to DB for {title_id}: {e}")
         db.session.rollback()
+        # Continue to JSON save even if DB fails, or vice versa? 
+        # For now, let's continue to be robust.
 
     # 2. Legacy Support: Update custom.json
-    custom_path = os.path.join(TITLEDB_DIR, "custom.json")
-    os.makedirs(os.path.dirname(custom_path), exist_ok=True)
-    custom_db = robust_json_load(custom_path) or {}
-
-    # Map fields for compatibility with TitleDB format
-    save_data = data.copy()
-    if "genre" in save_data:
-        save_data["category"] = save_data.pop("genre")
-    if "release_date" in save_data:
-        save_data["releaseDate"] = save_data.pop("release_date")
-    save_data["id"] = title_id
-
-    if title_id in custom_db and isinstance(custom_db[title_id], dict):
-        custom_db[title_id].update(save_data)
-    else:
-        custom_db[title_id] = save_data
-
     try:
+        custom_path = os.path.join(TITLEDB_DIR, "custom.json")
+        os.makedirs(os.path.dirname(custom_path), exist_ok=True)
+        custom_db = robust_json_load(custom_path) or {}
+
+        # Map fields for compatibility with TitleDB format
+        save_data = data.copy()
+        if "genre" in save_data and "category" not in save_data:
+            save_data["category"] = save_data.pop("genre")
+        if "release_date" in save_data and "releaseDate" not in save_data:
+            save_data["releaseDate"] = save_data.pop("release_date")
+        
+        save_data["id"] = title_id
+
+        if title_id in custom_db and isinstance(custom_db[title_id], dict):
+            custom_db[title_id].update(save_data)
+        else:
+            custom_db[title_id] = save_data
+
         safe_write_json(custom_path, custom_db, indent=4)
 
         # 3. Update in-memory DB immediately
         if _titles_db is not None:
             if title_id in _titles_db:
-                _titles_db[title_id].update(save_data)
+                if isinstance(_titles_db[title_id], dict):
+                    _titles_db[title_id].update(save_data)
             else:
                 _titles_db[title_id] = save_data
 
         return True, None
     except Exception as e:
-        logger.error(f"Error saving custom.json: {e}")
+        logger.error(f"Error saving custom.json for {title_id}: {e}")
         return False, str(e)
 
 

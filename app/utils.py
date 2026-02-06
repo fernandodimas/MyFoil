@@ -189,12 +189,31 @@ def now_utc():
     return datetime.now(timezone.utc)
 
 def ensure_utc(dt):
-    """Ensure a datetime object is aware and in UTC. If naive, assume UTC."""
+    """
+    Ensure a datetime object is aware and in UTC.
+    Extremely robust version: handles ISO strings, None, and naive datetimes.
+    """
     if dt is None:
         return None
+    
+    # Handle strings (ISO format)
+    if isinstance(dt, str):
+        try:
+            # Try parsing ISO format
+            dt = datetime.fromisoformat(dt.replace('Z', '+00:00'))
+        except (ValueError, TypeError, AttributeError):
+            return None
+
+    # Final check: is it a datetime-like object?
+    # We use hasattr because some libraries use proxy objects
+    if not hasattr(dt, 'tzinfo'):
+        return None
+
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
+    
     return dt.astimezone(timezone.utc)
+
 
 def get_local_timezone():
     """Returns the local timezone of the system"""

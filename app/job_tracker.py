@@ -44,6 +44,8 @@ class JobTracker:
         self.emitter = None
         self.app = None
         self.cancelled_jobs = set()
+        self._last_update_time = {} # job_id -> timestamp
+        self._last_progress = {}    # job_id -> last_percent
     
     def init_app(self, app):
         """Initialize with Flask app instance"""
@@ -220,7 +222,38 @@ class JobTracker:
     def update_progress(self, job_id: str, percent: int = 0, total: int = None, message: str = '', current: int = None):
         """
         Update job progress in DB and via WebSocket.
+        Throttled to max 1 update per second to reduce server load.
         """
+        import time
+        now = time.time()
+        
+        # Calculate percent if total/current provided
+        calc_percent = float(percent)
+        if total is not None:
+             total_val = float(total)
+             current_val = float(current if current is not None else percent)
+             calc_percent = round((current_val / total_val * 100) if total_val > 0 else 0, 1)
+
+        # Check throttling
+        last_time = self._last_update_time.get(job_id, 0)
+        last_pct = self._last_progress.get(job_id, -1)
+        
+        # Throttling rule: 
+        # - Always allow if first update (last_time == 0)
+        # - Always allow if 0% or 100%
+        # - Always allow if message changed (some jobs only use messages)
+        # - Otherwise, limit to 1.0s and at least 0.5% change
+        is_first = last_time == 0
+        is_critical = calc_percent <= 0 or calc_percent >= 100
+        is_significant = abs(calc_percent - last_pct) >= 0.5
+        time_passed = (now - last_time) >= 1.0
+
+        if not (is_first or is_critical or (time_passed and is_significant)):
+            return
+
+        self._last_update_time[job_id] = now
+        self._last_progress[job_id] = calc_percent
+
         app = self._get_app()
         if not app: return
 
@@ -231,53 +264,32 @@ class JobTracker:
                     from db import db, SystemJob
                     job = SystemJob.query.get(job_id)
                     if job:
-                        # Defensive type conversion
-                        try:
-                            if total is not None:
-                                total_val = float(total)
-                                current_val = float(current if current is not None else percent)
-                                job.progress_percent = round((current_val / total_val * 100) if total_val > 0 else 0, 1)
-                            else:
-                                # Direct mode
-                                job.progress_percent = float(percent)
-                        except (ValueError, TypeError):
-                            # Fallback if types are weird
-                            logger.warning(f"Invalid progress types for job {job_id}: percent={percent}, total={total}, current={current}")
-                            if isinstance(percent, (int, float)):
-                                job.progress_percent = float(percent)
-                        
+                        job.progress_percent = calc_percent
                         if message:
                             job.progress_message = str(message)
                         
                         # Prepare data for emission BEFORE commit
                         emit_data = job.to_dict()
-                        
                         db.session.commit()
             except Exception as e:
-                # Ignore lock errors, log others
                 if "locked" not in str(e).lower():
                     logger.error(f"DB error in update_progress: {e}")
 
-            # 2. Emit update via WebSocket (Realtime)
+            # 2. Emit update via WebSocket
             try:
                  if 'emit_data' not in locals():
-                     # Construct fallback payload if DB read failed
                      emit_data = {
                         "id": job_id,
                         "type": "unknown",
                         "status": "running",
-                        "progress": {
-                            "percent": float(percent),
-                            "message": message or ""
-                        }
+                        "progress": {"percent": calc_percent, "message": message or ""}
                      }
                  
                  if self.emitter:
                      if hasattr(self.emitter, "emit"):
-                        self.emitter.emit("job_update", emit_data, namespace="/")
+                         self.emitter.emit("job_update", emit_data, namespace="/")
                      else:
-                        self.emitter("job_update", emit_data)
-
+                         self.emitter("job_update", emit_data)
             except Exception as emit_err:
                  logger.debug(f"Failed to emit socket update: {emit_err}")
 

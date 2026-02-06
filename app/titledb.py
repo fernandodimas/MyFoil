@@ -6,6 +6,7 @@ Enhanced with multiple source support and direct JSON downloads
 import os
 import logging
 import requests
+import time
 
 # Retrieve main logger
 logger = logging.getLogger("main")
@@ -643,25 +644,43 @@ def get_active_source_info() -> Dict:
                     )
 
                     if not is_running and not recent_fail:
-                        logger.info(f"New TitleDB version detected ({active.name}). Scheduling auto-update in 15s...")
+                        delay_seconds = 10
+                        logger.info(f"New TitleDB version detected ({active.name}). Scheduling auto-update in {delay_seconds}s...")
                         
-                        def _delayed_launch():
+                        def _trigger_update():
+                            try:
+                                from tasks import update_titledb_async
+                                update_titledb_async.apply_async()
+                                logger.info("Auto-update TitleDB triggered successfully.")
+                            except Exception as trigger_err:
+                                logger.error(f"Failed to launch auto-update task: {trigger_err}")
+
+                        # Use scheduler if available (Flask app object often has it)
+                        from flask import current_app
+                        try:
+                            if hasattr(current_app, 'scheduler'):
+                                from datetime import timedelta
+                                current_app.scheduler.add_job(
+                                    job_id=f"auto_update_{int(time.time())}",
+                                    func=_trigger_update,
+                                    run_once=True,
+                                    start_date=now_utc() + timedelta(seconds=delay_seconds)
+                                )
+                            else:
+                                import gevent
+                                def _delayed():
+                                    gevent.sleep(delay_seconds)
+                                    _trigger_update()
+                                gevent.spawn(_delayed)
+                        except Exception as sched_err:
+                            logger.error(f"Error scheduling auto-update: {sched_err}")
+                            # Fallback to gevent if scheduler fails
                             import gevent
-                            gevent.sleep(15)
-                             # Re-check running status inside the thread just in case
-                            if any(j['type'] == JobType.TITLEDB_UPDATE for j in job_tracker.get_active_jobs()):
-                                return
-
-                            from tasks import update_titledb_async
-                            # Trigger Celery task
-                            update_titledb_async.apply_async()
-                            logger.info("Auto-update TitleDB triggered.")
-
-                        import gevent
-                        gevent.spawn(_delayed_launch)
+                            gevent.spawn(lambda: (gevent.sleep(delay_seconds), _trigger_update()))
 
                 except Exception as e:
-                    logger.error(f"Failed to trigger auto-update: {e}")
+                    import traceback
+                    logger.error(f"Failed to trigger auto-update logic: {e}\n{traceback.format_exc()}")
         
         # Format dates for UI
         last_download_date = format_datetime(active.last_success)
