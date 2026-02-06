@@ -21,8 +21,10 @@ web_bp = Blueprint("web", __name__)
 
 
 @web_bp.route("/")
+@web_bp.route("/index.json")
+@web_bp.route("/tinfoil.json")
 def index():
-    """Página inicial / Loja Tinfoil"""
+    """Página inicial / Loja Tinfoil / Índice JSON"""
 
     @tinfoil_access
     def access_tinfoil_shop():
@@ -42,24 +44,24 @@ def index():
     user_agent = request.headers.get("User-Agent", "")
     is_tinfoil = "Tinfoil" in user_agent or "NintendoSwitch" in user_agent
 
-    # Tinfoil headers check (like Ownfoil)
-    from constants import TINFOIL_HEADERS
-
-    has_all_tinfoil_headers = all(header in request.headers for header in TINFOIL_HEADERS)
-
-    is_api_request = (
-        request.headers.get("Accept") == "application/json"
-        or request.headers.get("X-Requested-With") == "XMLHttpRequest"
-        or is_tinfoil
+    # Tinfoil headers check - Relaxed to only require Uid or Hauth as identifiers
+    has_tinfoil_headers = any(h in request.headers for h in ["Uid", "Hauth", "Version"])
+    
+    # Check if specifically requesting JSON
+    is_api_requested = (
+        request.path.endswith(".json") or 
+        request.headers.get("Accept") == "application/json" or
+        request.headers.get("X-Requested-With") == "XMLHttpRequest"
     )
 
-    logger.info(
-        f"Request from {request.remote_addr}: UA={user_agent[:50]}..., is_tinfoil={is_tinfoil}, has_tinfoil_headers={has_all_tinfoil_headers}"
+    logger.debug(
+        f"Request to {request.path} from {request.remote_addr}: UA={user_agent[:50]}..., is_tinfoil={is_tinfoil}, has_tinfoil_headers={has_tinfoil_headers}"
     )
 
-    if is_tinfoil or has_all_tinfoil_headers or is_api_request:
+    if is_tinfoil or has_tinfoil_headers or is_api_requested:
         return access_tinfoil_shop()
 
+    # Continue with Web UI logic
     if not load_settings()["shop"]["public"]:
         return access_shop_auth()
     return access_shop()

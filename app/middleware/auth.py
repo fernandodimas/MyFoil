@@ -32,6 +32,9 @@ def tinfoil_access(f):
         hauth_success = None
         auth_success = None
         request.verified_host = None
+        
+        # Determine if shop is in public mode
+        is_public = app_settings['shop'].get('public', False) or app_settings['shop'].get('public_profile', False)
 
         # Host verification to prevent hotlinking
         # Tinfoil doesn't send Hauth for file grabs, only directories, so ignore get_game endpoints.
@@ -42,9 +45,9 @@ def tinfoil_access(f):
             logger.info(f"Secure Tinfoil request from remote host {request_host}, proceeding with host verification.")
             shop_host = app_settings["shop"].get("host")
             shop_hauth = app_settings["shop"].get("hauth")
+            
             if not shop_host:
                 logger.error("Missing shop host configuration, Host verification is disabled.")
-
             elif request_host != shop_host:
                 logger.warning(f"Incorrect URL referrer detected: {request_host}.")
                 error = f"Incorrect URL `{request_host}`."
@@ -94,8 +97,9 @@ def tinfoil_access(f):
     return _tinfoil_access
 
 def basic_auth(request):
-    """Autenticação básica HTTP"""
+    """Autenticação básica HTTP com suporte a senhas hashadas"""
     from db import User
+    from werkzeug.security import check_password_hash
     import base64
 
     auth = request.headers.get('Authorization')
@@ -105,12 +109,25 @@ def basic_auth(request):
     try:
         credentials = base64.b64decode(auth[6:]).decode('utf-8')
         username, password = credentials.split(':', 1)
-    except:
+    except Exception as e:
+        logger.error(f"Failed to decode Basic Auth: {e}")
         return False, 'Invalid authorization header format', False
 
     user = User.query.filter_by(user=username).first()
-    if user and user.password == password:  # In production, use proper password hashing
-        return True, None, user.admin_access
+    
+    if user:
+        # Support both hashed and plain text (for very old legacy migrations, though MyFoil uses hash)
+        password_ok = False
+        if user.password.startswith(('pbkdf2:sha256:', 'scrypt:')):
+            password_ok = check_password_hash(user.password, password)
+        else:
+            # Fallback for plain text if any remains
+            password_ok = (user.password == password)
+            
+        if password_ok:
+            if not user.has_shop_access():
+                return False, 'User does not have shop access', False
+            return True, None, user.admin_access
 
     return False, 'Invalid username or password', False
 
