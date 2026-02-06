@@ -6,8 +6,9 @@ from flask import Blueprint, request, jsonify
 from sqlalchemy import func, and_, case
 from db import (
     db, Apps, Titles, Libraries, Files, get_libraries, logger, app_files,
-    TitleMetadata, TitleTag, Tag, WishlistIgnore, TitleDBCache
+    TitleMetadata, TitleTag, Tag, WishlistIgnore, TitleDBCache, Wishlist
 )
+from flask_login import current_user
 from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC
 from settings import load_settings
 from auth import access_required
@@ -639,6 +640,29 @@ def app_info_api(id):
         if app_obj:
             tid = app_obj.title.title_id
             title_obj = app_obj.title
+    
+    # Handle phantom titles from Wishlist (upcoming/manual entries)
+    if not title_obj and tid.startswith("UPCOMING_"):
+        wish_item = Wishlist.query.filter_by(title_id=tid).first()
+        if wish_item:
+            return jsonify({
+                "id": tid,
+                "name": wish_item.name,
+                "publisher": "--",
+                "description": "Este jogo foi adicionado à sua wishlist a partir da lista de Próximos Lançamentos.",
+                "release_date": wish_item.release_date,
+                "iconUrl": wish_item.icon_url or "/static/img/no-icon.png",
+                "bannerUrl": wish_item.banner_url or "",
+                "owned": False,
+                "has_base": False,
+                "files": [],
+                "updates": [],
+                "dlcs": [],
+                "screenshots": [],
+                "metacritic": None,
+                "rating": None,
+                "category": []
+            })
 
     if not title_obj:
         # Maybe it's a DLC app_id, try to find base TitleID
@@ -663,7 +687,7 @@ def app_info_api(id):
         info = {
             "name": f"Unknown ({tid})",
             "publisher": "--",
-            "description": "No information available.",
+            "description": "Informações não encontradas no TitleDB para este ID.",
             "release_date": "--",
             "iconUrl": "/static/img/no-icon.png",
         }
@@ -678,23 +702,22 @@ def app_info_api(id):
         result["has_latest_version"] = False
         result["has_all_dlcs"] = False
         result["owned"] = False
+        result["files"] = []
 
-        # Files for this specific DLC if owned
-        dlc_files = []
-        app_obj_dlc = Apps.query.filter_by(app_id=tid, owned=True).first()
-        if app_obj_dlc:
+        # Apps associados mas sem Title record principal (ex: DLC avulsa)
+        app_obj_extra = Apps.query.filter_by(app_id=tid, owned=True).first()
+        if app_obj_extra:
             result["owned"] = True
-            for f in app_obj_dlc.files:
-                dlc_files.append(
-                    {
-                        "id": f.id,
-                        "filename": f.filename,
-                        "filepath": f.filepath,
-                        "size_formatted": format_size_py(f.size),
-                    }
-                )
+            result["files"] = [
+                {
+                    "id": f.id,
+                    "filename": f.filename,
+                    "filepath": f.filepath,
+                    "size_formatted": format_size_py(f.size),
+                }
+                for f in app_obj_extra.files
+            ]
 
-        result["files"] = dlc_files
         result["updates"] = []
         result["dlcs"] = []
         result["category"] = info.get("category", [])
@@ -708,7 +731,9 @@ def app_info_api(id):
     base_apps = [a for a in all_title_apps if a["app_type"] == APP_TYPE_BASE and a["owned"]]
     for b in base_apps:
         # We need the original Files objects to get IDs for download
-        app_model = db.session.get(Apps, b["id"])
+        # Use Apps.query.get for better compatibility with different Flask-SQLAlchemy versions
+        app_model = Apps.query.get(b["id"])
+        if not app_model: continue
         for f in app_model.files:
             base_files.append(
                 {
@@ -759,10 +784,11 @@ def app_info_api(id):
         upd_app = update_apps_by_version.get(v_int)
         files = []
         if upd_app and upd_app["owned"]:
-            app_model = db.session.get(Apps, upd_app["id"])
-            for f in app_model.files:
-                if f.id in seen_file_ids_in_modal: continue
-                files.append({"id": f.id, "filename": f.filename, "size_formatted": format_size_py(f.size)})
+            app_model = Apps.query.get(upd_app["id"])
+            if app_model:
+                for f in app_model.files:
+                    if f.id in seen_file_ids_in_modal: continue
+                    files.append({"id": f.id, "filename": f.filename, "size_formatted": format_size_py(f.size)})
         
         updates_list.append({
             "version": v_int,
@@ -775,15 +801,16 @@ def app_info_api(id):
     for v_int, upd_app in update_apps_by_version.items():
         if v_int not in [v["version"] for v in updates_list] and v_int != 0:
             files = []
-            if upd_app["owned"]:
-                app_model = db.session.get(Apps, upd_app["id"])
-                for f in app_model.files:
-                    if f.id in seen_file_ids_in_modal: continue
-                    files.append({"id": f.id, "filename": f.filename, "size_formatted": format_size_py(f.size)})
+            if upd_app.get("owned"):
+                app_model = Apps.query.get(upd_app["id"])
+                if app_model:
+                    for f in app_model.files:
+                        if f.id in seen_file_ids_in_modal: continue
+                        files.append({"id": f.id, "filename": f.filename, "size_formatted": format_size_py(f.size)})
             
             updates_list.append({
                 "version": v_int,
-                "owned": upd_app["owned"],
+                "owned": upd_app.get("owned", False),
                 "release_date": "Unknown",
                 "files": files
             })
@@ -808,17 +835,18 @@ def app_info_api(id):
         files = []
         if owned:
             for a in apps_for_dlc:
-                if a["owned"]:
-                    app_model = db.session.get(Apps, a["id"])
-                    for f in app_model.files:
-                        files.append(
-                            {
-                                "id": f.id,
-                                "filename": f.filename,
-                                "filepath": f.filepath,
-                                "size_formatted": format_size_py(f.size),
-                            }
-                        )
+                if a.get("owned"):
+                    app_model = Apps.query.get(a["id"])
+                    if app_model:
+                        for f in app_model.files:
+                            files.append(
+                                {
+                                    "id": f.id,
+                                    "filename": f.filename,
+                                    "filepath": f.filepath,
+                                    "size_formatted": format_size_py(f.size),
+                                }
+                            )
 
         dlc_info = titles.get_game_info(dlc_id)
         dlcs_list.append(

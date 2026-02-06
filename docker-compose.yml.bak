@@ -1,0 +1,101 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: myfoil-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: myfoil
+      POSTGRES_PASSWORD: myfoilpassword
+      POSTGRES_DB: myfoil
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U myfoil -d myfoil" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: myfoil-redis
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6379:6379"
+
+  myfoil:
+    container_name: myfoil
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # No cache to ensure fresh build every time
+      cache_from:
+        - myfoil:latest
+    # Don't specify image name - let Portainer auto-generate
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://myfoil:myfoilpassword@postgres:5432/myfoil
+      - REDIS_URL=redis://redis:6379/0
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Sao_Paulo
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - /path/to/your/games:/games # ⚠️ UPDATE THIS! Path to your game files
+      - /path/to/your/externo:/externo # ⚠️ UPDATE THIS! Path to your external drive
+      - ./config:/app/config
+      - ./data:/app/data
+    ports:
+      - "8465:8465"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8465/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  worker:
+    container_name: myfoil-worker
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - myfoil:latest
+    restart: unless-stopped
+    command: celery -A celery_app.celery worker --loglevel=info --concurrency=2
+    depends_on:
+      redis:
+        condition: service_healthy
+      myfoil:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql://myfoil:myfoilpassword@postgres:5432/myfoil
+      - REDIS_URL=redis://redis:6379/0
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Sao_Paulo
+    volumes:
+      - /path/to/your/games:/games # Same as myfoil service
+      - /path/to/your/externo:/externo # Same as myfoil service
+      - ./config:/app/config
+      - ./data:/app/data
+    healthcheck:
+      test: [ "CMD-SHELL", "celery -A celery_app.celery inspect ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:

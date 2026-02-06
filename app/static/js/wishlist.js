@@ -99,17 +99,53 @@ function renderWishlist() {
 }
 
 function formatDateDisplay(rawDate) {
-    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const cleanDate = String(rawDate || '').replace(/-/g, '').slice(0, 8);
+    if (!rawDate || rawDate === 'Unknown' || rawDate === '--') return { text: t('Desconhecida'), class: 'has-text-grey', icon: '' };
 
-    if (!cleanDate || cleanDate === 'Unknown') return { text: t('Desconhecida'), class: 'has-text-grey', icon: '' };
+    let dateObj;
+    let text = '';
 
-    const year = cleanDate.slice(0, 4);
-    const month = cleanDate.slice(4, 6);
-    const day = cleanDate.slice(6, 8);
-    const text = `${day}/${month}/${year}`;
+    // Normalize separators
+    const cleanDateStr = String(rawDate).trim().replace(/-/g, '/');
 
-    if (cleanDate > todayStr) {
+    // Case 1: DD/MM/YYYY
+    if (cleanDateStr.includes('/') && cleanDateStr.split('/').length === 3) {
+        const parts = cleanDateStr.split('/');
+        if (parts[0].length <= 2) {
+            // DD/MM/YYYY
+            dateObj = new Date(parts[2], parts[1] - 1, parts[0]);
+        } else {
+            // YYYY/MM/DD
+            dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+        }
+    } else {
+        // Case 2: YYYY-MM-DD (ISO) - already handled by replace above, but just in case
+        dateObj = new Date(rawDate);
+
+        if (isNaN(dateObj.getTime())) {
+            // Case 3: YYYYMMDD
+            const clean = String(rawDate).replace(/[^0-9]/g, '');
+            if (clean.length === 8) {
+                const y = clean.slice(0, 4);
+                const m = clean.slice(4, 6);
+                const d = clean.slice(6, 8);
+                dateObj = new Date(y, m - 1, d);
+            }
+        }
+    }
+
+    if (!dateObj || isNaN(dateObj.getTime())) {
+        return { text: rawDate, class: 'has-text-grey', icon: '' };
+    }
+
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const y = dateObj.getFullYear();
+    text = `${d}/${m}/${y}`;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (dateObj > today) {
         return { text, class: 'has-text-warning', icon: '<i class="bi bi-clock-fill mr-1"></i>' };
     } else {
         return { text, class: 'has-text-success', icon: '<i class="bi bi-check-circle-fill mr-1"></i>' };

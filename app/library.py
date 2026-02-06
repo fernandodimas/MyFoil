@@ -503,7 +503,12 @@ def identify_single_file(filepath):
         identification, success, contents, error, suggested_name = titles_lib.identify_file(filepath)
         
         if not success:
-             logger.warning(f"Failed to identify file (skipping): {filepath} - Error: {error}")
+             logger.warning(f"Failed to identify file: {filepath} - Error: {error}")
+             file_obj.identified = False
+             file_obj.identification_error = error or "Falha técnica na identificação"
+             file_obj.identification_attempts += 1
+             file_obj.last_attempt = now_utc()
+             db.session.commit()
              return False
 
         if success and contents and not error:

@@ -73,7 +73,8 @@ def get_upcoming():
         for game in games:
             if "first_release_date" in game:
                 game["release_date_formatted"] = datetime.fromtimestamp(game["first_release_date"]).strftime('%d/%m/%Y')
-                game["release_date"] = game["release_date_formatted"]
+                # Save as YYYY-MM-DD for standard sorting and logical comparisons
+                game["release_date"] = datetime.fromtimestamp(game["first_release_date"]).strftime('%Y-%m-%d')
             
             if "cover" in game and "url" in game["cover"]:
                 # Upgrade cover resolution
