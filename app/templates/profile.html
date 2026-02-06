@@ -93,7 +93,7 @@
     btn.classList.add('is-loading');
 
     try {
-      const response = await fetch('/change_password', {
+      const response = await window.safeFetch('/change_password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

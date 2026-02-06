@@ -18,6 +18,25 @@ window.debugError = function (...args) {
     console.error(...args);
 };
 
+window.safeFetch = function (url, options = {}) {
+    // Force URL to be relative to origin without credentials
+    if (typeof url === 'string' && url.startsWith('/')) {
+        url = window.location.origin + url;
+    }
+    return fetch(url, options);
+};
+
+// Configure jQuery globally to avoid credential issues with relative URLs
+if (typeof $ !== 'undefined') {
+    $.ajaxSetup({
+        beforeSend: function (xhr, settings) {
+            if (settings && settings.url && typeof settings.url === 'string' && settings.url.startsWith('/')) {
+                settings.url = window.location.origin + settings.url;
+            }
+        }
+    });
+}
+
 /**
  * Global Translation Helper
  * @param {string} key 

@@ -63,7 +63,7 @@ async function loadUpcomingGames() {
     const apiMessageText = document.getElementById('apiMessageText');
 
     try {
-        const response = await fetch('/api/upcoming');
+        const response = await window.safeFetch('/api/upcoming');
         const data = await response.json();
 
         if (loading) loading.classList.add('is-hidden');

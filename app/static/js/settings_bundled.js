@@ -1253,7 +1253,7 @@ $('.modal-background').on('click', function () { closeModal($(this).parent().att
 // Metadata Fetch Logic
 async function triggerMetadataFetch(force = false) {
     try {
-        const response = await fetch('/api/system/metadata/fetch', {
+        const response = await window.safeFetch('/api/system/metadata/fetch', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ force: force })
@@ -1278,7 +1278,7 @@ async function updateMetadataStatus() {
     if (!timeEl) return;
 
     try {
-        const response = await fetch('/api/system/metadata/status');
+        const response = await window.safeFetch('/api/system/metadata/status');
         if (response.ok) {
             const data = await response.json();
 

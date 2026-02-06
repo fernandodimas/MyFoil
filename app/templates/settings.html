@@ -378,7 +378,7 @@
                                             const list = document.getElementById('fileBrowserList');
                                             list.innerHTML = '<div class="p-5 has-text-centered"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
 
-                                            fetch('/api/system/fs/list', {
+                                            window.safeFetch('/api/system/fs/list', {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 body: JSON.stringify({ path: path })
@@ -1269,14 +1269,14 @@
                         <script>
                             function resetJobs() {
                                 if (!confirm("Deseja resetar todos os jobs travados e as flags de memória?")) return;
-                                fetch('/api/jobs/reset', { method: 'POST' })
+                                window.safeFetch('/api/jobs/reset', { method: 'POST' })
                                     .then(r => r.json())
                                     .then(data => alert(data.message || "Sucesso"));
                             }
 
                             function resetRedis() {
                                 if (!confirm("CUIDADO: Isso irá limpar todo o banco do Redis e a fila de processamento. Continuar?")) return;
-                                fetch('/api/system/redis/reset', { method: 'POST' })
+                                window.safeFetch('/api/system/redis/reset', { method: 'POST' })
                                     .then(r => r.json())
                                     .then(data => alert(data.message || "Sucesso"));
                             }
@@ -1284,7 +1284,7 @@
                             function testTitleDBSync() {
                                 const btn = document.getElementById('btnTestTitleDB');
                                 btn.classList.add('is-loading');
-                                fetch('/api/system/titledb/test', { method: 'POST' })
+                                window.safeFetch('/api/system/titledb/test', { method: 'POST' })
                                     .then(r => r.json())
                                     .then(data => {
                                         alert(data.message + "\nTítulos: " + data.titles_in_db + "\nCache: " + data.titledb_cache_count);
@@ -1295,7 +1295,7 @@
                             function refreshQueueStatus() {
                                 const display = document.getElementById('queueStatusDisplay');
                                 display.innerHTML = "Carregando status da fila...";
-                                fetch('/api/system/queue')
+                                window.safeFetch('/api/system/queue')
                                     .then(r => r.json())
                                     .then(data => {
                                         display.innerHTML = JSON.stringify(data, null, 2).replace(/\n/g, '<br>').replace(/ /g, '&nbsp;');
@@ -1307,7 +1307,7 @@
                                 const display = document.getElementById('watchdogStatusDisplay');
                                 display.innerHTML = "<p class='is-size-7'>Carregando...</p>";
 
-                                fetch('/api/system/watchdog/status')
+                                window.safeFetch('/api/system/watchdog/status')
                                     .then(r => r.json())
                                     .then(data => {
                                         if (data.success && data.running) {
@@ -1363,7 +1363,7 @@
                                 const btn = document.getElementById('btnRestartWatchdog');
                                 btn.classList.add('is-loading');
 
-                                fetch('/api/system/watchdog/restart', { method: 'POST' })
+                                window.safeFetch('/api/system/watchdog/restart', { method: 'POST' })
                                     .then(r => r.json())
                                     .then(data => {
                                         alert(data.message || "Operação concluída");

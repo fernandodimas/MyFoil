@@ -60,7 +60,7 @@ async function loadWishlist() {
     if (container) container.innerHTML = '';
 
     try {
-        const res = await fetch('/api/wishlist');
+        const res = await window.safeFetch('/api/wishlist');
         allWishlistItems = await res.json();
 
         if (loading) loading.classList.add('is-hidden');

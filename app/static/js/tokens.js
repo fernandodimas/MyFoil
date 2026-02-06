@@ -28,7 +28,7 @@ const tokensManager = {
         tbody.innerHTML = '<tr><td colspan="5" class="has-text-centered"><i class="fas fa-spinner fa-spin"></i> Carregando...</td></tr>';
 
         try {
-            const response = await fetch('/api/settings/tokens');
+            const response = await window.safeFetch('/api/settings/tokens');
             const tokens = await response.json();
 
             if (tokens.length === 0) {
@@ -82,7 +82,7 @@ const tokensManager = {
         btn.classList.add('is-loading');
 
         try {
-            const response = await fetch('/api/settings/tokens', {
+            const response = await window.safeFetch('/api/settings/tokens', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -114,7 +114,7 @@ const tokensManager = {
         }
 
         try {
-            const response = await fetch(`/api/settings/tokens/${id}`, {
+            const response = await window.safeFetch(`/api/settings/tokens/${id}`, {
                 method: 'DELETE'
             });
 

@@ -69,7 +69,9 @@ class SystemStatusManager {
 
     async fetchStatus() {
         try {
-            const response = await fetch('/api/system/jobs');
+            // Using safeFetch to strip any credentials from current URL 
+            // that modern browsers block in fetch requests (e.g. user:pass@host)
+            const response = await window.safeFetch('/api/system/jobs');
             if (response.ok) {
                 const data = await response.json();
                 this.updateStatus(data.jobs, data.titledb);
