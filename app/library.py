@@ -1300,8 +1300,14 @@ def get_game_info_item(tid, title_data):
                     continue
                 update_files.append(f)
     
-    game["updates_count"] = len(update_files)
-    game["has_redundant_updates"] = game["updates_count"] > 1
+    # Skip redundant check if the title itself is not recognized (Unknown)
+    display_name = title_data.get("name", "")
+    if not display_name or "Unknown" in display_name:
+        game["updates_count"] = 0
+        game["has_redundant_updates"] = False
+    else:
+        game["updates_count"] = len(update_files)
+        game["has_redundant_updates"] = game["updates_count"] > 1
 
     game["owned"] = len(owned_apps) > 0
 
