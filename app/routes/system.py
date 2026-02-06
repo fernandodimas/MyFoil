@@ -56,9 +56,44 @@ def settings_page():
     )
 
 
-@system_bp.route("/metrics")
-def metrics():
-    """Endpoint de métricas Prometheus"""
+@system_bp.route("/debug/inspect/<title_id>")
+@access_required("admin")
+def debug_inspect_title(title_id):
+    """Debug endpoint to inspect title/apps/files in DB"""
+    try:
+        title = Titles.query.filter_by(title_id=title_id).first()
+        if not title:
+            return jsonify({"error": "Title not found"}), 404
+            
+        result = {
+            "title": title.name,
+            "id": title.title_id,
+            "apps": []
+        }
+        
+        apps = Apps.query.filter_by(title_id=title.id).all()
+        for a in apps:
+            app_data = {
+                "id": a.app_id,
+                "type": a.app_type,
+                "version": a.app_version,
+                "owned": a.owned,
+                "files": []
+            }
+            
+            for f in a.files:
+                app_data["files"].append({
+                    "filename": f.filename,
+                    "filepath": f.filepath,
+                    "identified": f.identified,
+                    "error": f.identification_error,
+                    "size": f.size
+                })
+            result["apps"].append(app_data)
+            
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
     return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
 
 
