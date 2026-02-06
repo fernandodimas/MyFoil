@@ -389,11 +389,14 @@ def scan_library_api():
                         
                         logger.info("Running post_library_change...")
                         post_library_change()
-                        logger.info("Background scan completed successfully")
-                        job_tracker.complete_job(job_id, "Manual scan completed")
                         
+                        job_tracker.complete_job(job_id, "Manual scan completed")
+                        logger.info(f"Background thread finished successfully (job_id={job_id})")
                 except Exception as e:
-                    logger.error(f"Background scan failed: {e}", exc_info=True)
+                    logger.exception(f"Background thread failed: {e}")
+                    # Need temporary context to fail job if outside context
+                    with app_instance.app_context():
+                         job_tracker.fail_job(job_id, str(e))
                 finally:
                     with state.scan_lock:
                         state.scan_in_progress = False

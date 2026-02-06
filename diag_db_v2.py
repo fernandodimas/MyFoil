@@ -34,14 +34,21 @@ def diagnostic():
                 for a in apps:
                     if a.app_type == "UPDATE":
                         print(f"  APP: {a.app_id} (Type: {a.app_type}, Version: {a.app_version}, Owned: {a.owned})")
+                        
+                        # Check direct file relationship
                         for f in a.files:
-                            print(f"    FILE: {f.filename}")
+                            print(f"    FILE (DB): {f.filename}")
                             print(f"      Identified: {f.identified}")
                             print(f"      Error: {f.identification_error}")
                             print(f"      Path: {f.filepath}")
                             
                             if a.owned and not f.identification_error and f.identified and f.filepath:
                                 valid_update_files += 1
+                                
+                        # Check files_info structure if we were simulate the API logic
+                        # (Not possible directly on DB object without helper, but good enough)
+                
+                print(f"  -> Valid update files found: {valid_update_files}")
                 
                 print(f"  -> Valid update files for redundant check: {valid_update_files}")
                 if valid_update_files > 1:

@@ -20,13 +20,12 @@ PLUGINS_DIR = os.path.join(APP_DIR, "plugins")
 TITLEDB_DEFAULT_FILES = [
     "cnmts.json",
     "versions.json",
-    "versions.txt",
     "languages.json",
 ]
 
 MYFOIL_DB = os.environ.get("DATABASE_URL", "sqlite:///" + DB_FILE)
 
-BUILD_VERSION = '20260206_1651'
+BUILD_VERSION = '20260206_1735'
 
 DEFAULT_SETTINGS = {
     "library": {

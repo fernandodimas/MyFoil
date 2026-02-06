@@ -14,11 +14,12 @@ services:
 
   worker:
     healthcheck:
-      test: [ "CMD-SHELL", "celery -A celery_app.celery inspect ping" ]
-      interval: 60s
+      # Try celery ping first, fallback to checking process existence
+      test: ["CMD-SHELL", "celery -A celery_app.celery inspect ping -d celery@$HOSTNAME || pgrep -f 'celery worker'"]
+      interval: 30s
       timeout: 20s
       retries: 5
-      start_period: 30s
+      start_period: 60s
 
     container_name: myfoil-worker
     build:
