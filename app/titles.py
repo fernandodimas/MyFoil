@@ -37,28 +37,34 @@ version_regex = r"\[v(\d+)\]"
 
 def format_release_date(date_input):
     """Formata data para padrão YYYY-MM-DD"""
-    if not date_input:
-        return ""
+    try:
+        if not date_input:
+            return ""
 
-    date_str = str(date_input).strip()
+        date_str = str(date_input).strip()
 
-    # Já está no formato correto
-    if re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
+        # Já está no formato correto
+        if re.match(r"^\d{4}-\d{2}-\d{2}$", date_str):
+            return date_str
+
+        # Formato YYYYMMDD
+        if re.match(r"^\d{8}$", date_str):
+            return f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
+
+        # Tentar parsear outros formatos
+        for fmt in ["%Y/%m/%d", "%d/%m/%Y", "%m/%d/%Y", "%Y%m%d"]:
+            try:
+                # Use class name explicitly to be safe
+                from datetime import datetime
+                parsed = datetime.strptime(date_str, fmt)
+                return parsed.strftime("%Y-%m-%d")
+            except Exception:
+                continue
+
         return date_str
-
-    # Formato YYYYMMDD
-    if re.match(r"^\d{8}$", date_str):
-        return f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
-
-    # Tentar parsear outros formatos
-    for fmt in ["%Y/%m/%d", "%d/%m/%Y", "%m/%d/%Y", "%Y%m%d"]:
-        try:
-            parsed = datetime.strptime(date_str, fmt)
-            return parsed.strftime("%Y-%m-%d")
-        except ValueError:
-            continue
-
-    return date_str
+    except Exception as e:
+        print(f"DEBUG: format_release_date error for {date_input}: {e}", flush=True)
+        return str(date_input) if date_input else ""
 
 
 # Global variables for TitleDB data
@@ -1333,9 +1339,17 @@ def get_loaded_titles_file():
 
 def get_custom_title_info(title_id):
     """Retrieve custom info for a specific TitleID from custom.json"""
-    custom_path = os.path.join(TITLEDB_DIR, "custom.json")
-    custom_db = robust_json_load(custom_path) or {}
-    return custom_db.get(title_id.upper())
+    if not title_id: return None
+    try:
+        custom_path = os.path.join(TITLEDB_DIR, "custom.json")
+        if not os.path.exists(custom_path):
+            return None
+            
+        custom_db = robust_json_load(custom_path) or {}
+        return custom_db.get(str(title_id).upper())
+    except Exception as e:
+        print(f"DEBUG ERROR in get_custom_title_info: {e}", flush=True)
+        return None
 
 
 def search_titledb_by_name(query):

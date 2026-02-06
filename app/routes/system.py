@@ -755,12 +755,20 @@ def get_all_titles_api():
 @access_required("shop")
 def get_game_custom_info(tid):
     """Obter informações customizadas do jogo"""
+    print(f"DEBUG: get_game_custom_info called for {tid}", flush=True)
     try:
+        if not tid:
+            return jsonify({"success": False, "error": "TitleID missing"}), 400
+            
         info = titles.get_custom_title_info(tid)
+        print(f"DEBUG: get_custom_title_info result: {info}", flush=True)
         return jsonify({"success": True, "data": info})
     except Exception as e:
+        import traceback
+        err_msg = traceback.format_exc()
+        print(f"CRITICAL ERROR in get_game_custom_info for {tid}: {err_msg}", flush=True)
         logger.error(f"Error in get_game_custom_info for {tid}: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": str(e), "traceback": err_msg}), 500
 
 
 @system_bp.route("/games/<tid>/custom", methods=["POST"])
