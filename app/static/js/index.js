@@ -346,6 +346,7 @@ function applyFilters() {
     const showOnlyBase = $('#btnFilterPendingBase').hasClass('is-primary');
     const showOnlyUpdates = $('#btnFilterPendingUpd').hasClass('is-primary');
     const showOnlyDlcs = $('#btnFilterPendingDlc').hasClass('is-primary');
+    const showOnlyRedundant = $('#btnFilterRedundant').hasClass('is-primary');
 
     games.forEach(g => {
         if (!g) return;
@@ -402,6 +403,7 @@ function applyFilters() {
         if (showOnlyBase) matchesStatus = matchesStatus && !g.has_base;
         if (showOnlyUpdates) matchesStatus = matchesStatus && (g.has_base && g.has_non_ignored_updates);
         if (showOnlyDlcs) matchesStatus = matchesStatus && (g.has_base && g.has_non_ignored_dlcs);
+        if (showOnlyRedundant) matchesStatus = matchesStatus && g.has_redundant_updates;
 
         return matchesSearch && matchesGender && matchesTag && matchesStatus;
     });
@@ -431,7 +433,7 @@ function applyFilters() {
         return order === 'asc' ? comparison : -comparison;
     });
 
-    const hasActiveFilters = query || gender || tag || showOnlyBase || showOnlyUpdates || showOnlyDlcs;
+    const hasActiveFilters = query || gender || tag || showOnlyBase || showOnlyUpdates || showOnlyDlcs || showOnlyRedundant;
     $('#clearFiltersBtn').toggleClass('has-active', !!hasActiveFilters);
 
     $('#totalItemsCount, #totalItemsCountMobile').text(`${window.filteredGames.length} ${t('Jogos')}`);
@@ -442,7 +444,7 @@ function clearFilters() {
     $('#navbarSearch').val('');
     $('#filterGender').val('');
     $('#filterTag').val('');
-    $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
+    $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterPendingDlc, #btnFilterRedundant').removeClass('is-primary').addClass('is-light');
     $('#searchClearBtn').hide();
     $('#searchIcon').show();
 
@@ -630,7 +632,13 @@ $(document).ready(() => {
 
     $('#btnFilterPendingDlc').on('click', function () {
         $(this).toggleClass('is-primary is-light');
-        if ($(this).hasClass('is-primary')) $('#btnFilterPendingBase, #btnFilterPendingUpd').removeClass('is-primary').addClass('is-light');
+        if ($(this).hasClass('is-primary')) $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterRedundant').removeClass('is-primary').addClass('is-light');
+        applyFilters();
+    });
+
+    $('#btnFilterRedundant').on('click', function () {
+        $(this).toggleClass('is-primary is-light');
+        if ($(this).hasClass('is-primary')) $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
         applyFilters();
     });
 

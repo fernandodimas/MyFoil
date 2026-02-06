@@ -417,48 +417,49 @@ def scan_library_api():
 @system_bp.route("/files/unidentified")
 @access_required("admin")
 def get_unidentified_files_api():
-    """Obter arquivos não identificados"""
+    """Obter arquivos não identificados ou com erro"""
     import titles
+    results = []
+    seen_ids = set()
 
-    # 1. Arquivos sem TitleID (Falha técnica de identificação)
-    files = get_all_unidentified_files()
-    results = [
-        {
+    # 1. Arquivos com erro explícito ou não identificados
+    files = Files.query.filter((Files.identified == False) | (Files.identification_error.isnot(None))).all()
+    for f in files:
+        if f.id in seen_ids:
+            continue
+        seen_ids.add(f.id)
+        results.append({
             "id": f.id,
             "filename": f.filename,
             "filepath": f.filepath,
             "size": f.size,
             "size_formatted": format_size_py(f.size),
             "error": f.identification_error or "Arquivo não identificado (ID ausente)",
-        }
-        for f in files
-    ]
+        })
 
     # 2. Arquivos com TitleID mas sem reconhecimento de nome (Unknown)
-    # Buscamos por arquivos que pertencem a jogos "Unknown" no TitleDB
     identified_files = Files.query.filter(Files.identified == True).all()
     for f in identified_files:
+        if f.id in seen_ids:
+            continue
+        
         if not f.apps:
             continue
 
-        # Pega o primeiro app associado (normalmente arquivos NSP/XCI pertencem a 1 app)
         try:
             tid = f.apps[0].title.title_id
             tinfo = titles.get_title_info(tid)
             name = tinfo.get("name", "")
-
-            # Se for desconhecido (começa com Unknown ou vazio)
             if not name or name.startswith("Unknown"):
-                results.append(
-                    {
-                        "id": f.id,
-                        "filename": f.filename,
-                        "filepath": f.filepath,
-                        "size": f.size,
-                        "size_formatted": format_size_py(f.size),
-                        "error": f"Título não reconhecido no Banco de Dados ({tid})",
-                    }
-                )
+                seen_ids.add(f.id)
+                results.append({
+                    "id": f.id,
+                    "filename": f.filename,
+                    "filepath": f.filepath,
+                    "size": f.size,
+                    "size_formatted": format_size_py(f.size),
+                    "error": f"Título não reconhecido no Banco de Dados ({tid})",
+                })
         except (IndexError, AttributeError):
             continue
 

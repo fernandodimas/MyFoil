@@ -1290,9 +1290,15 @@ def get_game_info_item(tid, title_data):
     
     game["has_all_dlcs"] = all(d in owned_dlc_ids for d in all_possible_dlc_ids) if all_possible_dlc_ids else True
 
-    # Check for redundant updates (more than 1 update file)
-    owned_updates = [a for a in all_title_apps if a["app_type"] == APP_TYPE_UPD and a["owned"]]
-    game["updates_count"] = len(owned_updates)
+    # Check for redundant updates (more than 1 update file, excluding files with errors)
+    update_files = []
+    for a in all_title_apps:
+        if a["app_type"] == APP_TYPE_UPD and a["owned"]:
+            for f in a.get("files_info", []):
+                if not f.get("error"):
+                    update_files.append(f)
+    
+    game["updates_count"] = len(update_files)
     game["has_redundant_updates"] = game["updates_count"] > 1
 
     game["owned"] = len(owned_apps) > 0
