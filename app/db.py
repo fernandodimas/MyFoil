@@ -948,6 +948,16 @@ def get_all_titles_with_apps():
 
     results = []
     for t in titles:
+        # Pre-calculate max version for each file within this title's apps
+        # (e.g. an XCI file might be associated with both Base (v0) and Update (v65536))
+        file_max_versions = {}
+        for a in t.apps:
+            v = a.app_version or 0
+            for f in a.files:
+                current_max = file_max_versions.get(f.id, 0)
+                if v > current_max:
+                    file_max_versions[f.id] = v
+
         t_dict = to_dict(t)
         t_dict["apps"] = []
         for a in t.apps:
@@ -960,12 +970,16 @@ def get_all_titles_with_apps():
                 has_error = bool(f.identification_error)
                 is_identified = f.identified and not has_error
                 
+                # Get the "real" version of this file (e.g. if it's an XCI containing an update)
+                real_version = file_max_versions.get(f.id, 0)
+                
                 files_list.append({
                     "path": f.filepath,
                     "size": f.size,
                     "id": f.id,
                     "error": f.identification_error,
-                    "identified": is_identified
+                    "identified": is_identified,
+                    "version": real_version
                 })
             a_dict["files_info"] = files_list
             t_dict["apps"].append(a_dict)
