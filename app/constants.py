@@ -3,7 +3,6 @@ import os
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(APP_DIR, "data")
 CONFIG_DIR = os.path.join(APP_DIR, "config")
-DB_FILE = os.path.join(CONFIG_DIR, "myfoil.db")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "settings.yaml")
 KEYS_FILE = os.path.join(CONFIG_DIR, "keys.txt")
 CACHE_DIR = os.path.join(DATA_DIR, "cache")
@@ -12,10 +11,6 @@ ALEMBIC_DIR = os.path.join(APP_DIR, "migrations")
 ALEMBIC_CONF = os.path.join(ALEMBIC_DIR, "alembic.ini")
 TITLEDB_DIR = os.path.join(DATA_DIR, "titledb")
 PLUGINS_DIR = os.path.join(APP_DIR, "plugins")
-
-# Legacy constants kept for reference
-# TITLEDB_URL = 'https://github.com/blawar/titledb.git'
-# TITLEDB_ARTEFACTS_URL = 'https://nightly.link/a1ex4/ownfoil/workflows/region_titles/master/titledb.zip'
 
 TITLEDB_DEFAULT_FILES = [
     "cnmts.json",
@@ -28,7 +23,7 @@ if not MYFOIL_DB:
     raise RuntimeError("DATABASE_URL environment variable must be set")
 
 
-BUILD_VERSION = '20260206_1958'
+BUILD_VERSION = '20260206_2007'
 
 DEFAULT_SETTINGS = {
     "library": {

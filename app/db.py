@@ -16,7 +16,7 @@ import sys
 import shutil
 import logging
 import datetime
-from constants import DB_FILE, MYFOIL_DB, CONFIG_DIR, ALEMBIC_DIR, ALEMBIC_CONF
+from constants import MYFOIL_DB, CONFIG_DIR, ALEMBIC_DIR, ALEMBIC_CONF
 from utils import now_utc
 
 # Retrieve main logger
