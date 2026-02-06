@@ -511,6 +511,76 @@ def get_stats_overview():
         round((total_owned_bases / total_available_titledb * 100), 2) if total_available_titledb > 0 else 0
     )
 
+    # --- IGNORING LOGIC FOR PENDING COUNT ---
+    import json
+    from flask_login import current_user
+    
+    pending_games = [g for g in filtered_games if g.get("status_color") != "green" and g.get("has_base")]
+    ignored_games_count = 0
+
+    if pending_games:
+        ignores = WishlistIgnore.query.filter_by(user_id=current_user.id).all()
+        if ignores:
+            ignore_map = {}
+            for rec in ignores:
+                ignore_map[rec.title_id] = {
+                    "dlcs": json.loads(rec.ignore_dlcs or "{}"),
+                    "updates": json.loads(rec.ignore_updates or "{}")
+                }
+            
+            for g in pending_games:
+                tid = g.get("title_id")
+                if not tid: continue
+                
+                # If no ignore record, it's definitely pending
+                if tid not in ignore_map:
+                    continue
+                    
+                rec = ignore_map[tid]
+                ignored_updates_set = set(str(k) for k, v in rec["updates"].items() if v)
+                ignored_dlcs_set = set(str(k) for k, v in rec["dlcs"].items() if v)
+                
+                is_fully_ignored = True
+                
+                # Check Updates
+                if not g.get("has_latest_version"):
+                    current_ver = g.get("owned_version", 0)
+                    avail_versions = titles.get_all_existing_versions(tid)
+                    # Use versions from stored game object if available, otherwise fetch
+                    # But game object usually has 'latest_version_available', not list.
+                    # We need strict check.
+                    missing_versions = [v["version"] for v in avail_versions if v["version"] > current_ver]
+                    
+                    for mv in missing_versions:
+                        if str(mv) not in ignored_updates_set:
+                            is_fully_ignored = False
+                            break
+                
+                if not is_fully_ignored:
+                    continue
+                    
+                # Check DLCs
+                if not g.get("has_all_dlcs"):
+                    all_dlcs = titles.get_all_existing_dlc(tid)
+                    # Deduce owned DLCs from apps list relative to game object
+                    owned_dlc_ids = set()
+                    if g.get("apps"):
+                        for a in g["apps"]:
+                            if a.get("app_type") == APP_TYPE_DLC and a.get("owned") and len(a.get("files_info", [])) > 0:
+                                owned_dlc_ids.add(a["app_id"].upper())
+                    
+                    for dlc_id in all_dlcs:
+                        dlc_id = dlc_id.upper()
+                        if dlc_id == tid.upper(): continue
+                        
+                        if dlc_id not in owned_dlc_ids:
+                            if dlc_id not in ignored_dlcs_set:
+                                is_fully_ignored = False
+                                break
+                
+                if is_fully_ignored:
+                    ignored_games_count += 1
+
     app_settings = load_settings()
     keys_valid = app_settings.get("titles", {}).get("valid_keys", False)
 
@@ -530,7 +600,7 @@ def get_stats_overview():
                 "total_size": total_size,
                 "total_size_formatted": format_size_py(total_size),
                 "up_to_date": up_to_date,
-                "pending": total_owned - up_to_date,
+                "pending": max(0, (total_owned - up_to_date) - ignored_games_count),
                 "completion_rate": round((up_to_date / total_owned * 100), 1) if total_owned > 0 else 0,
             },
             "titledb": {
