@@ -659,7 +659,6 @@ def get_active_source_info() -> Dict:
                         from flask import current_app
                         try:
                             if hasattr(current_app, 'scheduler'):
-                                from datetime import timedelta
                                 current_app.scheduler.add_job(
                                     job_id=f"auto_update_{int(time.time())}",
                                     func=_trigger_update,
@@ -689,7 +688,6 @@ def get_active_source_info() -> Dict:
         cache_ts = titles.get_titledb_cache_timestamp()
         last_process_date = "Never"
         if cache_ts:
-            from datetime import datetime
             dt_processed = datetime.fromtimestamp(cache_ts, tz=timezone.utc)
             last_process_date = format_datetime(dt_processed)
         
