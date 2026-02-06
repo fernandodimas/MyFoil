@@ -41,19 +41,32 @@ async function loadWishlist() {
         tbody.innerHTML = '';
 
         for (const item of items) {
-            let statusHtml = t('Desconhecido');
-            let statusClass = 'has-text-grey';
-
+            // Parse release date and determine status
             const rawDate = String(item.release_date || '');
             const releaseDateStr = rawDate.replace(/-/g, '').slice(0, 8);
             const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
 
-            if (releaseDateStr && releaseDateStr > todayStr) {
-                statusHtml = t('Em Breve');
-                statusClass = 'has-text-info';
-            } else if (releaseDateStr) {
-                statusHtml = t('Lançado');
-                statusClass = 'has-text-success';
+            let displayDate = t('Desconhecida');
+            let dateClass = 'has-text-grey';
+            let statusIcon = '';
+
+            if (releaseDateStr) {
+                // Format date for display (DD/MM/YYYY)
+                const year = releaseDateStr.slice(0, 4);
+                const month = releaseDateStr.slice(4, 6);
+                const day = releaseDateStr.slice(6, 8);
+                displayDate = `${day}/${month}/${year}`;
+
+                // Determine color based on release status
+                if (releaseDateStr > todayStr) {
+                    // Future release - yellow
+                    dateClass = 'has-text-warning';
+                    statusIcon = '<i class="bi bi-clock-fill mr-1"></i>';
+                } else {
+                    // Already released - green
+                    dateClass = 'has-text-success';
+                    statusIcon = '<i class="bi bi-check-circle-fill mr-1"></i>';
+                }
             }
 
             const row = document.createElement('tr');
@@ -67,8 +80,8 @@ async function loadWishlist() {
                 <td class="is-vcentered font-mono is-size-7 opacity-70">
                     ${new Date(item.added_date).toLocaleDateString()}
                 </td>
-                <td class="is-vcentered ${statusClass} has-text-weight-bold is-size-7">
-                    ${statusHtml}
+                <td class="is-vcentered ${dateClass} has-text-weight-semibold is-size-7">
+                    ${statusIcon}${displayDate}
                 </td>
                 <td class="is-vcentered has-text-right">
                     <div class="buttons is-justify-content-flex-end">
