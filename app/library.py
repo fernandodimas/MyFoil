@@ -1292,6 +1292,8 @@ def get_game_info_item(tid, title_data):
 
     # Check for redundant updates (more than 1 unique update file, excluding files with errors)
     update_files_ids = set()
+    updates_info = []
+
     for a in all_title_apps:
         if a["app_type"] == APP_TYPE_UPD and a["owned"]:
             for f in a.get("files_info", []):
@@ -1299,10 +1301,26 @@ def get_game_info_item(tid, title_data):
                 if f.get("error") or not f.get("identified") or not f.get("path"):
                     continue
                 file_id = f.get("id")
+                filepath = f.get("path", "").lower()
+                
                 if file_id:
                     update_files_ids.add(file_id)
+                    updates_info.append({
+                        "id": file_id,
+                        "path": filepath,
+                        "is_xci": filepath.endswith(".xci") or filepath.endswith(".xcz")
+                    })
     
-    game["updates_count"] = len(update_files_ids)
+    # Refined logic: If we have an XCI/XCZ that contains the update, ignore it for redundancy 
+    # (assuming XCI is the "canonical" cartridge dump which often includes updates)
+    non_xci_updates = [u for u in updates_info if not u["is_xci"]]
+    
+    # If we have mixed content (XCI + NSP), only count the independent NSPs as "redundant" candidates
+    # effectively ignoring the XCI's bundled update from the count
+    if len(updates_info) > len(non_xci_updates):
+        game["updates_count"] = len(non_xci_updates)
+    else:
+        game["updates_count"] = len(update_files_ids)
     
     # Skip redundant check if the title itself is not recognized (Unknown)
     display_name = title_data.get("name", "")
