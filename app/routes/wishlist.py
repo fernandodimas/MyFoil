@@ -78,6 +78,9 @@ def get_wishlist():
                 "iconUrl": item.icon_url or "/static/img/no-icon.png",
                 "bannerUrl": item.banner_url,
                 "release_date": item.release_date,
+                "description": item.description,
+                "genres": item.genres,
+                "screenshots": item.screenshots,
                 "added_date": item.added_date.isoformat() if item.added_date else None,
                 "owned": False,
             }
@@ -129,6 +132,9 @@ def add_to_wishlist():
     release_date = data.get("release_date")
     icon_url = data.get("icon_url")
     banner_url = data.get("banner_url")
+    description = data.get("description")
+    genres = data.get("genres")
+    screenshots = data.get("screenshots")
 
     # Fetch metadata if using title_id
     if title_id and (not display_name or not release_date):
@@ -142,6 +148,15 @@ def add_to_wishlist():
                 icon_url = game_info.get("iconUrl")
             if not banner_url:
                 banner_url = game_info.get("bannerUrl")
+            if not description:
+                description = game_info.get("description")
+            if not genres:
+                genres = game_info.get("category")
+                if isinstance(genres, list):
+                    genres = ",".join(genres)
+            if not screenshots:
+                # Some TitleDB info might contain screenshots or at least bannerUrl
+                pass
 
     item = Wishlist(
         user_id=current_user.id, 
@@ -149,7 +164,10 @@ def add_to_wishlist():
         name=display_name,
         release_date=release_date,
         icon_url=icon_url,
-        banner_url=banner_url
+        banner_url=banner_url,
+        description=description,
+        genres=genres,
+        screenshots=screenshots
     )
     db.session.add(item)
     db.session.commit()

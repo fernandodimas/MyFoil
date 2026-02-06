@@ -284,6 +284,9 @@ class Wishlist(db.Model):
     release_date = db.Column(db.String)
     icon_url = db.Column(db.String)
     banner_url = db.Column(db.String)
+    description = db.Column(db.Text)
+    genres = db.Column(db.String)         # JSON ou string separada por vírgulas
+    screenshots = db.Column(db.Text)      # JSON list de URLs
 
     # Preferências de ignored (novas colunas)
     ignore_dlc = db.Column(db.Boolean, default=False)
@@ -594,6 +597,9 @@ def init_db(app):
                         ("release_date", "TEXT"),
                         ("icon_url", "TEXT"),
                         ("banner_url", "TEXT"),
+                        ("description", "TEXT"),
+                        ("genres", "TEXT"),
+                        ("screenshots", "TEXT"),
                     ]
                     
                     wishlist_extra_modified = False

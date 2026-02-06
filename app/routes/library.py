@@ -645,11 +645,25 @@ def app_info_api(id):
     if not title_obj and tid.startswith("UPCOMING_"):
         wish_item = Wishlist.query.filter_by(title_id=tid).first()
         if wish_item:
+            # Prepare genres and screenshots from wishlist item
+            genres = []
+            if wish_item.genres:
+                genres = [g.strip() for g in wish_item.genres.split(",") if g.strip()]
+            
+            import json
+            screenshots = []
+            if wish_item.screenshots:
+                try:
+                    screenshots = json.loads(wish_item.screenshots)
+                except:
+                    # Fallback to comma separated if not JSON
+                    screenshots = [s.strip() for s in wish_item.screenshots.split(",") if s.strip()]
+
             return jsonify({
                 "id": tid,
                 "name": wish_item.name,
                 "publisher": "--",
-                "description": "Este jogo foi adicionado à sua wishlist a partir da lista de Próximos Lançamentos.",
+                "description": wish_item.description or "Este jogo foi adicionado à sua wishlist a partir da lista de Próximos Lançamentos.",
                 "release_date": wish_item.release_date,
                 "iconUrl": wish_item.icon_url or "/static/img/no-icon.png",
                 "bannerUrl": wish_item.banner_url or "",
@@ -658,10 +672,10 @@ def app_info_api(id):
                 "files": [],
                 "updates": [],
                 "dlcs": [],
-                "screenshots": [],
+                "screenshots": screenshots,
                 "metacritic": None,
                 "rating": None,
-                "category": []
+                "category": genres
             })
 
     if not title_obj:

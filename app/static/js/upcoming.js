@@ -148,7 +148,7 @@ function renderCardView(games, container) {
                     <div class="date-badge">
                         <i class="bi bi-calendar-check mr-1"></i> ${game.release_date_formatted}
                     </div>
-                    <button class="button is-small is-dark is-rounded border-none shadow-sm" style="position: absolute; top: 8px; right: 8px; z-index: 10; opacity: 0.8;" onclick="event.stopPropagation(); addToWishlistByName('${safeNameJs}', {release_date: '${releaseDate}', id: '${game.id}', icon_url: '${game.cover_url}', banner_url: '${game.screenshots?.[0]?.url || ''}'})" title="Adicionar à Wishlist">
+                    <button class="button is-small is-dark is-rounded border-none shadow-sm" style="position: absolute; top: 8px; right: 8px; z-index: 10; opacity: 0.8;" onclick="event.stopPropagation(); addToWishlistFromObject(${index})" title="Adicionar à Wishlist">
                         <i class="bi bi-heart"></i>
                     </button>
                 </div>
@@ -193,7 +193,7 @@ function renderListView(games, container) {
             </td>
             <td class="is-vcentered has-text-centered font-mono is-size-7">${game.release_date_formatted}</td>
             <td class="is-vcentered has-text-right p-3">
-                <button class="button is-small is-light" onclick="event.stopPropagation(); addToWishlistByName('${game.name.replace(/'/g, "\\'")}', {release_date: '${releaseDate}', id: '${game.id}', icon_url: '${game.cover_url}', banner_url: '${game.screenshots?.[0]?.url || ''}'})">
+                <button class="button is-small is-light" onclick="event.stopPropagation(); addToWishlistFromObject(${index})">
                     <i class="bi bi-heart mr-1"></i> Wishlist
                 </button>
             </td>
@@ -256,7 +256,7 @@ function showUpcomingDetails(index) {
                         
                         <hr class="my-4 opacity-10">
                         
-                        <button class="button is-primary is-fullwidth" onclick="addToWishlistByName('${game.name.replace(/'/g, "\\'")}', {release_date: '${game.release_date || game.release_date_formatted || ""}', id: '${game.id}', icon_url: '${game.cover_url}', banner_url: '${game.screenshots?.[0]?.url || ''}'})">
+                        <button class="button is-primary is-fullwidth" onclick="addToWishlistFromObject(${index})">
                             <i class="bi bi-heart-fill mr-1"></i> Wishlist
                         </button>
                     </div>
@@ -292,6 +292,32 @@ function showUpcomingDetails(index) {
     openModal('upcomingDetailsModal');
 }
 
+function addToWishlistFromObject(index) {
+    const game = filteredGames[index];
+    if (!game) return;
+
+    // Normalize screenshot URLs to have https: prefix
+    const normalizedScreenshots = (game.screenshots || []).map(s => {
+        let url = s.url || s.image || "";
+        if (typeof url === 'string' && url.startsWith('//')) url = 'https:' + url;
+        // Upgrade to better quality
+        if (typeof url === 'string') url = url.replace('t_thumb', 't_1080p');
+        return url;
+    });
+
+    addToWishlistByName(game.name, {
+        id: game.id,
+        release_date: game.release_date || game.release_date_formatted || "",
+        icon_url: game.cover_url,
+        banner_url: game.screenshots && game.screenshots.length > 0 ?
+            (game.screenshots[0].url.startsWith('//') ? 'https:' + game.screenshots[0].url : game.screenshots[0].url).replace('t_thumb', 't_1080p')
+            : game.cover_url,
+        description: game.summary,
+        genres: (game.genres || []).map(g => g.name).join(","),
+        screenshots: JSON.stringify(normalizedScreenshots)
+    });
+}
+
 function addToWishlistByName(name, fallbackData = null) {
     const btn = $(event.currentTarget);
     btn.addClass('is-loading');
@@ -322,11 +348,14 @@ function addToWishlistByName(name, fallbackData = null) {
     if (fallbackData) {
         // Para a página de Upcoming, enviamos os dados diretamente sem buscar no TitleDB
         const postData = {
-            title_id: `UPCOMING_${fallbackData.id || Date.now()}`,
+            title_id: fallbackData.id && fallbackData.id.toString().startsWith('UPCOMING_') ? fallbackData.id : `UPCOMING_${fallbackData.id || Date.now()}`,
             name: name,
             release_date: fallbackData.release_date || "",
             icon_url: fallbackData.icon_url || "",
-            banner_url: fallbackData.banner_url || ""
+            banner_url: fallbackData.banner_url || "",
+            description: fallbackData.description || "",
+            genres: fallbackData.genres || "",
+            screenshots: fallbackData.screenshots || ""
         };
         addViaApi(postData, `"${name}" ${t('adicionado à wishlist!')}`);
         return;

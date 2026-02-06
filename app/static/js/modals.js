@@ -201,8 +201,9 @@ function showGameDetails(id) {
         ` : '';
 
         let content = `
-            <div class="modal-banner-container" style="position: relative; height: 240px; overflow: hidden; background: var(--bulma-background);">
-                <img src="${escapeHtml(game.bannerUrl || game.iconUrl || '/static/img/no-icon.png')}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.6; filter: blur(2px);">
+            <div class="modal-banner-container" style="position: relative; height: 240px; overflow: hidden; background: #000;">
+                <img src="${escapeHtml(game.bannerUrl || game.iconUrl || '/static/img/no-icon.png')}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
+                <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 80%; background: linear-gradient(transparent, var(--bulma-modal-card-body-background-color));"></div>
                 <button class="delete is-large" aria-label="close" onclick="closeModal('gameDetailsModal')" style="position: absolute; top: 1.5rem; right: 1.5rem; background-color: rgba(255,255,255,0.2); backdrop-filter: blur(8px); z-index: 20; border: 1px solid rgba(255,255,255,0.1);"></button>
             </div>
             <div class="p-6">
@@ -339,13 +340,14 @@ function showGameDetails(id) {
                             </div>
                         </div>
                         
+                        ${(filesHtml || updatesHtml || dlcsHtml) ? `
                         <hr class="my-5 opacity-10">
-                        
                         <div class="details-sections mt-4">
                             ${filesHtml}
                             ${updatesHtml}
                             ${dlcsHtml}
                         </div>
+                        ` : ''}
                         
                         ${game.screenshots && game.screenshots.length > 0 ? `
                         <div class="screenshot-carousel mt-5">
