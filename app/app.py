@@ -688,6 +688,14 @@ def check_initial_scan(app):
         )
 
     log_activity("system_startup", details={"version": BUILD_VERSION})
+    
+    # Log GPU status
+    try:
+        from gpu_utils import log_gpu_status
+        log_gpu_status()
+    except Exception as e:
+        logger.debug(f"GPU status check skipped: {e}")
+
 
 
 def create_app():
