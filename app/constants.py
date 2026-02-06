@@ -23,9 +23,12 @@ TITLEDB_DEFAULT_FILES = [
     "languages.json",
 ]
 
-MYFOIL_DB = os.environ.get("DATABASE_URL", "sqlite:///" + DB_FILE)
+MYFOIL_DB = os.environ.get("DATABASE_URL")
+if not MYFOIL_DB:
+    raise RuntimeError("DATABASE_URL environment variable must be set")
 
-BUILD_VERSION = '20260206_1953'
+
+BUILD_VERSION = '20260206_1958'
 
 DEFAULT_SETTINGS = {
     "library": {

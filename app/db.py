@@ -41,14 +41,6 @@ def get_current_db_version():
         return current_rev or "0"
 
 
-def create_db_backup():
-    current_revision = get_current_db_version()
-    timestamp = now_utc().strftime("%Y%m%d_%H%M%S")
-    backup_filename = f".backup_v{current_revision}_{timestamp}.db"
-    backup_path = os.path.join(CONFIG_DIR, backup_filename)
-    shutil.copy2(DB_FILE, backup_path)
-    logger.info(f"Database backup created: {backup_path}")
-
 
 def is_migration_needed():
     alembic_cfg = get_alembic_cfg()
@@ -700,7 +692,7 @@ def init_db(app):
 
                 logger.info("Checking database migration...")
                 if is_migration_needed():
-                    create_db_backup()
+                    # PostgreSQL backups handled externally
                     upgrade()
                     logger.info("Database migration applied successfully.")
 
