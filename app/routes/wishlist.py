@@ -91,13 +91,31 @@ def add_to_wishlist():
         if existing:
             return jsonify({"success": False, "error": "Jogo já está na wishlist"}), 400
 
+    display_name = name
+    release_date = data.get("release_date")
+    icon_url = data.get("icon_url")
+    banner_url = data.get("banner_url")
+
+    # Fetch metadata if using title_id
+    if title_id and (not display_name or not release_date):
+        game_info = titles.get_game_info(title_id)
+        if game_info:
+            if not display_name:
+                display_name = game_info.get("name")
+            if not release_date:
+                release_date = game_info.get("releaseDate") or game_info.get("release_date")
+            if not icon_url:
+                icon_url = game_info.get("iconUrl")
+            if not banner_url:
+                banner_url = game_info.get("bannerUrl")
+
     item = Wishlist(
         user_id=current_user.id, 
         title_id=title_id, 
-        name=name,
-        release_date=data.get("release_date"),
-        icon_url=data.get("icon_url"),
-        banner_url=data.get("banner_url")
+        name=display_name,
+        release_date=release_date,
+        icon_url=icon_url,
+        banner_url=banner_url
     )
     db.session.add(item)
     db.session.commit()

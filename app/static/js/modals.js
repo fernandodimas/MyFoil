@@ -26,6 +26,9 @@ function showGameDetails(id) {
     $.getJSON(`/api/app_info/${id}`, (game) => {
         $('#modalTitle').text(game.name);
 
+        // Update screenshot state
+        currentScreenshotsList = game.screenshots || [];
+
         // Set navigation context for keyboard shortcuts
         const navGames = (window.filteredGames && window.filteredGames.length) ? window.filteredGames : (window.games || []);
         window.setModalNavigationContext(id, navGames);
@@ -354,7 +357,7 @@ function showGameDetails(id) {
             if (!url) return '';
             return `
                                             <div class="swiper-slide" style="width: auto;">
-                                                <img src="${escapeHtml(url)}" alt="Screenshot ${idx + 1}" loading="lazy" onclick="window.open('${escapeHtml(url)}', '_blank')" style="cursor: pointer; width: 320px; height: 180px; object-fit: cover; border-radius: 8px; display: block;">
+                                                <img src="${escapeHtml(url)}" alt="Screenshot ${idx + 1}" loading="lazy" onclick="openScreenshotGallery(${idx})" style="cursor: pointer; width: 320px; height: 180px; object-fit: cover; border-radius: 8px; display: block;">
                                             </div>
                                         `;
         }).join('')}
@@ -778,6 +781,9 @@ function useMetadata(item) {
 // Keyboard Navigation for Game Details Modal
 let currentGameId = null;
 let availableGames = [];
+// Screenshot Gallery State
+let currentScreenshotIndex = 0;
+let currentScreenshotsList = [];
 
 window.setModalNavigationContext = function (gameId, gamesList) {
     currentGameId = gameId;
@@ -803,6 +809,25 @@ function navigateGameModal(direction) {
 
 // Global keyboard event handler
 $(document).on('keydown', function (e) {
+    // Screenshot Gallery Navigation
+    if ($('#screenshotModal').hasClass('is-active')) {
+        switch (e.key) {
+            case 'ArrowLeft':
+                e.preventDefault();
+                navigateScreenshotGallery('prev');
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                navigateScreenshotGallery('next');
+                break;
+            case 'Escape':
+                e.preventDefault();
+                closeModal('screenshotModal');
+                break;
+        }
+        return;
+    }
+
     if (!$('#gameDetailsModal').hasClass('is-active')) return;
     if ($(e.target).is('input, textarea')) return;
 
@@ -834,7 +859,57 @@ $(document).on('keydown', function (e) {
     }
 });
 
+function openScreenshotGallery(index) {
+    if (!currentScreenshotsList || currentScreenshotsList.length === 0) return;
+
+    currentScreenshotIndex = index;
+    if (currentScreenshotIndex < 0) currentScreenshotIndex = 0;
+    if (currentScreenshotIndex >= currentScreenshotsList.length) currentScreenshotIndex = currentScreenshotsList.length - 1;
+
+    updateScreenshotModalImage();
+    openModal('screenshotModal');
+}
+
+function navigateScreenshotGallery(direction) {
+    if (!currentScreenshotsList || currentScreenshotsList.length === 0) return;
+
+    if (direction === 'next') {
+        currentScreenshotIndex++;
+        if (currentScreenshotIndex >= currentScreenshotsList.length) currentScreenshotIndex = 0;
+    } else {
+        currentScreenshotIndex--;
+        if (currentScreenshotIndex < 0) currentScreenshotIndex = currentScreenshotsList.length - 1;
+    }
+    updateScreenshotModalImage();
+}
+
+function updateScreenshotModalImage() {
+    const s = currentScreenshotsList[currentScreenshotIndex];
+    const url = typeof s === 'string' ? s : (s.url || s.image);
+
+    // Add navigation arrows to the modal if not present
+    const modalContent = $('#screenshotModal .modal-content');
+    if (modalContent.find('.screenshot-nav').length === 0) {
+        modalContent.append(`
+            <button class="button is-ghost screenshot-nav prev" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: white; border: none; background: rgba(0,0,0,0.5); z-index: 10" onclick="navigateScreenshotGallery('prev')">
+                <i class="bi bi-chevron-left is-size-3"></i>
+            </button>
+            <button class="button is-ghost screenshot-nav next" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: white; border: none; background: rgba(0,0,0,0.5); z-index: 10" onclick="navigateScreenshotGallery('next')">
+                <i class="bi bi-chevron-right is-size-3"></i>
+            </button>
+            <p class="screenshot-counter" style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: white; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 12px; z-index: 10"></p>
+        `);
+    }
+
+    // Update counter
+    modalContent.find('.screenshot-counter').text(`${currentScreenshotIndex + 1} / ${currentScreenshotsList.length}`);
+
+    $('#screenshotModalImage').attr('src', url);
+}
+
+// Replaces original openScreenshotModal
 function openScreenshotModal(url) {
+    // Legacy fallback
     $('#screenshotModalImage').attr('src', url);
     openModal('screenshotModal');
 }
