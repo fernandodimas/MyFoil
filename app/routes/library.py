@@ -907,7 +907,7 @@ def app_info_api(id):
 
             # Screenshots
             if meta.screenshots:
-                existing_ss = set(s if isinstance(s, str) else s.get("url") for s in result.get("screenshots", []))
+                existing_ss = set(s if isinstance(s, str) else s.get("url") for s in (result.get("screenshots") or []))
                 for ss in meta.screenshots:
                     url = ss if isinstance(ss, str) else ss.get("url")
                     if url not in existing_ss:
@@ -919,7 +919,7 @@ def app_info_api(id):
         if title_obj.tags_json:
             result["tags"] = list(set((result.get("tags") or []) + (title_obj.tags_json or [])))
         if title_obj.screenshots_json:
-            existing_ss = set(s if isinstance(s, str) else s.get("url") for s in result.get("screenshots", []))
+            existing_ss = set(s if isinstance(s, str) else s.get("url") for s in (result.get("screenshots") or []))
             for ss in title_obj.screenshots_json:
                 url = ss if isinstance(ss, str) else ss.get("url")
                 if url not in existing_ss:
@@ -928,8 +928,9 @@ def app_info_api(id):
     # Include added_at for display in modal
     result["added_at"] = title_obj.added_at.isoformat() if title_obj and title_obj.added_at else None
 
-    # Ensure screenshots are included
-    result["screenshots"] = info.get("screenshots", [])
+    # Ensure screenshots are initialized if missing
+    if result.get("screenshots") is None:
+        result["screenshots"] = []
 
     # Calculate corrected owned version considering all owned apps (Base + Update)
     owned_versions = [int(a.get("app_version") or 0) for a in all_title_apps if a["owned"]]
@@ -944,7 +945,7 @@ def app_info_api(id):
     result["files"] = unique_base_files
     result["updates"] = sorted(updates_list, key=lambda x: x["version"])
     result["dlcs"] = sorted(dlcs_list, key=lambda x: x["name"])
-    result["category"] = info.get("category", [])  # Genre/Categories
+    result["category"] = result.get("category") or info.get("category", [])  # Genre/Categories
 
     # Total size for side info
     total_size = 0
