@@ -16,12 +16,11 @@ class Watcher:
     def __init__(self, callback):
         self.directories = set()  # Use a set to store directories
         self.callback = callback
-        self.event_handler = Handler(self.callback, watcher=self)
-        # Use PollingObserver with faster timeout for Docker volumes
-        # Default timeout is 1 second, we reduce to 0.5s for better responsiveness
-        self.observer = PollingObserver(timeout=0.5)
+        # Use PollingObserver with conservative timeout to reduce CPU usage
+        # 5.0s is enough for background detection without stressing the system
+        self.observer = PollingObserver(timeout=5.0)
         self.scheduler_map = {}
-        logger.info("[WATCHDOG-INIT] Created PollingObserver with 0.5s timeout for Docker volume compatibility")
+        logger.info("[WATCHDOG-INIT] Created PollingObserver with 5.0s timeout for resource efficiency")
         
         # Health monitoring attributes
         self.last_event_time = None
@@ -38,7 +37,7 @@ class Watcher:
             # IMPORTANT: Re-initialize observer if it was stopped.
             # Watchdog observers are threads and cannot be restarted once stopped.
             if self.observer is None or not self.observer.is_alive():
-                 self.observer = PollingObserver(timeout=0.5)
+                 self.observer = PollingObserver(timeout=5.0)
                  # Re-schedule all directories
                  for directory in self.directories:
                      task = self.observer.schedule(self.event_handler, directory, recursive=True)

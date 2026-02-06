@@ -577,7 +577,7 @@ def get_titledb_sources_status() -> List[Dict]:
     return source_manager.get_sources_status()
 
 
-def get_active_source_info() -> Dict:
+def get_active_source_info(force=False) -> Dict:
     """Get information about the currently active/latest successful source"""
     source_manager = get_source_manager()
     sources = source_manager.get_active_sources()
@@ -596,11 +596,11 @@ def get_active_source_info() -> Dict:
 
         # Use cached remote_date if available
         remote_date = active.remote_date
-        if not remote_date:
+        if not remote_date or force:
             # If not already fetching, trigger a background update
             if not getattr(active, "is_fetching", False):
                 # Use the source manager from global scope to refresh
-                source_manager.refresh_remote_dates()
+                source_manager.refresh_remote_dates(force=force)
             
             # Return current None state for now (UI shows Unknown/Spinning)
             remote_date = None

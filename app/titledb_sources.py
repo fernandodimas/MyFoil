@@ -220,6 +220,7 @@ class TitleDBSourceManager:
         self.config_dir = Path(config_dir)
         self.sources_file = self.config_dir / "titledb_sources.json"
         self.sources: List[TitleDBSource] = []
+        self.last_refresh_time = 0 # timestamp
         self.load_sources()
 
     def load_sources(self):
@@ -457,10 +458,17 @@ class TitleDBSourceManager:
         sorted_sources = sorted(self.sources, key=sort_key)
         return [s.to_dict() for s in sorted_sources]
 
-    def refresh_remote_dates(self):
+    def refresh_remote_dates(self, force=False):
         """Asynchronously refresh remote dates for all enabled sources"""
         import threading
+        import time
 
+        now = time.time()
+        # Cooldown: 1 hour (3600 seconds)
+        if not force and (now - self.last_refresh_time) < 3600:
+            return
+
+        self.last_refresh_time = now
         thread = threading.Thread(target=self._refresh_remote_dates_worker)
         thread.daemon = True
         thread.start()

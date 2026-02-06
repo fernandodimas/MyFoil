@@ -17,7 +17,7 @@ class JobScheduler:
         self.scheduled_jobs: Dict[str, Dict[str, Any]] = {}
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self._running = True
-        self._sleep_time = 1  # seconds
+        self._sleep_time = 5  # seconds
         self.thread = threading.Thread(target=self._run_loop, daemon=True)
         self.thread.start()
         logger.info("Job scheduler initialized.")

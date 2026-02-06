@@ -19,8 +19,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initial check for process status
     checkProcessStatus();
-    // Check every 10 seconds
-    setInterval(checkProcessStatus, 10000);
+    // Check every 30 seconds (increased from 10s for resource efficiency)
+    // Skip if tab is not visible
+    setInterval(() => {
+        if (document.visibilityState === 'visible') {
+            checkProcessStatus();
+        }
+    }, 30000);
 });
 
 function checkProcessStatus() {

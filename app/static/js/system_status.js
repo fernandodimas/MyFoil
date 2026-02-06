@@ -58,8 +58,13 @@ class SystemStatusManager {
         // Initial load
         this.fetchStatus();
 
-        // Poll every 15 seconds as fallback (and to keep UI fresh if socket misses)
-        setInterval(() => this.fetchStatus(), 15000);
+        // Poll every 60 seconds as fallback (increased from 15s for resource efficiency)
+        // Skip if tab is not visible to save server resources
+        setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                this.fetchStatus();
+            }
+        }, 60000);
     }
 
     async fetchStatus() {

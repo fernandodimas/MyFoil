@@ -478,7 +478,7 @@ def refresh_titledb_remote_api():
         from settings import load_settings
         
         # Get active source info (will fetch remote date)
-        info = titledb.get_active_source_info()
+        info = titledb.get_active_source_info(force=True)
         
         if info:
             return jsonify({
