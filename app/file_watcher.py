@@ -20,6 +20,7 @@ class Watcher:
         # 5.0s is enough for background detection without stressing the system
         self.observer = PollingObserver(timeout=5.0)
         self.scheduler_map = {}
+        self.event_handler = Handler(callback, watcher=self)
         logger.info("[WATCHDOG-INIT] Created PollingObserver with 5.0s timeout for resource efficiency")
         
         # Health monitoring attributes
