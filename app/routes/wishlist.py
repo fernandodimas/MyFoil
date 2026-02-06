@@ -38,10 +38,37 @@ def get_wishlist():
         owned_map = {row[0]: True for row in owned_entries}
 
     result = []
+    items_updated = False
+    
     for item in items:
         # Se o jogo já está na biblioteca, não mostrar na wishlist
         if item.title_id and owned_map.get(item.title_id):
             continue
+
+        # Self-healing: Check if metadata is missing and try to fetch it
+        if item.title_id and (not item.release_date or not item.icon_url or not item.banner_url):
+            game_info = titles.get_game_info(item.title_id)
+            if game_info:
+                updated = False
+                if not item.release_date and (game_info.get("releaseDate") or game_info.get("release_date")):
+                     item.release_date = game_info.get("releaseDate") or game_info.get("release_date")
+                     updated = True
+                
+                if not item.icon_url and game_info.get("iconUrl"):
+                     item.icon_url = game_info.get("iconUrl")
+                     updated = True
+
+                if not item.banner_url and game_info.get("bannerUrl"):
+                     item.banner_url = game_info.get("bannerUrl")
+                     updated = True
+                
+                if not item.name or item.name.startswith("Unknown"):
+                    if game_info.get("name"):
+                        item.name = game_info.get("name")
+                        updated = True
+
+                if updated:
+                    items_updated = True
 
         result.append(
             {
@@ -56,6 +83,13 @@ def get_wishlist():
             }
         )
 
+    if items_updated:
+        try:
+            db.session.commit()
+        except Exception as e:
+            # Don't fail the request if commit fails, just log it
+            print(f"Failed to update wishlist metadata: {e}")
+            db.session.rollback()
     return jsonify(result)
 
 

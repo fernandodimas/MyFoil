@@ -136,7 +136,7 @@ function renderCardView(games, container) {
         const genres = (game.genres || []).map(g => `<span class="tag is-dark is-light is-size-7 mr-1 mb-1">${g.name}</span>`).join('');
 
         const safeNameJs = game.name.replace(/'/g, "\\'");
-        const releaseDate = game.release_date || "";
+        const releaseDate = game.release_date || game.release_date_formatted || "";
         const card = document.createElement('div');
         card.className = 'grid-item';
         card.innerHTML = `
@@ -183,7 +183,9 @@ function renderListView(games, container) {
     const tableContainer = document.createElement('div');
     tableContainer.className = 'box is-paddingless shadow-sm overflow-hidden border-none bg-glass';
 
-    let rows = games.map((game, index) => `
+    let rows = games.map((game, index) => {
+        const releaseDate = game.release_date || game.release_date_formatted || "";
+        return `
         <tr class="list-view-row" onclick="showUpcomingDetails(${index})">
             <td width="60" class="p-2"><img src="${game.cover_url}" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;"></td>
             <td class="is-vcentered">
@@ -191,12 +193,12 @@ function renderListView(games, container) {
             </td>
             <td class="is-vcentered has-text-centered font-mono is-size-7">${game.release_date_formatted}</td>
             <td class="is-vcentered has-text-right p-3">
-                <button class="button is-small is-light" onclick="event.stopPropagation(); addToWishlistByName('${game.name.replace(/'/g, "\\'")}', {release_date: '${game.release_date || ""}', id: '${game.id}', icon_url: '${game.cover_url}', banner_url: '${game.screenshots?.[0]?.url || ''}'})">
+                <button class="button is-small is-light" onclick="event.stopPropagation(); addToWishlistByName('${game.name.replace(/'/g, "\\'")}', {release_date: '${releaseDate}', id: '${game.id}', icon_url: '${game.cover_url}', banner_url: '${game.screenshots?.[0]?.url || ''}'})">
                     <i class="bi bi-heart mr-1"></i> Wishlist
                 </button>
             </td>
         </tr>
-    `).join('');
+    `}).join('');
 
     tableContainer.innerHTML = `
         <table class="table is-fullwidth is-hoverable mb-0 bg-transparent">
@@ -223,6 +225,15 @@ function showUpcomingDetails(index) {
     $('#upModalTitle').text(game.name);
     const bgUrl = game.screenshots && game.screenshots.length > 0 ? `https:${game.screenshots[0].url.replace('t_thumb', 't_1080p')}` : game.cover_url;
 
+    // Prepare screenshots for the gallery (standardizing format for modals.js)
+    if (game.screenshots) {
+        window.currentScreenshotsList = game.screenshots.map(s => {
+            const url = typeof s === 'string' ? s : (s.url || s.image || '');
+            // Convert IGDB specific URLs to highres if needed (already handled by t_replace usually, but safer)
+            return url.includes('igdb.com') ? `https:${url.replace('t_thumb', 't_1080p')}` : url;
+        });
+    }
+
     let content = `
         <div class="modal-banner-container" style="position: relative; height: 200px; overflow: hidden; background: #000;">
             <img src="${bgUrl}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
@@ -245,7 +256,7 @@ function showUpcomingDetails(index) {
                         
                         <hr class="my-4 opacity-10">
                         
-                        <button class="button is-primary is-fullwidth" onclick="addToWishlistByName('${game.name.replace(/'/g, "\\'")}', {release_date: '${game.release_date || ""}', id: '${game.id}', icon_url: '${game.cover_url}', banner_url: '${game.screenshots?.[0]?.url || ''}'})">
+                        <button class="button is-primary is-fullwidth" onclick="addToWishlistByName('${game.name.replace(/'/g, "\\'")}', {release_date: '${game.release_date || game.release_date_formatted || ""}', id: '${game.id}', icon_url: '${game.cover_url}', banner_url: '${game.screenshots?.[0]?.url || ''}'})">
                             <i class="bi bi-heart-fill mr-1"></i> Wishlist
                         </button>
                     </div>
@@ -262,10 +273,10 @@ function showUpcomingDetails(index) {
                         <div class="mt-5">
                             <p class="heading mb-3">Screenshots</p>
                             <div class="columns is-multiline is-mobile">
-                                ${game.screenshots.slice(0, 4).map(s => `
-                                    <div class="column is-half">
-                                        <figure class="image is-16by9 overflow-hidden" style="border-radius: 8px;">
-                                            <img src="https:${s.url.replace('t_thumb', 't_cover_big')}" style="object-fit: cover;">
+                                ${game.screenshots.slice(0, 6).map((s, sIdx) => `
+                                    <div class="column is-half" onclick="openScreenshotGallery(${sIdx})">
+                                        <figure class="image is-16by9 overflow-hidden" style="border-radius: 8px; cursor: pointer; border: 1px solid rgba(255,255,255,0.1);">
+                                            <img src="https:${s.url.replace('t_thumb', 't_cover_big')}" style="object-fit: cover; transition: transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                                         </figure>
                                     </div>
                                 `).join('')}

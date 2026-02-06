@@ -6,72 +6,159 @@
 {% include 'nav.html' %}
 <div class="container is-fluid px-5 pb-6">
     <div class="section pt-5">
-        <div class="level mb-4">
-            <div class="level-left">
-                <div>
-                    <h1 class="title is-3">{{ t('Lista de Desejos') }}</h1>
-                    <p class="subtitle is-6 has-text-grey">{{ t('Gerencie os jogos que você pretende jogar') }}</p>
+        <!-- Controls Row (Mimic Dashboard) -->
+        <div class="box p-3 mb-4 shadow-sm border-none bg-glass"
+            style="position: relative; z-index: 20; border-radius: 12px; margin-top: 1.5rem;">
+            <div class="is-flex is-flex-wrap-wrap is-align-items-center gap-3 px-1">
+
+                <!-- Left Group: Title -->
+                <div class="is-flex gap-2 is-align-items-center">
+                    <h1 class="title is-5 mb-0 has-text-weight-black tracking-tighter">
+                        <span class="has-text-primary"><i class="bi bi-heart-fill mr-2"></i></span>{{ t('Wishlist') }}
+                    </h1>
                 </div>
-            </div>
-            <div class="level-right">
-                <div class="buttons">
-                    <button class="button is-primary shadow-sm" onclick="openAddToWishlistModal()">
-                        <span class="icon"><i class="bi bi-plus-circle"></i></span>
-                        <span>{{ t('Adicionar Jogo') }}</span>
+
+                <!-- Middle Group: Actions (Search/Add) -->
+                <div class="is-flex-grow-1 is-flex gap-2">
+                    <button class="button is-small is-primary shadow-sm" onclick="openAddToWishlistModal()">
+                        <span class="icon is-small"><i class="bi bi-plus-circle"></i></span>
+                        <span class="is-hidden-mobile">{{ t('Adicionar Jogo') }}</span>
                     </button>
-                    <div class="dropdown is-hoverable is-right">
+
+                    <div class="dropdown is-hoverable">
                         <div class="dropdown-trigger">
-                            <button class="button is-white shadow-sm" aria-haspopup="true"
-                                aria-controls="dropdown-menu-export">
+                            <button class="button is-small is-white shadow-sm" aria-haspopup="true">
                                 <span class="icon is-small has-text-primary"><i class="bi bi-download"></i></span>
-                                <span>{{ t('Exportar') }}</span>
+                                <span class="is-hidden-mobile">{{ t('Exportar') }}</span>
                                 <span class="icon is-small"><i class="bi bi-chevron-down"></i></span>
                             </button>
                         </div>
                         <div class="dropdown-menu" id="dropdown-menu-export" role="menu">
                             <div class="dropdown-content">
-                                <a href="/api/wishlist/export?format=json" target="_blank" class="dropdown-item">
+                                <a href="/api/wishlist/export?format=json" target="_blank"
+                                    class="dropdown-item is-size-7">
                                     <span class="icon mr-2"><i class="bi bi-filetype-json"></i></span> JSON
                                 </a>
-                                <a href="/api/wishlist/export?format=csv" target="_blank" class="dropdown-item">
+                                <a href="/api/wishlist/export?format=csv" target="_blank"
+                                    class="dropdown-item is-size-7">
                                     <span class="icon mr-2"><i class="bi bi-filetype-csv"></i></span> CSV
                                 </a>
-                                <a href="/api/wishlist/export?format=html" target="_blank" class="dropdown-item">
+                                <a href="/api/wishlist/export?format=html" target="_blank"
+                                    class="dropdown-item is-size-7">
                                     <span class="icon mr-2"><i class="bi bi-filetype-html"></i></span> HTML
                                 </a>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Right Group: Zoom & View Controls -->
+                <div class="is-flex gap-3 is-align-items-center is-justify-content-center-mobile"
+                    style="margin-left: auto;">
+                    <div class="is-hidden-mobile mr-2">
+                        <span class="is-size-7 opacity-50 font-mono" id="totalItemsCount">-- itens</span>
+                    </div>
+
+                    <div class="is-flex is-align-items-center is-hidden-mobile" style="min-width: 100px;">
+                        <i class="bi bi-zoom-in is-size-7 mr-2 opacity-50"></i>
+                        <input id="gridZoom" class="slider is-small is-primary m-0" type="range" min="150" max="400"
+                            step="10" value="200">
+                    </div>
+
+                    <div class="buttons has-addons m-0 view-toggle" id="viewToggleButtons">
+                        <button class="button is-small" onclick="setView('card')" id="btnViewCard"
+                            title="{{ t('Grade') }}">
+                            <span class="icon is-small"><i class="bi bi-grid-fill"></i></span>
+                        </button>
+                        <button class="button is-small" onclick="setView('icon')" id="btnViewIcon"
+                            title="{{ t('Ícones') }}">
+                            <span class="icon is-small"><i class="bi bi-image"></i></span>
+                        </button>
+                        <button class="button is-small" onclick="setView('list')" id="btnViewList"
+                            title="{{ t('Lista') }}">
+                            <span class="icon is-small"><i class="bi bi-list-ul"></i></span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="box is-paddingless shadow-sm overflow-hidden border-none"
-            style="border-radius: 12px; min-height: 400px;">
-            <div class="table-container">
-                <table class="table is-fullwidth is-hoverable game-list-table mb-0" id="wishlistTable">
-                    <thead>
-                        <tr class="has-background-light-soft" style="border-bottom: 2px solid var(--primary)">
-                            <th width="80" class="has-text-centered p-1">{{ t('Capa') }}</th>
-                            <th>{{ t('Título') }}</th>
-                            <th width="140">{{ t('Adicionado em') }}</th>
-                            <th width="140">{{ t('Data de Lançamento') }}</th>
-                            <th class="has-text-right">{{ t('Ações') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody id="wishlistBody">
-                        <tr>
-                            <td colspan="6" class="has-text-centered p-6">
-                                <span class="loader is-loading is-inline-block"
-                                    style="width: 2rem; height: 2rem;"></span>
-                                <p class="mt-2 has-text-grey">{{ t('Carregando wishlist...') }}</p>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+        <!-- Wishlist Status Info -->
+        <div id="wishlistLoading" class="has-text-centered py-6">
+            <span class="loader is-loading is-inline-block"
+                style="width: 48px; height: 48px; border-width: 4px;"></span>
+            <p class="is-size-6 mt-4 opacity-60">{{ t('Carregando wishlist...') }}</p>
+        </div>
+
+        <!-- Container for dynamic views -->
+        <div id="wishlistContainer" class="mt-2">
+            <!-- Dynamic content injected via JS -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="wishlistEmpty" class="has-text-centered py-6 is-hidden">
+            <div class="card p-6 bg-glass shadow-sm" style="border-radius: 20px;">
+                <i class="bi bi-heartbreak is-size-1 opacity-20 block mb-4"></i>
+                <h3 class="title is-4">{{ t('Sua wishlist está vazia') }}</h3>
+                <p class="subtitle is-6 opacity-50">{{ t('Adicione jogos que pretende jogar no futuro.') }}</p>
+                <button class="button is-primary mt-4" onclick="openAddToWishlistModal()">
+                    <i class="bi bi-plus-circle mr-2"></i> {{ t('Começar a Adicionar') }}
+                </button>
             </div>
         </div>
     </div>
+
+    <style>
+        /* Mimic behavior from upcoming and dashboard */
+        #wishlistContainer {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(var(--card-width, 200px), 1fr));
+            gap: 1.5rem;
+        }
+
+        #wishlistContainer.is-list-view {
+            display: block;
+        }
+
+        .wishlist-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .wishlist-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+            cursor: pointer;
+        }
+
+        .wishlist-card .card-image img {
+            aspect-ratio: 1 / 1;
+            object-fit: cover;
+            width: 100%;
+            height: 100%;
+        }
+
+        .date-badge-wish {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            z-index: 5;
+        }
+
+        .list-view-row:hover {
+            background-color: var(--bulma-navbar-item-hover-background-color) !important;
+            cursor: pointer;
+        }
+    </style>
+</div>
 </div>
 
 <!-- Add to Wishlist Modal -->

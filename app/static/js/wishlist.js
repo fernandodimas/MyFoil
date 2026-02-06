@@ -1,8 +1,8 @@
-/**
- * MyFoil Wishlist Logic
- */
+let allWishlistItems = [];
+let currentWishlistView = localStorage.getItem('wishlistViewMode') || 'list';
 
 document.addEventListener('DOMContentLoaded', () => {
+    initWishlistControls();
     loadWishlist();
 
     // Check for search parameter to auto-open add modal
@@ -13,91 +13,208 @@ document.addEventListener('DOMContentLoaded', () => {
             openAddToWishlistModal();
             $('#wishlistSearchInput').val(searchQuery);
             searchTitleDBForWishlist();
-        }, 500); // Small delay to ensure everything is ready
+        }, 500);
     }
 });
 
-function getPriorityLabel(level) {
-    switch (parseInt(level)) {
-        case 3: return `<span class="tag is-danger is-light">${t('Alta')}</span>`;
-        case 2: return `<span class="tag is-warning is-light">${t('Média')}</span>`;
-        case 1: return `<span class="tag is-info is-light">${t('Baixa')}</span>`;
-        default: return `<span class="tag is-light">${t('Normal')}</span>`;
+function initWishlistControls() {
+    const gridZoom = document.getElementById('gridZoom');
+    if (gridZoom) {
+        gridZoom.addEventListener('input', function () {
+            updateWishlistGridZoom(this.value);
+        });
+        const savedZoom = localStorage.getItem('wishlistGridZoom') || 200;
+        gridZoom.value = savedZoom;
+        updateWishlistGridZoom(savedZoom);
     }
+    updateViewButtons();
+}
+
+function updateWishlistGridZoom(value) {
+    document.documentElement.style.setProperty('--card-width', value + 'px');
+    localStorage.setItem('wishlistGridZoom', value);
+}
+
+function updateViewButtons() {
+    const buttons = document.querySelectorAll('#viewToggleButtons .button');
+    buttons.forEach(btn => btn.classList.remove('is-primary'));
+
+    const activeBtn = document.getElementById(`btnView${currentWishlistView.charAt(0).toUpperCase() + currentWishlistView.slice(1)}`);
+    if (activeBtn) activeBtn.classList.add('is-primary');
+}
+
+function setView(view) {
+    currentWishlistView = view;
+    localStorage.setItem('wishlistViewMode', view);
+    updateViewButtons();
+    renderWishlist();
 }
 
 async function loadWishlist() {
+    const loading = document.getElementById('wishlistLoading');
+    const empty = document.getElementById('wishlistEmpty');
+    const container = document.getElementById('wishlistContainer');
+
+    if (loading) loading.classList.remove('is-hidden');
+    if (empty) empty.classList.add('is-hidden');
+    if (container) container.innerHTML = '';
+
     try {
         const res = await fetch('/api/wishlist');
-        const items = await res.json();
-        const tbody = document.getElementById('wishlistBody');
-        if (!tbody) return;
+        allWishlistItems = await res.json();
 
-        if (items.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="has-text-centered p-6 opacity-50 italic">${t("Sua wishlist está vazia")}</td></tr>`;
+        if (loading) loading.classList.add('is-hidden');
+
+        if (allWishlistItems.length === 0) {
+            if (empty) empty.classList.remove('is-hidden');
             return;
         }
 
-        tbody.innerHTML = '';
+        // Update count
+        const countEl = document.getElementById('totalItemsCount');
+        if (countEl) countEl.innerText = `${allWishlistItems.length} itens`;
 
-        for (const item of items) {
-            // Parse release date and determine status
-            const rawDate = String(item.release_date || '');
-            const releaseDateStr = rawDate.replace(/-/g, '').slice(0, 8);
-            const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-
-            let displayDate = t('Desconhecida');
-            let dateClass = 'has-text-grey';
-            let statusIcon = '';
-
-            if (releaseDateStr) {
-                // Format date for display (DD/MM/YYYY)
-                const year = releaseDateStr.slice(0, 4);
-                const month = releaseDateStr.slice(4, 6);
-                const day = releaseDateStr.slice(6, 8);
-                displayDate = `${day}/${month}/${year}`;
-
-                // Determine color based on release status
-                if (releaseDateStr > todayStr) {
-                    // Future release - yellow
-                    dateClass = 'has-text-warning';
-                    statusIcon = '<i class="bi bi-clock-fill mr-1"></i>';
-                } else {
-                    // Already released - green
-                    dateClass = 'has-text-success';
-                    statusIcon = '<i class="bi bi-check-circle-fill mr-1"></i>';
-                }
-            }
-
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="p-1 has-text-centered is-vcentered">
-                    <img src="${item.iconUrl || '/static/img/no-icon.png'}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;" onerror="this.src='/static/img/no-icon.png'">
-                </td>
-                <td class="is-vcentered">
-                    <strong class="is-size-7-mobile is-clickable" onclick="showGameDetails('${item.title_id}')">${escapeHtml(item.name || 'Unknown')}</strong>
-                </td>
-                <td class="is-vcentered font-mono is-size-7 opacity-70">
-                    ${new Date(item.added_date).toLocaleDateString()}
-                </td>
-                <td class="is-vcentered ${dateClass} has-text-weight-semibold is-size-7">
-                    ${statusIcon}${displayDate}
-                </td>
-                <td class="is-vcentered has-text-right">
-                    <div class="buttons is-justify-content-flex-end">
-                        <button class="button is-small is-ghost has-text-danger" onclick="removeFromWishlist(${item.id})" title="${t('Remover')}">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            `;
-            tbody.appendChild(row);
-        }
+        renderWishlist();
     } catch (e) {
         console.error(e);
-        const tbody = document.getElementById('wishlistBody');
-        if (tbody) tbody.innerHTML = `<tr><td colspan="6" class="has-text-centered has-text-danger p-6">${t('Erro ao carregar wishlist')}</td></tr>`;
+        if (loading) loading.classList.add('is-hidden');
+        if (container) container.innerHTML = `<div class="notification is-danger">${t('Erro ao carregar wishlist')}</div>`;
     }
+}
+
+function renderWishlist() {
+    const container = document.getElementById('wishlistContainer');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (currentWishlistView === 'list') {
+        container.classList.add('is-list-view');
+        renderListView(allWishlistItems, container);
+    } else {
+        container.classList.remove('is-list-view');
+        if (currentWishlistView === 'card') renderCardView(allWishlistItems, container);
+        else renderIconView(allWishlistItems, container);
+    }
+}
+
+function formatDateDisplay(rawDate) {
+    const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const cleanDate = String(rawDate || '').replace(/-/g, '').slice(0, 8);
+
+    if (!cleanDate || cleanDate === 'Unknown') return { text: t('Desconhecida'), class: 'has-text-grey', icon: '' };
+
+    const year = cleanDate.slice(0, 4);
+    const month = cleanDate.slice(4, 6);
+    const day = cleanDate.slice(6, 8);
+    const text = `${day}/${month}/${year}`;
+
+    if (cleanDate > todayStr) {
+        return { text, class: 'has-text-warning', icon: '<i class="bi bi-clock-fill mr-1"></i>' };
+    } else {
+        return { text, class: 'has-text-success', icon: '<i class="bi bi-check-circle-fill mr-1"></i>' };
+    }
+}
+
+function renderCardView(items, container) {
+    items.forEach((item, index) => {
+        const date = formatDateDisplay(item.release_date);
+        const card = document.createElement('div');
+        card.className = 'wishlist-card-wrapper';
+        card.innerHTML = `
+            <div class="card box p-0 shadow-sm border-none bg-glass wishlist-card h-100 is-flex is-flex-direction-column" onclick="showGameDetails('${item.title_id}')">
+                <div class="card-image is-relative">
+                    <figure class="image is-square bg-light-soft">
+                        <img src="${item.iconUrl || '/static/img/no-icon.png'}" alt="${item.name}" onerror="this.src='/static/img/no-icon.png'">
+                    </figure>
+                    <div class="date-badge-wish ${date.class}">
+                        ${date.icon}${date.text}
+                    </div>
+                    <button class="button is-small is-danger is-light is-rounded" style="position: absolute; top: 8px; right: 8px; z-index: 10; opacity: 0.8;" onclick="event.stopPropagation(); removeFromWishlist(${item.id})" title="${t('Remover')}">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+                <div class="card-content p-3 is-flex is-flex-direction-column is-flex-grow-1">
+                    <h3 class="is-size-7 has-text-weight-bold line-clamp-2" style="height: 2.8em;" title="${item.name}">${escapeHtml(item.name || 'Unknown')}</h3>
+                    <p class="is-size-7 opacity-50 mt-1">${new Date(item.added_date).toLocaleDateString()}</p>
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+function renderIconView(items, container) {
+    items.forEach((item, index) => {
+        const date = formatDateDisplay(item.release_date);
+        const card = document.createElement('div');
+        card.className = 'wishlist-card-wrapper';
+        card.innerHTML = `
+            <div class="card shadow-sm border-none bg-glass h-100 wishlist-card" style="border-radius: 12px; overflow: hidden; position: relative;" title="${item.name}" onclick="showGameDetails('${item.title_id}')">
+                <figure class="image is-square bg-light-soft">
+                    <img src="${item.iconUrl || '/static/img/no-icon.png'}" alt="${item.name}" style="object-fit: cover; height: 100%; width: 100%; border-radius: 0;" onerror="this.src='/static/img/no-icon.png'">
+                </figure>
+                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; padding: 2px 5px; font-size: 0.65rem; text-align: center;">
+                    ${date.text}
+                </div>
+                <button class="button is-small is-danger shadow-sm" style="position: absolute; top: 2px; right: 2px; height: 20px; width: 20px; padding: 0; opacity: 0; transition: opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0" onclick="event.stopPropagation(); removeFromWishlist(${item.id})">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+        `;
+        // Allow removing from icon view via hover delete button
+        card.querySelector('.wishlist-card').onmouseover = function () { this.querySelector('button').style.opacity = 1; };
+        card.querySelector('.wishlist-card').onmouseout = function () { this.querySelector('button').style.opacity = 0; };
+        container.appendChild(card);
+    });
+}
+
+function renderListView(items, container) {
+    const tableContainer = document.createElement('div');
+    tableContainer.className = 'box is-paddingless shadow-sm overflow-hidden border-none bg-glass';
+
+    let rows = items.map(item => {
+        const date = formatDateDisplay(item.release_date);
+        return `
+            <tr class="list-view-row" onclick="showGameDetails('${item.title_id}')">
+                <td width="60" class="p-2 has-text-centered">
+                    <img src="${item.iconUrl || '/static/img/no-icon.png'}" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" onerror="this.src='/static/img/no-icon.png'">
+                </td>
+                <td class="is-vcentered">
+                    <strong class="is-size-7-mobile">${escapeHtml(item.name || 'Unknown')}</strong>
+                </td>
+                <td class="is-vcentered opacity-50 is-size-7 font-mono is-hidden-mobile">
+                    ${new Date(item.added_date).toLocaleDateString()}
+                </td>
+                <td class="is-vcentered ${date.class} is-size-7 has-text-weight-semibold">
+                    ${date.icon}${date.text}
+                </td>
+                <td class="is-vcentered has-text-right p-3">
+                    <button class="button is-small is-ghost has-text-danger" onclick="event.stopPropagation(); removeFromWishlist(${item.id})" title="${t('Remover')}">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    tableContainer.innerHTML = `
+        <table class="table is-fullwidth is-hoverable mb-0 bg-transparent">
+            <thead>
+                <tr style="border-bottom: 2px solid var(--primary)">
+                    <th class="p-2">Capa</th>
+                    <th>Título</th>
+                    <th class="is-hidden-mobile">Adicionado em</th>
+                    <th>Lançamento</th>
+                    <th class="has-text-right p-3">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows}
+            </tbody>
+        </table>
+    `;
+    container.appendChild(tableContainer);
 }
 
 function removeFromWishlist(itemId) {
@@ -162,18 +279,15 @@ function searchTitleDBForWishlist() {
         const renderResults = (results) => {
             if (!results || results.length === 0) return false;
 
+            // Store results in global variable to avoid syntax errors with inline JSON
+            window.__wishlistSearchResults = results;
+
             let html = '<div class="list">';
-            results.slice(0, 10).forEach(game => {
+            results.slice(0, 20).forEach((game, index) => {
                 const safeName = escapeHtml(game.name);
-                const gameData = JSON.stringify({
-                    title_id: game.id,
-                    name: game.name,
-                    icon_url: game.iconUrl,
-                    banner_url: game.bannerUrl
-                }).replace(/'/g, "\\'");
 
                 html += `
-                    <div class="list-item is-clickable" onclick='addGameToWishlistWithData(${gameData})'>
+                    <div class="list-item is-clickable" onclick="addGameFromSearchRequest(${index})">
                         <div class="media">
                             ${game.iconUrl ? `<div class="media-left"><figure class="image is-48x48"><img src="${game.iconUrl}" style="border-radius: 8px;"></figure></div>` : ''}
                             <div class="media-content">
@@ -208,6 +322,21 @@ function searchTitleDBForWishlist() {
             $('#wishlistSearchResults').html(`<p class="has-text-centered py-4 has-text-danger">${t('Erro ao buscar. Verifique o console.')}</p>`);
         });
     }, 300);
+}
+
+function addGameFromSearchRequest(index) {
+    if (!window.__wishlistSearchResults || !window.__wishlistSearchResults[index]) return;
+    const game = window.__wishlistSearchResults[index];
+
+    const data = {
+        title_id: game.id,
+        name: game.name,
+        icon_url: game.iconUrl,
+        banner_url: game.bannerUrl,
+        release_date: game.releaseDate || game.release_date // Ensure date is passed
+    };
+
+    addGameToWishlistWithData(data);
 }
 
 function addGameToWishlistWithData(data) {
