@@ -741,6 +741,32 @@ def app_info_api(id):
     # Get all apps for this title
     all_title_apps = library.get_all_title_apps(tid)
 
+    # Pre-calculate max version for each file ID across ALL apps for this title
+    # This solves the issue where an XCI file in the Base app (v0) is also in an Update app (v65536)
+    # and we want to show v65536 in the UI instead of v0.
+    file_max_versions = {}
+    for a in all_title_apps:
+        v = int(a.get("app_version") or 0)
+        # We need to fetch files for this app to map IDs
+        # Since 'all_title_apps' here is a list of dicts from library.get_all_title_apps which might not have file IDs
+        # We might need to query the DB or assume db.py/get_all_title_apps populated it sufficienty?
+        # library.get_all_title_apps returns list of dicts.
+        # Let's rely on the DB objects we iterate later.
+        pass
+
+    # Actually, we need to iterate the DB objects to build this map accurately
+    # Iterate all owned apps
+    owned_apps_map = [a for a in all_title_apps if a["owned"]]
+    for a_meta in owned_apps_map:
+        a_id = a_meta["id"]
+        a_ver = int(a_meta["app_version"] or 0)
+        app_db = Apps.query.get(a_id)
+        if app_db:
+            for f in app_db.files:
+                current = file_max_versions.get(f.id, 0)
+                if a_ver > current:
+                    file_max_versions[f.id] = a_ver
+
     # Base Files (from owned BASE apps)
     base_files = []
     base_apps = [a for a in all_title_apps if a["app_type"] == APP_TYPE_BASE and a["owned"]]
@@ -750,6 +776,9 @@ def app_info_api(id):
         app_model = Apps.query.get(b["id"])
         if not app_model: continue
         for f in app_model.files:
+            # Use the max calculated version for this file, or fallback to app version
+            eff_version = file_max_versions.get(f.id, app_model.app_version)
+            
             base_files.append(
                 {
                     "id": f.id,
@@ -757,7 +786,7 @@ def app_info_api(id):
                     "filepath": f.filepath,
                     "size": f.size,
                     "size_formatted": format_size_py(f.size),
-                    "version": app_model.app_version,
+                    "version": eff_version,
                 }
             )
 
@@ -802,7 +831,7 @@ def app_info_api(id):
             app_model = Apps.query.get(upd_app["id"])
             if app_model:
                 for f in app_model.files:
-                    if f.id in seen_file_ids_in_modal: continue
+                    # if f.id in seen_file_ids_in_modal: continue
                     files.append({"id": f.id, "filename": f.filename, "size_formatted": format_size_py(f.size)})
         
         updates_list.append({
@@ -820,7 +849,7 @@ def app_info_api(id):
                 app_model = Apps.query.get(upd_app["id"])
                 if app_model:
                     for f in app_model.files:
-                        if f.id in seen_file_ids_in_modal: continue
+                        # if f.id in seen_file_ids_in_modal: continue
                         files.append({"id": f.id, "filename": f.filename, "size_formatted": format_size_py(f.size)})
             
             updates_list.append({
