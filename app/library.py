@@ -1290,23 +1290,25 @@ def get_game_info_item(tid, title_data):
     
     game["has_all_dlcs"] = all(d in owned_dlc_ids for d in all_possible_dlc_ids) if all_possible_dlc_ids else True
 
-    # Check for redundant updates (more than 1 update file, excluding files with errors)
-    update_files = []
+    # Check for redundant updates (more than 1 unique update file, excluding files with errors)
+    update_files_ids = set()
     for a in all_title_apps:
         if a["app_type"] == APP_TYPE_UPD and a["owned"]:
             for f in a.get("files_info", []):
-                # Skip files with explicit errors or that are not identified
+                # Skip files with explicit errors, not identified, or missing path
                 if f.get("error") or not f.get("identified") or not f.get("path"):
                     continue
-                update_files.append(f)
+                file_id = f.get("id")
+                if file_id:
+                    update_files_ids.add(file_id)
+    
+    game["updates_count"] = len(update_files_ids)
     
     # Skip redundant check if the title itself is not recognized (Unknown)
     display_name = title_data.get("name", "")
-    if not display_name or "Unknown" in display_name:
-        game["updates_count"] = 0
+    if not display_name or "Unknown" in (display_name or ""):
         game["has_redundant_updates"] = False
     else:
-        game["updates_count"] = len(update_files)
         game["has_redundant_updates"] = game["updates_count"] > 1
 
     game["owned"] = len(owned_apps) > 0

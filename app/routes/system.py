@@ -332,20 +332,24 @@ def scan_library_api():
     errors = []
 
     try:
-        if CELERY_ENABLED:
+        # Use force_sync for emergencies (e.g. worker down)
+        force_sync = data.get("force_sync", False)
+        
+        if CELERY_ENABLED and not force_sync:
             if path is None:
                 scan_all_libraries_async.apply_async()
                 logger.info("Triggered asynchronous full library scan (Celery).")
                 from db import log_activity
                 log_activity("library_scan_queued", details={"path": "all", "source": "api"})
             else:
-                scan_library_async.apply_async(path)
+                scan_library_async.apply_async(args=[path])
                 logger.info(f"Triggered asynchronous library scan for: {path} (Celery)")
                 from db import log_activity
                 log_activity("library_scan_queued", details={"path": path, "source": "api"})
             return jsonify({"success": True, "async": True, "errors": []})
         else:
             # Synchronous mode - Use daemon thread to avoid worker timeout
+            # (Works even if CELERY_ENABLED is true but force_sync is requested)
             import threading
             import state
             from flask import current_app

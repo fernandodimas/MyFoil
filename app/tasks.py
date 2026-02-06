@@ -2,6 +2,10 @@ import sys
 import os
 import structlog
 
+# Fix MonkeyPatchWarning and Threading errors by patching EARLY
+from gevent import monkey
+monkey.patch_all()
+
 # Ensure the current directory is in the path for Celery workers
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -97,7 +101,19 @@ def init_worker(**kwargs):
         db.engine.dispose()
         logger.info("worker_process_initialized", msg="Engine pool disposed after fork")
 
-flask_app = create_app_context()
+# Avoid creating the flask app context at module level if it might fail
+# Instead, create it lazily or ensure it's safe
+_flask_app = None
+
+def get_flask_app():
+    global _flask_app
+    if _flask_app is None:
+        logger.info("creating_flask_app_context_lazy")
+        _flask_app = create_app_context()
+    return _flask_app
+
+# For celery signals to work, we still might need a reference
+flask_app = get_flask_app()
 
 # NOTE: Emitter is configured INSIDE each task to ensure fresh connection
 # This matches the pattern used by TitleDB/Backup which work correctly
