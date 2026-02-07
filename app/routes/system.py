@@ -1470,7 +1470,40 @@ def diagnostic_info():
             diagnostic["redis_test"] = "✅ PING successful"
         except Exception as e:
             diagnostic["redis_test"] = f"❌ PING failed: {str(e)}"
-    else:
-        diagnostic["redis_test"] = "⚠️ Not using Redis"
+        else:
+            diagnostic["redis_test"] = "⚠️ Not using Redis"
 
     return jsonify(diagnostic)
+
+
+# === Cloud Sync Placeholders (Feature Removed) ===
+# The cloud sync feature has been removed in v2.2.0 due to obsolescence and maintenance burden.
+# These placeholder endpoints prevent 404 errors in the frontend that still references them.
+
+
+@system_bp.route("/cloud/status", methods=["GET"])
+def cloud_status_placeholder():
+    """
+    Placeholder endpoint for cloud status.
+    Returns disabled status to prevent errors in frontend.
+    """
+    return jsonify(
+        {
+            "gdrive": {"authenticated": False, "enabled": False, "message": "Cloud sync feature removed in v2.2.0"},
+            "dropbox": {"authenticated": False, "enabled": False, "message": "Cloud sync feature removed in v2.2.0"},
+        }
+    )
+
+
+@system_bp.route("/cloud/auth/<provider>", methods=["GET"])
+def cloud_auth_placeholder(provider):
+    """
+    Placeholder endpoint for cloud authentication.
+    Returns error indicating feature has been removed.
+    """
+    return jsonify(
+        {
+            "error": f"Cloud sync for {provider} has been removed in MyFoil v2.2.0",
+            "message": "The cloud sync feature was removed due to obsolescence and maintenance burden. Please use local backups and file transfers instead.",
+        }
+    ), 503

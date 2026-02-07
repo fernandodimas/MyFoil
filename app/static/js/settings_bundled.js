@@ -827,7 +827,13 @@ function changeLanguage(lang) {
 }
 
 function connectCloud(provider) {
-    $.getJSON(`/api/cloud/auth/${provider}`, (data) => { if (data.auth_url) window.open(data.auth_url, '_blank'); }).fail((err) => showToast(err.responseJSON?.error || t('Erro ao iniciar autenticação'), 'error'));
+    $.getJSON(`/api/cloud/auth/${provider}`, (data) => { if (data.auth_url) window.open(data.auth_url, '_blank'); }).fail((err) => {
+        if (err.status === 503) {
+            showToast(err.responseJSON?.message || 'Cloud sync已被移除 in v2.2.0', 'warning');
+        } else {
+            showToast(err.responseJSON?.error || t('Erro ao iniciar autenticação'), 'error');
+        }
+    });
 }
 
 function fillCloudStatus() {
@@ -836,8 +842,14 @@ function fillCloudStatus() {
             const box = $(`#cloud-${p}`);
             const s = status[p];
             if (s) {
-                box.find('.btn-connect').prop('disabled', false).text(s.authenticated ? t('Reconectar') : t('Conectar'));
-                if (s.authenticated) box.find('.cloud-status').removeClass('is-hidden');
+                if (s.enabled === false) {
+                    box.find('.btn-connect').prop('disabled', true).text('Descontinuado');
+                } else if (s.authenticated) {
+                    box.find('.btn-connect').prop('disabled', false).text(t('Reconectar'));
+                    box.find('.cloud-status').removeClass('is-hidden');
+                } else {
+                    box.find('.btn-connect').prop('disabled', false).text(t('Conectar'));
+                }
                 box.find('.btn-config-needed').addClass('is-hidden');
             } else {
                 box.find('.btn-connect').addClass('is-hidden');

@@ -1621,10 +1621,14 @@
                                 </p>
                             </header>
                             <div class="card-content pt-0">
+                                <div class="notification is-warning mb-4">
+                                    <p class="has-text-weight-bold mb-2"><i class="bi bi-exclamation-triangle mr-2"></i>Cloud Sync Descontinuado</p>
+                                    <p class="is-size-7">O recurso de sincronização com Google Drive e Dropbox foi removido na versão 2.2.0 devido a obsolescência e manutenção. Use o sistema de backups local e transferência de arquivos direta como alternativa.</p>
+                                </div>
                                 <div class="columns">
                                     <div class="column is-6">
                                         <div class="box border is-shadowless" id="cloud-gdrive"
-                                            style="border-left: 4px solid var(--color-primary) !important;">
+                                            style="border-left: 4px solid var(--color-primary) !important; opacity: 0.6;">
                                             <p class="has-text-weight-bold mb-3"><i class="bi bi-google mr-2"></i>
                                                 Google Drive</p>
                                             <p class="is-size-7 opacity-60 mb-4">Sincronize sua biblioteca diretamente
@@ -1635,14 +1639,14 @@
                                                     Conectado</span>
                                             </div>
                                             <button class="button is-small is-primary is-fullwidth btn-connect"
-                                                onclick="connectCloud('gdrive')">Conectar</button>
+                                                onclick="connectCloud('gdrive')" disabled>Descontinuado</button>
                                             <p class="is-size-7 has-text-danger mt-2 is-hidden btn-config-needed">
                                                 Configuração necessária (secret.json não encontrado)</p>
                                         </div>
                                     </div>
                                     <div class="column is-6">
                                         <div class="box border is-shadowless" id="cloud-dropbox"
-                                            style="border-left: 4px solid var(--color-info) !important;">
+                                            style="border-left: 4px solid var(--color-info) !important; opacity: 0.6;">
                                             <p class="has-text-weight-bold mb-3"><i class="bi bi-dropbox mr-2"></i>
                                                 Dropbox</p>
                                             <p class="is-size-7 opacity-60 mb-4">Mantenha seu acervo seguro e acessível
@@ -1653,7 +1657,7 @@
                                                     Conectado</span>
                                             </div>
                                             <button class="button is-small is-primary is-fullwidth btn-connect"
-                                                onclick="connectCloud('dropbox')">Conectar</button>
+                                                onclick="connectCloud('dropbox')" disabled>Descontinuado</button>
                                             <p class="is-size-7 has-text-danger mt-2 is-hidden btn-config-needed">
                                                 Configuração necessária (app_key.txt não encontrado)</p>
                                         </div>
