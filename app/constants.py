@@ -23,7 +23,7 @@ if not MYFOIL_DB:
     raise RuntimeError("DATABASE_URL environment variable must be set")
 
 
-BUILD_VERSION = '20260206_2007'
+BUILD_VERSION = '20260206_2124'
 
 DEFAULT_SETTINGS = {
     "library": {

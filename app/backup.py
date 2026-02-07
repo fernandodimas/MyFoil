@@ -19,14 +19,6 @@ class BackupManager:
         backup_created = False
         
         try:
-            # Backup database
-            db_path = os.path.join(self.config_dir, 'myfoil.db')
-            if os.path.exists(db_path):
-                backup_db = os.path.join(self.backup_dir, f'myfoil_{timestamp}.db')
-                shutil.copy2(db_path, backup_db)
-                logger.info(f"Database backup created: {backup_db}")
-                backup_created = True
-            
             # Backup settings
             settings_path = os.path.join(self.config_dir, 'settings.yaml')
             if os.path.exists(settings_path):
@@ -69,8 +61,6 @@ class BackupManager:
                 if not os.path.isfile(filepath):
                     continue
                     
-                elif filename.startswith('myfoil_') and filename.endswith('.db'):
-                    backup_files['db'].append(filepath)
                 elif filename.startswith('settings_') and filename.endswith('.yaml'):
                     backup_files['settings'].append(filepath)
                 elif filename.startswith('keys_') and filename.endswith('.txt'):
@@ -116,8 +106,6 @@ class BackupManager:
     
     def _get_backup_type(self, filename):
         """Determine backup file type"""
-        if filename.endswith('.db'):
-            return 'database'
         elif filename.endswith('.json'):
             return 'settings'
         elif filename.endswith('.txt'):
@@ -133,8 +121,6 @@ class BackupManager:
                 return False
             
             # Determine target path based on backup type
-            if backup_filename.startswith('myfoil_') and backup_filename.endswith('.db'):
-                target_path = os.path.join(self.config_dir, 'myfoil.db')
             elif backup_filename.startswith('settings_') and backup_filename.endswith('.yaml'):
                 target_path = os.path.join(self.config_dir, 'settings.yaml')
             elif backup_filename.startswith('keys_') and backup_filename.endswith('.txt'):
