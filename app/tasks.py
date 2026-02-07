@@ -1,13 +1,18 @@
 import sys
 import os
-import structlog
 
-# Fix MonkeyPatchWarning and Threading errors by patching EARLY
+# Add app directory to path BEFORE any imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# CRITICAL: Monkey patch gevent BEFORE importing anything else
+# This should only happen ONCE in the entire application
 from gevent import monkey
+
 monkey.patch_all()
 
-# Ensure the current directory is in the path for Celery workers
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import structlog
+
+# Configure structlog for Celery workers to ensure we see output
 
 from celery_app import celery
 from flask import Flask
@@ -61,8 +66,9 @@ def create_app_context():
     @event.listens_for(Engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
         import sqlite3
+
         if not isinstance(dbapi_connection, sqlite3.Connection):
-             return
+            return
 
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA journal_mode=WAL")
@@ -72,11 +78,13 @@ def create_app_context():
 
     # Initialize job tracker for worker
     from job_tracker import job_tracker
+
     job_tracker.init_app(app)
 
     try:
         with app.app_context():
             from db import log_activity
+
             db_type = "PostgreSQL" if "postgresql" in app.config["SQLALCHEMY_DATABASE_URI"] else "SQLite"
             log_activity("worker_startup", details={"db_type": db_type})
     except Exception as e:
@@ -91,6 +99,7 @@ def init_worker(**kwargs):
     # Load encryption keys in the worker process
     try:
         from settings import load_keys
+
         load_keys()
         logger.info("worker_process_init", msg="Encryption keys loaded in worker")
     except Exception as e:
@@ -101,9 +110,11 @@ def init_worker(**kwargs):
         db.engine.dispose()
         logger.info("worker_process_initialized", msg="Engine pool disposed after fork")
 
+
 # Avoid creating the flask app context at module level if it might fail
 # Instead, create it lazily or ensure it's safe
 _flask_app = None
+
 
 def get_flask_app():
     global _flask_app
@@ -111,6 +122,7 @@ def get_flask_app():
         logger.info("creating_flask_app_context_lazy")
         _flask_app = create_app_context()
     return _flask_app
+
 
 # For celery signals to work, we still might need a reference
 flask_app = get_flask_app()
@@ -125,16 +137,16 @@ def scan_library_async(library_path):
     logger.info("SCAN_LIBRARY_TASK_RECEIVED", path=library_path)
     with flask_app.app_context():
         import time
-        
+
         # Recreate emitter fresh for THIS task execution
         logger.info("task_execution_started", task="scan_library_async", library_path=library_path)
         job_tracker.set_emitter(get_socketio_emitter())
-        
+
         job_id = f"scan_{os.path.basename(library_path)}_{int(time.time())}"
-        
+
         # Concurrency check
         active_jobs = job_tracker.get_active_jobs()
-        if any(j.get('type') == JobType.LIBRARY_SCAN and j.get('id') != job_id for j in active_jobs):
+        if any(j.get("type") == JobType.LIBRARY_SCAN and j.get("id") != job_id for j in active_jobs):
             logger.warning("Another library scan is already in progress. Skipping.")
             return False
 
@@ -142,6 +154,7 @@ def scan_library_async(library_path):
 
         try:
             from db import remove_missing_files_from_db
+
             # 1. Cleanup missing files first
             job_tracker.update_progress(job_id, 10, message="Cleaning up missing files...")
             count = remove_missing_files_from_db()
@@ -162,6 +175,7 @@ def scan_library_async(library_path):
 
             # Notify via socketio
             from library import trigger_library_update_notification
+
             trigger_library_update_notification()
 
             job_tracker.complete_job(job_id, "Scan completed")
@@ -178,10 +192,10 @@ def identify_file_async(filepath):
     """Identify a single file in background (e.g. from watchdog)"""
     with flask_app.app_context():
         import time
-        
+
         # Recreate emitter fresh for THIS task execution
         job_tracker.set_emitter(get_socketio_emitter())
-        
+
         job_id = f"id_{int(time.time())}"
         job_tracker.start_job(job_id, JobType.FILE_IDENTIFICATION, "Identifying new file")
 
@@ -191,12 +205,14 @@ def identify_file_async(filepath):
             # For simple file changes, we can just run the global cleanup and identification
             job_tracker.update_progress(job_id, 20, message="Checking for changes...")
             from db import remove_missing_files_from_db
+
             remove_missing_files_from_db()
 
             from library import Libraries
+
             libraries = Libraries.query.all()
             for i, lib in enumerate(libraries):
-                job_tracker.update_progress(job_id, 40 + (i*10), message=f"Identifying in {lib.path}")
+                job_tracker.update_progress(job_id, 40 + (i * 10), message=f"Identifying in {lib.path}")
                 identify_library_files(lib.path)
 
             # Atualizar títulos e gerar biblioteca (equivalente a post_library_change)
@@ -206,6 +222,7 @@ def identify_file_async(filepath):
 
             # Notificar via socketio
             from library import trigger_library_update_notification
+
             trigger_library_update_notification()
 
             job_tracker.complete_job(job_id, "File identification done")
@@ -220,63 +237,98 @@ def identify_file_async(filepath):
 @celery.task(name="tasks.scan_all_libraries_async")
 def scan_all_libraries_async():
     """Full library scan for all configured paths in background"""
-    with flask_app.app_context():
-        import time
+    import os
+    import traceback
 
-        # Recreate emitter fresh for THIS task execution
-        logger.info("SCAN_ALL_LIBRARIES_TASK_STARTING")
-        job_tracker.set_emitter(get_socketio_emitter())
+    logger.info("=" * 80)
+    logger.info("SCAN_ALL_LIBRARIES_TASK_STARTING - Worker received task!")
+    logger.info("=" * 80)
 
-        job_id = f"scan_all_{int(time.time())}"
-        
-        # Concurrency check
-        active_jobs = job_tracker.get_active_jobs()
-        if any(j.get('type') == JobType.LIBRARY_SCAN and j.get('id') != job_id for j in active_jobs):
-             logger.warning("Another library scan is already in progress. Skipping.")
-             return False
+    try:
+        with flask_app.app_context():
+            import time
 
-        logger.info("job_tracking_started", job_id=job_id, type="LIBRARY_SCAN")
-        job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, "Scanning all libraries")
+            logger.info("App context created successfully")
 
-        try:
-            from db import remove_missing_files_from_db, get_libraries
-            job_tracker.update_progress(job_id, 10, message="Cleaning up missing files...")
-            count = remove_missing_files_from_db()
-            logger.info("cleanup_completed", removed=count)
+            # Recreate emitter fresh for THIS task execution
+            logger.info("Setting socket emitter...")
+            job_tracker.set_emitter(get_socketio_emitter())
+            logger.info("Socket emitter set")
 
-            libraries = get_libraries()
-            total = len(libraries)
-            
-            if total == 0:
-                logger.warning("No libraries configured for scan.")
-                job_tracker.complete_job(job_id, "No libraries configured")
+            job_id = f"scan_all_{int(time.time())}"
+            logger.info(f"Job ID created: {job_id}")
+
+            # Concurrency check
+            logger.info("Checking for active jobs...")
+            active_jobs = job_tracker.get_active_jobs()
+            logger.info(f"Active jobs: {active_jobs}")
+
+            if any(j.get("type") == JobType.LIBRARY_SCAN and j.get("id") != job_id for j in active_jobs):
+                logger.warning("Another library scan is already in progress. Skipping.")
+                return False
+
+            logger.info("job_tracking_started", job_id=job_id, type="LIBRARY_SCAN")
+            job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, "Scanning all libraries")
+            logger.info("Job started in DB")
+
+            try:
+                from db import remove_missing_files_from_db, get_libraries
+
+                logger.info("Imported db functions")
+
+                job_tracker.update_progress(job_id, 10, message="Cleaning up missing files...")
+                logger.info("Cleaning up missing files...")
+                count = remove_missing_files_from_db()
+                logger.info("cleanup_completed", removed=count)
+
+                libraries = get_libraries()
+                total = len(libraries)
+                logger.info(f"Found {total} libraries to scan")
+                logger.info(f"Library paths: {[lib.path for lib in libraries]}")
+
+                if total == 0:
+                    logger.warning("No libraries configured for scan.")
+                    job_tracker.complete_job(job_id, "No libraries configured")
+                    return True
+
+                for i, lib in enumerate(libraries):
+                    msg = f"Scanning {lib.path}"
+                    logger.info(f"Processing library {i + 1}/{total}: {lib.path}")
+                    job_tracker.update_progress(job_id, 20 + int((i / total) * 60), message=msg)
+                    scan_library_path(lib.path, job_id=job_id)
+                    logger.info(f"Scan completed for {lib.path}, starting identification")
+                    identify_library_files(lib.path)
+                    logger.info(f"Identification completed for {lib.path}")
+
+                # Atualizar títulos e gerar biblioteca
+                logger.info("Updating titles and generating library...")
+                job_tracker.update_progress(job_id, 90, message="Refreshing library...")
+                update_titles()
+                generate_library(force=True)
+
+                # Notificar via socketio
+                from library import trigger_library_update_notification
+
+                trigger_library_update_notification()
+                logger.info("Notification sent")
+
+                job_tracker.complete_job(job_id, "Full scan completed")
+                logger.info("task_execution_completed", task="scan_all_libraries_async")
                 return True
-
-            for i, lib in enumerate(libraries):
-                msg = f"Scanning {lib.path}"
-                job_tracker.update_progress(job_id, 20 + int((i/total)*60), message=msg)
-                logger.info("scanning_path", path=lib.path)
-                scan_library_path(lib.path, job_id=job_id)
-                identify_library_files(lib.path)
-
-            # Atualizar títulos e gerar biblioteca
-            job_tracker.update_progress(job_id, 90, message="Refreshing library...")
-            update_titles()
-            generate_library(force=True)
-
-            # Notificar via socketio
-            from library import trigger_library_update_notification
-            trigger_library_update_notification()
-
-            job_tracker.complete_job(job_id, "Full scan completed")
-            logger.info("task_execution_completed", task="scan_all_libraries_async")
-            return True
-        except Exception as e:
-            logger.exception("task_execution_failed", task="scan_all_libraries_async", error=str(e))
-            job_tracker.fail_job(job_id, str(e))
-            return False
-        finally:
-            db.session.remove()
+            except Exception as e:
+                logger.exception("task_execution_failed", task="scan_all_libraries_async", error=str(e))
+                logger.error(traceback.format_exc())
+                job_tracker.fail_job(job_id, str(e))
+                return False
+            finally:
+                db.session.remove()
+                logger.info("Session removed")
+    except Exception as outer_e:
+        logger.error("=" * 80)
+        logger.error("CRITICAL ERROR in scan_all_libraries_async")
+        logger.error("=" * 80)
+        logger.error(traceback.format_exc())
+        raise
 
 
 @celery.task(name="tasks.fetch_metadata_for_game_async")
@@ -308,7 +360,7 @@ def fetch_metadata_for_all_games_async():
         job_id = f"metadata_{int(time.time())}"
         logger.info("job_tracking_started", job_id=job_id, type="METADATA_FETCH")
         job_tracker.start_job(job_id, JobType.METADATA_FETCH, "Fetching metadata for all games")
-        
+
         try:
             # Only fetch for games that have at least the base game (identified)
             games = Titles.query.filter(Titles.have_base == True).all()
@@ -318,9 +370,9 @@ def fetch_metadata_for_all_games_async():
             if total == 0:
                 job_tracker.complete_job(job_id, "No games to update")
                 return True
-            
+
             job_tracker.update_progress(job_id, 0, current=0, total=total)
-            
+
             for i, game in enumerate(games):
                 # We run synchronously here to track progress of the batch
                 try:
@@ -329,16 +381,19 @@ def fetch_metadata_for_all_games_async():
                     logger.error(f"Error updating {game.name}: {ex}")
 
                 progress = int(((i + 1) / total) * 100)
-                job_tracker.update_progress(job_id, progress, current=i+1, total=total, message=f"Updated {game.name}")
+                job_tracker.update_progress(
+                    job_id, progress, current=i + 1, total=total, message=f"Updated {game.name}"
+                )
 
             job_tracker.complete_job(job_id, f"Finished updating {total} games")
             logger.info("task_execution_completed", task="fetch_metadata_for_all_games_async")
             return True
-            
+
         except Exception as e:
             logger.exception("task_execution_failed", task="fetch_metadata_for_all_games_async", error=str(e))
             job_tracker.fail_job(job_id, str(e))
             return False
+
 
 @celery.task(name="tasks.update_titledb_async")
 def update_titledb_async(force=False):
@@ -346,12 +401,12 @@ def update_titledb_async(force=False):
     with flask_app.app_context():
         from titledb import update_titledb
         from settings import load_settings
-        
+
         logger.info("task_execution_started", task="update_titledb_async")
-        
+
         # Reload settings to ensure we have the latest (e.g. new sources)
         settings = load_settings()
-        
+
         return update_titledb(settings, force=force)
 
 
@@ -360,6 +415,7 @@ def fetch_all_metadata_async(force=False):
     """Comprehensive metadata fetch using MetadataFetcher service"""
     with flask_app.app_context():
         from metadata_service import metadata_fetcher
+
         logger.info("task_execution_started", task="fetch_all_metadata_async", force=force)
         try:
             return metadata_fetcher.fetch_all_metadata(force=force)

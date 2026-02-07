@@ -3,10 +3,23 @@ Library Routes - Endpoints relacionados à biblioteca de jogos
 """
 
 from flask import Blueprint, request, jsonify
-from sqlalchemy import func, and_, case
+from sqlalchemy import func, and_, case, or_
+from sqlalchemy.orm import joinedload
 from db import (
-    db, Apps, Titles, Libraries, Files, get_libraries, logger, app_files,
-    TitleMetadata, TitleTag, Tag, WishlistIgnore, TitleDBCache, Wishlist
+    db,
+    Apps,
+    Titles,
+    Libraries,
+    Files,
+    get_libraries,
+    logger,
+    app_files,
+    TitleMetadata,
+    TitleTag,
+    Tag,
+    WishlistIgnore,
+    TitleDBCache,
+    Wishlist,
 )
 from flask_login import current_user
 from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC
@@ -15,7 +28,7 @@ from auth import access_required
 import titles
 import titledb
 import library
-from utils import format_size_py
+from utils import format_size_py, now_utc
 
 library_bp = Blueprint("library", __name__, url_prefix="/api")
 
@@ -77,6 +90,199 @@ def library_api():
         resp.headers["X-Per-Page"] = str(per_page)
         resp.headers["X-Total-Pages"] = str(total_pages)
     return resp
+
+
+def _serialize_title_with_apps(title: Titles) -> dict:
+    """
+    Serialize a Title object with its owned apps to the expected library format.
+    This is used by the server-side paginated endpoint.
+
+    Returns a dict compatible with the existing library API response format.
+    """
+    from db import get_all_title_apps
+
+    title_id = title.title_id
+
+    # Get all title apps (owned and unowned)
+    all_title_apps_dict = get_all_title_apps(title_id)
+
+    # Get the full game object using the existing library function
+    # This ensures consistency with the cached version
+    game_info = library._get_game_info_item(
+        title_id,
+        {
+            "title_id": title_id,
+            "name": title.name,
+            "iconUrl": title.icon_url,
+            "bannerUrl": title.banner_url,
+            "category": title.category,
+            "release_date": title.release_date,
+            "publisher": title.publisher,
+            "description": title.description,
+            "size": title.size,
+            "nsuid": title.nsuid,
+            "have_base": title.have_base,
+            "up_to_date": title.up_to_date,
+            "complete": title.complete,
+            "apps": all_title_apps_dict,
+        },
+    )
+
+    return game_info
+
+
+@library_bp.route("/library/paged")
+@access_required("shop")
+def library_paged_api():
+    """
+    Server-side paginated library endpoint (Phase 2.2).
+
+    This endpoint performs pagination at the database level rather than loading
+    all games into memory and slicing. This significantly reduces memory usage
+    for large libraries.
+
+    Compatible with the existing library API response format.
+    """
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 50, type=int)
+    sort_by = request.args.get("sort", "name", type=str)
+    order = request.args.get("order", "asc", type=str)
+
+    # Validate parameters
+    page = max(1, page)
+    MAX_PER_PAGE = 100
+    per_page = min(max(1, per_page), MAX_PER_PAGE)
+
+    valid_sort_fields = ["name", "added_at", "release_date", "size"]
+    if sort_by not in valid_sort_fields:
+        sort_by = "name"
+
+    if order not in ["asc", "desc"]:
+        order = "asc"
+
+    # Build the query with eager loading to avoid N+1
+    query = Titles.query.options(joinedload(Titles.apps).filter(Apps.owned == True)).filter(Titles.title_id.isnot(None))
+
+    # Apply sorting
+    sort_field = getattr(Titles, sort_by, Titles.name)
+    if order == "desc":
+        sort_field = sort_field.desc()
+    query = query.order_by(sort_field)
+
+    # Paginate
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    # Serialize items
+    items = []
+    for title in paginated.items:
+        try:
+            item = _serialize_title_with_apps(title)
+            if item:
+                items.append(item)
+        except Exception as e:
+            logger.error(f"Error serializing title {title.title_id}: {e}")
+            continue
+
+    # Build response
+    response_data = {
+        "items": items,
+        "pagination": {
+            "page": paginated.page,
+            "per_page": paginated.per_page,
+            "total_items": paginated.total,
+            "total_pages": paginated.pages,
+            "has_next": paginated.has_next,
+            "has_prev": paginated.has_prev,
+            "sort_by": sort_by,
+            "order": order,
+        },
+    }
+
+    resp = jsonify(response_data)
+    resp.headers["X-Total-Count"] = str(paginated.total)
+    resp.headers["X-Page"] = str(paginated.page)
+    resp.headers["X-Per-Page"] = str(paginated.per_page)
+    resp.headers["X-Total-Pages"] = str(paginated.pages)
+    resp.headers["Cache-Control"] = "public, max-age=60"  # 1 minute cache for paginated results
+    return resp
+
+
+@library_bp.route("/library/search/paged")
+@access_required("shop")
+def library_search_paged_api():
+    """
+    Server-side paginated search endpoint with pagination at DB level.
+    """
+    query_text = request.args.get("q", "").lower().strip()
+    genre = request.args.get("genre")
+    owned_only = request.args.get("owned") == "true"
+    up_to_date = request.args.get("up_to_date") == "true"
+
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 50, type=int)
+
+    page = max(1, page)
+    MAX_PER_PAGE = 100
+    per_page = min(max(1, per_page), MAX_PER_PAGE)
+
+    # Build base query with eager loading
+    query = Titles.query.options(joinedload(Titles.apps).filter(Apps.owned == True)).filter(Titles.title_id.isnot(None))
+
+    # Apply filters
+    if query_text:
+        query = query.filter(
+            or_(
+                Titles.name.ilike(f"%{query_text}%"),
+                Titles.publisher.ilike(f"%{query_text}%"),
+                Titles.title_id.ilike(f"%{query_text}%"),
+            )
+        )
+
+    if owned_only:
+        query = query.filter(Titles.have_base == True)
+
+    if up_to_date:
+        query = query.filter(Titles.up_to_date == True)
+
+    # Paginate
+    paginated = query.order_by(Titles.name).paginate(page=page, per_page=per_page, error_out=False)
+
+    # Serialize and filter by genre if needed (genre filtering is post-query for simplicity)
+    items = []
+    for title in paginated.items:
+        try:
+            item = _serialize_title_with_apps(title)
+            if genre and genre != "Todos os Gêneros":
+                categories = item.get("category", [])
+                if isinstance(categories, str):
+                    categories = categories.split(",") if categories else []
+                if genre not in categories:
+                    continue
+            items.append(item)
+        except Exception as e:
+            logger.error(f"Error serializing title {title.title_id}: {e}")
+            continue
+
+    # Recalculate pagination after filtering
+    total_items = len(items)
+    total_pages = (total_items + per_page - 1) // per_page
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    paginated_items = items[start_idx:end_idx]
+
+    return jsonify(
+        {
+            "items": paginated_items,
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total_items": total_items,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1,
+            },
+        }
+    )
 
 
 @library_bp.route("/library/scroll")
@@ -280,7 +486,7 @@ def search_library_api():
 def outdated_games_api():
     """
     API endpoint que retorna jogos com atualizações pendentes.
-    
+
     Returns:
         JSON com lista de jogos que não possuem a última atualização disponível,
         incluindo informações sobre a versão pendente e data de lançamento.
@@ -288,49 +494,39 @@ def outdated_games_api():
     # Pagination parameters
     limit = request.args.get("limit", 100, type=int)
     offset = request.args.get("offset", 0, type=int)
-    
+
     # Validate parameters
     limit = min(max(1, limit), 500)  # Max 500 per request
     offset = max(0, offset)
-    
+
     try:
         # Query titles that are NOT up to date but HAVE the base game
-        outdated_titles = Titles.query.filter(
-            Titles.up_to_date == False,
-            Titles.have_base == True
-        ).limit(limit).offset(offset).all()
-        
+        outdated_titles = (
+            Titles.query.filter(Titles.up_to_date == False, Titles.have_base == True).limit(limit).offset(offset).all()
+        )
+
         # Get total count for pagination
-        total_count = Titles.query.filter(
-            Titles.up_to_date == False,
-            Titles.have_base == True
-        ).count()
-        
+        total_count = Titles.query.filter(Titles.up_to_date == False, Titles.have_base == True).count()
+
         games_list = []
         for title in outdated_titles:
             try:
                 # Get current owned version
-                owned_apps = Apps.query.filter(
-                    Apps.title_id == title.id,
-                    Apps.owned == True
-                ).all()
-                
-                current_version = max(
-                    [app.app_version for app in owned_apps if app.app_version],
-                    default=0
-                )
-                
+                owned_apps = Apps.query.filter(Apps.title_id == title.id, Apps.owned == True).all()
+
+                current_version = max([app.app_version for app in owned_apps if app.app_version], default=0)
+
                 # Get pending update info
                 pending_info = library.get_pending_update_info(title.title_id)
-                
+
                 if not pending_info:
                     # Skip if no update info available
                     continue
-                
+
                 # Only include if there's actually a newer version
                 if pending_info["version"] <= current_version:
                     continue
-                
+
                 game_entry = {
                     "id": title.title_id,
                     "nsuid": title.nsuid or "Unknown",
@@ -341,31 +537,30 @@ def outdated_games_api():
                         "version": pending_info["version"],
                         "version_string": pending_info["version_string"],
                         "update_id": pending_info["update_id"],
-                        "release_date": pending_info["release_date"]
-                    }
+                        "release_date": pending_info["release_date"],
+                    },
                 }
-                
+
                 games_list.append(game_entry)
-                
+
             except Exception as e:
                 logger.error(f"Error processing outdated game {title.title_id}: {e}")
                 continue
-        
-        return jsonify({
-            "success": True,
-            "count": len(games_list),
-            "total": total_count,
-            "limit": limit,
-            "offset": offset,
-            "games": games_list
-        })
-        
+
+        return jsonify(
+            {
+                "success": True,
+                "count": len(games_list),
+                "total": total_count,
+                "limit": limit,
+                "offset": offset,
+                "games": games_list,
+            }
+        )
+
     except Exception as e:
         logger.error(f"Error fetching outdated games: {e}")
-        return jsonify({
-            "success": False,
-            "message": str(e)
-        }), 500
+        return jsonify({"success": False, "message": str(e)}), 500
 
 
 @library_bp.route("/stats/overview")
@@ -515,7 +710,7 @@ def get_stats_overview():
     # --- IGNORING LOGIC FOR PENDING COUNT ---
     import json
     from flask_login import current_user
-    
+
     pending_games = [g for g in filtered_games if g.get("status_color") != "green" and g.get("has_base")]
     ignored_games_count = 0
 
@@ -526,23 +721,24 @@ def get_stats_overview():
             for rec in ignores:
                 ignore_map[rec.title_id] = {
                     "dlcs": json.loads(rec.ignore_dlcs or "{}"),
-                    "updates": json.loads(rec.ignore_updates or "{}")
+                    "updates": json.loads(rec.ignore_updates or "{}"),
                 }
-            
+
             for g in pending_games:
                 tid = g.get("title_id")
-                if not tid: continue
-                
+                if not tid:
+                    continue
+
                 # If no ignore record, it's definitely pending
                 if tid not in ignore_map:
                     continue
-                    
+
                 rec = ignore_map[tid]
                 ignored_updates_set = set(str(k) for k, v in rec["updates"].items() if v)
                 ignored_dlcs_set = set(str(k) for k, v in rec["dlcs"].items() if v)
-                
+
                 is_fully_ignored = True
-                
+
                 # Check Updates
                 if not g.get("has_latest_version"):
                     current_ver = g.get("owned_version", 0)
@@ -551,15 +747,15 @@ def get_stats_overview():
                     # But game object usually has 'latest_version_available', not list.
                     # We need strict check.
                     missing_versions = [v["version"] for v in avail_versions if v["version"] > current_ver]
-                    
+
                     for mv in missing_versions:
                         if str(mv) not in ignored_updates_set:
                             is_fully_ignored = False
                             break
-                
+
                 if not is_fully_ignored:
                     continue
-                    
+
                 # Check DLCs
                 if not g.get("has_all_dlcs"):
                     all_dlcs = titles.get_all_existing_dlc(tid)
@@ -567,18 +763,23 @@ def get_stats_overview():
                     owned_dlc_ids = set()
                     if g.get("apps"):
                         for a in g["apps"]:
-                            if a.get("app_type") == APP_TYPE_DLC and a.get("owned") and len(a.get("files_info", [])) > 0:
+                            if (
+                                a.get("app_type") == APP_TYPE_DLC
+                                and a.get("owned")
+                                and len(a.get("files_info", [])) > 0
+                            ):
                                 owned_dlc_ids.add(a["app_id"].upper())
-                    
+
                     for dlc_id in all_dlcs:
                         dlc_id = dlc_id.upper()
-                        if dlc_id == tid.upper(): continue
-                        
+                        if dlc_id == tid.upper():
+                            continue
+
                         if dlc_id not in owned_dlc_ids:
                             if dlc_id not in ignored_dlcs_set:
                                 is_fully_ignored = False
                                 break
-                
+
                 if is_fully_ignored:
                     ignored_games_count += 1
 
@@ -641,7 +842,7 @@ def app_info_api(id):
         if app_obj:
             tid = app_obj.title.title_id
             title_obj = app_obj.title
-    
+
     # Handle phantom titles from Wishlist (upcoming/manual entries)
     if not title_obj and tid.startswith("UPCOMING_"):
         wish_item = Wishlist.query.filter_by(title_id=tid).first()
@@ -650,8 +851,9 @@ def app_info_api(id):
             genres = []
             if wish_item.genres:
                 genres = [g.strip() for g in wish_item.genres.split(",") if g.strip()]
-            
+
             import json
+
             screenshots = []
             if wish_item.screenshots:
                 try:
@@ -660,24 +862,27 @@ def app_info_api(id):
                     # Fallback to comma separated if not JSON
                     screenshots = [s.strip() for s in wish_item.screenshots.split(",") if s.strip()]
 
-            return jsonify({
-                "id": tid,
-                "name": wish_item.name,
-                "publisher": "--",
-                "description": wish_item.description or "Este jogo foi adicionado à sua wishlist a partir da lista de Próximos Lançamentos.",
-                "release_date": wish_item.release_date,
-                "iconUrl": wish_item.icon_url or "/static/img/no-icon.png",
-                "bannerUrl": wish_item.banner_url or "",
-                "owned": False,
-                "has_base": False,
-                "files": [],
-                "updates": [],
-                "dlcs": [],
-                "screenshots": screenshots,
-                "metacritic": None,
-                "rating": None,
-                "category": genres
-            })
+            return jsonify(
+                {
+                    "id": tid,
+                    "name": wish_item.name,
+                    "publisher": "--",
+                    "description": wish_item.description
+                    or "Este jogo foi adicionado à sua wishlist a partir da lista de Próximos Lançamentos.",
+                    "release_date": wish_item.release_date,
+                    "iconUrl": wish_item.icon_url or "/static/img/no-icon.png",
+                    "bannerUrl": wish_item.banner_url or "",
+                    "owned": False,
+                    "has_base": False,
+                    "files": [],
+                    "updates": [],
+                    "dlcs": [],
+                    "screenshots": screenshots,
+                    "metacritic": None,
+                    "rating": None,
+                    "category": genres,
+                }
+            )
 
     if not title_obj:
         # Maybe it's a DLC app_id, try to find base TitleID
@@ -774,11 +979,12 @@ def app_info_api(id):
         # We need the original Files objects to get IDs for download
         # Use Apps.query.get for better compatibility with different Flask-SQLAlchemy versions
         app_model = Apps.query.get(b["id"])
-        if not app_model: continue
+        if not app_model:
+            continue
         for f in app_model.files:
             # Use the max calculated version for this file, or fallback to app version
             eff_version = file_max_versions.get(f.id, app_model.app_version)
-            
+
             base_files.append(
                 {
                     "id": f.id,
@@ -804,7 +1010,7 @@ def app_info_api(id):
     available_versions = titles.get_all_existing_versions(tid)
     # Updates list: Include ALL available versions from TitleDB
     version_release_dates = {v["version"]: v["release_date"] for v in available_versions}
-    
+
     # Ensure v0 has the base game release date in YYYY-MM-DD format
     base_release_date = info.get("release_date", "")
     if base_release_date and len(str(base_release_date)) == 8 and str(base_release_date).isdigit():
@@ -818,13 +1024,14 @@ def app_info_api(id):
 
     update_apps = [a for a in all_title_apps if a["app_type"] == APP_TYPE_UPD]
     update_apps_by_version = {int(a.get("app_version") or 0): a for a in update_apps}
-    
+
     updates_list = []
     # 1. Add all versions from TitleDB
     for v_info in available_versions:
         v_int = v_info["version"]
-        if v_int == 0: continue
-        
+        if v_int == 0:
+            continue
+
         upd_app = update_apps_by_version.get(v_int)
         files = []
         if upd_app and upd_app["owned"]:
@@ -833,14 +1040,16 @@ def app_info_api(id):
                 for f in app_model.files:
                     # if f.id in seen_file_ids_in_modal: continue
                     files.append({"id": f.id, "filename": f.filename, "size_formatted": format_size_py(f.size)})
-        
-        updates_list.append({
-            "version": v_int,
-            "owned": upd_app["owned"] if upd_app else False,
-            "release_date": v_info["release_date"] or "Unknown",
-            "files": files
-        })
-        
+
+        updates_list.append(
+            {
+                "version": v_int,
+                "owned": upd_app["owned"] if upd_app else False,
+                "release_date": v_info["release_date"] or "Unknown",
+                "files": files,
+            }
+        )
+
     # 2. Add any owned updates not in TitleDB
     for v_int, upd_app in update_apps_by_version.items():
         if v_int not in [v["version"] for v in updates_list] and v_int != 0:
@@ -851,13 +1060,10 @@ def app_info_api(id):
                     for f in app_model.files:
                         # if f.id in seen_file_ids_in_modal: continue
                         files.append({"id": f.id, "filename": f.filename, "size_formatted": format_size_py(f.size)})
-            
-            updates_list.append({
-                "version": v_int,
-                "owned": upd_app.get("owned", False),
-                "release_date": "Unknown",
-                "files": files
-            })
+
+            updates_list.append(
+                {"version": v_int, "owned": upd_app.get("owned", False), "release_date": "Unknown", "files": files}
+            )
 
     # DLCs
     dlc_ids = titles.get_all_existing_dlc(tid)
@@ -873,7 +1079,7 @@ def app_info_api(id):
         # Filter out self-mappings
         if str(dlc_id).upper() == tid.upper():
             continue
-            
+
         apps_for_dlc = dlc_apps_grouped.get(dlc_id, [])
         owned = any(a["owned"] for a in apps_for_dlc)
         files = []
@@ -938,7 +1144,10 @@ def app_info_api(id):
             # Screenshots
             if meta.screenshots:
                 logger.debug(f"Merging snapshots from meta for {tid}")
-                existing_ss = set(s if isinstance(s, str) else (s.get("url") if s else None) for s in (result.get("screenshots") or []))
+                existing_ss = set(
+                    s if isinstance(s, str) else (s.get("url") if s else None)
+                    for s in (result.get("screenshots") or [])
+                )
                 for ss in meta.screenshots:
                     url = ss if isinstance(ss, str) else ss.get("url")
                     if url not in existing_ss:
@@ -950,7 +1159,9 @@ def app_info_api(id):
         if title_obj.tags_json:
             result["tags"] = list(set((result.get("tags") or []) + (title_obj.tags_json or [])))
         if title_obj.screenshots_json:
-            existing_ss = set(s if isinstance(s, str) else (s.get("url") if s else None) for s in (result.get("screenshots") or []))
+            existing_ss = set(
+                s if isinstance(s, str) else (s.get("url") if s else None) for s in (result.get("screenshots") or [])
+            )
             for ss in title_obj.screenshots_json:
                 url = ss if isinstance(ss, str) else ss.get("url")
                 if url not in existing_ss:

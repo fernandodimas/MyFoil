@@ -4,7 +4,21 @@ System Routes - Endpoints relacionados ao sistema (stats, backups, etc.)
 
 from flask import Blueprint, render_template, request, jsonify, Response, send_from_directory
 from flask_login import current_user
-from db import db, Apps, Titles, Libraries, Files, ActivityLog, TitleDBCache, get_libraries, get_all_unidentified_files, logger, joinedload, Webhook
+from sqlalchemy import text
+from db import (
+    db,
+    Apps,
+    Titles,
+    Libraries,
+    Files,
+    ActivityLog,
+    TitleDBCache,
+    get_libraries,
+    get_all_unidentified_files,
+    logger,
+    joinedload,
+    Webhook,
+)
 from settings import load_settings
 from auth import access_required, admin_account_created
 import titles
@@ -22,6 +36,125 @@ system_bp = Blueprint("system", __name__, url_prefix="/api")
 
 # Web routes (não-API)
 system_web_bp = Blueprint("system_web", __name__)
+
+
+@system_bp.route("/health", methods=["GET"])
+def health_check_api():
+    """
+    Health check endpoint for monitoring (Phase 7.2).
+
+    Returns the health status of critical system components:
+    - Overall health status (healthy degraded, unhealthy)
+    - Database connection status
+    - Redis connection status (if configured)
+    - Celery worker status (if configured)
+    - Current timestamp
+
+    No authentication required for monitoring systems.
+    Returns 503 if any critical component is unhealthy.
+    """
+    overall_status = "healthy"
+    checks = {
+        "timestamp": now_utc().isoformat(),
+        "version": BUILD_VERSION,
+        "database": "unknown",
+        "redis": "unknown",
+        "celery": "unknown" if os.environ.get("CELERY_ENABLED", "").lower() != "true" else "checking",
+        "filewatcher": "unknown",
+    }
+
+    # Check Database connection
+    try:
+        from sqlalchemy import text
+
+        db.session.execute(text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception as e:
+        checks["database"] = f"error: {str(e)}"
+        overall_status = "unhealthy"
+
+    # Check Redis connection (if configured)
+    try:
+        redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+        r = redis.from_url(redis_url)
+        r.ping()
+        checks["redis"] = "ok"
+    except Exception as e:
+        if "CELERY_REQUIRED" in os.environ and os.environ["CELERY_REQUIRED"].lower() == "true":
+            # If Redis is required and not available, mark as degraded/unhealthy
+            checks["redis"] = f"error: {str(e)}"
+            overall_status = "degraded" if overall_status == "healthy" else "unhealthy"
+        else:
+            # Redis is optional
+            checks["redis"] = "not_configured"
+
+    # Check Celery workers (if enabled)
+    try:
+        if os.environ.get("CELERY_ENABLED", "").lower() == "true":
+            from celery_app import celery as celery_app_
+
+            # Ping workers
+            inspect = celery_app_.control.inspect()
+            active = inspect.ping()
+            if active:
+                checks["celery"] = f"ok ({len(active)} workers)"
+            else:
+                checks["celery"] = "no_active_workers"
+                overall_status = "degraded" if overall_status == "healthy" else "unhealthy"
+        else:
+            checks["celery"] = "disabled"
+    except Exception as e:
+        checks["celery"] = f"error: {str(e)}"
+        overall_status = "degraded" if overall_status == "healthy" else "unhealthy"
+
+    # Check File Watcher status
+    try:
+        import state
+
+        if state.watcher is not None and hasattr(state.watcher, "is_running"):
+            checks["filewatcher"] = "running" if state.watcher.is_running else "stopped"
+        else:
+            checks["filewatcher"] = "not_initialized"
+    except Exception as e:
+        checks["filewatcher"] = f"error: {str(e)}"
+
+    # Determine HTTP status code
+    status_code = 200 if overall_status == "healthy" else 503
+
+    # Build response
+    response_data = {
+        "status": overall_status,
+        "checks": checks,
+    }
+
+    return jsonify(response_data), status_code
+
+
+@system_bp.route("/health/ready", methods=["GET"])
+def health_ready_api():
+    """
+    Readiness probe - checks if the application is ready to serve requests.
+
+    This checks critical components only (database).
+    Returns 503 if the application is not ready.
+    """
+    try:
+        from sqlalchemy import text
+
+        db.session.execute(text("SELECT 1"))
+        return jsonify({"status": "ready", "timestamp": now_utc().isoformat()}), 200
+    except Exception as e:
+        return jsonify({"status": "not_ready", "error": str(e), "timestamp": now_utc().isoformat()}), 503
+
+
+@system_bp.route("/health/live", methods=["GET"])
+def health_live_api():
+    """
+    Liveness probe - checks if the application is alive.
+
+    Always returns 200 if the Flask application is running.
+    """
+    return jsonify({"status": "alive", "timestamp": now_utc().isoformat()}), 200
 
 
 @system_web_bp.route("/stats")
@@ -64,33 +197,25 @@ def debug_inspect_title(title_id):
         title = Titles.query.filter_by(title_id=title_id).first()
         if not title:
             return jsonify({"error": "Title not found"}), 404
-            
-        result = {
-            "title": title.name,
-            "id": title.title_id,
-            "apps": []
-        }
-        
+
+        result = {"title": title.name, "id": title.title_id, "apps": []}
+
         apps = Apps.query.filter_by(title_id=title.id).all()
         for a in apps:
-            app_data = {
-                "id": a.app_id,
-                "type": a.app_type,
-                "version": a.app_version,
-                "owned": a.owned,
-                "files": []
-            }
-            
+            app_data = {"id": a.app_id, "type": a.app_type, "version": a.app_version, "owned": a.owned, "files": []}
+
             for f in a.files:
-                app_data["files"].append({
-                    "filename": f.filename,
-                    "filepath": f.filepath,
-                    "identified": f.identified,
-                    "error": f.identification_error,
-                    "size": f.size
-                })
+                app_data["files"].append(
+                    {
+                        "filename": f.filename,
+                        "filepath": f.filepath,
+                        "identified": f.identified,
+                        "error": f.identification_error,
+                        "size": f.size,
+                    }
+                )
             result["apps"].append(app_data)
-            
+
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -131,53 +256,45 @@ def system_info_api():
     )
 
 
-
 @system_bp.route("/system/fs/list", methods=["POST"])
 @access_required("admin")
 def list_filesystem():
     """List local filesystem directories for browser"""
     data = request.get_json() or {}
     path = data.get("path")
-    
+
     if not path:
         path = os.getcwd()
         # On macOS/Linux start at root if not specified, or home?
         # Let's start at root if explicitly requested or empty.
         # Actually, let's default to root / on unix
-        if os.name == 'posix':
+        if os.name == "posix":
             path = "/"
         else:
             path = "C:\\"
 
     if not os.path.exists(path):
         return jsonify({"error": "Path does not exist"}), 404
-        
+
     try:
         items = []
         # Parent directory
         parent = os.path.dirname(os.path.abspath(path))
         if parent != path:
-             items.append({"name": "..", "path": parent, "type": "dir"})
-             
+            items.append({"name": "..", "path": parent, "type": "dir"})
+
         with os.scandir(path) as it:
             for entry in it:
-                if entry.is_dir() and not entry.name.startswith('.'):
+                if entry.is_dir() and not entry.name.startswith("."):
                     try:
-                        items.append({
-                            "name": entry.name,
-                            "path": entry.path,
-                            "type": "dir"
-                        })
+                        items.append({"name": entry.name, "path": entry.path, "type": "dir"})
                     except OSError:
-                        pass # Permission denied etc
-        
+                        pass  # Permission denied etc
+
         # Sort by name
         items.sort(key=lambda x: x["name"])
-        
-        return jsonify({
-            "current_path": os.path.abspath(path),
-            "items": items
-        })
+
+        return jsonify({"current_path": os.path.abspath(path), "items": items})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -210,6 +327,7 @@ def set_language(lang):
 def reset_jobs_api():
     """Reset manual de todos os jobs travados"""
     from job_tracker import job_tracker
+
     try:
         job_tracker.cleanup_stale_jobs()
         # Reset memory flags
@@ -225,25 +343,26 @@ def reset_jobs_api():
 def reset_redis_api():
     """Flush Redis database and purge Celery tasks"""
     try:
-        redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+        redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
         r = redis.from_url(redis_url)
         r.flushdb()
-        
+
         # Also purge Celery tasks
         count = celery_app.control.purge()
-        
-        return jsonify({
-            "success": True, 
-            "message": f"Redis resetado e {count} tarefas removidas da fila Celery.",
-            "purged_count": count
-        })
+
+        return jsonify(
+            {
+                "success": True,
+                "message": f"Redis resetado e {count} tarefas removidas da fila Celery.",
+                "purged_count": count,
+            }
+        )
     except Exception as e:
         logger.error(f"Error resetting Redis: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
 
 
 @system_bp.route("/system/queue", methods=["GET"])
-@access_required("admin")
 def get_queue_status_api():
     """Get Celery queue status and active tasks"""
     try:
@@ -251,16 +370,108 @@ def get_queue_status_api():
         active = i.active() or {}
         reserved = i.reserved() or {}
         scheduled = i.scheduled() or {}
-        
-        return jsonify({
-            "active": active,
-            "reserved": reserved,
-            "scheduled": scheduled,
-            "broker": celery_app.connection().as_uri()
-        })
+
+        # Check registered tasks
+        registered_tasks = list(celery_app.tasks.keys())
+
+        return jsonify(
+            {
+                "active": active,
+                "reserved": reserved,
+                "scheduled": scheduled,
+                "broker": celery_app.connection().as_uri(),
+                "registered_tasks": {
+                    "total": len(registered_tasks),
+                    "important_tasks": [t for t in registered_tasks if t.startswith("tasks.")],
+                },
+            }
+        )
     except Exception as e:
         logger.error(f"Error fetching queue status: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
+
+
+@system_bp.route("/system/celery/diagnose", methods=["GET"])
+def diagnose_celery_api():
+    """
+    Diagnostic endpoint for Celery worker status.
+    Returns detailed information about worker health, task registration, and connectivity.
+    """
+    try:
+        diagnosis = {"timestamp": now_utc().isoformat(), "checks": {}}
+
+        # 1. Check CELERY_ENABLED flag
+        from app import CELERY_ENABLED
+
+        diagnosis["checks"]["celery_enabled"] = CELERY_ENABLED
+
+        # 2. Check Redis connection
+        try:
+            r.ping()
+            diagnosis["checks"]["redis_connection"] = "ok"
+        except Exception as e:
+            diagnosis["checks"]["redis_connection"] = f"error: {str(e)}"
+
+        # 3. Check Celery broker connection
+        try:
+            inspect = celery_app.control.inspect()
+            stats = inspect.stats()
+            diagnosis["checks"]["broker_connection"] = "ok"
+            diagnosis["checks"]["workers"] = list(stats.keys()) if stats else []
+        except Exception as e:
+            diagnosis["checks"]["broker_connection"] = f"error: {str(e)}"
+            diagnosis["checks"]["workers"] = []
+
+        # 4. Check task registration
+        try:
+            registered_tasks = list(celery_app.tasks.keys())
+            important_tasks = ["tasks.scan_all_libraries_async", "tasks.scan_library_async"]
+            task_status = {}
+            for task_name in important_tasks:
+                task_status[task_name] = task_name in registered_tasks
+            diagnosis["checks"]["task_registration"] = task_status
+            diagnosis["checks"]["total_registered_tasks"] = len(registered_tasks)
+        except Exception as e:
+            diagnosis["checks"]["task_registration"] = f"error: {str(e)}"
+
+        # 5. Check for active tasks
+        try:
+            inspect = celery_app.control.inspect()
+            active = inspect.active() or {}
+            active_count = sum(len(tasks) for tasks in active.values())
+            diagnosis["checks"]["active_tasks"] = active_count
+        except Exception as e:
+            diagnosis["checks"]["active_tasks"] = f"error: {str(e)}"
+
+        # 6. Check for queued tasks
+        try:
+            inspect = celery_app.control.inspect()
+            reserved = inspect.reserved() or {}
+            queued_count = sum(len(tasks) for tasks in reserved.values())
+            diagnosis["checks"]["queued_tasks"] = queued_count
+        except Exception as e:
+            diagnosis["checks"]["queued_tasks"] = f"error: {str(e)}"
+
+        # Determine overall status
+        all_ok = True
+        for check_name, check_value in diagnosis["checks"].items():
+            if isinstance(check_value, str) and check_value.startswith("error"):
+                all_ok = False
+                break
+            if isinstance(check_value, dict) and any(
+                v is False or isinstance(v, str) and v.startswith("error") for v in check_value.values()
+            ):
+                all_ok = False
+                break
+
+        diagnosis["overall_status"] = "healthy" if all_ok else "unhealthy"
+
+        return jsonify({"success": True, "diagnosis": diagnosis})
+    except Exception as e:
+        logger.error(f"Error during Celery diagnosis: {e}")
+        import traceback
+
+        return jsonify({"success": False, "message": str(e), "traceback": traceback.format_exc()}), 500
 
 
 @system_bp.route("/system/titledb/test", methods=["POST"])
@@ -269,22 +480,26 @@ def test_titledb_sync_api():
     """Run TitleDB update synchronously and return detailed results"""
     from titledb import update_titledb
     from settings import load_settings
-    
+
     settings = load_settings()
     try:
         # Run synchronously
         success = update_titledb(settings, force=True)
-        
+
         # Check cache count
         count = Titles.query.count()
         cache_count = TitleDBCache.query.count()
-        
-        return jsonify({
-            "success": success,
-            "titles_in_db": count,
-            "titledb_cache_count": cache_count,
-            "message": "Sincronização do TitleDB concluída (Sync)." if success else "Sincronização falhou ou foi parcial."
-        })
+
+        return jsonify(
+            {
+                "success": success,
+                "titles_in_db": count,
+                "titledb_cache_count": cache_count,
+                "message": "Sincronização do TitleDB concluída (Sync)."
+                if success
+                else "Sincronização falhou ou foi parcial.",
+            }
+        )
     except Exception as e:
         logger.error(f"Error during TitleDB test sync: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
@@ -295,18 +510,11 @@ def test_titledb_sync_api():
 def watchdog_status_api():
     """Get watchdog status and health information"""
     try:
-        if hasattr(state, 'watcher') and state.watcher:
+        if hasattr(state, "watcher") and state.watcher:
             status = state.watcher.get_status()
-            return jsonify({
-                "success": True,
-                **status
-            })
+            return jsonify({"success": True, **status})
         else:
-            return jsonify({
-                "success": False,
-                "running": False,
-                "message": "Watchdog not initialized"
-            })
+            return jsonify({"success": False, "running": False, "message": "Watchdog not initialized"})
     except Exception as e:
         logger.error(f"Error fetching watchdog status: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
@@ -317,17 +525,16 @@ def watchdog_status_api():
 def restart_watchdog_api():
     """Manually restart the watchdog observer"""
     try:
-        if hasattr(state, 'watcher') and state.watcher:
+        if hasattr(state, "watcher") and state.watcher:
             success = state.watcher.restart()
-            return jsonify({
-                "success": success,
-                "message": "Watchdog reiniciado com sucesso." if success else "Falha ao reiniciar watchdog."
-            })
+            return jsonify(
+                {
+                    "success": success,
+                    "message": "Watchdog reiniciado com sucesso." if success else "Falha ao reiniciar watchdog.",
+                }
+            )
         else:
-            return jsonify({
-                "success": False,
-                "message": "Watchdog not initialized"
-            }), 400
+            return jsonify({"success": False, "message": "Watchdog not initialized"}), 400
     except Exception as e:
         logger.error(f"Error restarting watchdog: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
@@ -353,14 +560,19 @@ def scan_library_api():
 
     # TitleDB Lock Check
     import state
+
     with state.titledb_update_lock:
         if state.is_titledb_update_running:
-            active_titledb_jobs = [j for j in active_jobs if j.get('type') == 'titledb_update']
+            active_titledb_jobs = [j for j in active_jobs if j.get("type") == "titledb_update"]
             if not active_titledb_jobs:
-                logger.warning("scan_library_api: state.is_titledb_update_running was True but no active job found. Resetting flag.")
+                logger.warning(
+                    "scan_library_api: state.is_titledb_update_running was True but no active job found. Resetting flag."
+                )
                 state.is_titledb_update_running = False
             else:
-                logger.info(f"Skipping scan_library_api: TitleDB update job {active_titledb_jobs[0]['id']} is in progress.")
+                logger.info(
+                    f"Skipping scan_library_api: TitleDB update job {active_titledb_jobs[0]['id']} is in progress."
+                )
                 return jsonify({"success": False, "message": "TitleDB update in progress", "errors": []})
 
     success = True
@@ -369,19 +581,30 @@ def scan_library_api():
     try:
         # Use force_sync for emergencies (e.g. worker down)
         force_sync = data.get("force_sync", False)
-        
+
         if CELERY_ENABLED and not force_sync:
-            if path is None:
-                scan_all_libraries_async.apply_async()
-                logger.info("Triggered asynchronous full library scan (Celery).")
-                from db import log_activity
-                log_activity("library_scan_queued", details={"path": "all", "source": "api"})
-            else:
-                scan_library_async.apply_async(args=[path])
-                logger.info(f"Triggered asynchronous library scan for: {path} (Celery)")
-                from db import log_activity
-                log_activity("library_scan_queued", details={"path": path, "source": "api"})
-            return jsonify({"success": True, "async": True, "errors": []})
+            try:
+                if path is None:
+                    logger.info("Applying scan_all_libraries_async task to Celery...")
+                    result = scan_all_libraries_async.apply_async()
+                    logger.info(f"Task queued to Celery. Task ID: {result.id}. Result: {result}")
+                    from db import log_activity
+
+                    log_activity("library_scan_queued", details={"path": "all", "source": "api", "task_id": result.id})
+                else:
+                    logger.info(f"Applying scan_library_async task for path: {path}")
+                    result = scan_library_async.apply_async(args=[path])
+                    logger.info(f"Task queued to Celery. Task ID: {result.id}. Result: {result}")
+                    from db import log_activity
+
+                    log_activity("library_scan_queued", details={"path": path, "source": "api", "task_id": result.id})
+                return jsonify({"success": True, "async": True, "task_id": result.id, "errors": []})
+            except Exception as celery_error:
+                logger.error(f"Failed to queue task to Celery: {celery_error}")
+                import traceback
+
+                traceback.print_exc()
+                return jsonify({"success": False, "message": f"Celery error: {str(celery_error)}", "errors": []}), 500
         else:
             # Synchronous mode - Use daemon thread to avoid worker timeout
             # (Works even if CELERY_ENABLED is true but force_sync is requested)
@@ -389,28 +612,29 @@ def scan_library_api():
             import state
             from flask import current_app
             from library import scan_library_path, Libraries, identify_library_files, post_library_change
-            
+
             # Capture app instance BEFORE creating thread (current_app won't work in thread)
             app_instance = current_app._get_current_object()
-            
+
             logger.info(f"Preparing background scan thread (path={path})")
-            
+
             def run_scan_background():
                 """Background scan thread with proper app context"""
                 from job_tracker import job_tracker, JobType
                 import time
-                
+
                 job_id = f"manual_scan_{int(time.time())}"
-                
+
                 try:
                     logger.info(f"Background thread started - creating app context (job_id={job_id})")
                     # Use the captured app instance to create context
                     with app_instance.app_context():
                         job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, f"Starting manual scan...")
-                        
+
                         if path is None:
                             # Scan all libraries
                             from db import get_libraries
+
                             libraries = get_libraries()
                             logger.info(f"Scanning {len(libraries)} libraries")
                             for lib in libraries:
@@ -421,34 +645,42 @@ def scan_library_api():
                             logger.info(f"Scanning single library: {path}")
                             scan_library_path(path, job_id=job_id)
                             identify_library_files(path)
-                        
+
                         logger.info("Running post_library_change...")
                         post_library_change()
-                        
+
                         job_tracker.complete_job(job_id, "Manual scan completed")
                         logger.info(f"Background thread finished successfully (job_id={job_id})")
                 except Exception as e:
                     logger.exception(f"Background thread failed: {e}")
                     # Need temporary context to fail job if outside context
                     with app_instance.app_context():
-                         job_tracker.fail_job(job_id, str(e))
+                        job_tracker.fail_job(job_id, str(e))
                 finally:
                     with state.scan_lock:
                         state.scan_in_progress = False
                     logger.info("Background scan thread exiting")
-            
+
             with state.scan_lock:
                 state.scan_in_progress = True
-            
+
             scan_thread = threading.Thread(target=run_scan_background, daemon=True, name="LibraryScan")
             scan_thread.start()
             logger.info(f"Background scan thread launched successfully (daemonized)")
-            
-            return jsonify({"success": True, "async": False, "message": f"Scan started in background thread {'(all)' if path is None else '(path='+path+')'}", "errors": []})
+
+            return jsonify(
+                {
+                    "success": True,
+                    "async": False,
+                    "message": f"Scan started in background thread {'(all)' if path is None else '(path=' + path + ')'}",
+                    "errors": [],
+                }
+            )
     except Exception as e:
         errors.append(str(e))
         success = False
         from db import log_activity
+
         log_activity("library_scan_failed", details={"path": path, "error": str(e)})
         logger.error(f"Error during library scan api call: {e}")
 
@@ -461,6 +693,7 @@ def scan_library_api():
 def get_unidentified_files_api():
     """Obter arquivos não identificados ou com erro"""
     import titles
+
     results = []
     seen_ids = set()
 
@@ -470,21 +703,23 @@ def get_unidentified_files_api():
         if f.id in seen_ids:
             continue
         seen_ids.add(f.id)
-        results.append({
-            "id": f.id,
-            "filename": f.filename,
-            "filepath": f.filepath,
-            "size": f.size,
-            "size_formatted": format_size_py(f.size),
-            "error": f.identification_error or "Arquivo não identificado (ID ausente)",
-        })
+        results.append(
+            {
+                "id": f.id,
+                "filename": f.filename,
+                "filepath": f.filepath,
+                "size": f.size,
+                "size_formatted": format_size_py(f.size),
+                "error": f.identification_error or "Arquivo não identificado (ID ausente)",
+            }
+        )
 
     # 2. Arquivos com TitleID mas sem reconhecimento de nome (Unknown)
     identified_files = Files.query.filter(Files.identified == True).all()
     for f in identified_files:
         if f.id in seen_ids:
             continue
-        
+
         if not f.apps:
             continue
 
@@ -494,14 +729,16 @@ def get_unidentified_files_api():
             name = tinfo.get("name", "")
             if not name or name.startswith("Unknown"):
                 seen_ids.add(f.id)
-                results.append({
-                    "id": f.id,
-                    "filename": f.filename,
-                    "filepath": f.filepath,
-                    "size": f.size,
-                    "size_formatted": format_size_py(f.size),
-                    "error": f"Título não reconhecido no Banco de Dados ({tid})",
-                })
+                results.append(
+                    {
+                        "id": f.id,
+                        "filename": f.filename,
+                        "filepath": f.filepath,
+                        "size": f.size,
+                        "size_formatted": format_size_py(f.size),
+                        "error": f"Título não reconhecido no Banco de Dados ({tid})",
+                    }
+                )
         except (IndexError, AttributeError):
             continue
 
@@ -513,12 +750,8 @@ def get_unidentified_files_api():
 def get_all_files_api():
     """Obter todos os arquivos"""
     # Optimized query with eager loading to avoid N+1 problem (Fixes 524 Timeout)
-    files = (
-        Files.query.options(joinedload(Files.apps).joinedload(Apps.title))
-        .order_by(Files.filename)
-        .all()
-    )
-    
+    files = Files.query.options(joinedload(Files.apps).joinedload(Apps.title)).order_by(Files.filename).all()
+
     results = []
     for f in files:
         title_id = None
@@ -531,10 +764,10 @@ def get_all_files_api():
                     title_name = app.title.name
             except (IndexError, AttributeError):
                 pass
-        
+
         # Fallback if name not in DB title
         if title_id and not title_name:
-             title_name = "Unknown"
+            title_name = "Unknown"
 
         ext = ""
         if f.filename:
@@ -720,20 +953,19 @@ def process_status_api():
             pass
 
     # Also check DB for active jobs to support Celery workers report
-    has_active_scan = SystemJob.query.filter(
-        SystemJob.job_type == 'library_scan', 
-        SystemJob.status == 'running'
-    ).first() is not None
-    
-    has_active_tdb = SystemJob.query.filter(
-        SystemJob.job_type == 'titledb_update', 
-        SystemJob.status == 'running'
-    ).first() is not None
-    
-    has_active_metadata = SystemJob.query.filter(
-        SystemJob.job_type.like('%metadata_fetch%'), 
-        SystemJob.status == 'running'
-    ).first() is not None
+    has_active_scan = (
+        SystemJob.query.filter(SystemJob.job_type == "library_scan", SystemJob.status == "running").first() is not None
+    )
+
+    has_active_tdb = (
+        SystemJob.query.filter(SystemJob.job_type == "titledb_update", SystemJob.status == "running").first()
+        is not None
+    )
+
+    has_active_metadata = (
+        SystemJob.query.filter(SystemJob.job_type.like("%metadata_fetch%"), SystemJob.status == "running").first()
+        is not None
+    )
 
     return jsonify(
         {
@@ -763,12 +995,11 @@ def reidentify_all_api():
     """Trigger complete re-identification of all files"""
     from library import reidentify_all_files_job
     import threading
-    
+
     # Run in background thread (although it uses gevent inside, we need to spawn it)
     threading.Thread(target=reidentify_all_files_job).start()
-    
-    return jsonify({"success": True, "message": "Re-identification job started"})
 
+    return jsonify({"success": True, "message": "Re-identification job started"})
 
 
 @system_bp.post("/settings/titledb/sources/refresh-dates")
@@ -802,12 +1033,13 @@ def get_game_custom_info(tid):
     try:
         if not tid:
             return jsonify({"success": False, "error": "TitleID missing"}), 400
-            
+
         info = titles.get_custom_title_info(tid)
         print(f"DEBUG: get_custom_title_info result: {info}", flush=True)
         return jsonify({"success": True, "data": info})
     except Exception as e:
         import traceback
+
         err_msg = traceback.format_exc()
         print(f"CRITICAL ERROR in get_game_custom_info for {tid}: {err_msg}", flush=True)
         logger.error(f"Error in get_game_custom_info for {tid}: {e}")
@@ -1047,8 +1279,6 @@ def toggle_plugin_api():
     return jsonify({"success": True})
 
 
-
-
 @system_bp.route("/system/jobs", methods=["GET"])
 def get_all_jobs_api():
     """Retorna status de todos os jobs recentes"""
@@ -1063,7 +1293,7 @@ def get_all_jobs_api():
     return jsonify(
         {
             "jobs": jobs,  # Now already in dict format with to_dict()
-            "titledb": titledb_status
+            "titledb": titledb_status,
         }
     )
 
@@ -1076,12 +1306,13 @@ def trigger_metadata_fetch():
     import threading
     from flask import current_app, request
     from app import CELERY_ENABLED
-    
+
     data = request.json or {}
     force = data.get("force", False)
-    
+
     if CELERY_ENABLED:
         from tasks import fetch_all_metadata_async
+
         fetch_all_metadata_async.apply_async(args=[force])
         logger.info("Queued async metadata fetch (Celery)")
         return jsonify({"success": True, "message": "Metadata fetch queued in background (Celery)"})
@@ -1096,6 +1327,7 @@ def trigger_metadata_fetch():
                     logger.error(f"Background metadata fetch failed: {e}")
                 finally:
                     from db import db
+
                     db.session.remove()
 
         thread = threading.Thread(target=run_metadata_fetch, name="MetadataFetch")
@@ -1139,10 +1371,10 @@ def cancel_job(job_id):
 
     try:
         from job_tracker import job_tracker
-        
+
         # This will update DB and handle in-memory cancellation set
         job_tracker.cancel_job(job_id)
-        
+
         return jsonify({"success": True, "message": "Job cancelled"})
     except Exception as e:
         logger.error(f"Error cancelling job {job_id}: {e}")
@@ -1155,26 +1387,26 @@ def debug_files_api():
     """Diagnostic endpoint to see what's in the files table"""
     try:
         from db import Files
+
         count = Files.query.count()
         last_files = Files.query.order_by(Files.id.desc()).limit(20).all()
-        
+
         files_data = []
         for f in last_files:
-            files_data.append({
-                "id": f.id,
-                "filename": f.filename,
-                "filepath": f.filepath,
-                "folder": f.folder,
-                "identified": f.identified,
-                "size": f.size,
-                "error": f.identification_error,
-                "attempts": f.identification_attempts
-            })
-            
-        return jsonify({
-            "total_count": count,
-            "last_20_files": files_data
-        })
+            files_data.append(
+                {
+                    "id": f.id,
+                    "filename": f.filename,
+                    "filepath": f.filepath,
+                    "folder": f.folder,
+                    "identified": f.identified,
+                    "size": f.size,
+                    "error": f.identification_error,
+                    "attempts": f.identification_attempts,
+                }
+            )
+
+        return jsonify({"total_count": count, "last_20_files": files_data})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -1186,16 +1418,16 @@ def cleanup_jobs_api():
     try:
         from job_tracker import job_tracker
         from db import SystemJob, db
-        
+
         # 1. Cancel ALL currently running jobs
         running_jobs = SystemJob.query.filter(SystemJob.status == "running").all()
         for job in running_jobs:
             logger.warning(f"Forcing cancellation of job {job.job_id} during cleanup")
             job_tracker.cancel_job(job.job_id)
-            
+
         # 2. History cleanup
         job_tracker.cleanup_old_jobs(max_age_hours=24)
-        
+
         return jsonify({"success": True, "message": f"Cancelled {len(running_jobs)} running jobs and cleaned history"})
     except Exception as e:
         logger.error(f"Error during jobs cleanup: {e}")
