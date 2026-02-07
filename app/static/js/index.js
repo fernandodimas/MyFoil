@@ -8,6 +8,9 @@ window.filteredGames = [];
 let currentSort = localStorage.getItem('myfoil_library_sort') || 'name-asc';
 let currentView = localStorage.getItem('viewMode') || 'card';
 let ignorePreferences = {};  // Cache for ignore preferences per title_id
+let allGamesLoaded = false;  // Track if all games have been loaded
+let currentPage = 1;  // Current page for pagination
+const PER_PAGE = 100;  // Items per page
 
 // Fetch all ignore preferences on load
 function loadIgnorePreferences() {
@@ -18,6 +21,62 @@ function loadIgnorePreferences() {
         debugWarn('Failed to load ignore preferences');
         showToast(t('Failed to load ignore preferences'), 'danger');
         ignorePreferences = {};
+    });
+}
+
+// Load library with server-side pagination (Phase 2.2)
+function loadLibraryPaginated(page = 1, append = false) {
+    const API_ENDPOINT = '/api/library';  // Use original endpoint for now, can be switched to '/api/library/paged' later
+    
+    // If page 1 and not appending, clear games
+    if (page === 1 && !append) {
+        games = [];
+        filteredGames = [];
+        allGamesLoaded = false;
+        currentPage = 1;
+    }
+
+    $('#loadingIndicator').removeClass('is-hidden');
+    if (!append) $('#libraryContainer').empty();
+
+    $.getJSON(`${API_ENDPOINT}?page=${page}&per_page=${PER_PAGE}`, function (data) {
+        const newGames = (data && data.items) ? data.items : (Array.isArray(data) ? data : []);
+        
+        if (append) {
+            games = [...games, ...newGames];
+        } else {
+            games = newGames;
+        }
+
+        localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
+        localStorage.setItem('myfoil_library_cache_time', Date.now().toString());
+        
+        if (data && data.pagination) {
+            allGamesLoaded = !data.pagination.has_next;
+        } else {
+            allGamesLoaded = false;
+        }
+        
+        currentPage = page;
+        
+        initGenders(games);
+        initTags(games);
+
+        $('#loadingIndicator').addClass('is-hidden');
+
+        applyFilters();
+        
+        if (!append) {
+            showToast(t('Library updated!'), 'success');
+        }
+
+        // Load more if we haven't loaded everything
+        if (!allGamesLoaded && games.length < 1000) {  // Load up to 1000 games initially
+            setTimeout(() => loadLibraryPaginated(page + 1, true), 100);
+        }
+    }).fail(() => {
+        $('#loadingIndicator').addClass('is-hidden');
+        showToast(t('Failed to refresh library'), 'error');
     });
 }
 
@@ -156,27 +215,8 @@ function refreshLibrary() {
     }
     localStorage.setItem('myfoil_last_version', currentBuild);
 
-    // Show loading indicator
-    $('#loadingIndicator').removeClass('is-hidden');
-    $('#libraryContainer').empty();
-
-    $.getJSON('/api/library', function (data) {
-        games = (data && data.items) ? data.items : (Array.isArray(data) ? data : []);
-        localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
-        localStorage.setItem('myfoil_library_cache_time', Date.now().toString());
-        initGenders(games);
-        initTags(games);
-
-        // Hide loading indicator
-        $('#loadingIndicator').addClass('is-hidden');
-
-        // Reset and apply filters
-        applyFilters();
-        showToast(t('Library updated!'), 'success');
-    }).fail(() => {
-        $('#loadingIndicator').addClass('is-hidden');
-        showToast(t('Failed to refresh library'), 'error');
-    });
+    // Use paginated loading from Phase 2.2
+    loadLibraryPaginated(1, false);
 }
 
 function renderCardView(items) {
