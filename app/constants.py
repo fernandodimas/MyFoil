@@ -19,11 +19,9 @@ TITLEDB_DEFAULT_FILES = [
 ]
 
 MYFOIL_DB = os.environ.get("DATABASE_URL")
-if not MYFOIL_DB:
-    raise RuntimeError("DATABASE_URL environment variable must be set")
 
 
-BUILD_VERSION = '20260206_2124'
+BUILD_VERSION = '20260206_2130'
 
 DEFAULT_SETTINGS = {
     "library": {

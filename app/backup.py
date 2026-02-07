@@ -106,7 +106,7 @@ class BackupManager:
     
     def _get_backup_type(self, filename):
         """Determine backup file type"""
-        elif filename.endswith('.json'):
+        if filename.endswith('.json'):
             return 'settings'
         elif filename.endswith('.txt'):
             return 'keys'
@@ -120,8 +120,8 @@ class BackupManager:
                 logger.error(f"Backup file not found: {backup_filename}")
                 return False
             
-            # Determine target path based on backup type
-            elif backup_filename.startswith('settings_') and backup_filename.endswith('.yaml'):
+    # Determine target path based on backup type
+            if backup_filename.startswith('settings_') and backup_filename.endswith('.yaml'):
                 target_path = os.path.join(self.config_dir, 'settings.yaml')
             elif backup_filename.startswith('keys_') and backup_filename.endswith('.txt'):
                 target_path = os.path.join(self.config_dir, 'keys.txt')

@@ -47,7 +47,6 @@ import structlog
 from metrics import init_metrics
 from backup import BackupManager
 from plugin_system import get_plugin_manager
-from cloud_sync import get_cloud_manager
 
 # Routes and services
 from routes.library import library_bp
@@ -689,18 +688,15 @@ def check_initial_scan(app):
 
     log_activity("system_startup", details={"version": BUILD_VERSION})
     
-    # Log GPU status
-    try:
-        from gpu_utils import log_gpu_status
-        log_gpu_status()
-    except Exception as e:
-        logger.debug(f"GPU status check skipped: {e}")
 
 
 
 def create_app():
     """Application factory"""
     app = Flask(__name__)
+    if not MYFOIL_DB:
+        raise RuntimeError("DATABASE_URL environment variable must be set for PostgreSQL")
+    
     app.config["SQLALCHEMY_DATABASE_URI"] = MYFOIL_DB
     app.config["SECRET_KEY"] = get_or_create_secret_key()
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -710,13 +706,6 @@ def create_app():
         "max_overflow": 30,  # Allow extra connections during high load
         "pool_recycle": 3600, # Recycle connections every hour
     }
-    
-    # Add SQLite specific options only if using SQLite
-    if "sqlite" in MYFOIL_DB:
-        app.config["SQLALCHEMY_ENGINE_OPTIONS"]["connect_args"] = {
-            "timeout": 60,  # Increased timeout for concurrent operations
-            "check_same_thread": False,  # Allow multi-threaded access
-        }
 
     # Initialize components
     db.init_app(app)
@@ -828,8 +817,6 @@ def create_app():
         disabled_plugins = app_settings.get("plugins", {}).get("disabled", [])
         plugin_manager.load_plugins(disabled_plugins)
 
-        # Initialize cloud manager
-        cloud_manager = get_cloud_manager(CONFIG_DIR)
 
     # Job scheduler already initialized in init_internal
 
