@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   myfoil:
-    image: myfoil:latest
+    image: myfoil:${MYFOIL_VERSION:-2.1.3}
     container_name: myfoil
     restart: unless-stopped
     ports:
@@ -56,7 +56,7 @@ services:
       retries: 5
 
   worker:
-    image: myfoil:latest
+    image: myfoil:${MYFOIL_VERSION:-2.1.3}
     container_name: myfoil-worker
     restart: unless-stopped
     command: celery -A celery_app.celery worker --loglevel=info --concurrency=20 -P gevent

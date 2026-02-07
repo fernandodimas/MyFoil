@@ -305,3 +305,27 @@ for app_id, versions in _cnmts_db.items():
 ---
 
 *Documento gerado em: 2026-01-19*
+
+---
+
+# Release 2.2.0 (2026-02-07)
+
+## 🚀 Otimizações de Recursos
+
+### 1. TitleDB & GitHub API (12h Window)
+- **Verificação Remota:** Reduzida para 2x ao dia (a cada 12h).
+- **Cache API:** Aumento do TTL do cache da API do GitHub para 12h.
+- **Margem de Download:** Aumentada para 1h para evitar re-downloads rápidos.
+
+### 2. Metadados Seletivos
+- **Busca Inteligente:** O sistema agora busca metadados apenas para:
+  - Jogos sem metadados.
+  - Jogos com metadados desatualizados (+30 dias).
+- **Batching:** Processamento limitado a 50 jogos por vez para economizar recursos.
+
+### 3. Performance da Biblioteca
+- **Debounce:** Adicionado delay de 10s na regeneração da biblioteca para evitar travamentos durante adição massiva de arquivos.
+- **Cache Hash:** Regeneração de cache otimizada para pular se o hash do banco não mudou.
+
+## 🐳 Docker
+- **Tags de Versão:** Arquivos `docker-compose` atualizados para usar versões fixas (`${MYFOIL_VERSION:-2.1.3}`) em vez de `latest`, garantindo maior estabilidade.
