@@ -464,8 +464,8 @@ class TitleDBSourceManager:
         import time
 
         now = time.time()
-        # Cooldown: 1 hour (3600 seconds)
-        if not force and (now - self.last_refresh_time) < 3600:
+        # Cooldown: 12 hours (43200 seconds)
+        if not force and (now - self.last_refresh_time) < 43200:
             return
 
         self.last_refresh_time = now

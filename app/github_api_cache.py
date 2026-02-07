@@ -23,7 +23,7 @@ def _get_github_cache_key(user: str, repo: str, branch: str, filepath: str) -> s
 
 
 def get_github_date_cached(
-    api_url: str, headers: Dict, max_cache_age: int = 300, delay_between_calls: float = 1.0
+    api_url: str, headers: Dict, max_cache_age: int = 43200, delay_between_calls: float = 1.0
 ) -> Optional[datetime]:
     """
     Get GitHub commit date with caching to avoid rate limit

@@ -60,11 +60,33 @@ class MetadataFetcher:
         job_tracker.start_job(job_id)
         
         try:
-            # Fetch only for games we actually HAVE in library (have_base=True)
-            titles = Titles.query.filter_by(have_base=True).all()
+            # Selective fetching: 
+            # 1. Games without metadata
+            # 2. Games with metadata older than 30 days
+            from sqlalchemy import or_
+            from datetime import timedelta
+            
+            cutoff_date = now_utc() - timedelta(days=30)
+            
+            # Subquery to get title_ids that already have recent metadata
+            recent_metadata_tids = [m.title_id for m in TitleMetadata.query.filter(TitleMetadata.updated_at > cutoff_date).all()]
+            
+            # Filter titles: have_base=True AND (no metadata record OR old metadata)
+            # For simplicity, we filter out those in recent_metadata_tids
+            query = Titles.query.filter(Titles.have_base == True)
+            if recent_metadata_tids:
+                query = query.filter(~Titles.title_id.in_(recent_metadata_tids))
+            
+            # Limit batch size to 50 to reduce peak resource usage
+            titles = query.limit(50).all()
             total = len(titles)
             
-            logger.info(f"Starting metadata fetch for {total} library titles")
+            if total == 0:
+                logger.info("No titles need metadata update at this time.")
+                job_tracker.complete_job(job_id, "No titles need update")
+                return
+
+            logger.info(f"Starting selective metadata fetch for {total} titles (Batch limit: 50)")
             
             processed = 0
             updated = 0

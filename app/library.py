@@ -1609,8 +1609,11 @@ def generate_library(force=False):
     return sorted_library
 
 
+from utils import debounce
+
+@debounce(10) # Wait 10s after last change before regenerating
 def post_library_change():
-    """Called after library changes to update titles and regenerate library cache"""
+    """Called after library changes to update titles and regenerate library cache (DEBOUNCED)"""
     import gevent
     
     def _do_post_library_change():
@@ -1634,10 +1637,10 @@ def post_library_change():
                 # which control the badges (UPDATE, DLC) and filters
                 update_titles()
                 
-                # 4. Regenerate library cache (force=True) to ensure fresh data
-                # This is expensive so we yield periodically
+                # 4. Regenerate library cache (force=False)
+                # We use force=False to allow it to skip if hash matches (safety check)
                 gevent.sleep(0)
-                generate_library(force=True)
+                generate_library(force=False)
                 
                 # 5. Notify frontend via WebSocket
                 trigger_library_update_notification()

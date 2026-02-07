@@ -620,8 +620,8 @@ def get_active_source_info(force=False) -> Dict:
             comp_remote = ensure_utc(remote_date)
             comp_success = ensure_utc(active.last_success)
             
-            # If remote date is newer than last download (with 1min margin)
-            if comp_remote > (comp_success + timedelta(minutes=1)):
+            # If remote date is newer than last download (with 1h margin)
+            if comp_remote > (comp_success + timedelta(hours=1)):
                 update_available = True
                 
                 # Auto-update: Check if we should trigger an update
