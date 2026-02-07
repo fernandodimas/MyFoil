@@ -375,7 +375,7 @@ async function clearAllJobs() {
     // Use setTimeout to allow UI to update before making the request
     setTimeout(async () => {
         try {
-            const response = await fetch('/api/system/jobs/cleanup', { method: 'POST' });
+            const response = await fetch(window.location.origin + '/api/system/jobs/cleanup', { method: 'POST' });
 
             if (response.ok) {
                 if (statusManager) statusManager.fetchStatus();
@@ -426,7 +426,7 @@ async function cancelJob(jobId, btnElement) {
     }
 
     try {
-        const response = await fetch(`/api/system/jobs/${jobId}/cancel`, { method: 'POST' });
+        const response = await fetch(window.location.origin + `/api/system/jobs/${jobId}/cancel`, { method: 'POST' });
 
         if (response.ok) {
             const data = await response.json();

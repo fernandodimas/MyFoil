@@ -327,5 +327,7 @@ for app_id, versions in _cnmts_db.items():
 - **Debounce:** Adicionado delay de 10s na regeneração da biblioteca para evitar travamentos durante adição massiva de arquivos.
 - **Cache Hash:** Regeneração de cache otimizada para pular se o hash do banco não mudou.
 
-## 🐳 Docker
 - **Tags de Versão:** Arquivos `docker-compose` atualizados para usar versões fixas (`${MYFOIL_VERSION:-2.1.3}`) em vez de `latest`, garantindo maior estabilidade.
+
+### 🐛 Correções de Bugs
+- **Interface:** Corrigido erro "Request cannot be constructed from a URL that includes credentials" ao cancelar jobs ou limpar tarefas quando se acessa a aplicação via URL com autenticação básica.
