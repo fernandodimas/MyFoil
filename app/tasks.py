@@ -15,6 +15,7 @@ import structlog
 # Configure structlog for Celery workers to ensure we see output
 
 from celery_app import celery
+from celery.signals import worker_process_init, worker_ready
 from flask import Flask
 from db import db, remove_missing_files_from_db
 from library import scan_library_path, identify_library_files, update_titles, generate_library
