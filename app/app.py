@@ -5,6 +5,7 @@ Application Factory e Inicialização
 """
 
 from gevent import monkey
+
 monkey.patch_all()
 
 import warnings
@@ -31,8 +32,14 @@ from flask_limiter.util import get_remote_address
 
 # Local imports
 from constants import (
-    APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC,
-    MYFOIL_DB, BUILD_VERSION, CONFIG_DIR, PLUGINS_DIR, DATA_DIR
+    APP_TYPE_BASE,
+    APP_TYPE_UPD,
+    APP_TYPE_DLC,
+    MYFOIL_DB,
+    BUILD_VERSION,
+    CONFIG_DIR,
+    PLUGINS_DIR,
+    DATA_DIR,
 )
 from settings import load_settings, reload_conf
 from db import db, migrate
@@ -85,24 +92,18 @@ except ImportError:
     CELERY_ENABLED = False
 
 # Import additional modules for functions
-from auth import (
-    admin_account_created,
-    access_required,
-    auth_blueprint,
-    login_manager,
-    init_users
-)
+from auth import admin_account_created, access_required, auth_blueprint, login_manager, init_users
 from db import User, log_activity, init_db, delete_file_by_filepath, file_exists_in_db, update_file_path
 from library import (
-    generate_library, 
-    scan_library_path, 
+    generate_library,
+    scan_library_path,
     identify_library_files,
     add_missing_apps_to_db,
     update_titles,
     init_libraries,
     invalidate_library_cache,
     add_files_to_library,
-    post_library_change
+    post_library_change,
 )
 from utils import now_utc, ColoredFormatter, FilterRemoveDateFromWerkzeugLogs, get_or_create_secret_key
 from file_watcher import Watcher
@@ -112,6 +113,7 @@ from datetime import timedelta
 
 # Global variables
 app_settings = {}
+
 
 # Custom SocketIO class to gracefully handle session disconnections
 # This prevents noisy 'KeyError: Session is disconnected' tracebacks in logs
@@ -181,8 +183,10 @@ def get_system_status():
         except:
             pass
     return {
-        "scanning": state.scan_in_progress or any(j.get('type') == 'library_scan' for j in job_tracker.get_active_jobs()),
-        "updating_titledb": state.is_titledb_update_running or any(j.get('type') == 'titledb_update' for j in job_tracker.get_active_jobs()),
+        "scanning": state.scan_in_progress
+        or any(j.get("type") == "library_scan" for j in job_tracker.get_active_jobs()),
+        "updating_titledb": state.is_titledb_update_running
+        or any(j.get("type") == "titledb_update" for j in job_tracker.get_active_jobs()),
         "watching": watching > 0,
         "libraries": watching,
     }
@@ -197,14 +201,14 @@ handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(formatter)
 
 # Add File Handler for persistent debug logging
-ensure_data_dir = os.path.join(os.getcwd(), 'data')
+ensure_data_dir = os.path.join(os.getcwd(), "data")
 if not os.path.exists(ensure_data_dir):
     try:
         os.makedirs(ensure_data_dir)
     except:
         pass
 
-file_handler = logging.FileHandler(os.path.join(ensure_data_dir, 'debug.log'))
+file_handler = logging.FileHandler(os.path.join(ensure_data_dir, "debug.log"))
 file_handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s (%(module)s) %(message)s"))
 file_handler.setLevel(logging.DEBUG)
 
@@ -241,6 +245,7 @@ logging.getLogger("alembic.runtime.migration").setLevel(logging.WARNING)
 def set_sqlite_pragma(dbapi_connection, connection_record):
     """Configure SQLite pragmas for better performance and concurrency"""
     import sqlite3
+
     if not isinstance(dbapi_connection, sqlite3.Connection):
         return
 
@@ -359,6 +364,7 @@ def update_titledb_job(force=False):
         try:
             job_tracker.update_progress(job_id, 0, 10, "Initializing...")
             import time
+
             time.sleep(0.1)
 
             job_tracker.update_progress(job_id, 1, 10, "Downloading TitleDB files...")
@@ -378,6 +384,7 @@ def update_titledb_job(force=False):
                 job_tracker.update_progress(job_id, int(scaled_progress), 10, msg)
                 try:
                     import gevent
+
                     gevent.sleep(0)
                 except:
                     pass
@@ -393,14 +400,14 @@ def update_titledb_job(force=False):
 
             # Step 4: Optional Library identification
             # We only do this if specifically needed, or we do it faster
-            
+
             # Instead of full identification of every file (which is slow),
-            # we just invalidate the cache so new titles appear, 
+            # we just invalidate the cache so new titles appear,
             # and let the user trigger a scan if they want a full refresh.
             job_tracker.update_progress(job_id, 8, 10, "Refreshing library views...")
             invalidate_library_cache()
             # generate_library(force=True)  <-- REMOVED: Too slow and blocking
-            
+
             job_tracker.update_progress(job_id, 10, 10, "Finalizing...")
             logger.info("TitleDB update completed and library views refreshed.")
 
@@ -431,27 +438,37 @@ def scan_library_job():
             if state.is_titledb_update_running:
                 # Double check with job_tracker if there is REALLY a job running
                 active_jobs = job_tracker.get_active_jobs()
-                active_titledb_jobs = [j for j in active_jobs if j.get('type') == 'titledb_update']
-                
+                active_titledb_jobs = [j for j in active_jobs if j.get("type") == "titledb_update"]
+
                 if not active_titledb_jobs:
-                    logger.warning("state.is_titledb_update_running was True but no active job found in DB. Resetting flag.")
+                    logger.warning(
+                        "state.is_titledb_update_running was True but no active job found in DB. Resetting flag."
+                    )
                     state.is_titledb_update_running = False
                 else:
-                    logger.info(f"Skipping library scan: TitleDB update job {active_titledb_jobs[0]['id']} is in progress.")
+                    logger.info(
+                        f"Skipping library scan: TitleDB update job {active_titledb_jobs[0]['id']} is in progress."
+                    )
                     job_tracker.fail_job(job_id, "TitleDB update in progress")
                     return
 
         logger.info(f"Starting library scan job (Job ID: {job_id})")
-        
+
         # Check if there are already other active scan jobs
         active_jobs = job_tracker.get_active_jobs()
-        active_scan_jobs = [j for j in active_jobs if j.get('type') in ['library_scan', 'aggregate_scan', 'file_identification'] and j.get('id') != job_id]
-        
+        active_scan_jobs = [
+            j
+            for j in active_jobs
+            if j.get("type") in ["library_scan", "aggregate_scan", "file_identification"] and j.get("id") != job_id
+        ]
+
         if active_scan_jobs:
-            logger.warning(f"Skipping library scan: {len(active_scan_jobs)} other scan job(s) already in progress ({[j['id'] for j in active_scan_jobs]}).")
+            logger.warning(
+                f"Skipping library scan: {len(active_scan_jobs)} other scan job(s) already in progress ({[j['id'] for j in active_scan_jobs]})."
+            )
             job_tracker.fail_job(job_id, f"{len(active_scan_jobs)} scan job(s) already running")
             return
-        
+
         with state.scan_lock:
             if state.scan_in_progress:
                 logger.info("Skipping library scan: scan already in progress.")
@@ -460,13 +477,15 @@ def scan_library_job():
             state.scan_in_progress = True
         try:
             from metrics import ACTIVE_SCANS
-    
+
             with ACTIVE_SCANS.track_inprogress():
                 if CELERY_ENABLED:
                     from tasks import scan_all_libraries_async
+
                     scan_all_libraries_async.delay()
                     logger.info("Scheduled library scan queued to Celery.")
                     from db import log_activity
+
                     log_activity("library_scan_queued", details={"source": "scheduler"})
                     job_tracker.update_progress(job_id, 100, message="Scan task queued to Celery.")
                 else:
@@ -477,15 +496,17 @@ def scan_library_job():
                             job_tracker.update_progress(job_id, i + 1, len(libraries), f"Scanning {lib.path}...")
                             logger.info(f"Scanning library: {lib.path}")
                             scan_library_path(lib.path)
-        
-                            job_tracker.update_progress(job_id, i + 1, len(libraries), f"Identifying files in {lib.path}...")
+
+                            job_tracker.update_progress(
+                                job_id, i + 1, len(libraries), f"Identifying files in {lib.path}..."
+                            )
                             logger.info(f"Scan complete for {lib.path}, starting identification")
                             identify_library_files(lib.path)
                             logger.info(f"Identification complete for {lib.path}")
                         except Exception as lib_err:
                             logger.error(f"Error scanning library {lib.path}: {lib_err}")
                             continue
-    
+
                 # No need to call post_library_change here as scan_library_path now does it
             log_activity("library_scan_completed")
             logger.info("Library scan job completed successfully.")
@@ -517,7 +538,12 @@ def init_internal(app):
 
     # Cleanup stale jobs first (Reset stuck 'RUNNING'/'SCHEDULED' jobs from previous session)
     from job_tracker import job_tracker
+
+    logger.info("=" * 80)
+    logger.info("STARTUP: Cleaning up stale jobs from previous session...")
+    logger.info("=" * 80)
     job_tracker.cleanup_stale_jobs()
+    logger.info("STARTUP: Job cleanup completed")
 
     # Load TitleDB cache on startup (CRITICAL for versions_db)
     # This prevents "Call load_titledb first" errors during scans
@@ -526,6 +552,7 @@ def init_internal(app):
         with app.app_context():
             logger.info("Startup: Loading TitleDB cache...")
             import titles
+
             titles.load_titledb()
             print("DEBUG: init_internal titledb loaded.", flush=True)
     except Exception as e:
@@ -560,13 +587,14 @@ def init_internal(app):
         logger.info("Init Stage 2: initializing Watchdog...")
         with app.app_context():
             state.watcher = Watcher(on_library_change)
-            
+
             # Start observer FIRST, before adding directories
             # This ensures observer.is_alive() == True when directories are scheduled
             state.watcher.run()
-            
+
             # Give observer 500ms to fully start
             import time
+
             time.sleep(0.5)
 
             # Setup paths from Database (Source of Truth)
@@ -574,18 +602,18 @@ def init_internal(app):
             try:
                 libs_db = db_module.get_libraries()
                 yaml_paths = app_settings.get("library", {}).get("paths", [])
-                
+
                 db_paths = set(lib.path for lib in libs_db)
                 changes_made = False
-                
+
                 for p in yaml_paths:
                     if p not in db_paths:
                         logger.info(f"Syncing path from YAML to DB: {p}")
                         db_module.add_library(p)
                         changes_made = True
-                
+
                 if changes_made:
-                    libs_db = db_module.get_libraries() # Refresh
+                    libs_db = db_module.get_libraries()  # Refresh
 
                 library_paths = [lib.path for lib in libs_db]
                 logger.info(f"Loaded {len(library_paths)} library paths from Database for Watchdog.")
@@ -687,8 +715,6 @@ def check_initial_scan(app):
         )
 
     log_activity("system_startup", details={"version": BUILD_VERSION})
-    
-
 
 
 def create_app():
@@ -696,7 +722,7 @@ def create_app():
     app = Flask(__name__)
     if not MYFOIL_DB:
         raise RuntimeError("DATABASE_URL environment variable must be set for PostgreSQL")
-    
+
     app.config["SQLALCHEMY_DATABASE_URI"] = MYFOIL_DB
     app.config["SECRET_KEY"] = get_or_create_secret_key()
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -704,7 +730,7 @@ def create_app():
         "pool_pre_ping": True,  # Verify connections before using
         "pool_size": 20,  # Increase pool size for concurrent workers
         "max_overflow": 30,  # Allow extra connections during high load
-        "pool_recycle": 3600, # Recycle connections every hour
+        "pool_recycle": 3600,  # Recycle connections every hour
     }
 
     # Initialize components
@@ -816,7 +842,6 @@ def create_app():
         plugin_manager = get_plugin_manager(PLUGINS_DIR, app)
         disabled_plugins = app_settings.get("plugins", {}).get("disabled", [])
         plugin_manager.load_plugins(disabled_plugins)
-
 
     # Job scheduler already initialized in init_internal
 
