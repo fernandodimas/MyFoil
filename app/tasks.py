@@ -24,7 +24,6 @@ from socket_helper import get_socketio_emitter
 from app_services.rating_service import update_game_metadata
 
 import logging
-from celery.signals import worker_process_init
 
 # Configure structlog for Celery workers to ensure we see output
 structlog.configure(
@@ -82,6 +81,8 @@ def create_app_context():
 
     # Set socket emitter for notifications
     job_tracker.set_emitter(get_socketio_emitter())
+
+    return app
 
 
 # Worker startup: Cleanup stale jobs automatically
@@ -165,6 +166,31 @@ def worker_ready_cleanup(sender=None, **kwargs):
     except Exception as e:
         logger.warning(f"Worker ready cleanup has issues: {e}")
 
+
+# Lazy initialization of Flask app to avoid errors on import
+# The app context will only be created when the first task runs
+_flask_app = None
+
+
+def get_flask_app():
+    """Get or create the Flask app context lazily"""
+    global _flask_app
+    if _flask_app is None:
+        logger.info("Creating Flask app context (lazy initialization)...")
+        _flask_app = create_app_context()
+    return _flask_app
+
+
+@celery.task(name="tasks.scan_library_async")
+def scan_library_async(library_path):
+    """Full library scan in background"""
+    logger.info("SCAN_LIBRARY_TASK_RECEIVED", path=library_path)
+    with get_flask_app().app_context():
+        import time
+
+        logger.info("task_execution_started", task="scan_library_async", library_path=library_path)
+        job_tracker.set_emitter(get_socketio_emitter())
+
         job_id = f"scan_{os.path.basename(library_path)}_{int(time.time())}"
 
         # Concurrency check
@@ -212,49 +238,165 @@ def worker_ready_cleanup(sender=None, **kwargs):
 
 @celery.task(name="tasks.identify_file_async")
 def identify_file_async(filepath):
-    """Identify a single file in background (e.g. from watchdog)"""
-    with flask_app.app_context():
-        import time
+    """Identify file asynchronously in background"""
+    import titles as titles_lib
+    from db import Files, add_title_id_in_db, get_title_id_db_id, Titles
+    from db import get_app_by_id_and_version
 
-        # Recreate emitter fresh for THIS task execution
-        job_tracker.set_emitter(get_socketio_emitter())
-
-        job_id = f"id_{int(time.time())}"
-        job_tracker.start_job(job_id, JobType.FILE_IDENTIFICATION, "Identifying new file")
+    with get_flask_app().app_context():
+        logger.info("identify_task_starting", filepath=filepath)
 
         try:
-            logger.info("background_identification_started", triggered_by=filepath)
+            file_obj = Files.query.filter_by(filepath=filepath).first()
+            if not file_obj:
+                logger.error("file_not_found", filepath=filepath)
+                return False
 
-            # For simple file changes, we can just run the global cleanup and identification
-            job_tracker.update_progress(job_id, 20, message="Checking for changes...")
-            from db import remove_missing_files_from_db
+            # Identification
+            identification, success, file_contents, error, suggested_name = titles_lib.identify_file(filepath)
 
-            remove_missing_files_from_db()
+            # Update database
+            if success and file_contents:
+                # Clear old associations before adding new ones
+                from job_tracker import job_tracker
 
-            from library import Libraries
+                if file_obj.apps:
+                    file_obj.apps.clear()
 
-            libraries = Libraries.query.all()
-            for i, lib in enumerate(libraries):
-                job_tracker.update_progress(job_id, 40 + (i * 10), message=f"Identifying in {lib.path}")
-                identify_library_files(lib.path)
+                # Add title IDs to database
+                title_ids = list(dict.fromkeys([c["title_id"] for c in file_contents]))
+                for title_id in title_ids:
+                    add_title_id_in_db(title_id, name=suggested_name)
+                    logger.debug("title_added", title_id=title_id, name=suggested_name)
 
-            # Atualizar títulos e gerar biblioteca (equivalente a post_library_change)
-            job_tracker.update_progress(job_id, 90, message="Refreshing library...")
-            update_titles()
-            generate_library(force=True)
+                # Create Apps records
+                nb_content = 0
+                for file_content in file_contents:
+                    logger.info(
+                        f"Found content - Title ID: {file_content['title_id']} "
+                        f"App ID: {file_content['app_id']} "
+                        f"Type: {file_content['type']} "
+                        f"Version: {file_content['version']}"
+                    )
 
-            # Notificar via socketio
-            from library import trigger_library_update_notification
+                    title_id_in_db = get_title_id_db_id(file_content["title_id"])
+                    if not title_id_in_db:
+                        # Retry adding it
+                        add_title_id_in_db(file_content["title_id"])
+                        title_id_in_db = get_title_id_db_id(file_content["title_id"])
 
-            trigger_library_update_notification()
+                    if not title_id_in_db:
+                        raise Exception(f"Failed to find or create DB record for Title ID {file_content['title_id']}")
 
-            job_tracker.complete_job(job_id, "File identification done")
+                    # Check if app already exists
+                    existing_app = get_app_by_id_and_version(file_content["app_id"], file_content["version"])
+
+                    if existing_app:
+                        # Add file to existing app using many-to-many relationship
+                        if not existing_app.owned:
+                            existing_app.owned = True
+
+                        if file_obj not in existing_app.files:
+                            existing_app.files.append(file_obj)
+                    else:
+                        # Create new app entry with file included
+                        from db import Apps, AppType
+
+                        new_app = Apps(
+                            app_id=file_content["app_id"],
+                            version=file_content["version"],
+                            # type is stored in AppType, use the string from file_content
+                            # but look it up in AppType table first
+                            type=AppType.query.filter_by(name=file_content["type"]).first(),
+                        )
+                        new_app.title_id = title_id_in_db
+                        new_app.owned = True
+                        new_app.added_at = file_obj.added_at
+                        new_app.files = [file_obj]
+                        db.session.add(new_app)
+
+                    nb_content += 1
+                    logger.debug("app_added", app_id=file_content["app_id"])
+
+                # Update file object fields
+                file_obj.identified = True
+                file_obj.identification_type = identification
+                file_obj.identification_error = None
+                file_obj.suggested_name = suggested_name
+                from utils import now_utc
+
+                file_obj.last_attempt = now_utc()
+                db.session.commit()
+
+                logger.info("identify_file_completed", filepath=filepath, nb_content=nb_content)
+            else:
+                file_obj.identified = False
+                file_obj.identification_type = None
+                file_obj.identification_error = error
+                file_obj.identification_attempts += 1
+                from utils import now_utc
+
+                file_obj.last_attempt = now_utc()
+                db.session.commit()
+
+                logger.warning("identify_file_failed", filepath=filepath, error=error)
+
             return True
+
         except Exception as e:
-            job_tracker.fail_job(job_id, str(e))
+            logger.exception("identify_file_error", filepath=filepath, error=str(e))
+            from db import log_activity
+
+            log_activity("identify_error", details={"file": filepath, "error": str(e)})
             return False
-        finally:
-            db.session.remove()
+
+            # Identification
+            identification, success, file_contents, error, suggested_name = titles_identify(filepath)
+
+            # Update database
+            if success and file_contents:
+                # Limpar associações antigas
+                from db import remove_file_from_apps
+
+                remove_file_from_apps(file_id)
+
+                # Adicionar novo IDs de título
+                title_ids = list(dict.fromkeys([c["title_id"] for c in file_contents]))
+                for title_id in title_ids:
+                    add_title_id_in_db(title_id, name=suggested_name)
+                    logger.debug("title_added", title_id=title_id, name=suggested_name)
+
+                # Adicionar apps
+                nb_content = 0
+                for file_content in file_contents:
+                    add_app_to_file(
+                        file_content["app_id"], file_content["version"], file_content["type"], title_id, file_id
+                    )
+                    nb_content += 1
+                    logger.debug("app_added", app_id=file_content["app_id"])
+
+                # Atualizar status do arquivo
+                update_file_identification(
+                    file_id,
+                    identified=True,
+                    identification_type=identification,
+                    error=None,
+                    suggested_name=suggested_name,
+                    nb_content=nb_content,
+                )
+                logger.info("identify_file_completed", filepath=filepath, nb_content=nb_content)
+            else:
+                update_file_identification(file_id, identified=False, identification_type=None, error=error)
+                logger.warning("identify_file_failed", filepath=filepath, error=error)
+
+            return True
+
+        except Exception as e:
+            logger.exception("identify_file_error", filepath=filepath, error=str(e))
+            from db import log_activity
+
+            log_activity("identify_error", details={"file": filepath, "error": str(e)})
+            return False
 
 
 @celery.task(name="tasks.scan_all_libraries_async")
@@ -268,7 +410,7 @@ def scan_all_libraries_async():
     logger.info("=" * 80)
 
     try:
-        with flask_app.app_context():
+        with get_flask_app().app_context():
             import time
 
             logger.info("App context created successfully")
@@ -357,7 +499,7 @@ def scan_all_libraries_async():
 @celery.task(name="tasks.fetch_metadata_for_game_async")
 def fetch_metadata_for_game_async(title_id):
     """Fetch metadata for a single game"""
-    with flask_app.app_context():
+    with get_flask_app().app_context():
         from db import Titles
 
         game = Titles.query.filter_by(title_id=title_id).first()
@@ -372,7 +514,7 @@ def fetch_metadata_for_game_async(title_id):
 @celery.task(name="tasks.fetch_metadata_for_all_games_async")
 def fetch_metadata_for_all_games_async():
     """Background task to fetch metadata for ALL games"""
-    with flask_app.app_context():
+    with get_flask_app().app_context():
         from db import Titles
         import time
 
@@ -421,7 +563,7 @@ def fetch_metadata_for_all_games_async():
 @celery.task(name="tasks.update_titledb_async")
 def update_titledb_async(force=False):
     """Update TitleDB in background"""
-    with flask_app.app_context():
+    with get_flask_app().app_context():
         from titledb import update_titledb
         from settings import load_settings
 
@@ -436,7 +578,7 @@ def update_titledb_async(force=False):
 @celery.task(name="tasks.fetch_all_metadata_async")
 def fetch_all_metadata_async(force=False):
     """Comprehensive metadata fetch using MetadataFetcher service"""
-    with flask_app.app_context():
+    with get_flask_app().app_context():
         from metadata_service import metadata_fetcher
 
         logger.info("task_execution_started", task="fetch_all_metadata_async", force=force)
