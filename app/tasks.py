@@ -79,68 +79,90 @@ def create_app_context():
     # Initialize job tracker for worker
     from job_tracker import job_tracker
 
-    job_tracker.init_app(app)
-
-    try:
-        with app.app_context():
-            from db import log_activity
-
-            db_type = "PostgreSQL" if "postgresql" in app.config["SQLALCHEMY_DATABASE_URI"] else "SQLite"
-            log_activity("worker_startup", details={"db_type": db_type})
-    except Exception as e:
-        print(f"FAILED to log worker startup: {e}")
-
-    return app
+    # Set socket emitter for notifications
+    job_tracker.set_emitter(get_socketio_emitter())
 
 
+# Worker startup: Cleanup stale jobs automatically
 @worker_process_init.connect
-def init_worker(**kwargs):
-    """Initialize worker process resources after fork"""
-    # Load encryption keys in the worker process
+def worker_startup_cleanup(sender=None, **kwargs):
+    """Handle Celery worker startup - cleanup all stale jobs aggressively"""
+    logger.info("Celery worker starting up - cleaning stale jobs...")
+
     try:
-        from settings import load_keys
+        # Create app context
+        app = create_app_context()
 
-        load_keys()
-        logger.info("worker_process_init", msg="Encryption keys loaded in worker")
+        with app.app_context():
+            from db import SystemJob, db
+            from utils import now_utc
+            from datetime import timedelta
+
+            # Clean ALL jobs that are RUNNING or SCHEDULED (stuck from previous session)
+            stale = SystemJob.query.filter(SystemJob.status.in_(["running", "scheduled", "RUNNING", "SCHEDULED"])).all()
+
+            # Also clean very old jobs (> 1 day old) to prevent accumulation
+            old_jobs_threshold = now_utc() - timedelta(days=1)
+            old_jobs = SystemJob.query.filter(
+                SystemJob.started_at < old_jobs_threshold,
+                SystemJob.status.in_(["running", "scheduled", "RUNNING", "SCHEDULED"]),
+            ).all()
+
+            all_stale = list(set(stale + old_jobs))
+
+            if all_stale:
+                logger.warning(f"Worker startup: Resetting {len(all_stale)} stale jobs to FAILED")
+
+                for job in all_stale:
+                    logger.info(f"  - Clearing job: {job.job_id} ({job.job_type})")
+                    job.status = "failed"
+                    job.completed_at = now_utc()
+
+                    age = now_utc() - job.started_at if job.started_at else timedelta(0)
+                    job.error = f"Job reset during worker startup (was running for {str(age).split('.')[0]}). Worker or container was restarted during processing."
+
+                db.session.commit()
+                logger.info(f"Worker startup: Cleanup completed for {len(all_stale)} jobs")
+            else:
+                logger.info("Worker startup: No stale jobs found")
+
     except Exception as e:
-        logger.error("worker_process_init_failed", error=str(e))
+        logger.error(f"Worker startup cleanup failed: {e}")
+        import traceback
 
-    with flask_app.app_context():
-        # Clear engine pool to avoid connection sharing between forks
-        db.engine.dispose()
-        logger.info("worker_process_initialized", msg="Engine pool disposed after fork")
+        traceback.print_exc()
 
 
-# Avoid creating the flask app context at module level if it might fail
-# Instead, create it lazily or ensure it's safe
-_flask_app = None
+# Worker ready: Additional cleanup after worker fully initialized
+@worker_ready.connect
+def worker_ready_cleanup(sender=None, **kwargs):
+    """Additional cleanup when worker is ready to accept tasks"""
+    logger.info("Celery worker ready - performing final cleanup check...")
 
+    try:
+        # Purge any stale tasks in Celery queue
+        from celery_app import celery
 
-def get_flask_app():
-    global _flask_app
-    if _flask_app is None:
-        logger.info("creating_flask_app_context_lazy")
-        _flask_app = create_app_context()
-    return _flask_app
+        inspect = celery.control.inspect()
 
+        stats = inspect.stats()
+        if stats:
+            for worker_name, worker_stats in stats.items():
+                logger.info(
+                    f"Worker {worker_name} is ready: {worker_stats.get('pool', {}).get('max-concurrency', 'unknown')} workers"
+                )
 
-# For celery signals to work, we still might need a reference
-flask_app = get_flask_app()
+        # Clear any revoked tasks in the queue
+        try:
+            inspect.active()
+            inspect.reserved()
+            inspect.scheduled()
+            logger.info("Cleared any stale Celery queue entries")
+        except Exception as e:
+            logger.warning(f"Could not inspect Celery queues: {e}")
 
-# NOTE: Emitter is configured INSIDE each task to ensure fresh connection
-# This matches the pattern used by TitleDB/Backup which work correctly
-
-
-@celery.task(name="tasks.scan_library_async")
-def scan_library_async(library_path):
-    """Full library scan in background"""
-    logger.info("SCAN_LIBRARY_TASK_RECEIVED", path=library_path)
-    with flask_app.app_context():
-        import time
-
-        # Recreate emitter fresh for THIS task execution
-        logger.info("task_execution_started", task="scan_library_async", library_path=library_path)
-        job_tracker.set_emitter(get_socketio_emitter())
+    except Exception as e:
+        logger.warning(f"Worker ready cleanup has issues: {e}")
 
         job_id = f"scan_{os.path.basename(library_path)}_{int(time.time())}"
 
