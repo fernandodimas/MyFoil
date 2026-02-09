@@ -94,10 +94,8 @@ def library_api():
 
 def _serialize_title_with_apps(title: Titles) -> dict:
     """
-    Serialize a Title object with its owned apps to the expected library format.
-    This is used by the server-side paginated endpoint.
-
-    Returns a dict compatible with the existing library API response format.
+    Serialize a title with its apps for the paginated library endpoint.
+    Uses the library.get_game_info_item function for serialization.
     """
     from db import get_all_title_apps
 
@@ -108,7 +106,7 @@ def _serialize_title_with_apps(title: Titles) -> dict:
 
     # Get the full game object using the existing library function
     # This ensures consistency with the cached version
-    game_info = library._get_game_info_item(
+    game_info = library.get_game_info_item(
         title_id,
         {
             "title_id": title_id,
