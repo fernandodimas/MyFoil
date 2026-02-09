@@ -586,9 +586,10 @@ function clearSearch() {
 }
 
 // ========== INFINITE SCROLL ==========
-let scrollOffset = 0;
-let isLoadingMore = false;
-let hasMoreItems = true;
+// Variables are declared at the top of the file
+scrollOffset = 0;
+isLoadingMore = false;
+hasMoreItems = true;
 const SCROLL_BATCH_SIZE = 48;
 
 function setupInfiniteScroll() {
