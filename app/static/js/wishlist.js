@@ -264,7 +264,13 @@ function removeFromWishlist(itemId) {
         onConfirm: async () => {
             try {
                 console.log(`[WISHLIST] Sending DELETE request to /api/wishlist/${itemId}`);
-                const res = await fetch(`/api/wishlist/${itemId}`, { method: 'DELETE' });
+                const res = await window.safeFetch(`/api/wishlist/${itemId}`, { 
+                    method: 'DELETE',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
                 console.log(`[WISHLIST] DELETE response status: ${res.status}`);
                 
                 const data = await res.json();
@@ -289,8 +295,9 @@ async function changePriority(tid, newPriority) {
     if (newPriority < 0 || newPriority > 3) return;
 
     try {
-        const res = await fetch(`/api/wishlist/${tid}`, {
+        const res = await window.safeFetch(`/api/wishlist/${tid}`, {
             method: 'PUT',
+            credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ priority: newPriority })
         });
