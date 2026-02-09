@@ -1756,6 +1756,7 @@ def test_scan_task():
         logger.error(f"Error queuing test scan task: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+
 # === PROMETHEUS METRICS (Phase 3.2: Metrics & Monitoring) ===
 @system_bp.route("/metrics")
 @access_required("admin")
@@ -1768,7 +1769,7 @@ def prometheus_metrics():
     - Performance metrics (library load time, query time)
     - System metrics (disk usage, connections)
     - Task metrics (identification, Celery)
-    
+
     Metrics available:
     - myfoil_files_total: Total number of files
     - myfoil_titles_total: Total number of titles
@@ -1784,15 +1785,16 @@ def prometheus_metrics():
     - myfoil_system_disk_free_bytes: Free disk space per library
     """
     from app.metrics import get_metrics_export
-    
+
     # Refresh metrics before export
     try:
         from app.metrics import update_db_metrics, update_system_metrics
+
         update_db_metrics()
         update_system_metrics()
     except Exception as e:
         logger.error(f"Error refreshing metrics: {e}")
-    
+
     return get_metrics_export()
 
 
@@ -1800,12 +1802,12 @@ def prometheus_metrics():
 def health_check():
     """
     Health check endpoint for monitoring services.
-    
+
     Returns service health status for monitoring:
     - Database connection
     - Library cache
     - Celery worker (if enabled)
-    
+
     Example response:
     {
         "status": "healthy",
@@ -1818,15 +1820,15 @@ def health_check():
     from flask import current_app, jsonify
     from sqlalchemy import text
     import datetime
-    
+
     health_status = {
         "status": "healthy",
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
         "database": "disconnected",
         "cache": "unknown",
-        "metrics": "disabled"
+        "metrics": "disabled",
     }
-    
+
     try:
         with current_app.app_context():
             # Check database
@@ -1835,11 +1837,12 @@ def health_check():
                 health_status["database"] = "connected"
     except Exception as e:
         health_status["database"] = f"error: {e}"
-        health_status["status"] "degraded"
-    
+        health_status["status"] = "degraded"
+
     # Check library cache
     try:
         from app.library import load_library_from_disk
+
         cache = load_library_from_disk()
         if cache and "hash" in cache:
             health_status["cache"] = "working"
@@ -1847,23 +1850,25 @@ def health_check():
             health_status["cache"] = "not generated"
     except Exception as e:
         health_status["cache"] = f"error: {e}"
-    
+
     # Check Celery (if enabled)
     try:
         import os
+
         if os.environ.get("CELERY_ENABLED", "").lower() == "true":
             health_status["celery"] = "enabled"
         else:
             health_status["celery"] = "disabled"
     except:
         health_status["celery"] = "disabled"
-    
+
     # Check metrics
     try:
         from app.metrics import get_metrics_export
+
         health_status["metrics"] = "enabled"
     except:
         health_status["metrics"] = "disabled"
-    
+
     status_code = 200 if health_status["status"] == "healthy" else 503
     return jsonify(health_status), status_code
