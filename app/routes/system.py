@@ -1756,3 +1756,115 @@ def test_scan_task():
     except Exception as e:
         logger.error(f"Error queuing test scan task: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+# === PROMETHEUS METRICS (Phase 3.2: Metrics & Monitoring) ===
+@system_bp.route("/metrics")
+@access_required("admin")
+def prometheus_metrics():
+    """
+    Prometheus metrics endpoint for application monitoring.
+
+    Exposes metrics in Prometheus format for monitoring:
+    - Database counts (files, titles, apps, libraries)
+    - Performance metrics (library load time, query time)
+    - System metrics (disk usage, connections)
+    - Task metrics (identification, Celery)
+    
+    Metrics available:
+    - myfoil_files_total: Total number of files
+    - myfoil_titles_total: Total number of titles
+    - myfoil_apps_total: Total number of apps
+    - myfoil_libraries_total: Total number of libraries
+    - myfoil_files_identified_total: Successfully identified files
+    - myfoil_files_unidentified_total: Files not yet identified
+    - myfoil_files_with_errors_total: Files with identification errors
+    - myfoil_library_load_duration_seconds: Histogram of library load times
+    - myfoil_identification_duration_seconds: Histogram of identification times
+    - myfoil_api_request_duration_seconds: Histogram of API request times
+    - myfoil_system_disk_total_bytes: Total disk space per library
+    - myfoil_system_disk_free_bytes: Free disk space per library
+    """
+    from app.metrics import get_metrics_export
+    
+    # Refresh metrics before export
+    try:
+        from app.metrics import update_db_metrics, update_system_metrics
+        update_db_metrics()
+        update_system_metrics()
+    except Exception as e:
+        logger.error(f"Error refreshing metrics: {e}")
+    
+    return get_metrics_export()
+
+
+@system_bp.route("/metrics/health")
+def health_check():
+    """
+    Health check endpoint for monitoring services.
+    
+    Returns service health status for monitoring:
+    - Database connection
+    - Library cache
+    - Celery worker (if enabled)
+    
+    Example response:
+    {
+        "status": "healthy",
+        "timestamp": "2024-02-09T17:00:00Z",
+        "database": "connected",
+        "cache": "working",
+        "celery": "running"
+    }
+    """
+    from flask import current_app, jsonify
+    from sqlalchemy import text
+    import datetime
+    
+    health_status = {
+        "status": "healthy",
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "database": "disconnected",
+        "cache": "unknown",
+        "metrics": "disabled"
+    }
+    
+    try:
+        with current_app.app_context():
+            # Check database
+            with db.engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+                health_status["database"] = "connected"
+    except Exception as e:
+        health_status["database"] = f"error: {e}"
+        health_status["status"] "degraded"
+    
+    # Check library cache
+    try:
+        from app.library import load_library_from_disk
+        cache = load_library_from_disk()
+        if cache and "hash" in cache:
+            health_status["cache"] = "working"
+        else:
+            health_status["cache"] = "not generated"
+    except Exception as e:
+        health_status["cache"] = f"error: {e}"
+    
+    # Check Celery (if enabled)
+    try:
+        import os
+        if os.environ.get("CELERY_ENABLED", "").lower() == "true":
+            health_status["celery"] = "enabled"
+        else:
+            health_status["celery"] = "disabled"
+    except:
+        health_status["celery"] = "disabled"
+    
+    # Check metrics
+    try:
+        from app.metrics import get_metrics_export
+        health_status["metrics"] = "enabled"
+    except:
+        health_status["metrics"] = "disabled"
+    
+    status_code = 200 if health_status["status"] == "healthy" else 503
+    return jsonify(health_status), status_code
