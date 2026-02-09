@@ -1,6 +1,7 @@
 /**
  * MyFoil Library Index Logic
  * Handles library loading, filtering, sorting, and infinite scroll.
+ * Phase 2.2: Server-side pagination for improved performance.
  */
 
 let games = [];
@@ -10,7 +11,10 @@ let currentView = localStorage.getItem('viewMode') || 'card';
 let ignorePreferences = {};  // Cache for ignore preferences per title_id
 let allGamesLoaded = false;  // Track if all games have been loaded
 let currentPage = 1;  // Current page for pagination
-const PER_PAGE = 100;  // Items per page
+let isLoadingMore = false;  // Track loading state
+let totalItems = 0;  // Total number of games in library
+let isNewRender = true;  // Track if we need a full re-render
+const PER_PAGE = 60;  // Items per page for server-side pagination
 
 // Fetch all ignore preferences on load
 function loadIgnorePreferences() {
@@ -26,7 +30,7 @@ function loadIgnorePreferences() {
 
 // Load library with server-side pagination (Phase 2.2)
 function loadLibraryPaginated(page = 1, append = false) {
-    const API_ENDPOINT = '/api/library';  // Use original endpoint for now, can be switched to '/api/library/paged' later
+    const API_ENDPOINT = '/api/library/paged';  // Use server-side paginated endpoint
     
     // If page 1 and not appending, clear games
     if (page === 1 && !append) {
@@ -34,12 +38,37 @@ function loadLibraryPaginated(page = 1, append = false) {
         filteredGames = [];
         allGamesLoaded = false;
         currentPage = 1;
+        scrollOffset = 0;
+        isLoadingMore = false;
+        totalItems = 0;
     }
 
-    $('#loadingIndicator').removeClass('is-hidden');
-    if (!append) $('#libraryContainer').empty();
+    // Skip if already loading
+    if (isLoadingMore && append) {
+        return;
+    }
 
-    $.getJSON(`${API_ENDPOINT}?page=${page}&per_page=${PER_PAGE}`, function (data) {
+    isLoadingMore = true;
+    $('#loadingIndicator').removeClass('is-hidden');
+    
+    // Add loading spinner at bottom if appending
+    if (append) {
+        let scrollSentinel = $('#scrollSentinel');
+        if (!scrollSentinel.length) {
+            $('#libraryContainer').after('<div id="scrollSentinel" style="height: 20px; width: 100%; display: flex; justify-content: center; align-items: center;"><span class="icon is-small has-text-grey"><i class="fas fa-spinner fa-spin"></i></span></div>');
+        }
+    }
+
+    // Parse sort preference
+    let sort_by = 'name';
+    let order = 'asc';
+    if (currentSort && currentSort.includes('-')) {
+        const parts = currentSort.split('-');
+        sort_by = parts[0];
+        order = parts[1];
+    }
+
+    $.getJSON(`${API_ENDPOINT}?page=${page}&per_page=${PER_PAGE}&sort_by=${sort_by}&order=${order}`, function (data) {
         const newGames = (data && data.items) ? data.items : (Array.isArray(data) ? data : []);
         
         if (append) {
@@ -48,34 +77,28 @@ function loadLibraryPaginated(page = 1, append = false) {
             games = newGames;
         }
 
-        localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
-        localStorage.setItem('myfoil_library_cache_time', Date.now().toString());
-        
+        // Update total count from server
         if (data && data.pagination) {
+            totalItems = data.pagination.total_items || 0;
             allGamesLoaded = !data.pagination.has_next;
-        } else {
-            allGamesLoaded = false;
+            currentPage = data.pagination.page || page;
         }
-        
-        currentPage = page;
-        
-        initGenders(games);
-        initTags(games);
+
+        // Apply filters after data is loaded
+        applyFilters();
 
         $('#loadingIndicator').addClass('is-hidden');
-
-        applyFilters();
+        isLoadingMore = false;
         
         if (!append) {
             showToast(t('Library updated!'), 'success');
         }
 
-        // Load more if we haven't loaded everything
-        if (!allGamesLoaded && games.length < 1000) {  // Load up to 1000 games initially
-            setTimeout(() => loadLibraryPaginated(page + 1, true), 100);
-        }
+        // Setup infinite scroll observer
+        setupInfiniteScroll();
     }).fail(() => {
         $('#loadingIndicator').addClass('is-hidden');
+        isLoadingMore = false;
         showToast(t('Failed to refresh library'), 'error');
     });
 }
@@ -182,14 +205,17 @@ function setView(view) {
 
 function renderLibrary() {
     const container = $('#libraryContainer');
-    const paged = window.filteredGames;
-    const totalItems = paged.length;
-
-    // Clear container and reset scroll
+    
+    // Only re-render if we're on a new filter or view change
+    // Don't re-render on infinite scroll append (that's handled separately)
+    if (!isNewRender && scrollOffset > 0) {
+        return;
+    }
+    
+    isNewRender = false;
+    
+    // Clear container
     container.empty();
-
-    // Show item count
-    $('#totalItemsCount, #totalItemsCountMobile').text(`${totalItems} ${t('Jogos')}`);
 
     // Handle list view width
     if (currentView === 'list') {
@@ -198,9 +224,10 @@ function renderLibrary() {
         container.removeClass('is-list-view');
     }
 
-    // Use infinite scroll instead of pagination
+    // Use infinite scroll to render filtered games
+    // Note: We're using client-side infinite scroll on filteredGames
+    // for flexibility with various filter combinations
     resetInfiniteScroll();
-    setupInfiniteScroll();
 }
 
 function refreshLibrary() {
@@ -387,6 +414,9 @@ function applyFilters() {
     const showOnlyUpdates = $('#btnFilterPendingUpd').hasClass('is-primary');
     const showOnlyDlcs = $('#btnFilterPendingDlc').hasClass('is-primary');
     const showOnlyRedundant = $('#btnFilterRedundant').hasClass('is-primary');
+    
+    // Mark for full re-render
+    isNewRender = true;
 
     games.forEach(g => {
         if (!g) return;
@@ -476,7 +506,12 @@ function applyFilters() {
     const hasActiveFilters = query || gender || tag || showOnlyBase || showOnlyUpdates || showOnlyDlcs || showOnlyRedundant;
     $('#clearFiltersBtn').toggleClass('has-active', !!hasActiveFilters);
 
-    $('#totalItemsCount, #totalItemsCountMobile').text(`${window.filteredGames.length} ${t('Jogos')}`);
+    // Update item count - show filtered count vs total loaded
+    const loadedCount = totalItems || games.length;
+    const filteredCount = window.filteredGames.length;
+    const countText = hasActiveFilters ? `${filteredCount} / ${loadedCount}` : `${loadedCount}`;
+    $('#totalItemsCount, #totalItemsCountMobile').text(`${countText} ${t('Jogos')}`);
+    
     renderLibrary();
 }
 
@@ -515,9 +550,13 @@ function setupInfiniteScroll() {
 
     const observer = new IntersectionObserver((entries) => {
         const entry = entries[0];
-        if (entry.isIntersecting && !isLoadingMore && hasMoreItems && window.filteredGames.length > scrollOffset) {
-            loadMoreItems();
+        // Load more when user scrolls near bottom
+        // Load from server if we haven't loaded everything yet
+        if (entry.isIntersecting && !allGamesLoaded && !isLoadingMore) {
+            loadLibraryPaginated(currentPage + 1, true);
         }
+        // Also render more of the already loaded but filtered items
+        renderMoreFilteredItems();
     }, {
         rootMargin: '200px'
     });
@@ -525,30 +564,55 @@ function setupInfiniteScroll() {
     observer.observe(sentinel);
 }
 
-function loadMoreItems() {
-    if (isLoadingMore) return;
-    isLoadingMore = true;
-
-    const currentBatch = window.filteredGames.slice(scrollOffset, scrollOffset + SCROLL_BATCH_SIZE);
-
-    if (currentBatch.length === 0) {
-        hasMoreItems = false;
-        isLoadingMore = false;
+function renderMoreFilteredItems() {
+    // Get next batch of filtered games that haven't been rendered yet
+    const filtered = window.filteredGames;
+    const renderedCount = document.querySelectorAll('.grid-item').length;
+    
+    // Skip if we've already rendered all filtered games
+    if (renderedCount >= filtered.length) {
         return;
     }
-
-    if (currentView === 'card') renderCardView(currentBatch);
-    else if (currentView === 'icon') renderIconView(currentBatch);
-    else renderListView(currentBatch);
+    
+    // Get next batch
+    const startIdx = renderedCount;
+    const endIdx = Math.min(startIdx + 24, filtered.length);  // Render 24 at a time
+    const batch = filtered.slice(startIdx, endIdx);
+    
+    if (batch.length === 0) {
+        return;
+    }
+    
+    // Render the batch
+    if (currentView === 'card') renderCardView(batch);
+    else if (currentView === 'icon') renderIconView(batch);
+    else renderListView(batch);
 
     setupKeyboardNavigation();
+    observeImages();
+}
 
-    scrollOffset += currentBatch.length;
-    hasMoreItems = scrollOffset < window.filteredGames.length;
-    isLoadingMore = false;
+function loadMoreItems() {
+    // Initial render - show first batch
+    const filtered = window.filteredGames;
+    if (filtered.length === 0) {
+        $('#loadingIndicator').addClass('is-hidden');
+        $('#scrollSentinel').hide();
+        return;
+    }
+    
+    // Render first batch
+    const firstBatch = filtered.slice(0, 24);
+    if (currentView === 'card') renderCardView(firstBatch);
+    else if (currentView === 'icon') renderIconView(firstBatch);
+    else renderListView(firstBatch);
 
-    const sentinel = document.getElementById('scrollSentinel');
-    if (sentinel) sentinel.style.display = hasMoreItems ? 'block' : 'none';
+    setupKeyboardNavigation();
+    observeImages();
+    $('#loadingIndicator').addClass('is-hidden');
+    
+    // Show sentinel for lazy loading if there are more items
+    $('#scrollSentinel').toggle(filtered.length > firstBatch.length);
 }
 
 function resetInfiniteScroll() {
