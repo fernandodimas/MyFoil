@@ -219,7 +219,6 @@ def debug_inspect_title(title_id):
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
 
 
 @system_bp.route("/system/info")

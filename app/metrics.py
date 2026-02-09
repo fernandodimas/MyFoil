@@ -47,6 +47,28 @@ celery_queue_length = Gauge("myfoil_celery_queue_length", "Number of tasks in Ce
 
 celery_active_tasks = Gauge("myfoil_celery_active_tasks", "Number of active Celery tasks")
 
+ACTIVE_SCANS = Gauge("myfoil_active_scans", "Number of active library scans")
+
+
+class ActiveScanTracker:
+    """Context manager for tracking active scans.
+
+    Example:
+        with ACTIVE_SCANS.track_inprogress():
+            perform_scan()
+    """
+
+    def __enter__(self):
+        ACTIVE_SCANS.inc()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        ACTIVE_SCANS.dec()
+        return False
+
+
+ACTIVE_SCANS.track_inprogress = ActiveScanTracker
+
 # System Metrics
 system_cpu_usage = Gauge("myfoil_system_cpu_usage_percent", "System CPU usage percentage")
 
@@ -79,6 +101,28 @@ def init_metrics(app):
     logger = app.logger
     logger.info("Prometheus metrics initialized at /api/metrics")
     logger.info("System metrics collection enabled")
+
+
+def get_metrics_export():
+    """Get Prometheus metrics export for API endpoints."""
+    return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
+
+
+def update_db_metrics():
+    """Update database-related metrics like connection pool size."""
+    try:
+        from db import db
+
+        try:
+            engine = db.session.bind
+            if hasattr(engine, "pool"):
+                db_connection_pool_size.labels(pool="default").set(engine.pool.size())
+            else:
+                db_connection_pool_size.labels(pool="default").set(10)
+        except Exception as e:
+            db_connection_pool_size.labels(pool="default").set(10)
+    except Exception as e:
+        pass
 
 
 def track_db_query(operation, phase="unknown"):
