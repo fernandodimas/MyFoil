@@ -1,47 +1,12 @@
-"""
-MyFoil Database Models package.
-Contains all SQLAlchemy ORM models.
-"""
 
-from .libraries import Libraries
-from .files import Files
-from .titles import Titles
-from .titledb_cache import TitleDBCache, TitleDBVersions, TitleDBDLCs
-from .apps import Apps
-from .users import User, ApiToken
-from .tags import Tag, TitleTag
-from .wishlist import Wishlist, WishlistIgnore
-from .webhooks import Webhook
-from .metadata import TitleMetadata, MetadataFetchLog
-from .jobs import SystemJob
-from .activity import ActivityLog
+Models package
+Phase 3.1: Database refactoring - Separate models from db.py
 
-__all__ = [
-    # Library management
-    "Libraries",
-    "Files",
-    # Title management
-    "Titles",
-    "TitleDBCache",
-    "TitleDBVersions",
-    "TitleDBDLCs",
-    "Apps",
-    # User management
-    "User",
-    "ApiToken",
-    # Tags
-    "Tag",
-    "TitleTag",
-    # Wishlist
-    "Wishlist",
-    "WishlistIgnore",
-    # Webhooks
-    "Webhook",
-    # Metadata
-    "TitleMetadata",
-    "MetadataFetchLog",
-    # Jobs
-    "SystemJob",
-    # Activity
-    "ActivityLog",
-]
+All database models are now in separate files:
+- libraries.py
+- files.py
+- titles.py
+- etc.
+
+For backwards compatibility, you can still import from db.py:
+    from db import Files, Titles, Apps, User, etc.

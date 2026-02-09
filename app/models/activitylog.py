@@ -1,408 +1,10 @@
-import os
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import create_engine
-from sqlalchemy import event
-from sqlalchemy.orm import joinedload
-from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.dialects.postgresql import insert
-from flask_migrate import Migrate, upgrade
-from alembic.runtime.migration import MigrationContext
-from alembic.config import Config
-from alembic.script import ScriptDirectory
+"""
+Model: ActivityLog
+Extracted from db.py during Phase 3.1 refactoring
+"""
+
+from db import db, now_utc
 from flask_login import UserMixin
-from alembic import command
-
-import sys
-import shutil
-import logging
-import datetime
-from constants import MYFOIL_DB, CONFIG_DIR, ALEMBIC_DIR, ALEMBIC_CONF
-from utils import now_utc
-
-# Retrieve main logger
-logger = logging.getLogger("main")
-
-db = SQLAlchemy()
-migrate = Migrate()
-
-
-# Alembic functions
-def get_alembic_cfg():
-    cfg = Config(ALEMBIC_CONF)
-    cfg.set_main_option("script_location", ALEMBIC_DIR)
-    return cfg
-
-
-def get_current_db_version():
-    engine = create_engine(MYFOIL_DB)
-    with engine.connect() as connection:
-        context = MigrationContext.configure(connection)
-        current_rev = context.get_current_revision()
-        return current_rev or "0"
-
-
-def is_migration_needed():
-    alembic_cfg = get_alembic_cfg()
-    script = ScriptDirectory.from_config(alembic_cfg)
-    latest_revision = script.get_current_head()
-    current_revision = get_current_db_version()
-    if current_revision != latest_revision:
-        logger.info(f"Database migration needed, from {current_revision} to {latest_revision}")
-        return True
-    else:
-        logger.info(f"Database version is up to date ({current_revision})")
-        return False
-
-
-def to_dict(db_results):
-    return {c.name: getattr(db_results, c.name) for c in db_results.__table__.columns}
-
-
-class Libraries(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    path = db.Column(db.String, unique=True, nullable=False)
-    last_scan = db.Column(db.DateTime)
-
-
-class Files(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    library_id = db.Column(db.Integer, db.ForeignKey("libraries.id", ondelete="CASCADE"), nullable=False)
-    filepath = db.Column(db.String, unique=True, nullable=False)
-    folder = db.Column(db.String)
-    filename = db.Column(db.String, nullable=False)
-    extension = db.Column(db.String)
-    size = db.Column(db.BigInteger)
-    compressed = db.Column(db.Boolean, default=False)
-    multicontent = db.Column(db.Boolean, default=False)
-    nb_content = db.Column(db.Integer, default=0)
-    download_count = db.Column(db.Integer, default=0)
-    identified = db.Column(db.Boolean, default=False)
-    identification_type = db.Column(db.String)
-    identification_error = db.Column(db.String)
-    identification_attempts = db.Column(db.Integer, default=0)
-    last_attempt = db.Column(db.DateTime, default=now_utc)
-    titledb_version = db.Column(db.String)  # TitleDB version when file was identified
-
-    library = db.relationship("Libraries", backref=db.backref("files", lazy=True, cascade="all, delete-orphan"))
-
-    __table_args__ = (
-        # Composite index for library_id + identified queries (used in stats)
-        db.Index("idx_files_library_identified", "library_id", "identified"),
-        # Index for filepath lookups (helps with joins and lookups)
-        db.Index("ix_files_filepath", "filepath"),
-    )
-
-
-class Titles(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title_id = db.Column(db.String, unique=True, index=True)  # Index for faster lookups
-    have_base = db.Column(db.Boolean, default=False)
-    up_to_date = db.Column(db.Boolean, default=False)
-    complete = db.Column(db.Boolean, default=False)
-
-    # Metadata fields (Previously stored in JSON cache)
-    name = db.Column(db.String)
-    icon_url = db.Column(db.String)
-    banner_url = db.Column(db.String)
-    category = db.Column(db.String)  # Comma separated or JSON string
-    release_date = db.Column(db.String)
-    publisher = db.Column(db.String)
-    description = db.Column(db.Text)
-    size = db.Column(db.BigInteger)
-    nsuid = db.Column(db.String)
-
-    # Track when it was last updated from TitleDB vs User edit
-    last_updated = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
-    is_custom = db.Column(db.Boolean, default=False)  # True if edited by user
-    added_at = db.Column(db.DateTime)  # When game was first added to library
-
-    # === RATINGS E REVIEWS ===
-    metacritic_score = db.Column(db.Integer)  # 0-100
-    user_rating = db.Column(db.Float)  # 0.0-5.0
-    rawg_rating = db.Column(db.Float)  # 0.0-5.0
-    rating_count = db.Column(db.Integer)  # Número de avaliações
-
-    # === TEMPO DE JOGO ===
-    playtime_main = db.Column(db.Integer)  # Horas (story principal)
-    playtime_extra = db.Column(db.Integer)  # Main + extras
-    playtime_completionist = db.Column(db.Integer)  # 100%
-
-    # === METADADOS ADICIONAIS ===
-    genres_json = db.Column(db.JSON)  # ["Action", "Adventure"]
-    tags_json = db.Column(db.JSON)  # ["Open World", "RPG"]
-    screenshots_json = db.Column(db.JSON)  # [{"url": "...", "source": "rawg"}]
-
-    # === API TRACKING ===
-    rawg_id = db.Column(db.Integer)  # ID no RAWG
-    igdb_id = db.Column(db.Integer)  # ID no IGDB
-    api_last_update = db.Column(db.DateTime)  # Quando foi atualizado
-    api_source = db.Column(db.String(20))  # "rawg" | "igdb" | "manual"
-
-    tags = db.relationship("Tag", secondary="title_tag", backref=db.backref("titles", lazy="dynamic"))
-
-
-# TitleDB Cache - stores downloaded TitleDB data for fast access
-class TitleDBCache(db.Model):
-    __tablename__ = "titledb_cache"
-
-    id = db.Column(db.Integer, primary_key=True)
-    title_id = db.Column(db.String(16), unique=True, nullable=False, index=True)
-    data = db.Column(db.JSON, nullable=False)  # Full title data as JSON
-    source = db.Column(db.String(50), nullable=False)  # 'titles.json', 'US.en.json', 'BR.pt.json', etc.
-    downloaded_at = db.Column(db.DateTime, nullable=False, default=now_utc)
-    updated_at = db.Column(db.DateTime, nullable=False, default=now_utc, onupdate=now_utc)
-
-    # Indexes for fast lookups
-    __table_args__ = (db.Index("idx_source", "source"),)
-
-
-class TitleDBVersions(db.Model):
-    __tablename__ = "titledb_versions"
-
-    id = db.Column(db.Integer, primary_key=True)
-    title_id = db.Column(db.String(16), nullable=False, index=True)
-    version = db.Column(db.Integer, nullable=False)
-    release_date = db.Column(db.String(10))  # YYYY-MM-DD or YYYYMMDD
-
-    __table_args__ = (db.Index("idx_title_version", "title_id", "version"),)
-
-
-class TitleDBDLCs(db.Model):
-    __tablename__ = "titledb_dlcs"
-
-    id = db.Column(db.Integer, primary_key=True)
-    base_title_id = db.Column(db.String(16), nullable=False, index=True)
-    dlc_app_id = db.Column(db.String(16), nullable=False, index=True)
-
-    __table_args__ = (
-        db.Index("idx_dlc_base", "base_title_id"),
-        db.Index("idx_dlc_app", "dlc_app_id"),
-    )
-
-
-# Association table for many-to-many relationship between Apps and Files
-app_files = db.Table(
-    "app_files",
-    db.Column("app_id", db.Integer, db.ForeignKey("apps.id", ondelete="CASCADE"), primary_key=True),
-    db.Column("file_id", db.Integer, db.ForeignKey("files.id", ondelete="CASCADE"), primary_key=True),
-)
-
-
-class Apps(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title_id = db.Column(db.Integer, db.ForeignKey("titles.id", ondelete="CASCADE"), nullable=False)
-    app_id = db.Column(db.String, index=True)  # Index for faster lookups
-    app_version = db.Column(db.BigInteger)
-    app_type = db.Column(db.String, index=True)  # Index for filtering by type
-    owned = db.Column(db.Boolean, default=False, index=True)  # Index for owned filter
-
-    title = db.relationship("Titles", backref=db.backref("apps", lazy=True, cascade="all, delete-orphan"))
-    files = db.relationship("Files", secondary=app_files, backref=db.backref("apps", lazy="select"))
-
-    __table_args__ = (
-        db.UniqueConstraint("app_id", "app_version", name="uq_apps_app_version"),
-        # Composite index for common query patterns
-        db.Index("idx_app_id_version", "app_id", "app_version"),
-        db.Index("idx_owned_type", "owned", "app_type"),
-        db.Index("idx_title_type", "title_id", "app_type"),
-    )
-
-
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user = db.Column(db.String(100), unique=True)
-    password = db.Column(db.String(255))
-    admin_access = db.Column(db.Boolean)
-    shop_access = db.Column(db.Boolean)
-    backup_access = db.Column(db.Boolean)
-
-    @property
-    def is_admin(self):
-        return self.admin_access
-
-    def has_shop_access(self):
-        return self.shop_access
-
-    def has_backup_access(self):
-        return self.backup_access
-
-    def has_admin_access(self):
-        return self.admin_access
-
-    def has_access(self, access):
-        if access == "admin":
-            return self.has_admin_access()
-        elif access == "shop":
-            return self.has_shop_access()
-        elif access == "backup":
-            return self.has_backup_access()
-
-
-class ApiToken(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
-    token = db.Column(db.String(64), unique=True, nullable=False, index=True)
-    name = db.Column(db.String(100), nullable=False)
-    created_at = db.Column(db.DateTime, default=now_utc)
-    last_used = db.Column(db.DateTime)
-
-    user = db.relationship("User", backref=db.backref("api_tokens", lazy=True, cascade="all, delete-orphan"))
-
-
-class Tag(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), unique=True, nullable=False)
-    color = db.Column(db.String(7))  # Hex color
-    icon = db.Column(db.String(50))  # Bootstrap/FontAwesome icon class
-
-
-class TitleTag(db.Model):
-    title_id = db.Column(db.String, db.ForeignKey("titles.title_id", ondelete="CASCADE"), primary_key=True)
-    tag_id = db.Column(db.Integer, db.ForeignKey("tag.id", ondelete="CASCADE"), primary_key=True)
-
-
-class Wishlist(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"))
-    title_id = db.Column(db.String, index=True)
-    added_date = db.Column(db.DateTime, default=now_utc)
-    priority = db.Column(db.Integer, default=0)  # 0-5
-    notes = db.Column(db.Text)
-
-    # Novos campos para tornar a wishlist independente do TitleDB
-    name = db.Column(db.String)
-    release_date = db.Column(db.String)
-    icon_url = db.Column(db.String)
-    banner_url = db.Column(db.String)
-    description = db.Column(db.Text)
-    genres = db.Column(db.String)  # JSON ou string separada por vírgulas
-    screenshots = db.Column(db.Text)  # JSON list de URLs
-
-    # Preferências de ignored (novas colunas)
-    ignore_dlc = db.Column(db.Boolean, default=False)
-    ignore_update = db.Column(db.Boolean, default=False)
-
-
-class WishlistIgnore(db.Model):
-    """Tabela para armazenar preferências de ignore da wishlist por usuário"""
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=True)
-    title_id = db.Column(db.String, index=True, nullable=False)
-    ignore_dlcs = db.Column(db.Text, default="{}")  # JSON: {"app_id1": true, "app_id2": false, ...}
-    ignore_updates = db.Column(db.Text, default="{}")  # JSON: {"v1": true, "v2": false, ...}
-    created_at = db.Column(db.DateTime, default=now_utc)
-
-    __table_args__ = (db.UniqueConstraint("user_id", "title_id", name="uix_user_title_ignore"),)
-
-
-class Webhook(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    url = db.Column(db.String(500), nullable=False)
-    events = db.Column(db.Text)  # JSON list: ['file_added', 'scan_complete']
-    secret = db.Column(db.String(100))
-    active = db.Column(db.Boolean, default=True)
-
-    def to_dict(self):
-        import json
-
-        return {
-            "id": self.id,
-            "url": self.url,
-            "events": json.loads(self.events) if self.events else [],
-            "secret": self.secret,
-            "active": self.active,
-        }
-
-
-class TitleMetadata(db.Model):
-    """Remote metadata for titles from external sources (RAWG, IGDB, etc)"""
-
-    __tablename__ = "title_metadata"
-
-    id = db.Column(db.Integer, primary_key=True)
-    title_id = db.Column(
-        db.String(16), db.ForeignKey("titles.title_id", ondelete="CASCADE"), nullable=False, index=True
-    )
-
-    # Metadata fields
-    description = db.Column(db.Text)
-    rating = db.Column(db.Float)  # normalized 0-100
-    rating_count = db.Column(db.Integer)
-    genres = db.Column(db.JSON)  # list of strings
-    tags = db.Column(db.JSON)  # list of strings
-    release_date = db.Column(db.Date)
-
-    # Media URLs
-    cover_url = db.Column(db.String(512))
-    banner_url = db.Column(db.String(512))
-    screenshots = db.Column(db.JSON)  # list of URLs
-
-    # Source tracking
-    source = db.Column(db.String(50))  # 'rawg', 'igdb', 'nintendo'
-    source_id = db.Column(db.String(100))  # ID in source system
-
-    # Timestamps
-    fetched_at = db.Column(db.DateTime, default=now_utc)
-    updated_at = db.Column(db.DateTime, default=now_utc, onupdate=now_utc)
-
-    # Relationship handled by backref on metadata_entries
-
-    __table_args__ = (db.UniqueConstraint("title_id", "source", name="uq_title_source"),)
-
-
-class MetadataFetchLog(db.Model):
-    """Execution log for metadata fetch jobs"""
-
-    __tablename__ = "metadata_fetch_log"
-
-    id = db.Column(db.Integer, primary_key=True)
-    started_at = db.Column(db.DateTime, nullable=False, default=now_utc)
-    completed_at = db.Column(db.DateTime)
-    status = db.Column(db.String(20))  # 'running', 'completed', 'failed'
-
-    titles_processed = db.Column(db.Integer, default=0)
-    titles_updated = db.Column(db.Integer, default=0)
-    titles_failed = db.Column(db.Integer, default=0)
-
-    error_message = db.Column(db.Text)
-
-
-class SystemJob(db.Model):
-    """Persistent tracking for system background jobs (Shared between Flask/Celery)"""
-
-    __tablename__ = "system_jobs"
-
-    job_id = db.Column(db.String(50), primary_key=True)
-    job_type = db.Column(db.String(50), nullable=False)
-    status = db.Column(db.String(20), nullable=False)  # 'scheduled', 'running', 'completed', 'failed'
-
-    # Progress
-    progress_percent = db.Column(db.Float, default=0.0)
-    progress_message = db.Column(db.String(255))
-
-    # Data
-    result_json = db.Column(db.JSON)
-    metadata_json = db.Column(db.JSON)
-    error = db.Column(db.Text)
-
-    # Timestamps
-    started_at = db.Column(db.DateTime, default=now_utc)
-    completed_at = db.Column(db.DateTime)
-
-    def to_dict(self):
-        return {
-            "id": self.job_id,
-            "type": self.job_type,
-            "status": self.status,
-            "progress": {"percent": self.progress_percent, "message": self.progress_message},
-            "result": self.result_json,
-            "metadata": self.metadata_json,
-            "error": self.error,
-            "started_at": self.started_at.isoformat() if self.started_at else None,
-            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
-        }
-
 
 class ActivityLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -448,9 +50,8 @@ def init_db(app):
         @event.listens_for(db.engine, "connect")
         def set_sqlite_pragma(dbapi_connection, connection_record):
             import sqlite3
-
             if not isinstance(dbapi_connection, sqlite3.Connection):
-                return
+                 return
 
             cursor = dbapi_connection.cursor()
             cursor.execute("PRAGMA foreign_keys=ON;")
@@ -463,7 +64,6 @@ def init_db(app):
         # create or migrate database
         if "db" not in sys.argv:
             from sqlalchemy import inspect
-
             inspector = inspect(db.engine)
             if not inspector.has_table("files"):
                 logger.info("Initializing database tables...")
@@ -593,7 +193,7 @@ def init_db(app):
                         ("genres", "TEXT"),
                         ("screenshots", "TEXT"),
                     ]
-
+                    
                     wishlist_extra_modified = False
                     for col_name, col_type in wishlist_extra_cols:
                         if col_name not in wishlist_cols:
@@ -603,7 +203,7 @@ def init_db(app):
                                 wishlist_extra_modified = True
                             except Exception as e:
                                 logger.error(f"Failed to add column {col_name} to wishlist: {e}")
-
+                    
                     if wishlist_extra_modified:
                         conn.commit()
                         logger.info("Database schema updated with wishlist metadata columns.")
@@ -961,20 +561,18 @@ def get_all_titles_with_apps():
                 # Force identified=False if there is an error
                 has_error = bool(f.identification_error)
                 is_identified = f.identified and not has_error
-
+                
                 # Get the "real" version of this file (e.g. if it's an XCI containing an update)
                 real_version = file_max_versions.get(f.id, 0)
-
-                files_list.append(
-                    {
-                        "path": f.filepath,
-                        "size": f.size,
-                        "id": f.id,
-                        "error": f.identification_error,
-                        "identified": is_identified,
-                        "version": real_version,
-                    }
-                )
+                
+                files_list.append({
+                    "path": f.filepath,
+                    "size": f.size,
+                    "id": f.id,
+                    "error": f.identification_error,
+                    "identified": is_identified,
+                    "version": real_version
+                })
             a_dict["files_info"] = files_list
             t_dict["apps"].append(a_dict)
         t_dict["tags"] = [tag.name for tag in t.tags]
@@ -1132,13 +730,11 @@ def remove_titles_without_owned_apps():
     """Remove titles that have no owned apps - Optimized using a single subquery"""
     # Join Titles with Apps that are owned
     owned_titles_subquery = db.session.query(Apps.title_id).filter(Apps.owned == True).distinct().subquery()
-
+    
     # Find Titles that are NOT in the owned_titles_subquery
     # Use select() explicitly to avoid SAWarning
-    titles_to_delete_query = db.session.query(Titles).filter(
-        ~Titles.id.in_(db.select(owned_titles_subquery.c.title_id))
-    )
-
+    titles_to_delete_query = db.session.query(Titles).filter(~Titles.id.in_(db.select(owned_titles_subquery.c.title_id)))
+    
     titles_to_delete = [t.id for t in titles_to_delete_query.all()]
     titles_removed = len(titles_to_delete)
 
@@ -1224,7 +820,6 @@ def remove_missing_files_from_db():
             if i % 100 == 0:
                 try:
                     import gevent
-
                     gevent.sleep(0)
                 except:
                     pass
@@ -1257,3 +852,4 @@ def remove_missing_files_from_db():
     except Exception as e:
         db.session.rollback()
         logger.error(f"An error occurred while cleaning up missing files: {str(e)}")
+
