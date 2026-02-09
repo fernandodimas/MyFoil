@@ -299,21 +299,21 @@ def identify_file_async(filepath):
                         if file_obj not in existing_app.files:
                             existing_app.files.append(file_obj)
                     else:
-                        # Create new app entry with file included
-                        from db import Apps, AppType
+                        # Create new app entry
+                        from db import Apps
 
                         new_app = Apps(
                             app_id=file_content["app_id"],
-                            version=file_content["version"],
-                            # type is stored in AppType, use the string from file_content
-                            # but look it up in AppType table first
-                            type=AppType.query.filter_by(name=file_content["type"]).first(),
+                            app_version=file_content["version"],
+                            app_type=file_content["type"],
+                            owned=True,
+                            title_id=title_id_in_db,
                         )
-                        new_app.title_id = title_id_in_db
-                        new_app.owned = True
-                        new_app.added_at = file_obj.added_at
-                        new_app.files = [file_obj]
                         db.session.add(new_app)
+                        db.session.flush()  # Flush to get the app ID
+
+                        # Add the file to the new app
+                        new_app.files.append(file_obj)
 
                     nb_content += 1
                     logger.debug("app_added", app_id=file_content["app_id"])
