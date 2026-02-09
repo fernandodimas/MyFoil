@@ -1521,9 +1521,10 @@ def migration_status():
     Returns the current revision and available migrations.
     """
     from flask_migrate import current
+    from flask import current_app
 
     try:
-        with app.app_context():
+        with current_app.app_context():
             current_rev = current()
             return jsonify(
                 {"success": True, "current_revision": current_rev or "None", "message": "Migration status retrieved"}

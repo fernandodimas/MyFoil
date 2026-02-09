@@ -161,7 +161,7 @@ def library_paged_api():
         order = "asc"
 
     # Build the query with eager loading to avoid N+1
-    query = Titles.query.options(joinedload(Titles.apps).filter(Apps.owned == True)).filter(Titles.title_id.isnot(None))
+    query = Titles.query.options(joinedload(Titles.apps)).filter(Titles.title_id.isnot(None))
 
     # Apply sorting
     sort_field = getattr(Titles, sort_by, Titles.name)
@@ -226,7 +226,7 @@ def library_search_paged_api():
     per_page = min(max(1, per_page), MAX_PER_PAGE)
 
     # Build base query with eager loading
-    query = Titles.query.options(joinedload(Titles.apps).filter(Apps.owned == True)).filter(Titles.title_id.isnot(None))
+    query = Titles.query.options(joinedload(Titles.apps)).filter(Titles.title_id.isnot(None))
 
     # Apply filters
     if query_text:
