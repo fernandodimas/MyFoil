@@ -30,7 +30,15 @@ function loadIgnorePreferences() {
 
 // Load library with server-side pagination (Phase 2.2)
 function loadLibraryPaginated(page = 1, append = false) {
-    const API_ENDPOINT = '/api/library/paged';  // Use server-side paginated endpoint
+    // Try paged endpoint first, fall back to legacy endpoint if it fails
+    let API_ENDPOINT = '/api/library/paged';
+    let useLegacyFallback = false;
+    
+    // Check if we've already tried and failed with paged endpoint
+    if (localStorage.getItem('myfoil_use_legacy_endpoint') === 'true') {
+        API_ENDPOINT = '/api/library';
+        useLegacyFallback = true;
+    }
     
     // If page 1 and not appending, clear games
     if (page === 1 && !append) {
@@ -59,7 +67,10 @@ function loadLibraryPaginated(page = 1, append = false) {
         }
     }
 
-    // Parse sort preference
+    // Build URL parameters
+    let url = `${API_ENDPOINT}?page=${page}&per_page=${PER_PAGE}`;
+    
+    // Parse sort preference (for paged endpoint)
     let sort_by = 'name';
     let order = 'asc';
     if (currentSort && currentSort.includes('-')) {
@@ -67,9 +78,28 @@ function loadLibraryPaginated(page = 1, append = false) {
         sort_by = parts[0];
         order = parts[1];
     }
+    
+    // Add pagination/sort parameters
+    if (!useLegacyFallback) {
+        url += `&sort_by=${sort_by}&order=${order}`;
+    }
 
-    $.getJSON(`${API_ENDPOINT}?page=${page}&per_page=${PER_PAGE}&sort_by=${sort_by}&order=${order}`, function (data) {
-        const newGames = (data && data.items) ? data.items : (Array.isArray(data) ? data : []);
+    $.getJSON(url, function (data) {
+        // Check response format
+        let newGames = [];
+        
+        if (useLegacyFallback) {
+            // Legacy endpoint format: array directly or wrapped in items
+            newGames = (data && data.items) ? data.items : (Array.isArray(data) ? data : []);
+        } else {
+            // Paged endpoint format: { items: [...], pagination: {...} }
+            if (data && data.items && Array.isArray(data.items)) {
+                newGames = data.items;
+            } else if (Array.isArray(data)) {
+                // Fallback: maybe data is just an array
+                newGames = data;
+            }
+        }
         
         if (append) {
             games = [...games, ...newGames];
@@ -82,6 +112,10 @@ function loadLibraryPaginated(page = 1, append = false) {
             totalItems = data.pagination.total_items || 0;
             allGamesLoaded = !data.pagination.has_next;
             currentPage = data.pagination.page || page;
+        } else if (Array.isArray(data)) {
+            // Legacy: data is the full array
+            totalItems = data.length;
+            allGamesLoaded = true;
         }
 
         // Apply filters after data is loaded
@@ -96,10 +130,23 @@ function loadLibraryPaginated(page = 1, append = false) {
 
         // Setup infinite scroll observer
         setupInfiniteScroll();
-    }).fail(() => {
+        
+    }).fail((jqXHR, textStatus, errorThrown) => {
         $('#loadingIndicator').addClass('is-hidden');
         isLoadingMore = false;
-        showToast(t('Failed to refresh library'), 'error');
+        
+        console.error('Failed to load library:', textStatus, errorThrown);
+        console.error('Response:', jqXHR.responseText);
+        
+        // If this was the first attempt with paged endpoint, try legacy fallback
+        if (!useLegacyFallback && page === 1 && !append) {
+            console.log('Paged endpoint failed, falling back to legacy endpoint...');
+            localStorage.setItem('myfoil_use_legacy_endpoint', 'true');
+            showToast(t('Switching to legacy endpoint...'), 'info');
+            loadLibraryPaginated(page, false);
+        } else {
+            showToast(t('Failed to refresh library: ') + (errorThrown || textStatus), 'error');
+        }
     });
 }
 
