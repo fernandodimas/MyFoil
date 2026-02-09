@@ -1566,6 +1566,28 @@ def migrate_database():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@system_bp.route("/system/migrate/stamp", methods=["POST"])
+@access_required("admin")
+def migrate_stamp():
+    """
+    Stamp the database with a specific revision without running it.
+    Useful for fixing migration history on existing databases.
+    """
+    from flask_migrate import stamp
+    from flask import current_app, request
+
+    revision = request.args.get("revision", "head")
+
+    try:
+        with current_app.app_context():
+            logger.info(f"Stamping database with revision: {revision}")
+            stamp(revision=revision)
+            return jsonify({"success": True, "message": f"Database stamped with revision: {revision}"})
+    except Exception as e:
+        logger.error(f"Error stamping database: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @system_bp.route("/system/migrate/phase-2-1", methods=["POST"])
 @access_required("admin")
 def migrate_phase_2_1():

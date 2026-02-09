@@ -18,7 +18,7 @@ from celery_app import celery
 from celery.signals import worker_process_init, worker_ready
 from flask import Flask
 from db import db, remove_missing_files_from_db
-from library import scan_library_path, identify_library_files, update_titles, generate_library
+from library import scan_library_path, identify_library_files, update_titles, generate_library, post_library_change
 from job_tracker import job_tracker, JobType
 from socket_helper import get_socketio_emitter
 from app_services.rating_service import update_game_metadata
@@ -327,6 +327,14 @@ def identify_file_async(filepath):
 
                 file_obj.last_attempt = now_utc()
                 db.session.commit()
+
+                # Trigger library refresh after successful identification
+                try:
+                    from library import post_library_change
+
+                    post_library_change()
+                except Exception as e:
+                    logger.error("failed_to_trigger_refresh", error=str(e))
 
                 logger.info("identify_file_completed", filepath=filepath, nb_content=nb_content)
             else:
