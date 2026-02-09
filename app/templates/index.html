@@ -168,10 +168,23 @@
         <p class="is-size-7 mt-2 opacity-60">{{ t('Carregando mais jogos...') }}</p>
     </div>
 
-    <!-- Loading indicator -->
+    <!-- Loading indicator - Main -->
     <div id="loadingIndicator" class="has-text-centered py-6 is-hidden">
-        <span class="loader is-loading is-inline-block" style="width: 48px; height: 48px; border-width: 4px;"></span>
-        <p class="is-size-6 mt-4 opacity-60">{{ t('Carregando Biblioteca...') }}</p>
+        <div class="loading-overlay">
+            <div class="loading-spinner is-large"></div>
+            <div class="progress-container mt-4 mx-auto" style="max-width: 200px;">
+                <progress class="progress is-small is-primary" value="0" max="100" id="loadingProgress">0%</progress>
+            </div>
+            <p class="is-size-6 mt-4 opacity-60 has-text-weight-medium" id="loadingText">{{ t('Carregando Biblioteca...') }}</p>
+        </div>
+    </div>
+
+    <!-- Loading indicator - Pagination -->
+    <div id="paginationLoader" class="has-text-centered py-4 is-hidden bg-glass rounded">
+        <div class="is-flex is-align-items-center is-justify-content-center gap-2">
+            <span class="icon is-small has-text-primary"><i class="fas fa-spinner fa-spin"></i></span>
+            <span class="is-size-7 has-text-grey">{{ t('Carregando mais jogos...') }}</span>
+        </div>
     </div>
 </div>
 

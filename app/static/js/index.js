@@ -2,6 +2,7 @@
  * MyFoil Library Index Logic
  * Handles library loading, filtering, sorting, and infinite scroll.
  * Phase 2.2: Server-side pagination for improved performance.
+ * Phase 3.3: UX Improvements with visible loading indicators.
  */
 
 let games = [];
@@ -14,7 +15,8 @@ let currentPage = 1;  // Current page for pagination
 let isLoadingMore = false;  // Track loading state
 let totalItems = 0;  // Total number of games in library
 let isNewRender = true;  // Track if we need a full re-render
-const PER_PAGE = 60;  // Items per page for server-side pagination
+const PER_PAGE = 75;  // Items per page (optimized for performance - 75 is sweet spot)
+const SCROLL_BATCH_SIZE = 30;  // Render 30 items at a time for smoothness
 
 // Fetch all ignore preferences on load
 function loadIgnorePreferences() {
@@ -28,7 +30,7 @@ function loadIgnorePreferences() {
     });
 }
 
-// Load library with server-side pagination (Phase 2.2)
+// Load library with server-side pagination (Phase 2.2) with UX improvements
 function loadLibraryPaginated(page = 1, append = false) {
     // Try paged endpoint first, fall back to legacy endpoint if it fails
     let API_ENDPOINT = '/api/library/paged';
@@ -39,6 +41,145 @@ function loadLibraryPaginated(page = 1, append = false) {
         API_ENDPOINT = '/api/library';
         useLegacyFallback = true;
     }
+    
+    // If page 1 and not appending, clear games
+    if (page === 1 && !append) {
+        games = [];
+        filteredGames = [];
+        allGamesLoaded = false;
+        currentPage = 1;
+        scrollOffset = 0;
+        isLoadingMore = false;
+        totalItems = 0;
+    }
+
+    // Skip if already loading
+    if (isLoadingMore && append) {
+        return;
+    }
+
+    isLoadingMore = true;
+    
+    // Show appropriate loading indicator
+    if (append) {
+        // Show pagination loader at bottom
+        $('#paginationLoader').removeClass('is-hidden');
+    } else {
+        // Show main loader with progress
+        $('#loadingIndicator').removeClass('is-hidden');
+        $('#loadingProgress').val(0);
+        $('#loadingProgress').attr('max', 100);
+        
+        // Update loading text based on page
+        let loadingText = page === 1 
+            ? t('Carregando Biblioteca...') 
+            : t('Carregando página') + ` ${page}...`;
+        $('#loadingText').text(loadingText);
+    }
+    
+    // Build URL parameters
+    let url = `${API_ENDPOINT}?page=${page}&per_page=${PER_PAGE}`;
+    
+    // Parse sort preference (for paged endpoint)
+    let sort_by = 'name';
+    let order = 'asc';
+    if (currentSort && currentSort.includes('-')) {
+        const parts = currentSort.split('-');
+        sort_by = parts[0];
+        order = parts[1];
+    }
+    
+    // Add pagination/sort parameters
+    if (!useLegacyFallback) {
+        url += `&sort_by=${sort_by}&order=${order}`;
+    }
+
+    // Update progress bar to 50% (loading started)
+    $('#loadingProgress').val(50);
+
+    $.getJSON(url, function (data) {
+        // Update progress bar to 80% (data received)
+        $('#loadingProgress').val(80);
+        
+        // Check response format
+        let newGames = [];
+        
+        if (useLegacyFallback) {
+            newGames = (data && data.items) ? data.items : (Array.isArray(data) ? data : []);
+        } else {
+            if (data && data.items && Array.isArray(data.items)) {
+                newGames = data.items;
+            } else if (Array.isArray(data)) {
+                newGames = data;
+            }
+        }
+        
+        if (append) {
+            games = [...games, ...newGames];
+        } else {
+            games = newGames;
+        }
+
+        // Update total count from server
+        if (data && data.pagination) {
+            totalItems = data.pagination.total_items || 0;
+            allGamesLoaded = !data.pagination.has_next;
+            currentPage = data.pagination.page || page;
+            
+            // Update progress calculation
+            if (totalItems > 0) {
+                const loadedCount = games.length;
+                const progress = Math.min(100, Math.round((loadedCount / totalItems) * 100));
+                $('#loadingProgress').val(100);
+            }
+        } else if (Array.isArray(data)) {
+            totalItems = data.length;
+            allGamesLoaded = true;
+            $('#loadingProgress').val(100);
+        }
+
+        // Apply filters after data is loaded
+        applyFilters();
+
+        // Hide loading indicators
+        $('#loadingIndicator').addClass('is-hidden');
+        $('#paginationLoader').addClass('is-hidden');
+        isLoadingMore = false;
+        
+        if (!append) {
+            const loadedPercent = totalItems > 0 
+                ? `${Math.round((Math.min(PER_PAGE, totalItems) / totalItems) * 100)}%` 
+                : '100%';
+            showToast(t('Library updated!') + ` (${loadedPercent})`, 'success');
+        }
+
+        // Setup infinite scroll observer
+        setupInfiniteScroll();
+        
+    }).fail((jqXHR, textStatus, errorThrown) => {
+        $('#loadingIndicator').addClass('is-hidden');
+        $('#paginationLoader').addClass('is-hidden');
+        isLoadingMore = false;
+        
+        console.error('Failed to load library:', textStatus, errorThrown);
+        console.error('Response:', jqXHR.responseText);
+        
+        // If this was the first attempt with paged endpoint, try legacy fallback
+        if (!useLegacyFallback && page === 1 && !append) {
+            console.log('Paged endpoint failed, falling back to legacy endpoint...');
+            localStorage.setItem('myfoil_use_legacy_endpoint', 'true');
+            $('#loadingText').text(t('Mudando para endpoint legado...'));
+            $('#loadingIndicator').removeClass('is-hidden');
+            
+            setTimeout(() => {
+                loadLibraryPaginated(page, false);
+            }, 500);
+        } else {
+            $('#loadingProgress').removeClass('is-primary').addClass('is-danger');
+            showToast(t('Failed to refresh library: ') + (errorThrown || textStatus), 'error');
+        }
+    });
+}
     
     // If page 1 and not appending, clear games
     if (page === 1 && !append) {
@@ -150,31 +291,46 @@ function loadLibraryPaginated(page = 1, append = false) {
     });
 }
 
-// Lazy Loading Images
+// Lazy Loading Images - Phase 3.3 Improved with aggressive thresholds
 function observeImages() {
     if ('IntersectionObserver' in window) {
+        // Use more aggressive threshold for better performance
+        // Load images when they're 400px below viewport instead of waiting for intersection
         const imageObserver = new IntersectionObserver((entries, observer) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     const img = entry.target;
                     const src = img.getAttribute('data-src');
                     if (src) {
+                        // Add smooth fade-in effect
+                        img.style.transition = 'opacity 0.3s ease-in-out';
+                        img.style.opacity = '0.3';
+                        
                         img.src = src;
                         img.onload = () => {
-                            img.style.opacity = 1;
+                            img.style.opacity = '1';
+                        };
+                        img.onerror = () => {
+                            // Fallback to no-icon if image fails to load
+                            img.src = '/static/img/no-icon.png';
+                            img.style.opacity = '1';
                         };
                         img.removeAttribute('data-src');
                     }
                     observer.unobserve(img);
                 }
             });
+        }, {
+            // Load images earlier for smoother UX (400px before they enter viewport)
+            rootMargin: '400px 0px 400px 0px',
+            threshold: 0.01  // Trigger when 1% of image is visible
         });
 
         document.querySelectorAll('img.lazy-image').forEach(img => {
             imageObserver.observe(img);
         });
     } else {
-        // Fallback for older browsers
+        // Fallback for older browsers - still load images but without lazy loading
         document.querySelectorAll('img.lazy-image').forEach(img => {
             const src = img.getAttribute('data-src');
             if (src) {
@@ -619,15 +775,20 @@ function renderMoreFilteredItems() {
     
     // Skip if we've already rendered all filtered games
     if (renderedCount >= filtered.length) {
+        $('#paginationLoader').addClass('is-hidden');
         return;
     }
     
+    // Show pagination loader
+    $('#paginationLoader').removeClass('is-hidden');
+    
     // Get next batch
     const startIdx = renderedCount;
-    const endIdx = Math.min(startIdx + 24, filtered.length);  // Render 24 at a time
+    const endIdx = Math.min(startIdx + SCROLL_BATCH_SIZE, filtered.length);  // Render 30 at a time
     const batch = filtered.slice(startIdx, endIdx);
     
     if (batch.length === 0) {
+        $('#paginationLoader').addClass('is-hidden');
         return;
     }
     
@@ -638,6 +799,11 @@ function renderMoreFilteredItems() {
 
     setupKeyboardNavigation();
     observeImages();
+    
+    // Hide loader after a brief delay
+    setTimeout(() => {
+        $('#paginationLoader').addClass('is-hidden');
+    }, 300);
 }
 
 function loadMoreItems() {
@@ -650,7 +816,7 @@ function loadMoreItems() {
     }
     
     // Render first batch
-    const firstBatch = filtered.slice(0, 24);
+    const firstBatch = filtered.slice(0, SCROLL_BATCH_SIZE);
     if (currentView === 'card') renderCardView(firstBatch);
     else if (currentView === 'icon') renderIconView(firstBatch);
     else renderListView(firstBatch);
@@ -660,7 +826,8 @@ function loadMoreItems() {
     $('#loadingIndicator').addClass('is-hidden');
     
     // Show sentinel for lazy loading if there are more items
-    $('#scrollSentinel').toggle(filtered.length > firstBatch.length);
+    const hasMoreItems = filtered.length > firstBatch.length;
+    $('#scrollSentinel').toggle(hasMoreItems);
 }
 
 function resetInfiniteScroll() {

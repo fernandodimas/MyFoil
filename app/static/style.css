@@ -1562,3 +1562,118 @@ input[type=range].slider.is-small {
     min-height: 50px;
 }
 
+/* Loading Spinner - Phase 3.3 UX Improvements */
+.loading-overlay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.loading-spinner {
+    position: relative;
+    width: 64px;
+    height: 64px;
+}
+
+.loading-spinner.is-large {
+    width: 80px;
+    height: 80px;
+}
+
+.loading-spinner::before,
+.loading-spinner::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    border: 4px solid transparent;
+    border-top-color: var(--primary);
+    animation: spin-loading 1s linear infinite;
+}
+
+.loading-spinner::before {
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    border-top-color: var(--primary);
+    animation: spin-loading 1s linear infinite;
+}
+
+.loading-spinner::after {
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    border-top-color: var(--primary-light);
+    animation: spin-loading 0.8s linear infinite reverse;
+}
+
+@keyframes spin-loading {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Pagination Loader */
+#paginationLoader {
+    margin-top: 2rem;
+    padding: 1rem;
+    border-radius: 8px;
+    background: var(--bulma-card-background);
+    border: 1px solid var(--bulma-border);
+    animation: slideUp 0.3s ease-out;
+}
+
+#paginationLoader.has-text-centered {
+    display: flex;
+}
+
+/* Smooth animations for loading states */
+.loading-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.loading-fade-out {
+    animation: fadeOut 0.3s ease-in-out;
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+/* Progress bar styling improvement */
+.progress.is-small {
+    height: 6px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress::-webkit-progress-bar {
+    background-color: var(--bulma-input-border);
+    border-radius: 10px;
+}
+
+.progress::-webkit-progress-value {
+    background-color: var(--bulma-primary);
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+/* Dark mode loading adjustments */
+[data-theme="dark"] .loading-spinner::before {
+    border-top-color: var(--bulma-primary-light);
+}
+
+[data-theme="dark"] .loading-spinner::after {
+    border-top-color: var(--bulma-primary);
+}
+
