@@ -188,21 +188,75 @@ def update_wishlist_item(title_id):
 @login_required
 def remove_from_wishlist(identifier):
     """Remove item da wishlist pelo ID do banco (int) ou title_id (string)"""
+    import logging
+
+    logger = logging.getLogger("main")
+
+    logger.info(f"[WISHLIST DELETE] Request to remove item. Identifier: {identifier}, User ID: {current_user.id}")
+
+    # Verify user is authenticated
+    if not current_user or not current_user.is_authenticated:
+        logger.error(f"[WISHLIST DELETE] User not authenticated!")
+        return jsonify({"success": False, "error": "Usuário não autenticado"}), 401
+
     # Try to parse as integer first (database ID)
     try:
         item_id = int(identifier)
+        logger.info(f"[WISHLIST DELETE] Parsed as integer ID: {item_id}")
         item = Wishlist.query.filter_by(user_id=current_user.id, id=item_id).first()
     except ValueError:
         # Not an integer, try as title_id
+        logger.info(f"[WISHLIST DELETE] Not an integer, treating as title_id: {identifier}")
         item = Wishlist.query.filter_by(user_id=current_user.id, title_id=identifier).first()
 
     if not item:
+        logger.warning(f"[WISHLIST DELETE] Item not found for identifier: {identifier}, user_id: {current_user.id}")
         return jsonify({"success": False, "error": "Item não encontrado"}), 404
 
-    db.session.delete(item)
-    db.session.commit()
+    logger.info(f"[WISHLIST DELETE] Deleting item - DB ID: {item.id}, Title ID: {item.title_id}, Name: {item.name}")
 
-    return jsonify({"success": True})
+    try:
+        db.session.delete(item)
+        db.session.commit()
+        logger.info(f"[WISHLIST DELETE] Successfully deleted item DB ID: {item.id}")
+        return jsonify({"success": True, "id": item.id})
+    except Exception as e:
+        logger.error(f"[WISHLIST DELETE] Error deleting item: {e}", exc_info=True)
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@wishlist_bp.route("/wishlist/debug", methods=["GET"])
+@login_required
+def debug_wishlist():
+    """Debug endpoint to check wishlist data"""
+    import logging
+
+    logger = logging.getLogger("main")
+
+    try:
+        items = Wishlist.query.filter_by(user_id=current_user.id).all()
+
+        debug_data = {
+            "user_id": current_user.id,
+            "user_authenticated": current_user.is_authenticated,
+            "items_count": len(items),
+            "items": [
+                {
+                    "id": item.id,
+                    "title_id": item.title_id,
+                    "name": item.name,
+                    "added_date": item.added_date.isoformat() if item.added_date else None,
+                }
+                for item in items
+            ],
+        }
+
+        logger.info(f"[WISHLIST DEBUG] User {current_user.id} has {len(items)} items")
+        return jsonify(debug_data)
+    except Exception as e:
+        logger.error(f"[WISHLIST DEBUG] Error: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @wishlist_bp.route("/wishlist/export")

@@ -254,6 +254,8 @@ function renderListView(items, container) {
 }
 
 function removeFromWishlist(itemId) {
+    console.log(`[WISHLIST] Attempting to remove item: ${itemId}`);
+    
     confirmAction({
         title: t('Remover da Wishlist'),
         message: t('Deseja realmente remover este item da sua lista de desejos?'),
@@ -261,13 +263,23 @@ function removeFromWishlist(itemId) {
         confirmClass: 'is-danger',
         onConfirm: async () => {
             try {
+                console.log(`[WISHLIST] Sending DELETE request to /api/wishlist/${itemId}`);
                 const res = await fetch(`/api/wishlist/${itemId}`, { method: 'DELETE' });
+                console.log(`[WISHLIST] DELETE response status: ${res.status}`);
+                
+                const data = await res.json();
+                console.log(`[WISHLIST] DELETE response data:`, data);
+                
                 if (res.ok) {
                     showToast(t('Item removido da wishlist'), 'success');
                     loadWishlist();
+                } else {
+                    console.error(`[WISHLIST] Error response: ${data.error}`);
+                    showToast(`${t('Erro ao remover item')}: ${data.error || t('Erro desconhecido')}`, 'error');
                 }
             } catch (e) {
-                showToast(t('Erro ao remover item'), 'error');
+                console.error(`[WISHLIST] Network error:`, e);
+                showToast(`${t('Erro ao remover item')}: ${e.message}`, 'error');
             }
         }
     });
