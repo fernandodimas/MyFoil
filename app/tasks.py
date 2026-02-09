@@ -569,6 +569,14 @@ def update_titledb_async(force=False):
 
         logger.info("task_execution_started", task="update_titledb_async")
 
+        # Prevent concurrent TitleDB updates
+        from job_tracker import job_tracker, JobType
+
+        active_jobs = job_tracker.get_active_jobs()
+        if any(j.get("type") == JobType.TITLEDB_UPDATE for j in active_jobs):
+            logger.warning("TitleDB update is already running, skipping duplicate execution")
+            return False
+
         # Reload settings to ensure we have the latest (e.g. new sources)
         settings = load_settings()
 

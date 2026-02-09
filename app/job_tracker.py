@@ -5,7 +5,7 @@ from datetime import timedelta
 from typing import Optional, Dict, Any, List
 import uuid
 import logging
-from utils import now_utc
+from utils import now_utc, ensure_utc
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,6 @@ class JobTracker:
         try:
             with app.app_context():
                 from db import SystemJob, db
-                from utils import now_utc
 
                 # Reset all jobs stuck in RUNNING or SCHEDULED status
                 stale = SystemJob.query.filter(SystemJob.status.in_([JobStatus.RUNNING, JobStatus.SCHEDULED])).all()
@@ -83,6 +82,7 @@ class JobTracker:
                 # Also reset jobs that are very old (>1 day) regardless of status
                 old_jobs_threshold = now_utc() - timedelta(days=1)
                 old_jobs = SystemJob.query.filter(
+                    SystemJob.started_at.isnot(None),
                     SystemJob.started_at < old_jobs_threshold,
                     SystemJob.status.in_([JobStatus.RUNNING, JobStatus.SCHEDULED]),
                 ).all()
@@ -98,7 +98,8 @@ class JobTracker:
                         j.completed_at = now_utc()
 
                         # More detailed error message
-                        age = now_utc() - j.started_at if j.started_at else timedelta(0)
+                        start_time = ensure_utc(j.started_at) if j.started_at else now_utc()
+                        age = now_utc() - start_time
                         j.error = f"Job reset during startup (was running for {str(age).split('.')[0]}). This usually means the container was restarted while the job was in progress."
 
                     db.session.commit()
