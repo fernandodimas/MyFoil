@@ -30,16 +30,17 @@ def get_wishlist():
     # Verificar se usuário possui os jogos na biblioteca
     owned_map = {}
     if title_ids:
-        owned_entries = db.session.query(Titles.title_id).join(Apps).filter(
-            Titles.title_id.in_(title_ids), 
-            Apps.app_type == APP_TYPE_BASE, 
-            Apps.owned == True
-        ).all()
+        owned_entries = (
+            db.session.query(Titles.title_id)
+            .join(Apps)
+            .filter(Titles.title_id.in_(title_ids), Apps.app_type == APP_TYPE_BASE, Apps.owned == True)
+            .all()
+        )
         owned_map = {row[0]: True for row in owned_entries}
 
     result = []
     items_updated = False
-    
+
     for item in items:
         # Se o jogo já está na biblioteca, não mostrar na wishlist
         if item.title_id and owned_map.get(item.title_id):
@@ -51,17 +52,17 @@ def get_wishlist():
             if game_info:
                 updated = False
                 if not item.release_date and (game_info.get("releaseDate") or game_info.get("release_date")):
-                     item.release_date = game_info.get("releaseDate") or game_info.get("release_date")
-                     updated = True
-                
+                    item.release_date = game_info.get("releaseDate") or game_info.get("release_date")
+                    updated = True
+
                 if not item.icon_url and game_info.get("iconUrl"):
-                     item.icon_url = game_info.get("iconUrl")
-                     updated = True
+                    item.icon_url = game_info.get("iconUrl")
+                    updated = True
 
                 if not item.banner_url and game_info.get("bannerUrl"):
-                     item.banner_url = game_info.get("bannerUrl")
-                     updated = True
-                
+                    item.banner_url = game_info.get("bannerUrl")
+                    updated = True
+
                 if not item.name or item.name.startswith("Unknown"):
                     if game_info.get("name"):
                         item.name = game_info.get("name")
@@ -115,11 +116,12 @@ def add_to_wishlist():
 
         # Verificar se está na biblioteca
         from constants import APP_TYPE_BASE
-        owned = Apps.query.join(Titles).filter(
-            Titles.title_id == title_id, 
-            Apps.app_type == APP_TYPE_BASE, 
-            Apps.owned == True
-        ).first()
+
+        owned = (
+            Apps.query.join(Titles)
+            .filter(Titles.title_id == title_id, Apps.app_type == APP_TYPE_BASE, Apps.owned == True)
+            .first()
+        )
         if owned:
             return jsonify({"success": False, "error": "Jogo já está na sua biblioteca"}), 400
     elif name:
@@ -159,15 +161,15 @@ def add_to_wishlist():
                 pass
 
     item = Wishlist(
-        user_id=current_user.id, 
-        title_id=title_id, 
+        user_id=current_user.id,
+        title_id=title_id,
         name=display_name,
         release_date=release_date,
         icon_url=icon_url,
         banner_url=banner_url,
         description=description,
         genres=genres,
-        screenshots=screenshots
+        screenshots=screenshots,
     )
     db.session.add(item)
     db.session.commit()
@@ -182,11 +184,18 @@ def update_wishlist_item(title_id):
     return jsonify({"success": True})
 
 
-@wishlist_bp.route("/wishlist/<int:item_id>", methods=["DELETE"])
+@wishlist_bp.route("/wishlist/<identifier>", methods=["DELETE"])
 @login_required
-def remove_from_wishlist(item_id):
-    """Remove item da wishlist pelo ID do banco"""
-    item = Wishlist.query.filter_by(user_id=current_user.id, id=item_id).first()
+def remove_from_wishlist(identifier):
+    """Remove item da wishlist pelo ID do banco (int) ou title_id (string)"""
+    # Try to parse as integer first (database ID)
+    try:
+        item_id = int(identifier)
+        item = Wishlist.query.filter_by(user_id=current_user.id, id=item_id).first()
+    except ValueError:
+        # Not an integer, try as title_id
+        item = Wishlist.query.filter_by(user_id=current_user.id, title_id=identifier).first()
+
     if not item:
         return jsonify({"success": False, "error": "Item não encontrado"}), 404
 
