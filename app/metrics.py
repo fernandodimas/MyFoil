@@ -1,8 +1,14 @@
 from prometheus_client import Counter, Histogram, Gauge, Summary, generate_latest, CONTENT_TYPE_LATEST
-from flask import Response
-import psutil
+from flask import Response, request
 import time
 from functools import wraps
+
+try:
+    import psutil
+
+    psutil_available = True
+except ImportError:
+    psutil_available = False
 
 # Database Metrics
 db_connection_pool_size = Gauge("myfoil_db_connections_active", "Number of active database connections", ["pool"])
@@ -97,13 +103,15 @@ def track_db_query(operation, phase="unknown"):
 
 
 def update_system_metrics():
+    if not psutil_available:
+        return
     try:
         system_cpu_usage.set(psutil.cpu_percent())
 
         mem = psutil.virtual_memory()
-        system_memory_usage.set(mem.used - mem.cached)
+        system_memory_usage.set(mem.used)
 
         disk = psutil.disk_usage("/")
         system_disk_usage.labels(mount_point="/").set(disk.used)
     except Exception as e:
-        app.logger.warning(f"Failed to update system metrics: {e}")
+        pass
