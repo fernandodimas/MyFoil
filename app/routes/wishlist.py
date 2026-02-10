@@ -9,16 +9,16 @@ from io import StringIO
 from flask import Blueprint, request, Response
 from flask_login import current_user, login_required
 import titles
-from app.api_responses import (
+from api_responses import (
     success_response,
     error_response,
     handle_api_errors,
     ErrorCode,
     not_found_response,
 )
-from app.repositories.wishlist_repository import WishlistRepository
-from app.repositories.titles_repository import TitlesRepository
-from app.repositories.wishlistignore_repository import WishlistIgnoreRepository
+from repositories.wishlist_repository import WishlistRepository
+from repositories.titles_repository import TitlesRepository
+from repositories.wishlistignore_repository import WishlistIgnoreRepository
 
 wishlist_bp = Blueprint("wishlist", __name__, url_prefix="/api")
 

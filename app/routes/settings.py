@@ -2,18 +2,18 @@
 Settings Routes - Endpoints relacionados às configurações do sistema
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_login import current_user
 from db import db, logger
 from settings import reload_conf, load_settings, set_titles_settings, set_shop_settings, DEFAULT_SETTINGS, CONFIG_FILE
 from auth import access_required
 from constants import CONFIG_DIR, TITLEDB_DIR
 from utils import format_size_py, format_datetime
-from app.api_responses import success_response, error_response, not_found_response, handle_api_errors, ErrorCode
-from app.repositories.libraries_repository import LibrariesRepository
-from app.repositories.user_repository import UserRepository
-from app.repositories.webhook_repository import WebhookRepository
-from app.repositories.apitoken_repository import ApiTokenRepository
+from api_responses import success_response, error_response, not_found_response, handle_api_errors, ErrorCode
+from repositories.libraries_repository import LibrariesRepository
+from repositories.user_repository import UserRepository
+from repositories.webhook_repository import WebhookRepository
+from repositories.apitoken_repository import ApiTokenRepository
 import os
 import json
 import yaml
@@ -28,9 +28,7 @@ settings_bp = Blueprint("settings", __name__, url_prefix="/api")
 def get_settings_api():
     """Obter configurações atuais"""
     reload_conf()
-    import app
-
-    settings = copy.deepcopy(app.app_settings)
+    settings = load_settings()
 
     # Flatten settings for the JS frontend
     flattened = {}
@@ -87,7 +85,9 @@ def set_titles_settings_api():
                 return error_response(
                     ErrorCode.VALIDATION_ERROR,
                     message=f"The region/language pair {region}/{language} is not available.",
-                    details=[{"path": "titles", "error": f"The region/language pair {region}/{language} is not available."}]
+                    details=[
+                        {"path": "titles", "error": f"The region/language pair {region}/{language} is not available."}
+                    ],
                 )
 
     set_titles_settings(region, language, dbi_versions, auto_use_latest)
@@ -181,10 +181,9 @@ def library_paths_api():
     """Gerenciar caminhos da biblioteca"""
     if request.method == "POST":
         data = request.json
-        import app
         from library import add_library_complete
 
-        success, errors = add_library_complete(app.app, None, data["path"])
+        success, errors = add_library_complete(current_app, None, data["path"])
         if success:
             reload_conf()
             from library import post_library_change
@@ -217,10 +216,9 @@ def library_paths_api():
 
     elif request.method == "DELETE":
         data = request.json
-        import app
         from library import remove_library_complete
 
-        success, errors = remove_library_complete(app.app, None, data["path"])
+        success, errors = remove_library_complete(current_app, None, data["path"])
         if success:
             reload_conf()
             from library import post_library_change
@@ -347,7 +345,7 @@ def add_webhook_api():
         secret=data.get("secret"),
         active=data.get("active", True),
     )
-    from app import log_activity
+    from db import log_activity
 
     log_activity("webhook_created", details={"url": webhook.url}, user_id=current_user.id)
     return success_response(data={"webhook": webhook.to_dict()}, message="Webhook added")
@@ -467,16 +465,18 @@ def refresh_titledb_remote_api():
 def get_users_api():
     """Obter lista de usuários"""
     users = UserRepository.get_all()
-    return success_response(data=[
-        {
-            "id": u.id,
-            "user": u.user,
-            "admin_access": u.admin_access,
-            "shop_access": u.shop_access,
-            "backup_access": u.backup_access,
-        }
-        for u in users
-    ])
+    return success_response(
+        data=[
+            {
+                "id": u.id,
+                "user": u.user,
+                "admin_access": u.admin_access,
+                "shop_access": u.shop_access,
+                "backup_access": u.backup_access,
+            }
+            for u in users
+        ]
+    )
 
 
 @settings_bp.route("/user", methods=["POST"])
@@ -495,6 +495,7 @@ def create_user_api():
         return error_response(message="Username and password are required")
 
     from werkzeug.security import generate_password_hash
+
     hashed_pw = generate_password_hash(password)
 
     user = UserRepository.create(
@@ -505,15 +506,18 @@ def create_user_api():
         backup_access=backup_access,
     )
 
-    return success_response(data={
-        "user": {
-            "id": user.id,
-            "user": user.user,
-            "admin_access": user.admin_access,
-            "shop_access": user.shop_access,
-            "backup_access": user.backup_access,
+    return success_response(
+        data={
+            "user": {
+                "id": user.id,
+                "user": user.user,
+                "admin_access": user.admin_access,
+                "shop_access": user.shop_access,
+                "backup_access": user.backup_access,
+            },
         },
-    }, message="User created")
+        message="User created",
+    )
 
 
 @settings_bp.route("/user", methods=["DELETE"])
@@ -549,39 +553,6 @@ def apis_settings_api():
 
     if "rawg_api_key" in data:
         settings["apis"]["rawg_api_key"] = data["rawg_api_key"]
-    
-    if "igdb_client_id" in data:
-        settings["apis"]["igdb_client_id"] = data["igdb_client_id"]
-    
-    if "igdb_client_secret" in data:
-        settings["apis"]["igdb_client_secret"] = data["igdb_client_secret"]
-    
-    if "upcoming_days_ahead" in data:
-        settings["apis"]["upcoming_days_ahead"] = int(data["upcoming_days_ahead"])
-
-    with open(CONFIG_FILE, "w") as yaml_file:
-        yaml.dump(settings, yaml_file)
-
-    reload_conf()
-    return success_response(message="API settings updated")
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"success": False, "error": str(e)}), 400
-
-
-@settings_bp.route("/settings/apis", methods=["POST"])
-@access_required("admin")
-def apis_settings_api():
-    """Gerenciar configurações de APIs externas"""
-    data = request.json
-    settings = load_settings()
-
-    if "apis" not in settings:
-        settings["apis"] = {}
-
-    if "rawg_api_key" in data:
-        settings["apis"]["rawg_api_key"] = data["rawg_api_key"]
 
     if "igdb_client_id" in data:
         settings["apis"]["igdb_client_id"] = data["igdb_client_id"]
@@ -598,7 +569,7 @@ def apis_settings_api():
         yaml.dump(settings, yaml_file)
 
     reload_conf()
-    return jsonify({"success": True})
+    return success_response(message="API settings updated")
 
 
 @settings_bp.route("/settings/tokens", methods=["GET"])
@@ -607,15 +578,20 @@ def apis_settings_api():
 def get_tokens_api():
     """Get all API tokens"""
     tokens = ApiTokenRepository.get_all()
-    return success_response(data=[{
-        "id": t.id,
-        "name": t.name,
-        "user_id": t.user_id,
-        "user_name": t.user.user if t.user else "Unknown",
-        "created_at": format_datetime(t.created_at),
-        "last_used": format_datetime(t.last_used),
-        "prefix": t.token[:8] + "..."
-    } for t in tokens])
+    return success_response(
+        data=[
+            {
+                "id": t.id,
+                "name": t.name,
+                "user_id": t.user_id,
+                "user_name": t.user.user if t.user else "Unknown",
+                "created_at": format_datetime(t.created_at),
+                "last_used": format_datetime(t.last_used),
+                "prefix": t.token[:8] + "...",
+            }
+            for t in tokens
+        ]
+    )
 
 
 @settings_bp.route("/settings/tokens", methods=["POST"])
@@ -624,27 +600,21 @@ def get_tokens_api():
 def create_token_api():
     """Create a new API token"""
     import secrets
-    
+
     data = request.json
     name = data.get("name")
     user_id = data.get("user_id") or current_user.id
-    
+
     if not name:
         return error_response(message="Name is required")
-        
+
     token_str = secrets.token_hex(32)
-    
-    new_token = ApiTokenRepository.create(
-        user_id=user_id,
-        name=name,
-        token=token_str
+
+    new_token = ApiTokenRepository.create(user_id=user_id, name=name, token=token_str)
+
+    return success_response(
+        data={"token": token_str, "id": new_token.id, "name": new_token.name}, message="Token created"
     )
-    
-    return success_response(data={
-        "token": token_str,
-        "id": new_token.id,
-        "name": new_token.name
-    }, message="Token created")
 
 
 @settings_bp.route("/settings/tokens/<int:id>", methods=["DELETE"])
@@ -656,4 +626,3 @@ def delete_token_api(id):
     if success:
         return success_response(message="Token revoked")
     return not_found_response("Token")
-

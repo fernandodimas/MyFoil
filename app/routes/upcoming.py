@@ -12,7 +12,7 @@ from flask import Blueprint
 from app_services.rating_service import IGDBClient
 from settings import load_settings
 from auth import access_required
-from app.api_responses import (
+from api_responses import (
     success_response,
     error_response,
     handle_api_errors,

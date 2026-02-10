@@ -118,7 +118,7 @@ def tinfoil_error(error):
 
 def trigger_webhook(event_type, data):
     """Disparar webhooks configurados"""
-    from app import app
+    import app
     with app.app_context():
         try:
             webhooks = Webhook.query.filter_by(active=True).all()
@@ -205,7 +205,7 @@ def run_renaming_api():
 
     # Run in background to avoid timeout
     def run_wrapper():
-        from app import app
+        import app
         with app.app_context():
             start_renaming_job(patterns)
 

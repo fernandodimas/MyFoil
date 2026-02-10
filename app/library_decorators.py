@@ -12,7 +12,7 @@ def timed_scan(func):
 
     @functools.wraps(func)
     def wrapper(library_path, *args, **kwargs):
-        from app.metrics import scan_duration_seconds
+        from metrics import scan_duration_seconds
         import os
 
         scan_start = time.time()
@@ -40,7 +40,7 @@ def timed_identification(func):
 
     @functools.wraps(func)
     def wrapper(library_or_filepath, *args, **kwargs):
-        from app.metrics import identification_duration_seconds
+        from metrics import identification_duration_seconds
         import os
 
         identify_start = time.time()

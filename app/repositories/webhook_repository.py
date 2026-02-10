@@ -4,7 +4,7 @@ Phase 3.1: Database refactoring - Separate queries from models
 """
 
 from db import db
-from app.models.webhook import Webhook
+from models.webhook import Webhook
 
 
 class WebhookRepository:

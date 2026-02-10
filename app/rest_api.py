@@ -193,7 +193,7 @@ def init_rest_api(app):
         @access_required("shop")
         def get(self, title_id):
             """Get game details with updates and DLCs"""
-            from app import app_info_api
+            import app_info_api
 
             # Reuse existing logic that returns JSON
             return app_info_api(title_id)
@@ -204,7 +204,7 @@ def init_rest_api(app):
         @access_required("admin")
         def post(self):
             """Trigger a library scan (Async if Celery enabled)"""
-            from app import scan_library_api
+            import scan_library_api
 
             return scan_library_api()
 
@@ -214,7 +214,7 @@ def init_rest_api(app):
         @access_required("shop")
         def get(self):
             """Get current scan and update status"""
-            from app import process_status_api
+            import process_status_api
 
             return process_status_api()
 
@@ -225,7 +225,7 @@ def init_rest_api(app):
         @access_required("admin")
         def delete(self, file_id):
             """Delete a file from disk and database"""
-            from app import delete_file_api
+            import delete_file_api
 
             return delete_file_api(file_id)
 
@@ -236,7 +236,7 @@ def init_rest_api(app):
         @ns_library.marshal_list_with(unidentified_file_model)
         def get(self):
             """List all unidentified files"""
-            from app import get_unidentified_files_api
+            import get_unidentified_files_api
 
             return get_unidentified_files_api().get_json()
 
@@ -256,7 +256,7 @@ def init_rest_api(app):
         @access_required("admin")
         def post(self):
             """Add a new TitleDB source"""
-            from app import titledb_sources_api
+            import titledb_sources_api
 
             return titledb_sources_api()
 
@@ -267,7 +267,7 @@ def init_rest_api(app):
         @access_required("admin")
         def put(self, name):
             """Update an existing TitleDB source"""
-            from app import titledb_sources_api
+            import titledb_sources_api
 
             # Fake request body for direct call if needed or just use current request
             return titledb_sources_api()
@@ -276,7 +276,7 @@ def init_rest_api(app):
         @access_required("admin")
         def delete(self, name):
             """Remove a TitleDB source"""
-            from app import titledb_sources_api
+            import titledb_sources_api
 
             return titledb_sources_api()
 
@@ -286,7 +286,7 @@ def init_rest_api(app):
         @access_required("admin")
         def post(self):
             """Force TitleDB update in background"""
-            from app import force_titledb_update_api
+            import force_titledb_update_api
 
             return force_titledb_update_api()
 

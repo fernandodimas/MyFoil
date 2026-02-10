@@ -31,7 +31,7 @@ import library
 from utils import format_size_py, now_utc
 import json
 
-from app.api_responses import (
+from api_responses import (
     success_response,
     error_response,
     handle_api_errors,
@@ -39,16 +39,16 @@ from app.api_responses import (
     not_found_response,
     paginated_response,
 )
-from app.repositories.titles_repository import TitlesRepository
-from app.repositories.apps_repository import AppsRepository
-from app.repositories.libraries_repository import LibrariesRepository
-from app.repositories.files_repository import FilesRepository
-from app.repositories.wishlistignore_repository import WishlistIgnoreRepository
-from app.repositories.tag_repository import TagRepository
-from app.repositories.titletag_repository import TitleTagRepository
-from app.repositories.wishlist_repository import WishlistRepository
-from app.repositories.titledbcache_repository import TitleDBCacheRepository
-from app.repositories.title_metadata_repository import TitleMetadataRepository
+from repositories.titles_repository import TitlesRepository
+from repositories.apps_repository import AppsRepository
+from repositories.libraries_repository import LibrariesRepository
+from repositories.files_repository import FilesRepository
+from repositories.wishlistignore_repository import WishlistIgnoreRepository
+from repositories.tag_repository import TagRepository
+from repositories.titletag_repository import TitleTagRepository
+from repositories.wishlist_repository import WishlistRepository
+from repositories.titledbcache_repository import TitleDBCacheRepository
+from repositories.title_metadata_repository import TitleMetadataRepository
 
 library_bp = Blueprint("library", __name__, url_prefix="/api")
 

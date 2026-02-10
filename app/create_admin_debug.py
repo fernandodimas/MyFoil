@@ -8,7 +8,7 @@ import logging
 sys.stdout.reconfigure(line_buffering=True)
 
 print("DEBUG: Importing app...")
-from app import app, db
+import app, db
 print("DEBUG: App imported.")
 
 from auth import create_or_update_user, User

@@ -5,7 +5,7 @@ import sqlite3
 # Add current directory to path
 sys.path.append(os.getcwd())
 
-from app import app
+import app
 from db import db, SystemJob, Files
 from utils import now_utc
 

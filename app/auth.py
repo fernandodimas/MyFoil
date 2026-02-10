@@ -6,8 +6,8 @@ from db import db, User, ApiToken, logger
 from flask_login import LoginManager
 from utils import sanitize_sensitive_data
 from constants import BUILD_VERSION
-from app.api_responses import success_response, error_response, handle_api_errors, ErrorCode
-from app.repositories.user_repository import UserRepository
+from api_responses import success_response, error_response, handle_api_errors, ErrorCode
+from repositories.user_repository import UserRepository
 import os
 import logging
 
@@ -229,7 +229,7 @@ def init_users(app):
 @auth_blueprint.route("/login", methods=["GET", "POST"])
 def login():
     # Import here to avoid circular dependency
-    from app import limiter
+    import limiter
 
     # Apply rate limiting: 20 login attempts per minute per IP (Increased for better UX)
     @limiter.limit("20 per minute")

@@ -4,7 +4,7 @@ Phase 3.1: Database refactoring - Separate queries from models
 """
 
 from db import db
-from app.models.titlemetadata import TitleMetadata
+from models.titlemetadata import TitleMetadata
 
 
 class TitleMetadataRepository:

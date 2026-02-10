@@ -20,20 +20,20 @@ from db import (
     joinedload,
     Webhook,
 )
-from app.api_responses import (
+from api_responses import (
     success_response,
     error_response,
     handle_api_errors,
     ErrorCode,
     not_found_response,
 )
-from app.repositories.titles_repository import TitlesRepository
-from app.repositories.files_repository import FilesRepository
-from app.repositories.apps_repository import AppsRepository
-from app.repositories.systemjob_repository import SystemJobRepository
-from app.repositories.activitylog_repository import ActivityLogRepository
-from app.repositories.webhook_repository import WebhookRepository
-from app.repositories.wishlistignore_repository import WishlistIgnoreRepository
+from repositories.titles_repository import TitlesRepository
+from repositories.files_repository import FilesRepository
+from repositories.apps_repository import AppsRepository
+from repositories.systemjob_repository import SystemJobRepository
+from repositories.activitylog_repository import ActivityLogRepository
+from repositories.webhook_repository import WebhookRepository
+from repositories.wishlistignore_repository import WishlistIgnoreRepository
 
 from settings import load_settings
 from auth import access_required, admin_account_created
@@ -1068,7 +1068,7 @@ def add_webhook_api():
         active=data.get("active", True),
     )
 
-    from app import log_activity
+    from db import log_activity
 
     log_activity("webhook_created", details={"url": webhook.url}, user_id=current_user.id)
     return success_response(data=webhook.to_dict(), message="Webhook added successfully")
@@ -1403,7 +1403,7 @@ def cleanup_jobs_api():
 def diagnostic_info():
     """Comprehensive system diagnostic for debugging job tracking issues"""
     from job_tracker import job_tracker
-    from app import socketio
+    import socketio
     import sys
 
     diagnostic = {
@@ -1754,11 +1754,11 @@ def prometheus_metrics():
     - myfoil_system_disk_total_bytes: Total disk space per library
     - myfoil_system_disk_free_bytes: Free disk space per library
     """
-    from app.metrics import get_metrics_export
+    from metrics import get_metrics_export
 
     # Refresh metrics before export
     try:
-        from app.metrics import update_db_metrics, update_library_metrics, update_system_metrics
+        from metrics import update_db_metrics, update_library_metrics, update_system_metrics
 
         update_db_metrics()
         update_library_metrics()
@@ -1812,7 +1812,7 @@ def health_check():
 
     # Check library cache
     try:
-        from app.library import load_library_from_disk
+        from library import load_library_from_disk
 
         cache = load_library_from_disk()
         if cache and "hash" in cache:
@@ -1835,7 +1835,7 @@ def health_check():
 
     # Check metrics
     try:
-        from app.metrics import get_metrics_export
+        from metrics import get_metrics_export
 
         health_status["metrics"] = "enabled"
     except:

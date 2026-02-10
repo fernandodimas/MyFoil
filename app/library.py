@@ -819,7 +819,7 @@ def identify_library_files(library):
                 db.session.rollback()
                 # Toast notification attempting
                 try:
-                    from app import socketio
+                    import socketio
 
                     socketio.emit(
                         "notification",
@@ -1011,7 +1011,7 @@ def add_missing_apps_to_db():
 def trigger_library_update_notification():
     """Helper function to trigger library update notifications (used by Celery tasks)"""
     try:
-        from app import socketio
+        import socketio
         import datetime
 
         socketio.emit("library_updated", {"timestamp": now_utc().isoformat()}, namespace="/")
@@ -1671,7 +1671,7 @@ def generate_library(force=False):
 
     # Emit notification with game count
     try:
-        from app import socketio
+        import socketio
 
         socketio.emit(
             "notification",
@@ -1704,7 +1704,7 @@ def post_library_change():
     import gevent
 
     def _do_post_library_change():
-        from app import app
+        import app
 
         with app.app_context():
             global _LIBRARY_CACHE
@@ -1760,7 +1760,7 @@ def reidentify_all_files_job():
     from job_tracker import job_tracker
     import gevent
     import datetime
-    from app import app
+    import app
     from db import db, Files, Apps
 
     with app.app_context():
