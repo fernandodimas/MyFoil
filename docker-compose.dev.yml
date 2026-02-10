@@ -33,7 +33,7 @@ services:
       - FLASK_ENV=development
       - FLASK_DEBUG=1
       - CONFIG_FILE=/app/config/config.json
-      - MYFOIL_DB=sqlite:////app/data/myfoil.db
+      - DATABASE_URL=postgresql://myfoil:myfoilpassword@192.168.16.250:5432/myfoil
     depends_on:
       redis:
         condition: service_healthy
@@ -60,7 +60,7 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/0
       - CONFIG_FILE=/app/config/config.json
-      - MYFOIL_DB=sqlite:////app/data/myfoil.db
+      - DATABASE_URL=postgresql://myfoil:myfoilpassword@192.168.16.250:5432/myfoil
       - CELERY_REQUIRED=true
     depends_on:
       redis:

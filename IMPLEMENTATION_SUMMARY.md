@@ -20,7 +20,7 @@
 - ✅ Applies migration `b2c3d4e5f9g1_add_composite_indexes_v2.py`
 - ✅ Verifies all 9新 indexes were created successfully
 - ✅ Auto-rollback on failure with restored backup
-- ✅ Supports both SQLite and PostgreSQL
+ - ✅ Migrated to PostgreSQL-only deployment and removed SQLite fallback
 - ✅ Color-coded output for easy readability
 - ✅ Comprehensive error handling
 

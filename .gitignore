@@ -21,8 +21,9 @@ data
 .python-version*.db
 app/config/*.db
 *.db
-*.sqlite
-*.sqlite3
+*.sql
+*.dump
+*.backup
 
 # TitleDB JSON
 titles.json

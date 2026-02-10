@@ -44,28 +44,18 @@ BACKUP_DIR="./backups"
 mkdir -p "$BACKUP_DIR"
 BACKUP_FILE="$BACKUP_DIR/pre_migration_$(date +%Y%m%d_%H%M%S).sql"
 
-# Determine database type
-if [ -n "$DATABASE_URL" ]; then
-    DB_TYPE="postgresql"
-    print_success "Using PostgreSQL database"
-else
-    DB_TYPE="sqlite"
-    print_success "Using SQLite database"
+# PostgreSQL-only
+if [ -z "$DATABASE_URL" ]; then
+    print_error "DATABASE_URL must be set (PostgreSQL only)"
+    exit 1
 fi
 
+print_success "Using PostgreSQL database"
+
 # Create backup
-if [ "$DB_TYPE" == "sqlite" ]; then
-    if [ -f "app.db" ]; then
-        cp app.db "$BACKUP_FILE"
-        print_success "Database backed up to: $BACKUP_FILE"
-    else
-        print_warning "No app.db found - starting with new database"
-        BACKUP_FILE=""
-    fi
-else
-    print_warning "PostgreSQL backup: Please ensure you have a backup mechanism in place"
-    BACKUP_FILE=""
-fi
+print_warning "PostgreSQL backup is not automated by this script"
+print_warning "Recommended: pg_dump --format=custom --file $BACKUP_FILE \"$DATABASE_URL\""
+BACKUP_FILE=""
 
 # Check current migration version
 echo ""
@@ -93,34 +83,11 @@ echo ""
 echo "Step 3: Applying migration b2c3d4e5f9g1 (Composite Indexes)..."
 echo "This will take a few seconds to several minutes depending on database size..."
 
-if [ "$DB_TYPE" == "sqlite" ]; then
-    # Check database file exists
-    if [ ! -f "app.db" ]; then
-        print_error "Database file 'app.db' not found"
-        if [ -n "$BACKUP_FILE" ]; then
-            print_error "Backup created at: $BACKUP_FILE"
-        fi
-        exit 1
-    fi
-fi
-
 # Run migration
 if $FLASK_CMD db upgrade; then
     print_success "Migration applied successfully"
 else
     print_error "Migration failed!"
-    if [ -n "$BACKUP_FILE" ]; then
-        echo ""
-        echo "Attempting to restore from backup..."
-        if [ "$DB_TYPE" == "sqlite" ]; then
-            cp "$BACKUP_FILE" app.db
-            if [ $? -eq 0 ]; then
-                print_success "Database restored from backup"
-            else
-                print_error "Failed to restore from backup"
-            fi
-        fi
-    fi
     exit 1
 fi
 
@@ -128,37 +95,7 @@ fi
 echo ""
 echo "Step 4: Verifying indexes were created..."
 
-if [ "$DB_TYPE" == "sqlite" ]; then
-    echo "Checking SQLite indexes..."
-    EXPECTED_INDEXES=(
-        "idx_files_library_id"
-        "idx_files_identified"
-        "idx_files_size"
-        "idx_titles_up_to_date_have_base"
-        "idx_titles_have_base"
-        "idx_titles_up_to_date"
-        "idx_titles_have_base_added_at"
-        "idx_apps_title_id_owned"
-        "idx_apps_title_id_type_owned"
-    )
-
-    MISSING_INDEXES=()
-    for idx in "${EXPECTED_INDEXES[@]}"; do
-        if sqlite3 app.db "SELECT name FROM sqlite_master WHERE type='index' AND name='$idx';" | grep -q "$idx"; then
-            print_success "Index found: $idx"
-        else
-            print_error "Index missing: $idx"
-            MISSING_INDEXES+=("$idx")
-        fi
-    done
-
-    if [ ${#MISSING_INDEXES[@]} -gt 0 ]; then
-        print_error "Failed to create indexes: ${MISSING_INDEXES[*]}"
-        exit 1
-    fi
-else
-    print_warning "Please verify PostgreSQL indexes manually"
-fi
+print_warning "Please verify PostgreSQL indexes manually"
 
 # Confirm new migration version
 echo ""

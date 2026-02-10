@@ -244,14 +244,10 @@ livenessProbe:
 After running the migration, verify indexes are created:
 
 ```bash
-# Check indexes on Files table
-sqlite3 app.db "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='files' ORDER BY name;"
-
-# Check indexes on Titles table
-sqlite3 app.db "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='titles' ORDER BY name;"
-
-# Check indexes on Apps table
-sqlite3 app.db "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='apps' ORDER BY name;"
+# Check indexes (PostgreSQL)
+psql "$DATABASE_URL" -c "SELECT indexname FROM pg_indexes WHERE schemaname='public' AND tablename='files' ORDER BY indexname;"
+psql "$DATABASE_URL" -c "SELECT indexname FROM pg_indexes WHERE schemaname='public' AND tablename='titles' ORDER BY indexname;"
+psql "$DATABASE_URL" -c "SELECT indexname FROM pg_indexes WHERE schemaname='public' AND tablename='apps' ORDER BY indexname;"
 ```
 
 ### Phase 2.2 - Pagination
@@ -325,7 +321,6 @@ flask db downgrade
 ## Compatibility
 
 ### Database
-- SQLite: ✅ Fully supported
 - PostgreSQL: ✅ Fully supported
 
 ### Flask / SQLAlchemy
@@ -374,7 +369,7 @@ All changes are backward compatible:
 
 - Health check endpoints are designed to work with Kubernetes/Docker health probes
 - Pagination endpoints maintain the same response format for easy frontend adoption
-- Indexes are created with `batch_alter_table` for SQLite compatibility
+  - Indexes are created with `batch_alter_table` for migration compatibility across database backends
 - All new code includes proper docstrings and type hints
 
 ---

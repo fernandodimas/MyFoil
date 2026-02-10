@@ -59,23 +59,6 @@ def create_app_context():
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)
 
-    # Configure SQLite pragmas for worker process
-    from sqlalchemy import event
-    from sqlalchemy.engine import Engine
-
-    @event.listens_for(Engine, "connect")
-    def set_sqlite_pragma(dbapi_connection, connection_record):
-        import sqlite3
-
-        if not isinstance(dbapi_connection, sqlite3.Connection):
-            return
-
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA journal_mode=WAL")
-        cursor.execute("PRAGMA synchronous=NORMAL")
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
     # Initialize job tracker for worker
     from job_tracker import job_tracker
 

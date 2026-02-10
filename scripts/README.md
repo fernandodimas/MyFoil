@@ -109,8 +109,8 @@ bash scripts/deploy_phase_2_1.sh
 flask db current
 # Should show: b2c3d4e5f9g1
 
-# 4. Check indexes
-sqlite3 app.db "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%';"
+# 4. Check indexes (PostgreSQL)
+psql "$DATABASE_URL" -c "SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND indexname LIKE 'idx_%' ORDER BY indexname;"
 ```
 
 ### Test Endpoints

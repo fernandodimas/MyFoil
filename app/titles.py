@@ -3,7 +3,6 @@ import re
 import json
 import time
 import fcntl
-import sqlite3
 import datetime
 from datetime import datetime
 
@@ -13,9 +12,18 @@ except ImportError:
     gevent = None
 
 import titledb
+
 # import titledb_cache_file  # REMOVED: File cache deprecated
 print("DEBUG: titles.py imported", flush=True)
-from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC, TITLEDB_DIR, TITLEDB_DEFAULT_FILES, ALLOWED_EXTENSIONS, CONFIG_DIR
+from constants import (
+    APP_TYPE_BASE,
+    APP_TYPE_UPD,
+    APP_TYPE_DLC,
+    TITLEDB_DIR,
+    TITLEDB_DEFAULT_FILES,
+    ALLOWED_EXTENSIONS,
+    CONFIG_DIR,
+)
 from utils import now_utc, ensure_utc, format_size_py, format_datetime, debounce
 from settings import load_settings, load_keys
 from pathlib import Path
@@ -56,6 +64,7 @@ def format_release_date(date_input):
             try:
                 # Use class name explicitly to be safe
                 from datetime import datetime
+
                 parsed = datetime.strptime(date_str, fmt)
                 return parsed.strftime("%Y-%m-%d")
             except Exception:
@@ -81,6 +90,8 @@ def yield_to_event_loop():
             time.sleep(0.001)
     except Exception:
         pass  # Ignore sleep errors
+
+
 _cnmts_db = None
 _titles_db = None
 _versions_db = None
@@ -162,7 +173,7 @@ def load_titledb_from_db():
             }
             # Populate reverse map
             _dlc_map[dlc_app_id] = base_tid
-            
+
             # Populate optimization index
             if base_tid not in _dlcs_by_base_id:
                 _dlcs_by_base_id[base_tid] = []
@@ -202,40 +213,19 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
         except (BlockingIOError, IOError):
             logger.info("Outro processo já está salvando o TitleDB no cache. Ignorando esta execução.")
             lock_file.close()
-            return True # Not an error, just redundant
+            return True  # Not an error, just redundant
 
         logger.info("Saving TitleDB to database cache...")
 
         now = now_utc()
 
-        # Optimize SQLite for bulk operations
         import time
         from sqlalchemy.exc import OperationalError
-        
-        is_sqlite = "sqlite" in str(db.engine.url)
-        
-        if is_sqlite:
-            logger.info("Applying SQLite optimizations for bulk insert...")
-            try:
-                # Increase cache size to 64MB for faster operations
-                db.session.execute(db.text("PRAGMA cache_size = -64000"))
-                # Store temp tables in memory
-                db.session.execute(db.text("PRAGMA temp_store = MEMORY"))
-                # Use synchronous=OFF during bulk insert (faster, slight risk if crash mid-operation)
-                db.session.execute(db.text("PRAGMA synchronous = OFF"))
-                db.session.commit()
-                logger.info("✅ SQLite optimizations applied")
-            except Exception as e:
-                logger.warning(f"Could not apply all optimizations: {e}")
-                db.session.rollback()
-        
-        # Note: We skip DELETE and rely on INSERT OR REPLACE (upsert pattern)
-        # This is MUCH faster as it avoids exclusive table lock from DELETE
-        logger.info(f"Using UPSERT pattern ({'INSERT OR REPLACE' if is_sqlite else 'ON CONFLICT'})")
-        
+
+        logger.info("Using UPSERT pattern (ON CONFLICT)")
+
         max_retries = 3
         retry_delay = 2
-
 
         # Try to import gevent for cooperative multitasking
         try:
@@ -246,7 +236,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
         # Deduplicate titles just in case (though dict keys should be unique)
         seen_titles = set()
         pending_entries = []
-        BATCH_SIZE = 500  # Reduced from 2000 to minimize SQLite lock duration
+        BATCH_SIZE = 500  # Reduced from 2000 to minimize DB lock duration
 
         logger.info(f"Starting to process {len(_titles_db)} titles in batches of {BATCH_SIZE}...")
         # Iterate and save in chunks to keep memory usage low
@@ -284,31 +274,26 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                             }
                             for e in pending_entries
                         ]
-                        
-                        if is_sqlite:
-                            sql = """
-                                INSERT OR REPLACE INTO titledb_cache (title_id, data, source, downloaded_at, updated_at)
-                                VALUES (:title_id, :data, :source, :downloaded_at, :updated_at)
-                            """
-                        else:
-                            # PostgreSQL UPSERT syntax
-                            sql = """
-                                INSERT INTO titledb_cache (title_id, data, source, downloaded_at, updated_at)
-                                VALUES (:title_id, :data, :source, :downloaded_at, :updated_at)
-                                ON CONFLICT (title_id) DO UPDATE SET
-                                data = EXCLUDED.data,
-                                source = EXCLUDED.source,
-                                downloaded_at = EXCLUDED.downloaded_at,
-                                updated_at = EXCLUDED.updated_at
-                            """
+
+                        sql = """
+                            INSERT INTO titledb_cache (title_id, data, source, downloaded_at, updated_at)
+                            VALUES (:title_id, :data, :source, :downloaded_at, :updated_at)
+                            ON CONFLICT (title_id) DO UPDATE SET
+                            data = EXCLUDED.data,
+                            source = EXCLUDED.source,
+                            downloaded_at = EXCLUDED.downloaded_at,
+                            updated_at = EXCLUDED.updated_at
+                        """
 
                         db.session.execute(db.text(sql), mappings)
                         db.session.commit()
                         break
                     except OperationalError as e:
                         if "locked" in str(e).lower() and attempt < max_retries - 1:
-                            wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
-                            logger.warning(f"DB locked during bulk save (attempt {attempt+1}/{max_retries}). Retrying in {wait_time}s...")
+                            wait_time = retry_delay * (2**attempt)  # Exponential backoff
+                            logger.warning(
+                                f"DB locked during bulk save (attempt {attempt + 1}/{max_retries}). Retrying in {wait_time}s..."
+                            )
                             db.session.rollback()
                             time.sleep(wait_time)
                             continue
@@ -318,7 +303,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                         db.session.rollback()
                         raise
                 pending_entries = []  # Release memory
-                
+
                 # Progress update if possible
                 if progress_callback:
                     prog = 81 + int((i / len(_titles_db)) * 10)
@@ -335,38 +320,33 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                 try:
                     mappings = [
                         {
-                                "title_id": e.title_id,
-                                "data": json.dumps(e.data),
-                                "source": e.source,
-                                "downloaded_at": e.downloaded_at,
-                                "updated_at": e.updated_at,
+                            "title_id": e.title_id,
+                            "data": json.dumps(e.data),
+                            "source": e.source,
+                            "downloaded_at": e.downloaded_at,
+                            "updated_at": e.updated_at,
                         }
                         for e in pending_entries
                     ]
-                    if is_sqlite:
-                        sql = """
-                            INSERT OR REPLACE INTO titledb_cache (title_id, data, source, downloaded_at, updated_at)
-                            VALUES (:title_id, :data, :source, :downloaded_at, :updated_at)
-                        """
-                    else:
-                        # PostgreSQL UPSERT syntax
-                        sql = """
-                            INSERT INTO titledb_cache (title_id, data, source, downloaded_at, updated_at)
-                            VALUES (:title_id, :data, :source, :downloaded_at, :updated_at)
-                            ON CONFLICT (title_id) DO UPDATE SET
-                            data = EXCLUDED.data,
-                            source = EXCLUDED.source,
-                            downloaded_at = EXCLUDED.downloaded_at,
-                            updated_at = EXCLUDED.updated_at
-                        """
-                    
+                    sql = """
+                        INSERT INTO titledb_cache (title_id, data, source, downloaded_at, updated_at)
+                        VALUES (:title_id, :data, :source, :downloaded_at, :updated_at)
+                        ON CONFLICT (title_id) DO UPDATE SET
+                        data = EXCLUDED.data,
+                        source = EXCLUDED.source,
+                        downloaded_at = EXCLUDED.downloaded_at,
+                        updated_at = EXCLUDED.updated_at
+                    """
+
                     db.session.execute(db.text(sql), mappings)
                     db.session.commit()
                     break
                 except OperationalError as e:
                     if "locked" in str(e).lower() and attempt < max_retries - 1:
-                        wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
-                        logger.warning(f"DB locked during final bulk save (attempt {attempt+1}/{max_retries}). Retrying in {wait_time}s...")
+                        wait_time = retry_delay * (2**attempt)  # Exponential backoff
+                        logger.warning(
+                            f"DB locked during final bulk save (attempt {attempt + 1}/{max_retries}). Retrying in {wait_time}s..."
+                        )
                         db.session.rollback()
                         time.sleep(wait_time)
                         continue
@@ -410,7 +390,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                                 break
                             except OperationalError as e:
                                 if "locked" in str(e).lower() and attempt < max_retries - 1:
-                                    logger.warning(f"DB locked during versions bulk save (attempt {attempt+1})...")
+                                    logger.warning(f"DB locked during versions bulk save (attempt {attempt + 1})...")
                                     db.session.rollback()
                                     time.sleep(retry_delay)
                                     continue
@@ -429,7 +409,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                     break
                 except OperationalError as e:
                     if "locked" in str(e).lower() and attempt < max_retries - 1:
-                        logger.warning(f"DB locked during final versions bulk save (attempt {attempt+1})...")
+                        logger.warning(f"DB locked during final versions bulk save (attempt {attempt + 1})...")
                         db.session.rollback()
                         time.sleep(retry_delay)
                         continue
@@ -465,7 +445,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                             break
                         except OperationalError as e:
                             if "locked" in str(e).lower() and attempt < max_retries - 1:
-                                logger.warning(f"DB locked during DLC bulk save (attempt {attempt+1})...")
+                                logger.warning(f"DB locked during DLC bulk save (attempt {attempt + 1})...")
                                 db.session.rollback()
                                 time.sleep(retry_delay)
                                 continue
@@ -483,7 +463,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                     break
                 except OperationalError as e:
                     if "locked" in str(e).lower() and attempt < max_retries - 1:
-                        logger.warning(f"DB locked during final DLC bulk save (attempt {attempt+1})...")
+                        logger.warning(f"DB locked during final DLC bulk save (attempt {attempt + 1})...")
                         db.session.rollback()
                         time.sleep(retry_delay)
                         continue
@@ -495,16 +475,15 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
 
         _titledb_cache_timestamp = time.time()  # Use time.time() for cache TTL comparison
         logger.info(f"TitleDB saved to DB cache: {title_count} titles, {version_count} versions, {dlc_count} DLCs")
-        
+
         # ALSO save to file cache for fast loading
         try:
             logger.info("Saving TitleDB to file cache...")
             titledb_cache_file.save_titledb_to_file(_titles_db, _versions_db, _cnmts_db)
         except Exception as file_err:
             logger.warning(f"Could not save to file cache (non-fatal): {file_err}")
-        
-        return True
 
+        return True
 
     except Exception as e:
         logger.error(f"Error saving TitleDB to cache: {e}")
@@ -557,20 +536,20 @@ def robust_json_load(filepath):
         # Check if clean file is newer than source file
         if os.path.getmtime(clean_filepath) >= os.path.getmtime(filepath):
             try:
-                with open(clean_filepath, 'r', encoding='utf-8') as f:
+                with open(clean_filepath, "r", encoding="utf-8") as f:
                     return json.load(f)
             except Exception as e:
                 logger.warning(f"Failed to load cached clean file {clean_filepath}: {e}")
                 # Fall through to process original file
-    
+
     # Try 0: Fast load first (Native JSON parser is much faster)
     try:
         filesize = os.path.getsize(filepath)
         # Increase limit for fast load to avoid unnecessary sanitization for valid big files
-        if filesize < 500 * 1024 * 1024: 
-            with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
+        if filesize < 500 * 1024 * 1024:
+            with open(filepath, "r", encoding="utf-8", errors="replace") as f:
                 data = json.load(f)
-                
+
                 # Create clean marker for valid files too
                 # This prevents re-parsing logic checks next time if we wanted to
                 # But mostly we use .clean for files that NEEDED sanitization.
@@ -581,20 +560,21 @@ def robust_json_load(filepath):
         # This is the most common issue in TitleDB JSONs (bare backslashes)
         logger.warning(f"Fast JSON load failed for {os.path.basename(filepath)}: {e}. Attempting regex sanitization...")
         try:
-            with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
+            with open(filepath, "r", encoding="utf-8", errors="replace") as f:
                 content = f.read()
-            
+
             # Pattern to match a valid escape sequence OR a bare backslash
             # Group 1 captures valid escapes, Group 3 captures bare backslashes
             import re
+
             pattern = re.compile(r"(\\([\"\\/bfnrt]|u[0-9a-fA-F]{4}))|(\\)")
-            
+
             def replace_func(m):
                 return m.group(1) if m.group(1) else r"\\"
-            
+
             # Correct only bare backslashes
             content = pattern.sub(replace_func, content)
-            
+
             # Try loading again with strict=False
             data = json.loads(content, strict=False)
             if data:
@@ -602,9 +582,9 @@ def robust_json_load(filepath):
                 # We don't overwrite the original to avoid conflict with downloaders or re-downloads
                 logger.info(f"Sanitized {os.path.basename(filepath)} successfully. Saving to cache...")
                 try:
-                    with open(clean_filepath, 'w', encoding='utf-8') as f:
+                    with open(clean_filepath, "w", encoding="utf-8") as f:
                         json.dump(data, f)  # Removed indent to save space and I/O time
-                    
+
                     # Update mtime of clean file to be definitely newer than source
                     # (in case everything happened in the same second)
                     now = time.time()
@@ -624,6 +604,7 @@ def robust_json_load(filepath):
 
             try:
                 from large_json_sanitizer import sanitize_large_json_file
+
                 sanitized = sanitize_large_json_file(filepath)
 
                 if sanitized and len(sanitized) > 0:
@@ -631,7 +612,7 @@ def robust_json_load(filepath):
                     # AUTO-REPAIR: Save the recovered blocks back to disk as a clean JSON
                     logger.info(f"Auto-repairing {os.path.basename(filepath)} with recovered blocks...")
                     try:
-                        with open(filepath, 'w', encoding='utf-8') as f:
+                        with open(filepath, "w", encoding="utf-8") as f:
                             json.dump(sanitized, f)  # Removed indent to save space and I/O time
                     except Exception as save_err:
                         logger.warning(f"Failed to save auto-repaired JSON after stream recovery: {save_err}")
@@ -657,13 +638,13 @@ def getDirsAndFiles(path):
     try:
         # Avoid blocking the event loop for too long
         if gevent:
-            gevent.sleep(0.001) 
-        
+            gevent.sleep(0.001)
+
         with os.scandir(path) as it:
             for i, entry in enumerate(it):
                 if gevent and i % 50 == 0:
                     gevent.sleep(0.001)
-                
+
                 if entry.name == ".DS_Store":
                     try:
                         os.remove(entry.path)
@@ -674,7 +655,7 @@ def getDirsAndFiles(path):
 
                 if entry.name.startswith("._"):
                     continue
-                
+
                 if entry.is_dir(follow_symlinks=False):
                     fullPath = entry.path
                     allDirs.append(fullPath)
@@ -706,17 +687,17 @@ def get_title_id_from_app_id(app_id, app_type):
     Switch IDs use a 16-char hex format.
     Standard: [TitleID 13 hex] [Suffix 3 hex]
     Suffix: 000=Base, 800=Update, 001-7FF=DLC
-    
+
     Heuristic: Most DLCs share the same 13-hex prefix as the Base game.
     However, some publishers use an offset (usually the 13th digit).
     If the 13th digit is ODD, the base game often has that digit as (digit - 1).
     """
     app_id = app_id.upper()
     prefix = app_id[:-3]
-    
+
     # 1. Check Standard Heuristic (Prefix + 000)
     std_id = prefix + "000"
-    
+
     # 2. Check Even/Odd Heuristic (Only if it might be an offset)
     # The 13th character is prefix[-1]
     char_13 = prefix[-1]
@@ -726,7 +707,7 @@ def get_title_id_from_app_id(app_id, app_type):
         if (app_type == APP_TYPE_DLC or app_type == APP_TYPE_UPD) and (val % 2 != 0):
             even_char = hex(val - 1)[2:].upper()
             even_id = prefix[:-1] + even_char + "000"
-            
+
             # If we have TitleDB loaded, we can verify which one is a valid Base Title
             global _titles_db
             if _titles_db:
@@ -736,7 +717,7 @@ def get_title_id_from_app_id(app_id, app_type):
                 # If even_id exists but std_id doesn't, even_id is ALMOST CERTAINLY the parent
                 if even_id.lower() in _titles_db:
                     return even_id
-            
+
             # Default fallback for odd DLC: the even parent is much more common than a phantom odd parent
             return even_id
     except:
@@ -871,7 +852,7 @@ def load_titledb(force=False, progress_callback=None):
     logger.info("Loading TitleDB from database...")
     if progress_callback:
         progress_callback("Carregando banco de dados de títulos...", 10)
-    
+
     if load_titledb_from_db():
         _titles_db_loaded = True
         logger.info(f"TitleDB loaded successfully from DB.")
@@ -883,11 +864,17 @@ def load_titledb(force=False, progress_callback=None):
     else:
         logger.warning("Failed to load TitleDB from database (or empty).")
         # Ensure we have empty dicts at least
-        if _titles_db is None: _titles_db = {}
-        if _versions_db is None: _versions_db = {}
-        if _cnmts_db is None: _cnmts_db = {}
-        if _dlc_map is None: _dlc_map = {}
-        _titles_db_loaded = True # Mark as loaded even if empty to prevent retries loop
+        if _titles_db is None:
+            _titles_db = {}
+        if _versions_db is None:
+            _versions_db = {}
+        if _cnmts_db is None:
+            _cnmts_db = {}
+        if _dlc_map is None:
+            _dlc_map = {}
+        _titles_db_loaded = True  # Mark as loaded even if empty to prevent retries loop
+
+
 def unload_titledb():
     global _cnmts_db
     global _titles_db
@@ -980,11 +967,11 @@ def identify_file_from_cnmt(filepath):
 
 def identify_file(filepath):
     filename = os.path.split(filepath)[-1]
-    
+
     # Debug Logging
     db_size = len(_titles_db) if _titles_db else 0
     logger.info(f"Identifying '{filename}'... (Keys loaded: {Keys.keys_loaded}, TitleDB: {db_size} titles)")
-    
+
     contents = []
     success = True
     error = ""
@@ -1008,7 +995,9 @@ def identify_file(filepath):
                         title_id = app_id
                     contents.append((title_id, app_type, app_id, version))
         except Exception as e:
-            logger.warning(f"Could not identify file {filepath} from metadata (this is common if keys are missing): {e}")
+            logger.warning(
+                f"Could not identify file {filepath} from metadata (this is common if keys are missing): {e}"
+            )
             error = str(e)
             success = False
 
@@ -1054,18 +1043,18 @@ def identify_file(filepath):
                 }
             ]
             identification = "filename"
-            success = True  
-            error = "" # Success in fallback should clear the error
+            success = True
+            error = ""  # Success in fallback should clear the error
 
     # Final cleanup of the error string if we found something
     if contents and success:
         error = ""
-        
+
     # Extract suggested name from filename (part before first bracket)
     suggested_name = None
     if contents and success:
         # "Game Name [ID][v0].nsp" -> "Game Name"
-        name_part = filename.split('[')[0].strip()
+        name_part = filename.split("[")[0].strip()
         if name_part and name_part != filename:
             suggested_name = name_part
 
@@ -1083,7 +1072,7 @@ def get_game_info(title_id, silent=False):
         return None
 
     search_id = str(title_id).upper()
-    
+
     # 0. Check Cache
     if search_id in _game_info_cache:
         return _game_info_cache[search_id]
@@ -1119,24 +1108,29 @@ def get_game_info(title_id, silent=False):
         if not info:
             search_id_upper = search_id.upper()
             for data in _titles_db.values():
-                if not isinstance(data, dict): continue
+                if not isinstance(data, dict):
+                    continue
                 if str(data.get("id", "")).upper() == search_id_upper:
                     info = data
                     break
-        
+
         if info and isinstance(info, dict):
-            res.update({
-                "name": info.get("name") or res["name"],
-                "bannerUrl": info.get("bannerUrl") or info.get("banner_url") or "",
-                "iconUrl": info.get("iconUrl") or info.get("icon_url") or "",
-                "category": info.get("category", []) if isinstance(info.get("category"), list) else ([info.get("category")] if info.get("category") else []),
-                "release_date": format_release_date(info.get("releaseDate") or info.get("release_date")),
-                "size": info.get("size") or 0,
-                "publisher": info.get("publisher") or "Nintendo",
-                "description": info.get("description") or "",
-                "nsuid": info.get("nsuid") or info.get("nsuId") or "",
-                "screenshots": info.get("screenshots") or [],
-            })
+            res.update(
+                {
+                    "name": info.get("name") or res["name"],
+                    "bannerUrl": info.get("bannerUrl") or info.get("banner_url") or "",
+                    "iconUrl": info.get("iconUrl") or info.get("icon_url") or "",
+                    "category": info.get("category", [])
+                    if isinstance(info.get("category"), list)
+                    else ([info.get("category")] if info.get("category") else []),
+                    "release_date": format_release_date(info.get("releaseDate") or info.get("release_date")),
+                    "size": info.get("size") or 0,
+                    "publisher": info.get("publisher") or "Nintendo",
+                    "description": info.get("description") or "",
+                    "nsuid": info.get("nsuid") or info.get("nsuId") or "",
+                    "screenshots": info.get("screenshots") or [],
+                }
+            )
 
     # 2. Overwrite/Merge with Database info (Customizations/Suggested names)
     try:
@@ -1145,26 +1139,34 @@ def get_game_info(title_id, silent=False):
             # Only override name if it's custom or if we don't have a good TitleDB name
             if db_title.is_custom or (db_title.name and ("Unknown" in res["name"] or not info)):
                 res["name"] = db_title.name
-            
+
             # Icons and banners (Merge strategy: DB takes priority if present)
-            if db_title.icon_url: res["iconUrl"] = db_title.icon_url
-            if db_title.banner_url: res["bannerUrl"] = db_title.banner_url
-            
+            if db_title.icon_url:
+                res["iconUrl"] = db_title.icon_url
+            if db_title.banner_url:
+                res["bannerUrl"] = db_title.banner_url
+
             # Other fields
-            if db_title.description: res["description"] = db_title.description
-            if db_title.publisher: res["publisher"] = db_title.publisher
-            if db_title.release_date: res["release_date"] = format_release_date(db_title.release_date)
-            if db_title.size: res["size"] = db_title.size
-            if db_title.nsuid: res["nsuid"] = db_title.nsuid
-            if db_title.category: res["category"] = db_title.category.split(",")
+            if db_title.description:
+                res["description"] = db_title.description
+            if db_title.publisher:
+                res["publisher"] = db_title.publisher
+            if db_title.release_date:
+                res["release_date"] = format_release_date(db_title.release_date)
+            if db_title.size:
+                res["size"] = db_title.size
+            if db_title.nsuid:
+                res["nsuid"] = db_title.nsuid
+            if db_title.category:
+                res["category"] = db_title.category.split(",")
             res["is_custom"] = db_title.is_custom or False
-            
+
     except Exception as e:
         if not silent:
             logger.error(f"Error merging database info for {search_id}: {e}")
 
     # 3. Final Heuristics & Fallbacks
-    
+
     # DLC/Update Icon Fallback: Only if icon is strictly missing
     if not res["iconUrl"] and not search_id.endswith("000"):
         possible_base_ids = [search_id[:-3] + "000"]
@@ -1172,10 +1174,12 @@ def get_game_info(title_id, silent=False):
             prefix = search_id[:-3]
             base_prefix = hex(int(prefix, 16) - 1)[2:].upper().rjust(13, "0")
             possible_base_ids.append(base_prefix + "000")
-        except: pass
+        except:
+            pass
 
         for bid in possible_base_ids:
-            if bid == search_id: continue
+            if bid == search_id:
+                continue
             base_info = get_game_info(bid, silent=True)
             if base_info and base_info.get("iconUrl") and not base_info["name"].startswith("Unknown"):
                 res["iconUrl"] = base_info["iconUrl"]
@@ -1189,7 +1193,13 @@ def get_game_info(title_id, silent=False):
     # Sanitize name
     name = res.get("name")
     if name:
-        for r in [" – Nintendo Switch™ 2 Edition", " - Nintendo Switch™ 2 Edition", " – Nintendo Switch 2 Edition", " - Nintendo Switch 2 Edition", " Nintendo Switch 2 Edition"]:
+        for r in [
+            " – Nintendo Switch™ 2 Edition",
+            " - Nintendo Switch™ 2 Edition",
+            " – Nintendo Switch 2 Edition",
+            " - Nintendo Switch 2 Edition",
+            " Nintendo Switch 2 Edition",
+        ]:
             name = name.replace(r, "")
         res["name"] = name.strip()
 
@@ -1289,9 +1299,9 @@ def get_all_existing_dlc(title_id):
 
     if not title_id:
         return []
-        
+
     title_id = title_id.lower()
-    
+
     # Priority 1: Use optimization index if available
     if _dlcs_by_base_id and title_id in _dlcs_by_base_id:
         return _dlcs_by_base_id[title_id]
@@ -1316,21 +1326,26 @@ def get_loaded_titles_file():
     """Return the currently loaded titles filename(s) from Database"""
     try:
         from db import TitleDBCache, db
+
         # Get distinct sources
-        with db.session.no_autoflush: 
-             # Use distinct to get unique source filenames
-             sources = db.session.query(TitleDBCache.source).distinct().all()
-        
+        with db.session.no_autoflush:
+            # Use distinct to get unique source filenames
+            sources = db.session.query(TitleDBCache.source).distinct().all()
+
         source_names = [s[0] for s in sources if s[0]]
-        
+
         if not source_names:
             return "Database (Empty)"
-            
+
         # Filter out common base files to show regional interest
-        regional = [s for s in source_names if "titles" not in s and "versions" not in s and "cnmts" not in s and "languages" not in s]
+        regional = [
+            s
+            for s in source_names
+            if "titles" not in s and "versions" not in s and "cnmts" not in s and "languages" not in s
+        ]
         if regional:
-             return ", ".join(sorted(regional))
-             
+            return ", ".join(sorted(regional))
+
         return ", ".join(sorted(source_names))
     except Exception as e:
         logger.warning(f"Error getting loaded titles file: {e}")
@@ -1339,12 +1354,13 @@ def get_loaded_titles_file():
 
 def get_custom_title_info(title_id):
     """Retrieve custom info for a specific TitleID from custom.json"""
-    if not title_id: return None
+    if not title_id:
+        return None
     try:
         custom_path = os.path.join(TITLEDB_DIR, "custom.json")
         if not os.path.exists(custom_path):
             return None
-            
+
         custom_db = robust_json_load(custom_path) or {}
         return custom_db.get(str(title_id).upper())
     except Exception as e:
@@ -1365,7 +1381,7 @@ def search_titledb_by_name(query):
     for tid, data in _titles_db.items():
         if not isinstance(data, dict):
             continue
-            
+
         name = data.get("name", "")
         if name and query in name.lower():
             results.append(
@@ -1411,7 +1427,8 @@ def save_custom_title_info(title_id, data):
 
         # Helper to safely update field if present in data
         def update_field(field_name, attr_name=None):
-            if not attr_name: attr_name = field_name
+            if not attr_name:
+                attr_name = field_name
             if field_name in data and data[field_name] is not None:
                 setattr(db_title, attr_name, data[field_name])
 
@@ -1421,7 +1438,7 @@ def save_custom_title_info(title_id, data):
         update_field("iconUrl", "icon_url")
         update_field("bannerUrl", "banner_url")
         update_field("nsuid")
-        
+
         if "size" in data:
             try:
                 db_title.size = int(data["size"])
@@ -1440,14 +1457,14 @@ def save_custom_title_info(title_id, data):
         rel_date = data.get("releaseDate") or data.get("release_date")
         if rel_date:
             db_title.release_date = str(rel_date)
-            
+
         db_title.is_custom = True
         db.session.commit()
         logger.info(f"Saved custom info to database for {title_id}")
     except Exception as e:
         logger.error(f"Error saving custom info to DB for {title_id}: {e}")
         db.session.rollback()
-        # Continue to JSON save even if DB fails, or vice versa? 
+        # Continue to JSON save even if DB fails, or vice versa?
         # For now, let's continue to be robust.
 
     # 2. Legacy Support: Update custom.json
@@ -1462,7 +1479,7 @@ def save_custom_title_info(title_id, data):
             save_data["category"] = save_data.pop("genre")
         if "release_date" in save_data and "releaseDate" not in save_data:
             save_data["releaseDate"] = save_data.pop("release_date")
-        
+
         save_data["id"] = title_id
 
         if title_id in custom_db and isinstance(custom_db[title_id], dict):
@@ -1529,10 +1546,10 @@ def sync_titles_to_db(force=False):
         for tid, title in db_titles_map.items():
             if tid in _titles_db:
                 tdb_info = _titles_db[tid]
-                
+
                 if not isinstance(tdb_info, dict):
                     continue
-                
+
                 # Only update if NOT custom
                 if not title.is_custom:
                     # Simple helper to avoid overwriting with None or empty
@@ -1543,11 +1560,11 @@ def sync_titles_to_db(force=False):
                     set_if_not_empty(title, "name", tdb_info.get("name"))
                     set_if_not_empty(title, "description", tdb_info.get("description"))
                     set_if_not_empty(title, "publisher", tdb_info.get("publisher"))
-                    
+
                     # Visuals - Try both camelCase (blawar) and snake_case (standard JSONs)
                     icon = tdb_info.get("iconUrl") or tdb_info.get("icon_url")
                     set_if_not_empty(title, "icon_url", icon)
-                    
+
                     banner = tdb_info.get("bannerUrl") or tdb_info.get("banner_url")
                     set_if_not_empty(title, "banner_url", banner)
 
@@ -1558,10 +1575,10 @@ def sync_titles_to_db(force=False):
                     # Date - Try both
                     release = tdb_info.get("releaseDate") or tdb_info.get("release_date")
                     set_if_not_empty(title, "release_date", release)
-                    
+
                     if tdb_info.get("size"):
                         title.size = tdb_info.get("size")
-                        
+
                     # Support both nsuid and nsuId
                     nsuid_val = tdb_info.get("nsuid") or tdb_info.get("nsuId")
                     if nsuid_val:
@@ -1571,9 +1588,9 @@ def sync_titles_to_db(force=False):
                     ss = tdb_info.get("screenshots")
                     if ss and isinstance(ss, list):
                         title.screenshots_json = ss
-                    
+
                     updated_count += 1
-                
+
                 # Periodic yield for safety
                 if updated_count % 500 == 0:
                     yield_to_event_loop()

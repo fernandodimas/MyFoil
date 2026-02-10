@@ -80,22 +80,6 @@ def log_activity(action_type, title_id=None, user_id=None, **details):
 
 def init_db(app):
     with app.app_context():
-        # Ensure foreign keys, WAL mode, and timeout are set when connection is opened
-        @event.listens_for(db.engine, "connect")
-        def set_sqlite_pragma(dbapi_connection, connection_record):
-            import sqlite3
-
-            if not isinstance(dbapi_connection, sqlite3.Connection):
-                return
-
-            cursor = dbapi_connection.cursor()
-            cursor.execute("PRAGMA foreign_keys=ON;")
-            # Enable WAL mode for better concurrent access
-            cursor.execute("PRAGMA journal_mode=WAL;")
-            # Increase timeout to 30 seconds to handle contention
-            cursor.execute("PRAGMA busy_timeout=30000;")
-            cursor.close()
-
         # create or migrate database
         if "db" not in sys.argv:
             from sqlalchemy import inspect

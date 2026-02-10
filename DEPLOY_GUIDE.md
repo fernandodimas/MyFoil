@@ -55,8 +55,8 @@ flask db upgrade
 # Verify indexes were created
 flask db heads
 
-# For SQLite, verify with:
-sqlite3 app.db "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name IN ('files', 'titles', 'apps') ORDER BY name;"
+# Verify indexes (PostgreSQL)
+psql "$DATABASE_URL" -c "SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND tablename IN ('files','titles','apps') ORDER BY indexname;"
 ```
 
 Expected indexes:
@@ -300,19 +300,12 @@ docker logs -f myfoil-worker | grep "SCAN_ALL_LIBRARIES"
 
 ### 5.3 Verify Database Indexes
 
-```sqlite
+```bash
 # Inside container
 docker exec -it myfoil bash
-sqlite3 app.db
 
 # Check indexes
-SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%' ORDER BY name;
-
-# Check index usage
-SELECT * FROM pragma_index_info('idx_files_library_id');
-
-# Exit
-.exit
+psql "$DATABASE_URL" -c "SELECT indexname FROM pg_indexes WHERE schemaname='public' AND indexname LIKE 'idx_%' ORDER BY indexname;"
 ```
 
 ---
@@ -365,7 +358,7 @@ Attempting to restore from backup...
 **Solutions**:
 1. Check disk space: `df -h`
 2. Check database file permissions: `ls -la app.db`
-3. Check SQLite version: `sqlite3 --version`
+3. Check PostgreSQL client: `psql --version`
 4. Try manual upgrade: `flask db upgrade -v debug`
 
 ### Issue 2: Indexes not created

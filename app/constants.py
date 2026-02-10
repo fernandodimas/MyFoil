@@ -18,10 +18,10 @@ TITLEDB_DEFAULT_FILES = [
     "languages.json",
 ]
 
-MYFOIL_DB = os.environ.get("DATABASE_URL", f"sqlite:///{os.path.join(DATA_DIR, 'myfoil.db')}")
+MYFOIL_DB = os.environ.get("DATABASE_URL")
 
 
-BUILD_VERSION = '20260210_1509'
+BUILD_VERSION = '20260210_1735'
 
 DEFAULT_SETTINGS = {
     "library": {

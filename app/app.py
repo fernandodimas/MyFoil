@@ -47,8 +47,7 @@ import db as db_module
 from i18n import I18n
 import titles
 import titledb
-from sqlalchemy import event
-from sqlalchemy.engine import Engine
+
 from rest_api import init_rest_api
 import structlog
 from metrics import init_metrics
@@ -241,22 +240,6 @@ logging.getLogger("werkzeug").addFilter(FilterRemoveDateFromWerkzeugLogs())
 logging.getLogger("alembic.runtime.migration").setLevel(logging.WARNING)
 
 
-@event.listens_for(Engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    """Configure SQLite pragmas for better performance and concurrency"""
-    import sqlite3
-
-    if not isinstance(dbapi_connection, sqlite3.Connection):
-        return
-
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.execute("PRAGMA synchronous=NORMAL")
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.execute("PRAGMA busy_timeout=180000")  # 3 minutes timeout for locked DB (increased from 60s)
-    cursor.close()
-
-
 # ===== LEGACY FUNCTIONS - TO BE REFACTORED =====
 # These functions are kept for backward compatibility
 # They should be moved to appropriate service modules in the future
@@ -393,7 +376,7 @@ def update_titledb_job(force=False):
             # titles.load_titledb will call progress_cb
             titles.load_titledb(force=True, progress_callback=progress_cb)
 
-            # Step 3: Sync to SQLite (The title data itself)
+            # Step 3: Sync to database metadata (PostgreSQL)
             job_tracker.update_progress(job_id, 5, 10, "Syncing database metadata...")
             add_missing_apps_to_db()
             update_titles()

@@ -62,8 +62,9 @@ logs/
 
 # Database (should be in volumes)
 *.db
-*.sqlite
-*.sqlite3
+*.sql
+*.dump
+*.backup
 
 # Temporary files
 tmp/
