@@ -3,6 +3,7 @@ System Routes - Endpoints relacionados ao sistema (stats, backups, etc.)
 """
 
 from flask import Blueprint, render_template, request, jsonify, Response, send_from_directory
+import socket
 from flask_login import current_user
 from sqlalchemy import text
 from db import (
@@ -56,101 +57,101 @@ def health_check_api():
     import socket
 
 
-try:
-    import psutil
-
-    psutil_available = True
-except ImportError:
-    psutil_available = False
-
-start_time = now_utc()
-overall_status = "healthy"
-checks = {
-    "timestamp": start_time.isoformat(),
-    "version": BUILD_VERSION,
-    "hostname": socket.gethostname(),
-    "database": "unknown",
-    "redis": "unknown",
-    "celery": "unknown" if os.environ.get("CELERY_ENABLED", "").lower() != "true" else "checking",
-    "filewatcher": "unknown",
-}
-
-# Disk and memory
-if psutil_available:
     try:
-        disk = psutil.disk_usage("/")
-        checks["disk_free_gb"] = round(disk.free / (1024**3), 2)
-        checks["disk_percent"] = disk.percent
-        mem = psutil.virtual_memory()
-        checks["memory_used_gb"] = round(mem.used / (1024**3), 2)
-        checks["memory_percent"] = mem.percent
-    except Exception as e:
-        checks["psutil"] = f"error: {str(e)}"
-
-    # Check Database connection
-    try:
-        from sqlalchemy import text
-
-        db.session.execute(text("SELECT 1"))
-        checks["database"] = "ok"
-    except Exception as e:
-        checks["database"] = f"error: {str(e)}"
-        overall_status = "unhealthy"
-
-    # Check Redis connection (if configured)
-    try:
-        redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-        r = redis.from_url(redis_url)
-        r.ping()
-        checks["redis"] = "ok"
-    except Exception as e:
-        if "CELERY_REQUIRED" in os.environ and os.environ["CELERY_REQUIRED"].lower() == "true":
-            # If Redis is required and not available, mark as degraded/unhealthy
-            checks["redis"] = f"error: {str(e)}"
-            overall_status = "degraded" if overall_status == "healthy" else "unhealthy"
-        else:
-            # Redis is optional
-            checks["redis"] = "not_configured"
-
-    # Check Celery workers (if enabled)
-    try:
-        if os.environ.get("CELERY_ENABLED", "").lower() == "true":
-            from celery_app import celery as celery_app_
-
-            # Ping workers
-            inspect = celery_app_.control.inspect()
-            active = inspect.ping()
-            if active:
-                checks["celery"] = f"ok ({len(active)} workers)"
-            else:
-                checks["celery"] = "no_active_workers"
+        import psutil
+    
+        psutil_available = True
+    except ImportError:
+        psutil_available = False
+    
+    start_time = now_utc()
+    overall_status = "healthy"
+    checks = {
+        "timestamp": start_time.isoformat(),
+        "version": BUILD_VERSION,
+        "hostname": socket.gethostname(),
+        "database": "unknown",
+        "redis": "unknown",
+        "celery": "unknown" if os.environ.get("CELERY_ENABLED", "").lower() != "true" else "checking",
+        "filewatcher": "unknown",
+    }
+    
+    # Disk and memory
+    if psutil_available:
+        try:
+            disk = psutil.disk_usage("/")
+            checks["disk_free_gb"] = round(disk.free / (1024**3), 2)
+            checks["disk_percent"] = disk.percent
+            mem = psutil.virtual_memory()
+            checks["memory_used_gb"] = round(mem.used / (1024**3), 2)
+            checks["memory_percent"] = mem.percent
+        except Exception as e:
+            checks["psutil"] = f"error: {str(e)}"
+    
+        # Check Database connection
+        try:
+            from sqlalchemy import text
+    
+            db.session.execute(text("SELECT 1"))
+            checks["database"] = "ok"
+        except Exception as e:
+            checks["database"] = f"error: {str(e)}"
+            overall_status = "unhealthy"
+    
+        # Check Redis connection (if configured)
+        try:
+            redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+            r = redis.from_url(redis_url)
+            r.ping()
+            checks["redis"] = "ok"
+        except Exception as e:
+            if "CELERY_REQUIRED" in os.environ and os.environ["CELERY_REQUIRED"].lower() == "true":
+                # If Redis is required and not available, mark as degraded/unhealthy
+                checks["redis"] = f"error: {str(e)}"
                 overall_status = "degraded" if overall_status == "healthy" else "unhealthy"
-        else:
-            checks["celery"] = "disabled"
-    except Exception as e:
-        checks["celery"] = f"error: {str(e)}"
-        overall_status = "degraded" if overall_status == "healthy" else "unhealthy"
-
-    # Check File Watcher status
-    try:
-        import state
-
-        if state.watcher is not None and hasattr(state.watcher, "is_running"):
-            checks["filewatcher"] = "running" if state.watcher.is_running else "stopped"
-        else:
-            checks["filewatcher"] = "not_initialized"
-    except Exception as e:
-        checks["filewatcher"] = f"error: {str(e)}"
+            else:
+                # Redis is optional
+                checks["redis"] = "not_configured"
+    
+        # Check Celery workers (if enabled)
+        try:
+            if os.environ.get("CELERY_ENABLED", "").lower() == "true":
+                from celery_app import celery as celery_app_
+    
+                # Ping workers
+                inspect = celery_app_.control.inspect()
+                active = inspect.ping()
+                if active:
+                    checks["celery"] = f"ok ({len(active)} workers)"
+                else:
+                    checks["celery"] = "no_active_workers"
+                    overall_status = "degraded" if overall_status == "healthy" else "unhealthy"
+            else:
+                checks["celery"] = "disabled"
+        except Exception as e:
+            checks["celery"] = f"error: {str(e)}"
+            overall_status = "degraded" if overall_status == "healthy" else "unhealthy"
+    
+        # Check File Watcher status
+        try:
+            import state
+    
+            if state.watcher is not None and hasattr(state.watcher, "is_running"):
+                checks["filewatcher"] = "running" if state.watcher.is_running else "stopped"
+            else:
+                checks["filewatcher"] = "not_initialized"
+        except Exception as e:
+            checks["filewatcher"] = f"error: {str(e)}"
 
     # Determine HTTP status code
     status_code = 200 if overall_status == "healthy" else 503
-
+    
     # Build response
     response_data = {
         "status": overall_status,
         "checks": checks,
     }
-
+    
     return jsonify(response_data), status_code
 
 
