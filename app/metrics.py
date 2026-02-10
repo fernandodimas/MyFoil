@@ -19,6 +19,13 @@ db_query_duration_seconds = Histogram(
 
 db_query_total = Counter("myfoil_db_queries_total", "Total database queries", ["operation", "status"])
 
+db_files_total = Gauge("myfoil_files_total", "Total number of files")
+db_titles_total = Gauge("myfoil_titles_total", "Total number of titles")
+db_apps_total = Gauge("myfoil_apps_total", "Total number of apps")
+db_libraries_total = Gauge("myfoil_libraries_total", "Total number of libraries")
+db_files_unidentified_total = Gauge("myfoil_files_unidentified_total", "Files not yet identified")
+db_files_with_errors_total = Gauge("myfoil_files_with_errors_total", "Files with identification errors")
+
 # Library Metrics
 library_games_total = Gauge("myfoil_library_games_total", "Total number of games in library")
 
@@ -80,6 +87,8 @@ system_disk_usage = Gauge("myfoil_system_disk_usage_bytes", "System disk usage i
 def init_metrics(app):
     @app.route("/api/metrics")
     def metrics():
+        update_db_metrics()
+        update_library_metrics()
         update_system_metrics()
         return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
 
@@ -111,7 +120,7 @@ def get_metrics_export():
 def update_db_metrics():
     """Update database-related metrics like connection pool size."""
     try:
-        from db import db
+        from db import db, Files, Titles, Apps, Libraries
 
         try:
             engine = db.session.bind
@@ -121,6 +130,31 @@ def update_db_metrics():
                 db_connection_pool_size.labels(pool="default").set(10)
         except Exception as e:
             db_connection_pool_size.labels(pool="default").set(10)
+
+        # Basic counts
+        db_files_total.set(Files.query.count())
+        db_titles_total.set(Titles.query.count())
+        db_apps_total.set(Apps.query.count())
+        db_libraries_total.set(Libraries.query.count())
+
+        # Identification status
+        db_files_unidentified_total.set(Files.query.filter(Files.identified == False).count())
+        db_files_with_errors_total.set(Files.query.filter(Files.identification_error.isnot(None)).count())
+    except Exception as e:
+        pass
+
+
+def update_library_metrics():
+    """Update library-related metrics (counts and coverage)."""
+    try:
+        from db import Titles
+        from sqlalchemy import or_
+
+        library_games_total.set(Titles.query.filter(Titles.title_id.isnot(None)).count())
+        library_games_identified.set(Titles.query.filter(Titles.have_base == True).count())
+        library_games_with_cover.set(
+            Titles.query.filter(or_(Titles.icon_url.isnot(None), Titles.banner_url.isnot(None))).count()
+        )
     except Exception as e:
         pass
 

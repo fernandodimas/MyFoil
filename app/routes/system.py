@@ -1893,9 +1893,10 @@ def prometheus_metrics():
 
     # Refresh metrics before export
     try:
-        from app.metrics import update_db_metrics, update_system_metrics
+        from app.metrics import update_db_metrics, update_library_metrics, update_system_metrics
 
         update_db_metrics()
+        update_library_metrics()
         update_system_metrics()
     except Exception as e:
         logger.error(f"Error refreshing metrics: {e}")

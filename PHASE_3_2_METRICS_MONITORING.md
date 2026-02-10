@@ -26,6 +26,12 @@
 - `myfoil_db_query_duration_seconds` - Database query duration histogram
 - `myfoil_db_query_errors_total` - Database query error counter
 
+### Library Coverage Metrics (Advanced)
+- `myfoil_library_games_total` - Total games in library
+- `myfoil_library_games_identified` - Games with base content (identified)
+- `myfoil_library_games_with_cover` - Games with icon/banner
+- `myfoil_library_size_bytes` - Total library size in bytes
+
 ### Library Performance Metrics
 - `myfoil_library_load_duration_seconds` - Library load time histogram
 - `myfoil_library_generation_duration_seconds` - Library generation time histogram
@@ -77,6 +83,18 @@ myfoil_files_identified_total 512
 # HELP
 # TYPE myfoil_files_total gauge
 myfoil_files_total 542
+
+# TYPE myfoil_library_games_total gauge
+myfoil_library_games_total 268
+
+# TYPE myfoil_library_games_identified gauge
+myfoil_library_games_identified 240
+
+# TYPE myfoil_library_games_with_cover gauge
+myfoil_library_games_with_cover 255
+
+# TYPE myfoil_library_size_bytes gauge
+myfoil_library_size_bytes 1234567890
 
 # HELP
 # TYPE myfoil_identification_tasks_total counter
