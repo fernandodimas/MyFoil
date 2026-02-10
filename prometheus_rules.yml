@@ -1,0 +1,70 @@
+groups:
+  - name: myfoil_alerts
+    rules:
+      # Database Alerts
+      - alert: MyFoilSlowDBQueries
+        expr: rate(myfoil_db_query_duration_seconds_sum[5m]) / rate(myfoil_db_query_duration_seconds_count[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Average DB query duration >1s over 5 minutes"
+
+      - alert: MyFoilHighDBErrorRate
+        expr: rate(myfoil_db_queries_total{status="error"}[5m]) / rate(myfoil_db_queries_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High database error rate"
+          description: "DB error rate >10% over 5 minutes"
+
+      # Disk Alerts
+      - alert: MyFoilLowDiskSpace
+        expr: myfoil_system_disk_usage_percent > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space"
+          description: "Disk usage >90% on mount point {{ $labels.mount_point }}"
+
+      # API Alerts
+      - alert: MyFoilHighAPIErrorRate
+        expr: rate(myfoil_api_requests_total{status_code=~"5.."}[5m]) / rate(myfoil_api_requests_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API error rate"
+          description: "API error rate >10% (5xx responses) over 5 minutes"
+
+      # Scan Alerts
+      - alert: MyFoilLongScanDuration
+        expr: histogram_quantile(0.95, rate(myfoil_scan_duration_seconds_bucket[5m])) > 1800
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Long library scan duration"
+          description: "95th percentile scan duration >30 minutes"
+
+      # System Alerts
+      - alert: MyFoilHighCPUUsage
+        expr: myfoil_system_cpu_usage_percent > 95
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage >95% for 10 minutes"
+
+      - alert: MyFoilHighMemoryUsage
+        expr: myfoil_system_memory_usage_bytes / 1024 / 1024 / 1024 > 8  # >8GB
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage >8GB"

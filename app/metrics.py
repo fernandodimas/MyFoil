@@ -1,4 +1,4 @@
-from prometheus_client import Counter, Histogram, Gauge, Summary, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 from flask import Response, request
 import time
 from functools import wraps
@@ -83,6 +83,12 @@ system_memory_usage = Gauge("myfoil_system_memory_usage_bytes", "System memory u
 
 system_disk_usage = Gauge("myfoil_system_disk_usage_bytes", "System disk usage in bytes", ["mount_point"])
 
+system_disk_usage_percent = Gauge("myfoil_system_disk_usage_percent", "System disk usage percentage", ["mount_point"])
+
+api_error_rate_percent = Gauge("myfoil_api_error_rate_percent", "API error rate percentage")
+
+scan_duration_seconds = Histogram("myfoil_scan_duration_seconds", "Full library scan duration in seconds")
+
 
 def init_metrics(app):
     @app.route("/api/metrics")
@@ -128,7 +134,7 @@ def update_db_metrics():
                 db_connection_pool_size.labels(pool="default").set(engine.pool.size())
             else:
                 db_connection_pool_size.labels(pool="default").set(10)
-        except Exception as e:
+        except Exception:
             db_connection_pool_size.labels(pool="default").set(10)
 
         # Basic counts
@@ -140,7 +146,7 @@ def update_db_metrics():
         # Identification status
         db_files_unidentified_total.set(Files.query.filter(Files.identified == False).count())
         db_files_with_errors_total.set(Files.query.filter(Files.identification_error.isnot(None)).count())
-    except Exception as e:
+    except Exception:
         pass
 
 
@@ -155,7 +161,7 @@ def update_library_metrics():
         library_games_with_cover.set(
             Titles.query.filter(or_(Titles.icon_url.isnot(None), Titles.banner_url.isnot(None))).count()
         )
-    except Exception as e:
+    except Exception:
         pass
 
 
@@ -168,7 +174,7 @@ def track_db_query(operation, phase="unknown"):
                 result = func(*args, **kwargs)
                 db_query_total.labels(operation=operation, status="success").inc()
                 return result
-            except Exception as e:
+            except Exception:
                 db_query_total.labels(operation=operation, status="error").inc()
                 raise
             finally:
@@ -191,5 +197,15 @@ def update_system_metrics():
 
         disk = psutil.disk_usage("/")
         system_disk_usage.labels(mount_point="/").set(disk.used)
-    except Exception as e:
+        system_disk_usage_percent.labels(mount_point="/").set(disk.percent)
+
+        # Calculate API error rate (errors / total requests over last 5m)
+        # This will be computed in Prometheus rules using rate functions
+        # For now, set to 0 if no data
+        try:
+            # This is a placeholder; actual calculation in Prometheus
+            api_error_rate_percent.set(0.0)
+        except:
+            pass
+    except Exception:
         pass
