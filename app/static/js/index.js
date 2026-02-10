@@ -15,6 +15,8 @@ let currentPage = 1;  // Current page for pagination
 let isLoadingMore = false;  // Track loading state
 let totalItems = 0;  // Total number of games in library
 let isNewRender = true;  // Track if we need a full re-render
+let scrollOffset = 0;  // Track which filtered items have been rendered
+let hasMoreItems = true;  // Track if there are more items to render
 const PER_PAGE = 75;  // Items per page (optimized for performance - 75 is sweet spot)
 const SCROLL_BATCH_SIZE = 30;  // Render 30 items at a time for smoothness
 
@@ -633,11 +635,6 @@ function clearSearch() {
 }
 
 // ========== INFINITE SCROLL ==========
-// Variables are declared at the top of the file
-scrollOffset = 0;
-isLoadingMore = false;
-hasMoreItems = true;
-const SCROLL_BATCH_SIZE = 48;
 
 function setupInfiniteScroll() {
     const sentinel = document.getElementById('scrollSentinel');
@@ -715,9 +712,9 @@ function loadMoreItems() {
     setupKeyboardNavigation();
     observeImages();
     $('#loadingIndicator').addClass('is-hidden');
-    
+
     // Show sentinel for lazy loading if there are more items
-    const hasMoreItems = filtered.length > firstBatch.length;
+    hasMoreItems = filtered.length > firstBatch.length;
     $('#scrollSentinel').toggle(hasMoreItems);
 }
 
