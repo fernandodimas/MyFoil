@@ -53,15 +53,39 @@ def health_check_api():
     No authentication required for monitoring systems.
     Returns 503 if any critical component is unhealthy.
     """
-    overall_status = "healthy"
-    checks = {
-        "timestamp": now_utc().isoformat(),
-        "version": BUILD_VERSION,
-        "database": "unknown",
-        "redis": "unknown",
-        "celery": "unknown" if os.environ.get("CELERY_ENABLED", "").lower() != "true" else "checking",
-        "filewatcher": "unknown",
-    }
+    import socket
+
+
+try:
+    import psutil
+
+    psutil_available = True
+except ImportError:
+    psutil_available = False
+
+start_time = now_utc()
+overall_status = "healthy"
+checks = {
+    "timestamp": start_time.isoformat(),
+    "version": BUILD_VERSION,
+    "hostname": socket.gethostname(),
+    "database": "unknown",
+    "redis": "unknown",
+    "celery": "unknown" if os.environ.get("CELERY_ENABLED", "").lower() != "true" else "checking",
+    "filewatcher": "unknown",
+}
+
+# Disk and memory
+if psutil_available:
+    try:
+        disk = psutil.disk_usage("/")
+        checks["disk_free_gb"] = round(disk.free / (1024**3), 2)
+        checks["disk_percent"] = disk.percent
+        mem = psutil.virtual_memory()
+        checks["memory_used_gb"] = round(mem.used / (1024**3), 2)
+        checks["memory_percent"] = mem.percent
+    except Exception as e:
+        checks["psutil"] = f"error: {str(e)}"
 
     # Check Database connection
     try:
