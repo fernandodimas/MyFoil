@@ -1713,6 +1713,16 @@ def post_library_change():
                 # 2. Delete disk cache
                 invalidate_library_cache()
 
+                # 2.5. Invalidate Redis cache (Phase 4.1)
+                try:
+                    import redis_cache
+
+                    if redis_cache.is_cache_enabled():
+                        redis_cache.invalidate_library_cache()
+                        logger.info("Redis library cache invalidated")
+                except ImportError:
+                    pass
+
                 # 3. Update titles with new files
                 # This is critical for updating 'up_to_date' and 'complete' status flags
                 # which control the badges (UPDATE, DLC) and filters

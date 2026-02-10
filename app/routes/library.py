@@ -32,6 +32,15 @@ from utils import format_size_py, now_utc
 
 library_bp = Blueprint("library", __name__, url_prefix="/api")
 
+# Import cache module (Phase 4.1)
+try:
+    import redis_cache
+
+    CACHE_ENABLED = True
+except ImportError:
+    CACHE_ENABLED = False
+    logger.warning("Redis cache module not available")
+
 
 @library_bp.route("/library")
 @access_required("shop")
@@ -140,7 +149,10 @@ def library_paged_api():
     for large libraries.
 
     Compatible with the existing library API response format.
+
+    Phase 4.1: Added Redis caching (5 min TTL)
     """
+    # Parse parameters
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
     sort_by = request.args.get("sort", "name", type=str)
@@ -157,6 +169,20 @@ def library_paged_api():
 
     if order not in ["asc", "desc"]:
         order = "asc"
+
+    # Try to get from cache (Phase 4.1)
+    if CACHE_ENABLED:
+        cache_key = f"library_paged:{page}:{per_page}:{sort_by}:{order}"
+        cached_data = redis_cache.cache_get(cache_key)
+        if cached_data:
+            logger.debug(f"Cache HIT for library_paged: page={page}, sort={sort_by}-{order}")
+            resp = jsonify(json.loads(cached_data))
+            resp.headers["X-Cache"] = "HIT"
+            resp.headers["X-Total-Count"] = resp.json.get("pagination", {}).get("total_items", "0")
+            resp.headers["X-Page"] = str(page)
+            resp.headers["X-Per-Page"] = str(per_page)
+            resp.headers["Cache-Control"] = "public, max-age=300"
+            return resp
 
     # Build the query with eager loading to avoid N+1
     query = Titles.query.options(joinedload(Titles.apps)).filter(Titles.title_id.isnot(None))
@@ -196,12 +222,17 @@ def library_paged_api():
         },
     }
 
+    # Cache the response (Phase 4.1)
+    if CACHE_ENABLED:
+        redis_cache.cache_set(cache_key, response_data, ttl=300)  # 5 min cache
+
     resp = jsonify(response_data)
     resp.headers["X-Total-Count"] = str(paginated.total)
     resp.headers["X-Page"] = str(paginated.page)
     resp.headers["X-Per-Page"] = str(paginated.per_page)
     resp.headers["X-Total-Pages"] = str(paginated.pages)
-    resp.headers["Cache-Control"] = "public, max-age=60"  # 1 minute cache for paginated results
+    resp.headers["X-Cache"] = "MISS"
+    resp.headers["Cache-Control"] = "public, max-age=300"  # 5 min cache
     return resp
 
 

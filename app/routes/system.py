@@ -157,6 +157,84 @@ def health_live_api():
     return jsonify({"status": "alive", "timestamp": now_utc().isoformat()}), 200
 
 
+@system_bp.route("/cache/info", methods=["GET"])
+@access_required("admin")
+def get_cache_info_api():
+    """
+    Get cache information (Phase 4.1).
+
+    Returns cache status, statistics, and key count.
+    """
+    try:
+        from redis_cache import get_cache_info
+
+        info = get_cache_info()
+        return jsonify({"success": True, **info})
+    except Exception as e:
+        logger.error(f"Error getting cache info: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@system_bp.post("/cache/clear")
+@access_required("admin")
+def clear_cache_api():
+    """
+    Clear all cache entries (Phase 4.1).
+
+    WARNING: This will clear all cached data.
+    """
+    try:
+        from redis_cache import clear_all_cache
+
+        success = clear_all_cache()
+        if success:
+            return jsonify({"success": True, "message": "All cache cleared successfully"})
+        else:
+            return jsonify({"success": False, "message": "Failed to clear cache"}), 500
+    except Exception as e:
+        logger.error(f"Error clearing cache: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@system_bp.post("/cache/invalidate/library")
+@access_required("admin")
+def invalidate_library_cache_api():
+    """
+    Invalidate library-related cache entries (Phase 4.1).
+
+    This is called automatically when library is updated.
+    """
+    try:
+        from redis_cache import invalidate_library_cache
+
+        success = invalidate_library_cache()
+        if success:
+            return jsonify({"success": True, "message": "Library cache invalidated successfully"})
+        else:
+            return jsonify({"success": False, "message": "Failed to invalidate library cache"}), 500
+    except Exception as e:
+        logger.error(f"Error invalidating library cache: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@system_bp.post("/cache/reset-stats")
+@access_required("admin")
+def reset_cache_stats_api():
+    """
+    Reset cache statistics (Phase 4.1).
+
+    Resets hits, misses, sets, and deletes counters.
+    """
+    try:
+        from redis_cache import reset_cache_stats
+
+        reset_cache_stats()
+        return jsonify({"success": True, "message": "Cache statistics reset successfully"})
+    except Exception as e:
+        logger.error(f"Error resetting cache stats: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @system_web_bp.route("/stats")
 @access_required("shop")
 def stats_page():
@@ -223,7 +301,23 @@ def debug_inspect_title(title_id):
 
 @system_bp.route("/system/info")
 def system_info_api():
-    """Informações do sistema"""
+    """Informações do sistema (Phase 4.1: Added Redis caching - 1 min TTL)"""
+    # Try to get from cache (Phase 4.1)
+    try:
+        import redis_cache
+
+        if redis_cache.is_cache_enabled():
+            cache_key = "system_info"
+            cached_data = redis_cache.cache_get(cache_key)
+            if cached_data:
+                logger.debug("Cache HIT for system_info")
+                resp = jsonify(json.loads(cached_data))
+                resp.headers["X-Cache"] = "HIT"
+                return resp
+    except ImportError:
+        pass
+
+    # Get system info
     from settings import load_settings
 
     settings = load_settings()
@@ -243,16 +337,27 @@ def system_info_api():
     else:
         id_src = f"{source_name} (Não carregado)"
 
-    return jsonify(
-        {
-            "build_version": BUILD_VERSION,
-            "id_source": id_src,
-            "update_source": update_src,
-            "titledb_region": settings.get("titles/region", "US"),
-            "titledb_language": settings.get("titles/language", "en"),
-            "titledb_file": titledb_file,
-        }
-    )
+    response_data = {
+        "build_version": BUILD_VERSION,
+        "id_source": id_src,
+        "update_source": update_src,
+        "titledb_region": settings.get("titles/region", "US"),
+        "titledb_language": settings.get("titles/language", "en"),
+        "titledb_file": titledb_file,
+    }
+
+    # Cache the response (Phase 4.1)
+    try:
+        import redis_cache
+
+        if redis_cache.is_cache_enabled():
+            redis_cache.cache_set("system_info", response_data, ttl=60)  # 1 min cache
+    except ImportError:
+        pass
+
+    resp = jsonify(response_data)
+    resp.headers["X-Cache"] = "MISS"
+    return resp
 
 
 @system_bp.route("/system/fs/list", methods=["POST"])
