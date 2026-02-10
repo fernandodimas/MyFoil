@@ -83,12 +83,6 @@ system_memory_usage = Gauge("myfoil_system_memory_usage_bytes", "System memory u
 
 system_disk_usage = Gauge("myfoil_system_disk_usage_bytes", "System disk usage in bytes", ["mount_point"])
 
-system_disk_usage_percent = Gauge("myfoil_system_disk_usage_percent", "System disk usage percentage", ["mount_point"])
-
-api_error_rate_percent = Gauge("myfoil_api_error_rate_percent", "API error rate percentage")
-
-scan_duration_seconds = Histogram("myfoil_scan_duration_seconds", "Full library scan duration in seconds")
-
 
 def init_metrics(app):
     @app.route("/api/metrics")
