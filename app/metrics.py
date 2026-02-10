@@ -56,6 +56,21 @@ celery_active_tasks = Gauge("myfoil_celery_active_tasks", "Number of active Cele
 
 ACTIVE_SCANS = Gauge("myfoil_active_scans", "Number of active library scans")
 
+# Scan & Identification Duration Metrics
+scan_duration_seconds = Histogram(
+    "myfoil_scan_duration_seconds",
+    "Duration of library scan operations",
+    ["library", "status"],
+    buckets=[60, 300, 600, 1800, 3600, 7200, 14400],  # 1min, 5min, 10min, 30min, 1h, 2h, 4h
+)
+
+identification_duration_seconds = Histogram(
+    "myfoil_identification_duration_seconds",
+    "Duration of file identification operations",
+    ["library", "type"],  # library path, type: "batch" or "single"
+    buckets=[0.1, 0.5, 1, 5, 10, 30, 60, 300, 600, 1800],  # 0.1s to 30min
+)
+
 
 class ActiveScanTracker:
     """Context manager for tracking active scans.

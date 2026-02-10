@@ -314,6 +314,10 @@ def add_files_to_library(library, files):
     logger.info(f"add_files_to_library complete: {files_added} files added, {files_updated} files updated")
 
 
+from library_decorators import timed_scan, timed_identification
+
+
+@timed_scan
 def scan_library_path(library_path, job_id=None):
     cleanup_metadata_files(library_path)
     library_id = get_library_id(library_path)
@@ -493,6 +497,7 @@ def get_files_to_identify(library_id):
     return non_identified_files
 
 
+@timed_identification
 def identify_single_file(filepath):
     """
     Identify a single file and create Apps records.
@@ -647,6 +652,7 @@ def identify_single_file(filepath):
         return False
 
 
+@timed_identification
 def identify_library_files(library):
     if isinstance(library, int):
         library_id = library
