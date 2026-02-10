@@ -10,17 +10,17 @@ from models.activitylog import ActivityLog
 
 class ActivityLogRepository:
     """Repository for ActivityLog database operations"""
-    
+
     @staticmethod
     def get_all():
         """Get all ActivityLog records"""
         return ActivityLog.query.all()
-    
+
     @staticmethod
     def get_by_id(id):
         """Get ActivityLog by ID"""
         return ActivityLog.query.get(id)
-    
+
     @staticmethod
     def create(**kwargs):
         """Create new ActivityLog record"""
@@ -33,31 +33,36 @@ class ActivityLogRepository:
         except SQLAlchemyError as e:
             db.session.rollback()
             raise e
-    
+
     @staticmethod
     def update(id, **kwargs):
         """Update ActivityLog record"""
         item = ActivityLog.query.get(id)
         if not item:
             return None
-        
+
         for key, value in kwargs.items():
             if hasattr(item, key):
                 setattr(item, key, value)
-        
+
         db.session.commit()
         return item
-    
+
     @staticmethod
     def delete(id):
         """Delete ActivityLog record"""
         item = ActivityLog.query.get(id)
         if not item:
             return False
-        
+
         db.session.delete(item)
         db.session.commit()
         return True
+
+    @staticmethod
+    def get_recent(limit=50):
+        """Get recent ActivityLog records"""
+        return ActivityLog.query.order_by(ActivityLog.timestamp.desc()).limit(limit).all()
 
     @staticmethod
     def count():

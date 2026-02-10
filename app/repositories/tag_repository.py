@@ -10,17 +10,22 @@ from models.tag import Tag
 
 class TagRepository:
     """Repository for Tag database operations"""
-    
+
     @staticmethod
     def get_all():
         """Get all Tag records"""
         return Tag.query.all()
-    
+
     @staticmethod
     def get_by_id(id):
         """Get Tag by ID"""
         return Tag.query.get(id)
-    
+
+    @staticmethod
+    def get_by_ids(ids):
+        """Get Tags by a list of IDs"""
+        return Tag.query.filter(Tag.id.in_(ids)).all()
+
     @staticmethod
     def create(**kwargs):
         """Create new Tag record"""
@@ -33,28 +38,28 @@ class TagRepository:
         except SQLAlchemyError as e:
             db.session.rollback()
             raise e
-    
+
     @staticmethod
     def update(id, **kwargs):
         """Update Tag record"""
         item = Tag.query.get(id)
         if not item:
             return None
-        
+
         for key, value in kwargs.items():
             if hasattr(item, key):
                 setattr(item, key, value)
-        
+
         db.session.commit()
         return item
-    
+
     @staticmethod
     def delete(id):
         """Delete Tag record"""
         item = Tag.query.get(id)
         if not item:
             return False
-        
+
         db.session.delete(item)
         db.session.commit()
         return True

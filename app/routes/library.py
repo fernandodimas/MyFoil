@@ -29,6 +29,26 @@ import titles
 import titledb
 import library
 from utils import format_size_py, now_utc
+import json
+
+from app.api_responses import (
+    success_response,
+    error_response,
+    handle_api_errors,
+    ErrorCode,
+    not_found_response,
+    paginated_response,
+)
+from app.repositories.titles_repository import TitlesRepository
+from app.repositories.apps_repository import AppsRepository
+from app.repositories.libraries_repository import LibrariesRepository
+from app.repositories.files_repository import FilesRepository
+from app.repositories.wishlistignore_repository import WishlistIgnoreRepository
+from app.repositories.tag_repository import TagRepository
+from app.repositories.titletag_repository import TitleTagRepository
+from app.repositories.wishlist_repository import WishlistRepository
+from app.repositories.titledbcache_repository import TitleDBCacheRepository
+from app.repositories.title_metadata_repository import TitleMetadataRepository
 
 library_bp = Blueprint("library", __name__, url_prefix="/api")
 
@@ -44,6 +64,7 @@ except ImportError:
 
 @library_bp.route("/library")
 @access_required("shop")
+@handle_api_errors
 def library_api():
     """API endpoint da biblioteca com paginação - Otimizado"""
     # Fast check for cache and ETag
@@ -78,7 +99,7 @@ def library_api():
     full_cache = library.load_library_from_disk()
 
     # Preparar resposta com metadados de paginação
-    response_data = {
+    data = {
         "items": paginated_data,
         "pagination": {
             "page": page,
@@ -90,7 +111,7 @@ def library_api():
         },
     }
 
-    resp = jsonify(response_data)
+    resp, status = success_response(data=data)
     if full_cache and "hash" in full_cache:
         resp.set_etag(full_cache["hash"])
         # Adicionar headers de paginação
@@ -98,7 +119,7 @@ def library_api():
         resp.headers["X-Page"] = str(page)
         resp.headers["X-Per-Page"] = str(per_page)
         resp.headers["X-Total-Pages"] = str(total_pages)
-    return resp
+    return resp, status
 
 
 def _serialize_title_with_apps(title: Titles) -> dict:
@@ -140,17 +161,10 @@ def _serialize_title_with_apps(title: Titles) -> dict:
 
 @library_bp.route("/library/paged")
 @access_required("shop")
+@handle_api_errors
 def library_paged_api():
     """
     Server-side paginated library endpoint (Phase 2.2).
-
-    This endpoint performs pagination at the database level rather than loading
-    all games into memory and slicing. This significantly reduces memory usage
-    for large libraries.
-
-    Compatible with the existing library API response format.
-
-    Phase 4.1: Added Redis caching (5 min TTL)
     """
     # Parse parameters
     page = request.args.get("page", 1, type=int)
@@ -176,25 +190,17 @@ def library_paged_api():
         cached_data = redis_cache.cache_get(cache_key)
         if cached_data:
             logger.debug(f"Cache HIT for library_paged: page={page}, sort={sort_by}-{order}")
-            resp = jsonify(json.loads(cached_data))
+            data = json.loads(cached_data)
+            resp, status = success_response(data=data)
             resp.headers["X-Cache"] = "HIT"
-            resp.headers["X-Total-Count"] = resp.json.get("pagination", {}).get("total_items", "0")
+            resp.headers["X-Total-Count"] = str(data.get("pagination", {}).get("total_items", "0"))
             resp.headers["X-Page"] = str(page)
             resp.headers["X-Per-Page"] = str(per_page)
             resp.headers["Cache-Control"] = "public, max-age=300"
-            return resp
+            return resp, status
 
-    # Build the query with eager loading to avoid N+1
-    query = Titles.query.options(joinedload(Titles.apps)).filter(Titles.title_id.isnot(None))
-
-    # Apply sorting
-    sort_field = getattr(Titles, sort_by, Titles.name)
-    if order == "desc":
-        sort_field = sort_field.desc()
-    query = query.order_by(sort_field)
-
-    # Paginate
-    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+    # Use repository for pagination
+    paginated = TitlesRepository.get_paged(page=page, per_page=per_page, sort_by=sort_by, order=order)
 
     # Serialize items
     items = []
@@ -207,8 +213,8 @@ def library_paged_api():
             logger.error(f"Error serializing title {title.title_id}: {e}")
             continue
 
-    # Build response
-    response_data = {
+    # Build response data
+    data = {
         "items": items,
         "pagination": {
             "page": paginated.page,
@@ -224,20 +230,21 @@ def library_paged_api():
 
     # Cache the response (Phase 4.1)
     if CACHE_ENABLED:
-        redis_cache.cache_set(cache_key, response_data, ttl=300)  # 5 min cache
+        redis_cache.cache_set(cache_key, data, ttl=300)  # 5 min cache
 
-    resp = jsonify(response_data)
+    resp, status = success_response(data=data)
     resp.headers["X-Total-Count"] = str(paginated.total)
     resp.headers["X-Page"] = str(paginated.page)
     resp.headers["X-Per-Page"] = str(paginated.per_page)
     resp.headers["X-Total-Pages"] = str(paginated.pages)
     resp.headers["X-Cache"] = "MISS"
     resp.headers["Cache-Control"] = "public, max-age=300"  # 5 min cache
-    return resp
+    return resp, status
 
 
 @library_bp.route("/library/search/paged")
 @access_required("shop")
+@handle_api_errors
 def library_search_paged_api():
     """
     Server-side paginated search endpoint with pagination at DB level.
@@ -254,27 +261,11 @@ def library_search_paged_api():
     MAX_PER_PAGE = 100
     per_page = min(max(1, per_page), MAX_PER_PAGE)
 
-    # Build base query with eager loading
-    query = Titles.query.options(joinedload(Titles.apps)).filter(Titles.title_id.isnot(None))
-
-    # Apply filters
-    if query_text:
-        query = query.filter(
-            or_(
-                Titles.name.ilike(f"%{query_text}%"),
-                Titles.publisher.ilike(f"%{query_text}%"),
-                Titles.title_id.ilike(f"%{query_text}%"),
-            )
-        )
-
-    if owned_only:
-        query = query.filter(Titles.have_base == True)
-
-    if up_to_date:
-        query = query.filter(Titles.up_to_date == True)
-
-    # Paginate
-    paginated = query.order_by(Titles.name).paginate(page=page, per_page=per_page, error_out=False)
+    # Use repository for pagination with filters
+    filters = {"owned_only": owned_only, "up_to_date": up_to_date}
+    paginated = TitlesRepository.get_paged(
+        page=page, per_page=per_page, query_text=query_text, filters=filters, sort_by="name", order="asc"
+    )
 
     # Serialize and filter by genre if needed (genre filtering is post-query for simplicity)
     items = []
@@ -299,8 +290,8 @@ def library_search_paged_api():
     end_idx = start_idx + per_page
     paginated_items = items[start_idx:end_idx]
 
-    return jsonify(
-        {
+    return success_response(
+        data={
             "items": paginated_items,
             "pagination": {
                 "page": page,
@@ -316,6 +307,7 @@ def library_search_paged_api():
 
 @library_bp.route("/library/scroll")
 @access_required("shop")
+@handle_api_errors
 def library_scroll_api():
     """API endpoint para scroll infinito - Retorna batch de jogos"""
     # Parâmetros de scroll
@@ -336,7 +328,7 @@ def library_scroll_api():
     # Verificar se há mais dados
     has_more = offset + limit < total_items
 
-    response_data = {
+    data = {
         "items": batch_data,
         "scroll": {
             "offset": offset,
@@ -347,17 +339,15 @@ def library_scroll_api():
         },
     }
 
-    return jsonify(response_data)
+    return success_response(data=data)
 
 
 @library_bp.route("/library/ignore/<title_id>", methods=["GET", "POST"])
 @access_required("shop")
+@handle_api_errors
 def library_ignore_api(title_id):
     """Get or set per-item ignore preferences for a game (DLCs and Updates)"""
-    from flask_login import current_user
-    import json
-
-    ignore_record = WishlistIgnore.query.filter_by(user_id=current_user.id, title_id=title_id).first()
+    ignore_record = WishlistIgnoreRepository.get_by_user_and_title(current_user.id, title_id)
 
     if request.method == "GET":
         if ignore_record:
@@ -367,7 +357,7 @@ def library_ignore_api(title_id):
             dlcs = {}
             updates = {}
 
-        return jsonify({"success": True, "dlcs": dlcs, "updates": updates})
+        return success_response(data={"dlcs": dlcs, "updates": updates})
 
     data = request.json or {}
     item_type = data.get("type")  # 'dlc' or 'update'
@@ -375,49 +365,44 @@ def library_ignore_api(title_id):
     ignored = data.get("ignored", False)
 
     if not item_type or not item_id:
-        return jsonify({"success": False, "error": "type and item_id are required"}), 400
+        return error_response(ErrorCode.VALIDATION_ERROR, message="type and item_id are required", status_code=400)
 
     if item_type not in ("dlc", "update"):
-        return jsonify({"success": False, "error": 'type must be "dlc" or "update"'}), 400
+        return error_response(ErrorCode.VALIDATION_ERROR, message='type must be "dlc" or "update"', status_code=400)
 
     if not ignore_record:
-        ignore_record = WishlistIgnore(
+        ignore_record = WishlistIgnoreRepository.create(
             user_id=current_user.id, title_id=title_id, ignore_dlcs="{}", ignore_updates="{}"
         )
-        db.session.add(ignore_record)
-        db.session.flush()
 
     if item_type == "dlc":
         dlcs = json.loads(ignore_record.ignore_dlcs) if ignore_record.ignore_dlcs else {}
         dlcs[item_id] = ignored
-        ignore_record.ignore_dlcs = json.dumps(dlcs)
+        WishlistIgnoreRepository.update(ignore_record.id, ignore_dlcs=json.dumps(dlcs))
     else:
         updates = json.loads(ignore_record.ignore_updates) if ignore_record.ignore_updates else {}
         updates[item_id] = ignored
-        ignore_record.ignore_updates = json.dumps(updates)
+        WishlistIgnoreRepository.update(ignore_record.id, ignore_updates=json.dumps(updates))
 
-    db.session.commit()
-
-    return jsonify({"success": True})
+    return success_response(message="Ignore preferences updated")
 
 
 @library_bp.route("/library/<title_id>/status")
 @access_required("shop")
+@handle_api_errors
 def library_status_api(title_id):
     """Retorna status do jogo considerando preferências de ignore do usuário"""
-    import json
-    from flask_login import current_user
     import titles as titles_lib
 
     lib_data = library.load_library_from_disk()
     if not lib_data or "library" not in lib_data:
-        return jsonify({"error": "Library not loaded"}), 500
+        return error_response(ErrorCode.INTERNAL_ERROR, message="Library not loaded", status_code=500)
 
     game = next((g for g in lib_data["library"] if g.get("id") == title_id), None)
     if not game:
-        return jsonify({"error": "Game not found"}), 404
+        return not_found_response("Game", title_id)
 
-    ignore_record = WishlistIgnore.query.filter_by(user_id=current_user.id, title_id=title_id).first()
+    ignore_record = WishlistIgnoreRepository.get_by_user_and_title(current_user.id, title_id)
 
     ignored_dlcs = json.loads(ignore_record.ignore_dlcs) if ignore_record and ignore_record.ignore_dlcs else {}
     ignored_updates = json.loads(ignore_record.ignore_updates) if ignore_record and ignore_record.ignore_updates else {}
@@ -437,6 +422,7 @@ def library_status_api(title_id):
     latest_version = game.get("latest_version_available", 0)
     owned_version = game.get("owned_version", 0)
 
+    has_pending_updates = False
     if latest_version > 0 and owned_version < latest_version:
         next_version = owned_version + 1
         while next_version <= latest_version:
@@ -444,13 +430,9 @@ def library_status_api(title_id):
                 has_pending_updates = True
                 break
             next_version += 1
-        else:
-            has_pending_updates = False
-    else:
-        has_pending_updates = False
 
-    return jsonify(
-        {
+    return success_response(
+        data={
             "title_id": title_id,
             "has_pending_dlcs": has_pending_dlcs,
             "has_pending_updates": has_pending_updates,
@@ -462,6 +444,7 @@ def library_status_api(title_id):
 
 @library_bp.route("/library/search")
 @access_required("shop")
+@handle_api_errors
 def search_library_api():
     """Busca na biblioteca com filtros"""
     query = request.args.get("q", "").lower()
@@ -507,18 +490,15 @@ def search_library_api():
 
         results.append(game)
 
-    return jsonify({"count": len(results), "results": results})
+    return success_response(data={"count": len(results), "results": results})
 
 
 @library_bp.route("/library/outdated-games")
 @access_required("shop")
+@handle_api_errors
 def outdated_games_api():
     """
     API endpoint que retorna jogos com atualizações pendentes.
-
-    Returns:
-        JSON com lista de jogos que não possuem a última atualização disponível,
-        incluindo informações sobre a versão pendente e data de lançamento.
     """
     # Pagination parameters
     limit = request.args.get("limit", 100, type=int)
@@ -528,169 +508,86 @@ def outdated_games_api():
     limit = min(max(1, limit), 500)  # Max 500 per request
     offset = max(0, offset)
 
-    try:
-        # Query titles that are NOT up to date but HAVE the base game
-        outdated_titles = (
-            Titles.query.filter(Titles.up_to_date == False, Titles.have_base == True).limit(limit).offset(offset).all()
-        )
+    # Use repository to get outdated titles
+    outdated_titles = TitlesRepository.get_outdated(limit=limit, offset=offset)
+    total_count = TitlesRepository.count_outdated()
 
-        # Get total count for pagination
-        total_count = Titles.query.filter(Titles.up_to_date == False, Titles.have_base == True).count()
+    games_list = []
+    for title in outdated_titles:
+        try:
+            # Get current owned version
+            owned_apps = AppsRepository.get_owned_by_title(title.id)
+            current_version = max([app.app_version for app in owned_apps if app.app_version], default=0)
 
-        games_list = []
-        for title in outdated_titles:
-            try:
-                # Get current owned version
-                owned_apps = Apps.query.filter(Apps.title_id == title.id, Apps.owned == True).all()
+            # Get pending update info
+            pending_info = library.get_pending_update_info(title.title_id)
 
-                current_version = max([app.app_version for app in owned_apps if app.app_version], default=0)
-
-                # Get pending update info
-                pending_info = library.get_pending_update_info(title.title_id)
-
-                if not pending_info:
-                    # Skip if no update info available
-                    continue
-
-                # Only include if there's actually a newer version
-                if pending_info["version"] <= current_version:
-                    continue
-
-                game_entry = {
-                    "id": title.title_id,
-                    "nsuid": title.nsuid or "Unknown",
-                    "name": title.name or f"Unknown ({title.title_id})",
-                    "current_version": current_version,
-                    "current_version_string": library.version_to_string(current_version),
-                    "pending_update": {
-                        "version": pending_info["version"],
-                        "version_string": pending_info["version_string"],
-                        "update_id": pending_info["update_id"],
-                        "release_date": pending_info["release_date"],
-                    },
-                }
-
-                games_list.append(game_entry)
-
-            except Exception as e:
-                logger.error(f"Error processing outdated game {title.title_id}: {e}")
+            if not pending_info:
                 continue
 
-        return jsonify(
-            {
-                "success": True,
-                "count": len(games_list),
-                "total": total_count,
-                "limit": limit,
-                "offset": offset,
-                "games": games_list,
-            }
-        )
+            if pending_info["version"] <= current_version:
+                continue
 
-    except Exception as e:
-        logger.error(f"Error fetching outdated games: {e}")
-        return jsonify({"success": False, "message": str(e)}), 500
+            game_entry = {
+                "id": title.title_id,
+                "nsuid": title.nsuid or "Unknown",
+                "name": title.name or f"Unknown ({title.title_id})",
+                "current_version": current_version,
+                "current_version_string": library.version_to_string(current_version),
+                "pending_update": {
+                    "version": pending_info["version"],
+                    "version_string": pending_info["version_string"],
+                    "update_id": pending_info["update_id"],
+                    "release_date": pending_info["release_date"],
+                },
+            }
+
+            games_list.append(game_entry)
+
+        except Exception as e:
+            logger.error(f"Error processing outdated game {title.title_id}: {e}")
+            continue
+
+    return success_response(
+        data={
+            "count": len(games_list),
+            "total": total_count,
+            "limit": limit,
+            "offset": offset,
+            "games": games_list,
+        }
+    )
 
 
 @library_bp.route("/stats/overview")
 @access_required("shop")
+@handle_api_errors
 def get_stats_overview():
     """Estatísticas detalhadas da biblioteca com filtros - Otimizado"""
-    import library
-
     library_id = request.args.get("library_id", type=int)
 
     # 1. Fetch library list for filter dropdown
-    libs = Libraries.query.all()
+    libs = LibrariesRepository.get_all()
     libraries_list = [{"id": l.id, "path": l.path} for l in libs]
 
     # 2. Otimização: Combinar todas as queries de Files em uma única query com agregações
-    if library_id:
-        # Query otimizada usando join direto ao invés de subquery
-        file_stats = (
-            db.session.query(
-                func.count(Files.id).label("total_files"),
-                func.sum(Files.size).label("total_size"),
-                func.sum(case((Files.identified == False, 1), else_=0)).label("unidentified_files"),
-            )
-            .filter(Files.library_id == library_id)
-            .first()
-        )
-
-        # Query otimizada para Apps usando join direto
-        Apps.query.join(app_files).join(Files).filter(Files.library_id == library_id)
-    else:
-        # Query otimizada sem filtro de library
-        file_stats = db.session.query(
-            func.count(Files.id).label("total_files"),
-            func.sum(Files.size).label("total_size"),
-            func.sum(case((Files.identified == False, 1), else_=0)).label("unidentified_files"),
-        ).first()
+    file_stats = FilesRepository.get_stats_by_library(library_id)
 
     # Extrair resultados da query otimizada
-    total_files = file_stats.total_files or 0
-    total_size = file_stats.total_size or 0
-    unidentified_files = file_stats.unidentified_files or 0
+    total_files = file_stats["total_files"]
+    total_size = file_stats["total_size"]
+    unidentified_files = file_stats["unidentified_files"]
     identified_files = total_files - unidentified_files
     id_rate = round((identified_files / total_files * 100), 1) if total_files > 0 else 0
 
-    # 4. Collection Breakdown (Owned Apps) - Otimizado com uma única query
-    # Combinar todas as contagens em uma única query usando agregações condicionais
-    if library_id:
-        owned_apps_stats = (
-            db.session.query(
-                func.sum(case((Apps.owned == True, 1), else_=0)).label("total_owned"),
-                func.sum(case((and_(Apps.owned == True, Apps.app_type == APP_TYPE_BASE), 1), else_=0)).label(
-                    "total_bases"
-                ),
-                func.sum(case((and_(Apps.owned == True, Apps.app_type == APP_TYPE_UPD), 1), else_=0)).label(
-                    "total_updates"
-                ),
-                func.sum(case((and_(Apps.owned == True, Apps.app_type == APP_TYPE_DLC), 1), else_=0)).label(
-                    "total_dlcs"
-                ),
-                func.count(func.distinct(case((Apps.owned == True, Apps.title_id), else_=None))).label(
-                    "distinct_titles"
-                ),
-            )
-            .select_from(Apps)
-            .join(app_files)
-            .join(Files)
-            .filter(Files.library_id == library_id)
-            .first()
-        )
-    else:
-        owned_apps_stats = (
-            db.session.query(
-                func.sum(case((Apps.owned == True, 1), else_=0)).label("total_owned"),
-                func.sum(case((and_(Apps.owned == True, Apps.app_type == APP_TYPE_BASE), 1), else_=0)).label(
-                    "total_bases"
-                ),
-                func.sum(case((and_(Apps.owned == True, Apps.app_type == APP_TYPE_UPD), 1), else_=0)).label(
-                    "total_updates"
-                ),
-                func.sum(case((and_(Apps.owned == True, Apps.app_type == APP_TYPE_DLC), 1), else_=0)).label(
-                    "total_dlcs"
-                ),
-                func.count(func.distinct(case((Apps.owned == True, Apps.title_id), else_=None))).label(
-                    "distinct_titles"
-                ),
-            )
-            .select_from(Apps)
-            .first()
-        )
+    # 3. Collection Breakdown (Owned Apps) - Otimizado com uma única query
+    owned_apps_stats = AppsRepository.get_owned_counts(library_id)
 
-    total_owned_bases = owned_apps_stats.total_bases or 0
-    total_owned_updates = owned_apps_stats.total_updates or 0
-    total_owned_dlcs = owned_apps_stats.total_dlcs or 0
+    total_owned_bases = owned_apps_stats["bases"]
+    total_owned_updates = owned_apps_stats["updates"]
+    total_owned_dlcs = owned_apps_stats["dlcs"]
 
-    # 5. Up-to-date Logic (Requires Title level check)
-    # This is more complex to filter strictly by library if a title bridges libraries,
-    # but we'll use the TitleDB coverage logic globally for now.
-
-    # Status breakdown (Global titles)
-    # Note: We still use the library cache for genre and status for now if no filter
-    # If filtered, we'll need to recalculate from DB or use a simplified logic
+    # 4. Status breakdown and Genres (Logic from library cache)
     lib_data = library.load_library_from_disk()
     if not lib_data:
         games = library.generate_library()
@@ -701,26 +598,27 @@ def get_stats_overview():
     filtered_games = games
     if library_id:
         # A bit expensive, but accurate to the library
-        lib_path = Libraries.query.get(library_id).path
-        filtered_games = [g for g in games if any(lib_path in f for f in g.get("files", []))]
+        lib_obj = LibrariesRepository.get_by_id(library_id)
+        if lib_obj:
+            lib_path = lib_obj.path
+            filtered_games = [g for g in games if any(lib_path in f for f in g.get("files", []))]
 
     # Recalculate based on filtered list
-    # Total owned should be all games in our library list,
-    # as items only appear there if we own at least one component (Base, Update or DLC)
     total_owned = len(filtered_games)
     up_to_date = len([g for g in filtered_games if g.get("status_color") == "green" and g.get("has_base")])
+
     # Genre Distribution (from filtered list)
     genre_dist = {}
     for g in filtered_games:
-        cats = g.get("category", [])
-        if not cats:
-            cats = ["Unknown"]
+        cats = g.get("category", []) or ["Unknown"]
         for c in cats:
             genre_dist[c] = genre_dist.get(c, 0) + 1
 
-    # Coverage Logic: compare owned bases vs total available in TitleDB
-    # We define "available" as any entry in TitleDBCache that ends with 000 (standard base TitleID rule)
-    total_available_titledb = TitleDBCache.query.filter(TitleDBCache.title_id.like("%000")).count()
+    # Sort genre distribution and take top 10
+    genre_dist_sorted = dict(sorted(genre_dist.items(), key=lambda x: x[1], reverse=True)[:10])
+
+    # Coverage Logic
+    total_available_titledb = TitleDBCacheRepository.count_bases()
 
     # Recognized games are games we have that exist in TitleDB
     games_with_metadata = len(
@@ -731,35 +629,28 @@ def get_stats_overview():
     metadata_coverage_pct = round((games_with_metadata / total_owned * 100), 1) if total_owned > 0 else 0
 
     # Global coverage (Discovery): what percentage of the full library do we own?
-    # Consider only base games for a fair comparison
     global_coverage_pct = (
         round((total_owned_bases / total_available_titledb * 100), 2) if total_available_titledb > 0 else 0
     )
 
     # --- IGNORING LOGIC FOR PENDING COUNT ---
-    import json
-    from flask_login import current_user
-
     pending_games = [g for g in filtered_games if g.get("status_color") != "green" and g.get("has_base")]
     ignored_games_count = 0
 
     if pending_games:
-        ignores = WishlistIgnore.query.filter_by(user_id=current_user.id).all()
+        ignores = WishlistIgnoreRepository.get_all_by_user(current_user.id)
         if ignores:
-            ignore_map = {}
-            for rec in ignores:
-                ignore_map[rec.title_id] = {
+            ignore_map = {
+                rec.title_id: {
                     "dlcs": json.loads(rec.ignore_dlcs or "{}"),
                     "updates": json.loads(rec.ignore_updates or "{}"),
                 }
+                for rec in ignores
+            }
 
             for g in pending_games:
                 tid = g.get("title_id")
-                if not tid:
-                    continue
-
-                # If no ignore record, it's definitely pending
-                if tid not in ignore_map:
+                if not tid or tid not in ignore_map:
                     continue
 
                 rec = ignore_map[tid]
@@ -772,9 +663,6 @@ def get_stats_overview():
                 if not g.get("has_latest_version"):
                     current_ver = g.get("owned_version", 0)
                     avail_versions = titles.get_all_existing_versions(tid)
-                    # Use versions from stored game object if available, otherwise fetch
-                    # But game object usually has 'latest_version_available', not list.
-                    # We need strict check.
                     missing_versions = [v["version"] for v in avail_versions if v["version"] > current_ver]
 
                     for mv in missing_versions:
@@ -788,7 +676,6 @@ def get_stats_overview():
                 # Check DLCs
                 if not g.get("has_all_dlcs"):
                     all_dlcs = titles.get_all_existing_dlc(tid)
-                    # Deduce owned DLCs from apps list relative to game object
                     owned_dlc_ids = set()
                     if g.get("apps"):
                         for a in g["apps"]:
@@ -819,8 +706,8 @@ def get_stats_overview():
     active_src = titledb.get_active_source_info()
     source_name = active_src.get("name", "Nenhuma") if active_src else "Nenhuma"
 
-    return jsonify(
-        {
+    return success_response(
+        data={
             "libraries": libraries_list,
             "library": {
                 "total_titles": len(filtered_games),
@@ -849,7 +736,7 @@ def get_stats_overview():
                 "unrecognized_count": total_owned - games_with_metadata,
                 "keys_valid": keys_valid,
             },
-            "genres": genre_dist,
+            "genres": genre_dist_sorted,
             "recent": filtered_games[:8],
         }
     )
@@ -857,31 +744,29 @@ def get_stats_overview():
 
 @library_bp.route("/app_info/<id>")
 @access_required("shop")
+@handle_api_errors
 def app_info_api(id):
     """Informações detalhadas de um jogo específico"""
     logger.info(f"API: Requested app_info for {id} (v1626)")
     # Try to get by TitleID first (hex string)
     tid = str(id).upper()
-    title_obj = Titles.query.filter_by(title_id=tid).first()
+    title_obj = TitlesRepository.get_by_title_id(tid)
 
     # If not found by TitleID, try by integer primary key (legacy/fallback)
-    app_obj = None
     if not title_obj and str(id).isdigit():
-        app_obj = db.session.get(Apps, int(id))
-        if app_obj:
+        app_obj = AppsRepository.get_by_id(int(id))
+        if app_obj and app_obj.title:
             tid = app_obj.title.title_id
             title_obj = app_obj.title
 
     # Handle phantom titles from Wishlist (upcoming/manual entries)
     if not title_obj and tid.startswith("UPCOMING_"):
-        wish_item = Wishlist.query.filter_by(title_id=tid).first()
+        wish_item = WishlistRepository.get_by_title_id(tid)
         if wish_item:
             # Prepare genres and screenshots from wishlist item
             genres = []
             if wish_item.genres:
                 genres = [g.strip() for g in wish_item.genres.split(",") if g.strip()]
-
-            import json
 
             screenshots = []
             if wish_item.screenshots:
@@ -891,8 +776,8 @@ def app_info_api(id):
                     # Fallback to comma separated if not JSON
                     screenshots = [s.strip() for s in wish_item.screenshots.split(",") if s.strip()]
 
-            return jsonify(
-                {
+            return success_response(
+                data={
                     "id": tid,
                     "name": wish_item.name,
                     "publisher": "--",
@@ -918,17 +803,9 @@ def app_info_api(id):
         titles.load_titledb()  # Ensure loaded
         base_tid, app_type = titles.identify_appId(tid)
         if base_tid and tid != base_tid:
-            # It's a DLC or Update.
-            # For the main game modal, we usually want the base_tid.
-            # But let's check if we should stay on this ID
-            if app_type == APP_TYPE_DLC:
-                pass
-            else:
+            if app_type != APP_TYPE_DLC:
                 tid = base_tid
-                title_obj = Titles.query.filter_by(title_id=tid).first()
-
-    # If still not found, we can't show much, but let's try to show TitleDB info
-    # if it's a valid TitleID even if not in our DB
+                title_obj = TitlesRepository.get_by_title_id(tid)
 
     # Get basic info from titledb
     info = titles.get_game_info(tid)
@@ -944,17 +821,24 @@ def app_info_api(id):
     if not title_obj:
         # Game/Title not in our database as a main Title, or specifically a DLC request
         result = info.copy()
-        result["id"] = tid
-        result["app_id"] = tid
-        result["owned_version"] = 0
-        result["has_base"] = False
-        result["has_latest_version"] = False
-        result["has_all_dlcs"] = False
-        result["owned"] = False
-        result["files"] = []
+        result.update(
+            {
+                "id": tid,
+                "app_id": tid,
+                "owned_version": 0,
+                "has_base": False,
+                "has_latest_version": False,
+                "has_all_dlcs": False,
+                "owned": False,
+                "files": [],
+                "updates": [],
+                "dlcs": [],
+                "category": info.get("category", []),
+            }
+        )
 
         # Apps associados mas sem Title record principal (ex: DLC avulsa)
-        app_obj_extra = Apps.query.filter_by(app_id=tid, owned=True).first()
+        app_obj_extra = AppsRepository.get_by_app_id(tid, owned=True)
         if app_obj_extra:
             result["owned"] = True
             result["files"] = [
@@ -967,34 +851,18 @@ def app_info_api(id):
                 for f in app_obj_extra.files
             ]
 
-        result["updates"] = []
-        result["dlcs"] = []
-        result["category"] = info.get("category", [])
-        return jsonify(result)
+        return success_response(data=result)
 
     # Get all apps for this title
     all_title_apps = library.get_all_title_apps(tid)
 
     # Pre-calculate max version for each file ID across ALL apps for this title
-    # This solves the issue where an XCI file in the Base app (v0) is also in an Update app (v65536)
-    # and we want to show v65536 in the UI instead of v0.
     file_max_versions = {}
-    for a in all_title_apps:
-        v = int(a.get("app_version") or 0)
-        # We need to fetch files for this app to map IDs
-        # Since 'all_title_apps' here is a list of dicts from library.get_all_title_apps which might not have file IDs
-        # We might need to query the DB or assume db.py/get_all_title_apps populated it sufficienty?
-        # library.get_all_title_apps returns list of dicts.
-        # Let's rely on the DB objects we iterate later.
-        pass
-
-    # Actually, we need to iterate the DB objects to build this map accurately
-    # Iterate all owned apps
     owned_apps_map = [a for a in all_title_apps if a["owned"]]
     for a_meta in owned_apps_map:
         a_id = a_meta["id"]
         a_ver = int(a_meta["app_version"] or 0)
-        app_db = Apps.query.get(a_id)
+        app_db = AppsRepository.get_by_id(a_id)
         if app_db:
             for f in app_db.files:
                 current = file_max_versions.get(f.id, 0)
@@ -1005,9 +873,7 @@ def app_info_api(id):
     base_files = []
     base_apps = [a for a in all_title_apps if a["app_type"] == APP_TYPE_BASE and a["owned"]]
     for b in base_apps:
-        # We need the original Files objects to get IDs for download
-        # Use Apps.query.get for better compatibility with different Flask-SQLAlchemy versions
-        app_model = Apps.query.get(b["id"])
+        app_model = AppsRepository.get_by_id(b["id"])
         if not app_model:
             continue
         for f in app_model.files:
@@ -1028,12 +894,10 @@ def app_info_api(id):
     # Deduplicate files by ID
     seen_ids = set()
     unique_base_files = []
-    seen_file_ids_in_modal = set()
     for f in base_files:
         if f["id"] not in seen_ids:
             unique_base_files.append(f)
             seen_ids.add(f["id"])
-            seen_file_ids_in_modal.add(f["id"])
 
     # Updates and DLCs (for detailed listing)
     available_versions = titles.get_all_existing_versions(tid)
@@ -1064,10 +928,9 @@ def app_info_api(id):
         upd_app = update_apps_by_version.get(v_int)
         files = []
         if upd_app and upd_app["owned"]:
-            app_model = Apps.query.get(upd_app["id"])
+            app_model = AppsRepository.get_by_id(upd_app["id"])
             if app_model:
                 for f in app_model.files:
-                    # if f.id in seen_file_ids_in_modal: continue
                     files.append({"id": f.id, "filename": f.filename, "size_formatted": format_size_py(f.size)})
 
         updates_list.append(
@@ -1084,10 +947,9 @@ def app_info_api(id):
         if v_int not in [v["version"] for v in updates_list] and v_int != 0:
             files = []
             if upd_app.get("owned"):
-                app_model = Apps.query.get(upd_app["id"])
+                app_model = AppsRepository.get_by_id(upd_app["id"])
                 if app_model:
                     for f in app_model.files:
-                        # if f.id in seen_file_ids_in_modal: continue
                         files.append({"id": f.id, "filename": f.filename, "size_formatted": format_size_py(f.size)})
 
             updates_list.append(
@@ -1115,7 +977,7 @@ def app_info_api(id):
         if owned:
             for a in apps_for_dlc:
                 if a.get("owned"):
-                    app_model = Apps.query.get(a["id"])
+                    app_model = AppsRepository.get_by_id(a["id"])
                     if app_model:
                         for f in app_model.files:
                             files.append(
@@ -1150,8 +1012,8 @@ def app_info_api(id):
         result["rating_count"] = title_obj.rating_count
         result["playtime_main"] = title_obj.playtime_main
 
-        # Merge enriched metadata from TitleMetadata table
-        remote_meta = TitleMetadata.query.filter_by(title_id=tid).all()
+        # Merge enriched metadata
+        remote_meta = TitleMetadataRepository.get_by_title_id(tid)
         for meta in remote_meta:
             if meta.rating and not result.get("metacritic_score"):
                 result["metacritic_score"] = int(meta.rating)
@@ -1172,7 +1034,6 @@ def app_info_api(id):
 
             # Screenshots
             if meta.screenshots:
-                logger.debug(f"Merging snapshots from meta for {tid}")
                 existing_ss = set(
                     s if isinstance(s, str) else (s.get("url") if s else None)
                     for s in (result.get("screenshots") or [])
@@ -1208,10 +1069,10 @@ def app_info_api(id):
     result["owned_version"] = max(owned_versions) if owned_versions else 0
     result["display_version"] = result["owned_version"]
 
-    # Use status from title_obj (re-calculated with corrected logic in library.py/update_titles)
-    result["has_base"] = title_obj.have_base
-    result["has_latest_version"] = title_obj.up_to_date
-    result["has_all_dlcs"] = title_obj.complete
+    # Use status from title_obj
+    result["has_base"] = title_obj.have_base if title_obj else False
+    result["has_latest_version"] = title_obj.up_to_date if title_obj else False
+    result["has_all_dlcs"] = title_obj.complete if title_obj else False
 
     result["files"] = unique_base_files
     result["updates"] = sorted(updates_list, key=lambda x: x["version"])
@@ -1222,9 +1083,10 @@ def app_info_api(id):
     total_size = 0
     for a in all_title_apps:
         if a["owned"]:
-            app_model = db.session.get(Apps, a["id"])
-            for f in app_model.files:
-                total_size += f.size
+            app_model = AppsRepository.get_by_id(a["id"])
+            if app_model:
+                for f in app_model.files:
+                    total_size += f.size
 
     result["size"] = total_size
     result["size_formatted"] = format_size_py(total_size)
@@ -1238,115 +1100,96 @@ def app_info_api(id):
         result["status_color"] = "gray"
 
     # owned field for wishlist and other uses
-    # Check both have_base and if there are actual files
     has_owned_files = len(unique_base_files) > 0
     result["owned"] = result["has_base"] or has_owned_files
 
-    resp = jsonify(result)
-    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    resp.headers["Pragma"] = "no-cache"
-    resp.headers["Expires"] = "0"
-    return resp
+    return success_response(data=result)
 
 
 @library_bp.route("/tags")
 @access_required("shop")
+@handle_api_errors
 def get_tags():
     """Get all available tags"""
-    tags = Tag.query.all()
-    return jsonify([{"id": t.id, "name": t.name, "color": t.color, "icon": t.icon} for t in tags])
+    tags = TagRepository.get_all()
+    return success_response(data=[{"id": t.id, "name": t.name, "color": t.color, "icon": t.icon} for t in tags])
 
 
 @library_bp.route("/titles/<title_id>/tags")
 @access_required("shop")
+@handle_api_errors
 def get_title_tags(title_id):
     """Get tags for a specific title"""
-    title = Titles.query.filter_by(title_id=title_id).first()
+    title = TitlesRepository.get_by_title_id(title_id)
     if not title:
-        return jsonify({"error": "Title not found"}), 404
+        return not_found_response("Title not found")
 
-    title_tags = TitleTag.query.filter_by(title_id=title_id).all()
+    title_tags = TitleTagRepository.get_by_title_id(title_id)
     tag_ids = [tt.tag_id for tt in title_tags]
-    tags = Tag.query.filter(Tag.id.in_(tag_ids)).all()
+    tags = TagRepository.get_by_ids(tag_ids)
 
-    return jsonify([{"id": t.id, "name": t.name, "color": t.color, "icon": t.icon} for t in tags])
+    return success_response(data=[{"id": t.id, "name": t.name, "color": t.color, "icon": t.icon} for t in tags])
 
 
 @library_bp.route("/tags/<int:tag_id>", methods=["PUT"])
 @access_required("admin")
+@handle_api_errors
 def update_tag_api(tag_id):
     """Atualizar tag"""
     data = request.json
-    tag = db.session.get(Tag, tag_id)
+    tag = TagRepository.update(tag_id, **data)
     if not tag:
-        return jsonify({"error": "Tag not found"}), 404
-
-    if "name" in data:
-        tag.name = data["name"]
-    if "color" in data:
-        tag.color = data["color"]
-    if "icon" in data:
-        tag.icon = data["icon"]
-
-    try:
-        db.session.commit()
-        return jsonify({"success": True, "tag": {"id": tag.id, "name": tag.name, "color": tag.color, "icon": tag.icon}})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+        return not_found_response("Tag not found")
+    return success_response(data={"id": tag.id, "name": tag.name, "color": tag.color, "icon": tag.icon})
 
 
 @library_bp.route("/tags/<int:tag_id>", methods=["DELETE"])
 @access_required("admin")
+@handle_api_errors
 def delete_tag_api(tag_id):
     """Remover tag"""
-    tag = db.session.get(Tag, tag_id)
-    if not tag:
-        return jsonify({"error": "Tag not found"}), 404
-
-    try:
-        db.session.delete(tag)
-        db.session.commit()
-        return jsonify({"success": True})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+    if TagRepository.delete(tag_id):
+        return success_response(message="Tag removed successfully")
+    return not_found_response("Tag not found")
 
 
 @library_bp.route("/library/metadata/refresh/<title_id>", methods=["POST"])
 @access_required("shop")
+@handle_api_errors
 def refresh_game_metadata(title_id):
     """Manually refresh metadata for a specific game"""
     from tasks import fetch_metadata_for_game_async
 
-    game = Titles.query.filter_by(title_id=title_id).first()
+    game = TitlesRepository.get_by_title_id(title_id)
     if not game:
-        return jsonify({"error": "Game not found"}), 404
+        return not_found_response("Game not found")
 
     # Queue async task
     fetch_metadata_for_game_async.delay(title_id)
 
-    return jsonify({"message": "Metadata refresh queued", "title_id": title_id})
+    return success_response(message="Metadata refresh queued", data={"title_id": title_id})
 
 
 @library_bp.route("/library/metadata/refresh-all", methods=["POST"])
 @access_required("admin")
+@handle_api_errors
 def refresh_all_metadata():
     """Refresh metadata for all games (admin only)"""
     from tasks import fetch_metadata_for_all_games_async
 
     fetch_metadata_for_all_games_async.delay()
 
-    return jsonify({"message": "Metadata refresh queued for all games"})
+    return success_response(message="Metadata refresh queued for all games")
 
 
 @library_bp.route("/library/search-rawg", methods=["GET"])
 @access_required("admin")
+@handle_api_errors
 def search_rawg_api():
     """Search RAWG API directly (for testing/manual matching)"""
     query = request.args.get("q")
     if not query:
-        return jsonify({"error": "Query parameter 'q' required"}), 400
+        return error_response(ErrorCode.INVALID_PARAMS, "Query parameter 'q' required")
 
     from app_services.rating_service import RAWGClient
 
@@ -1354,23 +1197,21 @@ def search_rawg_api():
     api_key = settings.get("apis", {}).get("rawg_api_key")
 
     if not api_key:
-        return jsonify({"error": "RAWG API key not configured"}), 500
+        return error_response(ErrorCode.INTERNAL_ERROR, "RAWG API key not configured")
 
     client = RAWGClient(api_key)
-    try:
-        result = client.search_game(query)
-        return jsonify(result or {})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    result = client.search_game(query)
+    return success_response(data=result or {})
 
 
 @library_bp.route("/library/search-igdb", methods=["GET"])
 @access_required("admin")
+@handle_api_errors
 def search_igdb_api():
     """Search IGDB API directly (for testing/manual matching)"""
     query = request.args.get("q")
     if not query:
-        return jsonify({"error": "Query parameter 'q' required"}), 400
+        return error_response(ErrorCode.INVALID_PARAMS, "Query parameter 'q' required")
 
     from app_services.rating_service import IGDBClient
 
@@ -1379,11 +1220,8 @@ def search_igdb_api():
     client_secret = settings.get("apis", {}).get("igdb_client_secret")
 
     if not client_id or not client_secret:
-        return jsonify({"error": "IGDB credentials not configured"}), 500
+        return error_response(ErrorCode.INTERNAL_ERROR, "IGDB credentials not configured")
 
     client = IGDBClient(client_id, client_secret)
-    try:
-        result = client.search_game(query)
-        return jsonify(result or [])
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    result = client.search_game(query)
+    return success_response(data=result or [])

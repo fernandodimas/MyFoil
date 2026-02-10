@@ -10,17 +10,17 @@ from models.titledbcache import TitleDBCache
 
 class TitleDBCacheRepository:
     """Repository for TitleDBCache database operations"""
-    
+
     @staticmethod
     def get_all():
         """Get all TitleDBCache records"""
         return TitleDBCache.query.all()
-    
+
     @staticmethod
     def get_by_id(id):
         """Get TitleDBCache by ID"""
         return TitleDBCache.query.get(id)
-    
+
     @staticmethod
     def create(**kwargs):
         """Create new TitleDBCache record"""
@@ -33,28 +33,28 @@ class TitleDBCacheRepository:
         except SQLAlchemyError as e:
             db.session.rollback()
             raise e
-    
+
     @staticmethod
     def update(id, **kwargs):
         """Update TitleDBCache record"""
         item = TitleDBCache.query.get(id)
         if not item:
             return None
-        
+
         for key, value in kwargs.items():
             if hasattr(item, key):
                 setattr(item, key, value)
-        
+
         db.session.commit()
         return item
-    
+
     @staticmethod
     def delete(id):
         """Delete TitleDBCache record"""
         item = TitleDBCache.query.get(id)
         if not item:
             return False
-        
+
         db.session.delete(item)
         db.session.commit()
         return True
@@ -63,3 +63,8 @@ class TitleDBCacheRepository:
     def count():
         """Count total TitleDBCache records"""
         return TitleDBCache.query.count()
+
+    @staticmethod
+    def count_bases():
+        """Count total base games in TitleDB (ending in 000)"""
+        return TitleDBCache.query.filter(TitleDBCache.title_id.like("%000")).count()

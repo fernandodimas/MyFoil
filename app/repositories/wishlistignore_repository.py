@@ -10,17 +10,27 @@ from models.wishlistignore import WishlistIgnore
 
 class WishlistIgnoreRepository:
     """Repository for WishlistIgnore database operations"""
-    
+
     @staticmethod
     def get_all():
         """Get all WishlistIgnore records"""
         return WishlistIgnore.query.all()
-    
+
     @staticmethod
     def get_by_id(id):
         """Get WishlistIgnore by ID"""
-        return WishlistIgnore.query.get(id)
-    
+        return db.session.get(WishlistIgnore, id)
+
+    @staticmethod
+    def get_by_user_and_title(user_id, title_id):
+        """Get ignore preferences for a specific user and title"""
+        return WishlistIgnore.query.filter_by(user_id=user_id, title_id=title_id).first()
+
+    @staticmethod
+    def get_all_by_user(user_id):
+        """Get all ignore preferences for a user"""
+        return WishlistIgnore.query.filter_by(user_id=user_id).all()
+
     @staticmethod
     def create(**kwargs):
         """Create new WishlistIgnore record"""
@@ -33,28 +43,28 @@ class WishlistIgnoreRepository:
         except SQLAlchemyError as e:
             db.session.rollback()
             raise e
-    
+
     @staticmethod
     def update(id, **kwargs):
         """Update WishlistIgnore record"""
         item = WishlistIgnore.query.get(id)
         if not item:
             return None
-        
+
         for key, value in kwargs.items():
             if hasattr(item, key):
                 setattr(item, key, value)
-        
+
         db.session.commit()
         return item
-    
+
     @staticmethod
     def delete(id):
         """Delete WishlistIgnore record"""
         item = WishlistIgnore.query.get(id)
         if not item:
             return False
-        
+
         db.session.delete(item)
         db.session.commit()
         return True
