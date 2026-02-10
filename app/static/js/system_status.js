@@ -6,7 +6,15 @@ class SystemStatusManager {
         // - upgrade: true - Allow upgrade to websocket if possible
         // - reconnection: true - Auto-reconnect on disconnect
         // - reconnectionAttempts: 5 - Limit reconnection attempts
-        if (typeof socket === 'undefined') {
+        // If the Socket.IO client isn't loaded, create a noop socket to avoid runtime errors
+        if (typeof io === 'undefined') {
+            console.warn('Socket.IO client not loaded; realtime status disabled');
+            this.socket = {
+                on: function () {},
+                off: function () {},
+                emit: function () {},
+            };
+        } else if (typeof socket === 'undefined') {
             this.socket = io({
                 transports: ['websocket', 'polling'], // Try websocket first (more stable)
                 upgrade: true,
