@@ -34,7 +34,7 @@ from db import (
     get_app_by_id_and_version,
     remove_titles_without_owned_apps,
 )
-from metrics import files_identified_total, identification_duration_seconds, library_size_bytes
+from metrics import files_identified_total, library_size_bytes
 import titles as titles_lib
 import datetime
 from pathlib import Path

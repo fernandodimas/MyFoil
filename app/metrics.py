@@ -45,10 +45,6 @@ api_requests_total = Counter("myfoil_api_requests_total", "Total API requests", 
 # Identification Metrics
 files_identified_total = Counter("myfoil_files_identified_total", "Total files identified", ["app_type", "status"])
 
-identification_duration_seconds = Histogram(
-    "myfoil_identification_duration_seconds", "Time spent identifying files", ["app_type"]
-)
-
 # Celery/Background Metrics
 celery_queue_length = Gauge("myfoil_celery_queue_length", "Number of tasks in Celery queue", ["queue"])
 
@@ -206,15 +202,5 @@ def update_system_metrics():
 
         disk = psutil.disk_usage("/")
         system_disk_usage.labels(mount_point="/").set(disk.used)
-        system_disk_usage_percent.labels(mount_point="/").set(disk.percent)
-
-        # Calculate API error rate (errors / total requests over last 5m)
-        # This will be computed in Prometheus rules using rate functions
-        # For now, set to 0 if no data
-        try:
-            # This is a placeholder; actual calculation in Prometheus
-            api_error_rate_percent.set(0.0)
-        except:
-            pass
     except Exception:
         pass
