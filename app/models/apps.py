@@ -3,8 +3,15 @@ Model: Apps
 Extracted from db.py during Phase 3.1 refactoring
 """
 
-from db import db, now_utc
-from flask_login import UserMixin
+from db import db
+
+# Association table for many-to-many relationship between Apps and Files
+app_files = db.Table(
+    "app_files",
+    db.Column("app_id", db.Integer, db.ForeignKey("apps.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("file_id", db.Integer, db.ForeignKey("files.id", ondelete="CASCADE"), primary_key=True),
+)
+
 
 class Apps(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -24,5 +31,3 @@ class Apps(db.Model):
         db.Index("idx_owned_type", "owned", "app_type"),
         db.Index("idx_title_type", "title_id", "app_type"),
     )
-
-

@@ -1465,9 +1465,6 @@ def cloud_status_placeholder():
 def cloud_auth_placeholder(provider):
     """
     Placeholder endpoint for cloud authentication.
-    """
-    return success_response(message=f"Cloud sync feature removed. Provider {provider} is no longer supported.")
-
     Returns error indicating feature has been removed.
     """
     return jsonify(
