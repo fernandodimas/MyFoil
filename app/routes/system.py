@@ -1403,7 +1403,7 @@ def cleanup_jobs_api():
 def diagnostic_info():
     """Comprehensive system diagnostic for debugging job tracking issues"""
     from job_tracker import job_tracker
-    import socketio
+    from app import socketio
     import sys
 
     diagnostic = {

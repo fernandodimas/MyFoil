@@ -229,7 +229,7 @@ def init_users(app):
 @auth_blueprint.route("/login", methods=["GET", "POST"])
 def login():
     # Import here to avoid circular dependency
-    import limiter
+    from app import limiter
 
     # Apply rate limiting: 20 login attempts per minute per IP (Increased for better UX)
     @limiter.limit("20 per minute")
