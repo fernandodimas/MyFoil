@@ -990,11 +990,11 @@ function renderFilesExplorer() {
 
     $('.breadcrumb').removeClass('is-hidden');
     if (currentExplorerPath === '') {
-        explorerLibraries.forEach(lib => tbody.append(`<tr class="is-clickable" onclick="setExplorerPath('${lib.path}')"><td colspan="6" class="table-cell-full"><div class="folder-item"><i class="bi bi-folder-fill has-text-warning mr-2"></i><span class="has-text-weight-bold">${escapeHtml(lib.path)}</span><span class="tag is-light ml-2">${lib.files_count} ${t('arquivos')}</span></div></td></tr>`));
-        $('#filesExplorerCount').text(explorerLibraries.length + t(' bibliotecas configuradas'));
+        (Array.isArray(explorerLibraries) ? explorerLibraries : []).forEach(lib => tbody.append(`<tr class="is-clickable" onclick="setExplorerPath('${lib.path}')"><td colspan="6" class="table-cell-full"><div class="folder-item"><i class="bi bi-folder-fill has-text-warning mr-2"></i><span class="has-text-weight-bold">${escapeHtml(lib.path)}</span><span class="tag is-light ml-2">${lib.files_count} ${t('arquivos')}</span></div></td></tr>`));
+        $('#filesExplorerCount').text((Array.isArray(explorerLibraries) ? explorerLibraries.length : 0) + t(' bibliotecas configuradas'));
     } else {
         const items = [], folders = new Set();
-        allFiles.forEach(f => {
+        (Array.isArray(allFiles) ? allFiles : []).forEach(f => {
             if (f.filepath.startsWith(currentExplorerPath)) {
                 let rel = f.filepath.substring(currentExplorerPath.length);
                 if (rel.startsWith('/')) rel = rel.substring(1);
@@ -1271,20 +1271,24 @@ $(document).ready(async () => {
     fillBackupsTable();
 
     try {
-        const [reg, lang, set] = await Promise.all([
+        const [regRaw, langRaw, setRaw] = await Promise.all([
             $.getJSON("/api/settings/regions").catch(e => { debugWarn("Failed to load regions"); return { regions: [] }; }),
             $.getJSON("/api/settings/languages").catch(e => { debugWarn("Failed to load languages"); return { languages: [] }; }),
             $.getJSON("/api/settings").catch(e => { throw e; }) // Critical
         ]);
 
+        const reg = (typeof unwrap === 'function') ? unwrap(regRaw) : regRaw;
+        const lang = (typeof unwrap === 'function') ? unwrap(langRaw) : langRaw;
+        const set = (typeof unwrap === 'function') ? unwrap(setRaw) : setRaw;
+
         const selR = $('#selectRegion').empty();
         const regions = (reg && Array.isArray(reg.regions)) ? reg.regions : [];
-        regions.forEach(r => selR.append(new Option(r, r)));
+        (Array.isArray(regions) ? regions : []).forEach(r => selR.append(new Option(r, r)));
         if (set && set['titles/region']) selR.val(set['titles/region']);
 
         const selL = $('#selectLanguage').empty();
         const languages = (lang && Array.isArray(lang.languages)) ? lang.languages : [];
-        languages.forEach(l => selL.append(new Option(l, l)));
+        (Array.isArray(languages) ? languages : []).forEach(l => selL.append(new Option(l, l)));
         if (set && set['titles/language']) selL.val(set['titles/language']);
 
         $('#autoUseLatest').prop('checked', set['titles/auto_use_latest'] === true);

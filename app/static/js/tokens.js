@@ -32,23 +32,12 @@ const tokensManager = {
             const raw = await response.json();
 
             // Normalize response shapes: envelope { code, success, data } or direct array
-            let tokens = raw;
-            try {
-                if (raw && raw.data !== undefined) tokens = raw.data;
-            } catch (e) {
-                // ignore
-            }
+            const payload = (raw && raw.data !== undefined) ? raw.data : raw;
+            let tokens = [];
+            if (Array.isArray(payload)) tokens = payload;
+            else if (payload && typeof payload === 'object') tokens = payload.tokens || payload.results || payload || [];
 
-            if (!Array.isArray(tokens)) {
-                // Common alternative shapes: { tokens: [...] } or { results: [...] }
-                if (tokens && typeof tokens === 'object') {
-                    tokens = tokens.tokens || tokens.results || [];
-                } else {
-                    tokens = [];
-                }
-            }
-
-            if (tokens.length === 0) {
+            if (!Array.isArray(tokens) || tokens.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="has-text-centered has-text-grey">Nenhum token encontrado.</td></tr>';
                 return;
             }
