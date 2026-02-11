@@ -55,6 +55,29 @@ from backup import BackupManager
 from plugin_system import get_plugin_manager
 
 # Routes and services
+from pathlib import Path
+import hashlib
+import sys
+
+# Debug helper: print SHA1 and head of routes/system.py at startup to detect
+# version skew between repository and runtime container.
+try:
+    system_path = Path(__file__).resolve().parent / "routes" / "system.py"
+    if system_path.exists():
+        content = system_path.read_text(encoding="utf-8")
+        sha1 = hashlib.sha1(content.encode("utf-8")).hexdigest()
+        print(f"DEBUG: routes/system.py sha1={sha1}")
+        # print first 12 lines to help triage indentation issues
+        for i, line in enumerate(content.splitlines()[:12], start=1):
+            print(f"DEBUG: system.py L{i}: {line}")
+        sys.stdout.flush()
+    else:
+        print(f"DEBUG: routes/system.py not found at expected path: {system_path}")
+        sys.stdout.flush()
+except Exception as e:
+    print(f"DEBUG: error reading routes/system.py: {e}")
+    sys.stdout.flush()
+
 from routes.library import library_bp
 from routes.settings import settings_bp
 from routes.system import system_bp, system_web_bp
