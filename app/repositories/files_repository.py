@@ -9,6 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from db import db
 from models.files import Files
 from models.apps import Apps
+from models.titles import Titles
 
 
 class FilesRepository:
@@ -46,9 +47,10 @@ class FilesRepository:
         return (
             Files.query.options(joinedload(Files.apps).joinedload(Apps.title))
             .join(Files.apps)
-            .join(Apps.title)
+            .join(Titles)
             .filter(Files.identified == True)
-            .filter(db.or_(Apps.title.name.is_(None), Apps.title.name.ilike("Unknown%")))
+            # Use Titles.name (column) instead of Apps.title (relationship) when filtering
+            .filter(db.or_(Titles.name.is_(None), Titles.name.ilike("Unknown%")))
             .all()
         )
 

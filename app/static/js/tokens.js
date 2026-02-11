@@ -29,7 +29,24 @@ const tokensManager = {
 
         try {
             const response = await window.safeFetch('/api/settings/tokens');
-            const tokens = await response.json();
+            const raw = await response.json();
+
+            // Normalize response shapes: envelope { code, success, data } or direct array
+            let tokens = raw;
+            try {
+                if (raw && raw.data !== undefined) tokens = raw.data;
+            } catch (e) {
+                // ignore
+            }
+
+            if (!Array.isArray(tokens)) {
+                // Common alternative shapes: { tokens: [...] } or { results: [...] }
+                if (tokens && typeof tokens === 'object') {
+                    tokens = tokens.tokens || tokens.results || [];
+                } else {
+                    tokens = [];
+                }
+            }
 
             if (tokens.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="has-text-centered has-text-grey">Nenhum token encontrado.</td></tr>';

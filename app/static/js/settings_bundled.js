@@ -17,6 +17,19 @@ const unwrap = (res) => {
     return res;
 }
 
+// Coerce various API shapes into an array for safe iteration
+const coerceArray = (res) => {
+    const payload = unwrap(res);
+    if (Array.isArray(payload)) return payload;
+    if (!payload || typeof payload !== 'object') return [];
+    // Common keys that may contain arrays
+    const keys = ['plugins', 'paths', 'sources', 'backups', 'tokens', 'users', 'webhooks', 'files', 'results'];
+    for (let k of keys) if (Array.isArray(payload[k])) return payload[k];
+    // Fallback: return first array-valued property
+    for (let k of Object.keys(payload)) if (Array.isArray(payload[k])) return payload[k];
+    return [];
+}
+
 // --- External API Settings ---
 window.saveAPISettings = function () {
     const rawg_api_key = $('#rawgApiKey').val();
@@ -335,11 +348,12 @@ function checkWatchdogStatus() {
 function fillUserTable() {
     $.getJSON("/api/users", (result) => {
         const tbody = $('#userTable tbody').empty();
-        allUsernames = result.map(u => u.user);
-        if (!result.length) {
+        const list = coerceArray(result);
+        allUsernames = list.map(u => u.user);
+        if (!list.length) {
             tbody.append(`<tr><td colspan="3" class="has-text-centered py-6 opacity-40 italic">${t("No users found")}</td></tr>`);
         } else {
-            result.forEach(user => {
+            list.forEach(user => {
                 const self = user.user === window.currentUser;
                 tbody.append(`
                     <tr>
@@ -369,7 +383,8 @@ function fillUserTable() {
 
 function fillTitleDBSourcesTable() {
     $.getJSON("/api/settings/titledb/sources", (result) => {
-        if (!result.success) return;
+        const payload = unwrap(result);
+        if (!payload || !payload.sources) return;
         const tbody = $('#titledbSourcesTable tbody').empty();
         if (!tbody.data('sortable-init')) {
             const sortableEl = document.getElementById('titledbSourcesTable').querySelector('tbody');
@@ -401,7 +416,7 @@ function fillTitleDBSourcesTable() {
             }
         }
 
-        result.sources.forEach(source => {
+        payload.sources.forEach(source => {
             let remoteDateHtml = '';
             if (source.is_fetching) {
                 remoteDateHtml = `<span class="is-size-7 italic opacity-50"><i class="bi bi-arrow-repeat spin mr-1"></i> ${t('Carregando...')}</span>`;
@@ -468,10 +483,11 @@ function fillErrorsTable() {
 
     $.getJSON("/api/files/unidentified", (result) => {
         const tbody = $('#errorsTable tbody').empty();
-        if (!result || !result.length) {
+        const list = coerceArray(result);
+        if (!list.length) {
             tbody.append(`<tr><td colspan="4" class="has-text-centered py-6 opacity-40 italic">${t('Nenhum erro de identificação encontrado.')}</td></tr>`);
         } else {
-            result.forEach(file => {
+            list.forEach(file => {
                 const isRecognitionError = file.error && file.error.includes('Banco de Dados');
                 const tidMatch = isRecognitionError ? file.error.match(/\((0100[0-9A-F]+)\)/) : null;
                 const tid = tidMatch ? tidMatch[1] : null;
@@ -877,8 +893,9 @@ function fillCloudStatus() {
 function fillPluginsList() {
     $.getJSON('/api/plugins', (plugins) => {
         const container = $('#pluginsList').empty();
-        if (plugins.length === 0) { container.append(`<p class="is-size-7 opacity-50 has-text-centered py-4">${t('Nenhum plugin encontrado.')}</p>`); return; }
-        plugins.forEach(p => {
+        const list = coerceArray(plugins);
+        if (list.length === 0) { container.append(`<p class="is-size-7 opacity-50 has-text-centered py-4">${t('Nenhum plugin encontrado.')}</p>`); return; }
+        list.forEach(p => {
             const isEnabled = p.enabled !== false;
             container.append(`
                 <div class="box is-shadowless border p-4 mb-3" style="border: 1px solid rgba(0,0,0,0.05);">
@@ -940,8 +957,8 @@ function updateExplorerBreadcrumb() {
 
 function fillFilesExplorer() {
     $.getJSON('/api/settings/library/paths', (res) => {
-        explorerLibraries = res.paths || [];
-        $.getJSON('/api/files/all', (files) => { allFiles = files; renderFilesExplorer(); updateExplorerBreadcrumb(); }).fail(() => $('#filesExplorerTable tbody').html(`<tr><td colspan="6" class="has-text-centered py-4 has-text-danger">${t('Erro ao carregar arquivos.')}</td></tr>`));
+        explorerLibraries = coerceArray(res).length ? coerceArray(res) : (unwrap(res).paths || []);
+        $.getJSON('/api/files/all', (files) => { allFiles = unwrap(files) || files || []; renderFilesExplorer(); updateExplorerBreadcrumb(); }).fail(() => $('#filesExplorerTable tbody').html(`<tr><td colspan="6" class="has-text-centered py-4 has-text-danger">${t('Erro ao carregar arquivos.')}</td></tr>`));
     });
 }
 
@@ -1071,8 +1088,9 @@ $(document).on('change', '#fileTypeFilter, #fileStatusFilter', renderFilesExplor
 function fillWebhooksList() {
     $.getJSON('/api/settings/webhooks', (ws) => {
         const c = $('#webhooksList').empty();
-        if (!ws || ws.length === 0) { c.append(`<p class="is-size-7 opacity-50 has-text-centered py-4">${t('Nenhum webhook configurado.')}</p>`); return; }
-        ws.forEach(w => {
+        const list = coerceArray(ws);
+        if (!list || list.length === 0) { c.append(`<p class="is-size-7 opacity-50 has-text-centered py-4">${t('Nenhum webhook configurado.')}</p>`); return; }
+        list.forEach(w => {
             const icon = w.active ? '<i class="bi bi-check-circle-fill has-text-success mr-2"></i>' : '<i class="bi bi-x-circle-fill has-text-danger mr-2"></i>';
             c.append(`<div class="box is-shadowless border p-3 mb-2" style="border-left: 4px solid var(--color-info) !important;"><div class="columns is-vcentered is-mobile"><div class="column"><div class="is-flex is-align-items-center mb-1">${icon}<span class="tag is-small ${w.active ? 'is-success' : 'is-light'} is-light">${w.active ? t('Ativo') : t('Inativo')}</span></div><p class="is-size-7 has-text-weight-bold truncate" title="${escapeHtml(w.url)}">${escapeHtml(w.url)}</p><p class="is-size-7 opacity-50">${t('Eventos')}: ${escapeHtml(w.events.join(', '))}</p></div><div class="column is-narrow"><button class="button is-danger is-small is-light" onclick="deleteWebhook(${w.id})" title="${t('Excluir webhook')}"><i class="bi bi-trash3"></i></button></div></div></div>`);
         });
