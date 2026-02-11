@@ -132,6 +132,14 @@ function loadLibraryPaginated(page = 1, append = false) {
             games = newGames;
         }
 
+        // Initialize filter dropdowns (genres/tags) based on loaded games
+        try {
+            initGenders(games);
+            initTags(games);
+        } catch (e) {
+            console.warn('Failed to init genders/tags from loaded games', e);
+        }
+
         // Update total count from server
         if (data && data.pagination) {
             totalItems = data.pagination.total_items || 0;
@@ -618,6 +626,15 @@ function applyFilters() {
     const countText = hasActiveFilters ? `${filteredCount} / ${loadedCount}` : `${loadedCount}`;
     $('#totalItemsCount, #totalItemsCountMobile').text(`${countText} ${t('Jogos')}`);
     
+    // Show a friendly empty state if there are no filtered results
+    if (window.filteredGames.length === 0) {
+        $('#noResults').removeClass('is-hidden');
+        $('#libraryContainer').addClass('is-hidden');
+    } else {
+        $('#noResults').addClass('is-hidden');
+        $('#libraryContainer').removeClass('is-hidden');
+    }
+
     renderLibrary();
 }
 
