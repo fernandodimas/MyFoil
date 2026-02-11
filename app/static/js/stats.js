@@ -4,6 +4,16 @@
 
 let genreChart = null;
 
+// Normalize envelope-style API responses: { code, success, data } or direct payload
+const unwrap = (res) => {
+    try {
+        if (res && res.data !== undefined) return res.data;
+    } catch (e) {
+        // ignore
+    }
+    return res;
+}
+
 $(document).ready(() => {
     loadStats(true); // Initial load with library list population
 });
@@ -12,34 +22,40 @@ function loadStats(initFilter = false) {
     const libId = $('#libraryFilter').val();
     const url = `/api/stats/overview${libId ? '?library_id=' + libId : ''}`;
 
-    $.getJSON(url, (data) => {
+    $.getJSON(url, (raw) => {
+        const data = unwrap(raw) || {};
         if (initFilter) {
             populateLibraryFilter(data.libraries || []);
         }
 
+        // Safe accessor helpers
+        const lib = data.library || {};
+        const id = data.identification || {};
+        const tdb = data.titledb || {};
+
         // Fill quick cards
-        $('#stat-total-games').text(data.library.total_titles || 0);
-        $('#stat-total-files-top').text((data.identification.total_files || 0) + ' ' + t('Arquivos'));
-        $('#stat-total-size').text(data.library.total_size_formatted || '0 B');
+        $('#stat-total-games').text(lib.total_titles || 0);
+        $('#stat-total-files-top').text((id.total_files || 0) + ' ' + t('Arquivos'));
+        $('#stat-total-size').text(lib.total_size_formatted || '0 B');
 
         // Breakdown
-        $('#stat-total-bases').text(data.library.total_bases || 0);
-        $('#stat-total-updates').text(data.library.total_updates || 0);
-        $('#stat-total-dlcs').text(data.library.total_dlcs || 0);
+        $('#stat-total-bases').text(lib.total_bases || 0);
+        $('#stat-total-updates').text(lib.total_updates || 0);
+        $('#stat-total-dlcs').text(lib.total_dlcs || 0);
 
-        $('#stat-up-to-date-pct').text((data.library.completion_rate || 0) + '%');
-        $('#stat-up-to-date-count').text((data.library.up_to_date || 0) + ' ' + t('atualizados'));
-        $('#stat-pending-count').text(data.library.pending || 0);
+        $('#stat-up-to-date-pct').text((lib.completion_rate || 0) + '%');
+        $('#stat-up-to-date-count').text((lib.up_to_date || 0) + ' ' + t('atualizados'));
+        $('#stat-pending-count').text(lib.pending || 0);
 
-        $('#stat-coverage-pct').text((data.titledb.coverage_pct || 0) + '%');
-        $('#stat-source-name').text(data.titledb.source_name || '--');
-        $('#stat-total-available').text((data.titledb.total_available || 0).toLocaleString());
+        $('#stat-coverage-pct').text((tdb.coverage_pct || 0) + '%');
+        $('#stat-source-name').text(tdb.source_name || '--');
+        $('#stat-total-available').text((tdb.total_available || 0).toLocaleString());
 
         // Identification Stats
-        $('#stat-id-rate').text(data.identification.identified_pct || 0);
-        $('#stat-recognition-pct').text(data.identification.recognition_pct || 0);
-        $('#stat-unidentified-files').text(data.identification.unidentified_count || 0);
-        $('#stat-unrecognized-count').text(data.identification.unrecognized_count || 0);
+        $('#stat-id-rate').text(id.identified_pct || 0);
+        $('#stat-recognition-pct').text(id.recognition_pct || 0);
+        $('#stat-unidentified-files').text(id.unidentified_count || 0);
+        $('#stat-unrecognized-count').text(id.unrecognized_count || 0);
 
         // Render Genre Chart
         renderGenreChart(data.genres || {});

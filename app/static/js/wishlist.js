@@ -1,6 +1,29 @@
 let allWishlistItems = [];
 let currentWishlistView = localStorage.getItem('wishlistViewMode') || 'list';
 
+// Normalize envelope-style API responses: { code, success, data } or direct payload
+const unwrap = (res) => {
+    try {
+        if (res && res.data !== undefined) return res.data;
+    } catch (e) {
+        // ignore
+    }
+    return res;
+}
+
+// Coerce various API shapes into an array for safe iteration
+const coerceArray = (res) => {
+    const payload = unwrap(res);
+    if (Array.isArray(payload)) return payload;
+    if (!payload || typeof payload !== 'object') return [];
+    // Common keys that may contain arrays
+    const keys = ['items', 'results', 'wishlist', 'data'];
+    for (let k of keys) if (Array.isArray(payload[k])) return payload[k];
+    // Fallback: return first array-valued property
+    for (let k of Object.keys(payload)) if (Array.isArray(payload[k])) return payload[k];
+    return [];
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initWishlistControls();
     loadWishlist();
@@ -62,7 +85,17 @@ async function loadWishlist() {
 
     try {
         const res = await window.safeFetch('/api/wishlist');
-        allWishlistItems = await res.json();
+        const raw = await res.json();
+        // Support both envelope responses and raw arrays
+        const payload = unwrap(raw);
+        if (Array.isArray(payload)) allWishlistItems = payload;
+        else if (payload && typeof payload === 'object') {
+            // Try common properties
+            allWishlistItems = payload.wishlist || payload.items || payload.results || [];
+            if (!Array.isArray(allWishlistItems)) allWishlistItems = coerceArray(payload);
+        } else {
+            allWishlistItems = [];
+        }
 
         if (loading) loading.classList.add('is-hidden');
 
@@ -154,6 +187,7 @@ function formatDateDisplay(rawDate) {
 }
 
 function renderCardView(items, container) {
+    if (!Array.isArray(items)) items = coerceArray(items);
     items.forEach((item, index) => {
         const date = formatDateDisplay(item.release_date);
         const card = document.createElement('div');
@@ -182,6 +216,7 @@ function renderCardView(items, container) {
 }
 
 function renderIconView(items, container) {
+    if (!Array.isArray(items)) items = coerceArray(items);
     items.forEach((item, index) => {
         const date = formatDateDisplay(item.release_date);
         const card = document.createElement('div');
@@ -208,6 +243,7 @@ function renderIconView(items, container) {
 
 function renderListView(items, container) {
     const tableContainer = document.createElement('div');
+    if (!Array.isArray(items)) items = coerceArray(items);
     tableContainer.className = 'box is-paddingless shadow-sm overflow-hidden border-none bg-glass';
 
     let rows = items.map(item => {
