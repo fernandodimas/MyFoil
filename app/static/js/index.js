@@ -17,6 +17,7 @@ let totalItems = 0;  // Total number of games in library
 let isNewRender = true;  // Track if we need a full re-render
 let scrollOffset = 0;  // Track which filtered items have been rendered
 let hasMoreItems = true;  // Track if there are more items to render
+let isServerSideFiltered = false; // Track if current games list is a filtered subset
 const PER_PAGE = 75;  // Items per page (optimized for performance - 75 is sweet spot)
 const SCROLL_BATCH_SIZE = 30;  // Render 30 items at a time for smoothness
 
@@ -113,6 +114,8 @@ function loadLibraryPaginated(page = 1, append = false) {
         // Update progress bar to 80% (data received)
         $('#loadingProgress').val(80);
         
+        isServerSideFiltered = false;
+
         // Normalize response: support both envelope { code, data: { items } } and direct responses
         const payload = (data && data.data) ? data.data : data;
 
@@ -548,6 +551,12 @@ function applyFilters() {
         return;
     }
 
+    // If we were previously in a filtered state (server-side search), we need to reload the full library
+    if (isServerSideFiltered) {
+        loadLibraryPaginated(1, false);
+        return;
+    }
+
     // No active filters: fall back to client-side filtering on already-loaded pages
     // Compute status flags based on ignore preferences
     games.forEach(g => {
@@ -701,6 +710,8 @@ function searchLibraryServer(page = 1, append = false) {
     $.getJSON(url, function (res) {
         const payload = (res && res.data) ? res.data : res;
         const items = (payload && payload.items && Array.isArray(payload.items)) ? payload.items : (payload.items || []);
+
+        isServerSideFiltered = true;
 
         if (append) {
             games = [...games, ...items];
