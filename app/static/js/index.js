@@ -526,7 +526,7 @@ function renderListView(items) {
 }
 
 function applyFilters() {
-    const query = ($('#navbarSearch').val() || '').toLowerCase();
+    const query = ($('#navbarSearch').val() || '').trim();
     const gender = $('#filterGender').val();
     const tag = $('#filterTag').val();
 
@@ -538,6 +538,18 @@ function applyFilters() {
     // Mark for full re-render
     isNewRender = true;
 
+    const hasActiveFilters = !!(query || gender || tag || showOnlyBase || showOnlyUpdates || showOnlyDlcs || showOnlyRedundant);
+    $('#clearFiltersBtn').toggleClass('has-active', !!hasActiveFilters);
+
+    // If the user has active filters or a search query, use the server-side paged search
+    if (hasActiveFilters) {
+        // Use server-side search to operate against the whole library (not only loaded page)
+        searchLibraryServer(1, false);
+        return;
+    }
+
+    // No active filters: fall back to client-side filtering on already-loaded pages
+    // Compute status flags based on ignore preferences
     games.forEach(g => {
         if (!g) return;
         const gameIgnore = ignorePreferences[g.id] || {};
@@ -546,7 +558,6 @@ function applyFilters() {
 
         let hasNonIgnoredUpdates = false;
         if (g.has_base && !g.has_latest_version) {
-            // Check based on the updates list from the server
             if (g.updates && Array.isArray(g.updates)) {
                 const ownedVersion = parseInt(g.owned_version) || 0;
                 hasNonIgnoredUpdates = g.updates.some(u => {
@@ -554,7 +565,6 @@ function applyFilters() {
                     return v > ownedVersion && !u.owned && !ignoredUpdates[v.toString()];
                 });
             } else {
-                // Fallback to basic comparison if updates list is missing (unlikely)
                 hasNonIgnoredUpdates = true;
             }
         }
@@ -584,20 +594,7 @@ function applyFilters() {
         }
     });
 
-    window.filteredGames = games.filter(g => {
-        if (!g) return false;
-        const matchesSearch = !query || g.name.toLowerCase().includes(query) || g.id.toLowerCase().includes(query);
-        const matchesGender = !gender || (g.category && g.category.includes(gender));
-        const matchesTag = !tag || (g.tags && g.tags.includes(tag));
-
-        let matchesStatus = true;
-        if (showOnlyBase) matchesStatus = matchesStatus && !g.has_base;
-        if (showOnlyUpdates) matchesStatus = matchesStatus && (g.has_base && g.has_non_ignored_updates);
-        if (showOnlyDlcs) matchesStatus = matchesStatus && (g.has_base && g.has_non_ignored_dlcs);
-        if (showOnlyRedundant) matchesStatus = matchesStatus && g.has_redundant_updates;
-
-        return matchesSearch && matchesGender && matchesTag && matchesStatus;
-    });
+    window.filteredGames = games.slice();
 
     window.filteredGames.sort((a, b) => {
         const [field, order] = currentSort.split('-');
@@ -624,16 +621,13 @@ function applyFilters() {
         return order === 'asc' ? comparison : -comparison;
     });
 
-    const hasActiveFilters = query || gender || tag || showOnlyBase || showOnlyUpdates || showOnlyDlcs || showOnlyRedundant;
-    $('#clearFiltersBtn').toggleClass('has-active', !!hasActiveFilters);
-
     // Update item count - show filtered count vs total loaded
     const loadedCount = totalItems || games.length;
     const filteredCount = window.filteredGames.length;
-    const countText = hasActiveFilters ? `${filteredCount} / ${loadedCount}` : `${loadedCount}`;
+    const countText = `${loadedCount}`;
     $('#totalItemsCount, #totalItemsCountMobile').text(`${countText} ${t('Jogos')}`);
-    
-    // Show a friendly empty state if there are no filtered results
+
+    // Show/hide empty state
     if (window.filteredGames.length === 0) {
         $('#noResults').removeClass('is-hidden');
         $('#libraryContainer').addClass('is-hidden');
@@ -666,6 +660,110 @@ function clearSearch() {
     $('#searchClearBtn').hide();
     $('#searchIcon').show();
     applyFilters();
+}
+
+// Server-side search helper to query the entire library (paged) when filters/search are active
+function searchLibraryServer(page = 1, append = false) {
+    const query = ($('#navbarSearch').val() || '').trim();
+    const genre = $('#filterGender').val();
+    const tag = $('#filterTag').val();
+    const showOnlyBase = $('#btnFilterPendingBase').hasClass('is-primary');
+    const showOnlyUpdates = $('#btnFilterPendingUpd').hasClass('is-primary');
+    const showOnlyDlcs = $('#btnFilterPendingDlc').hasClass('is-primary');
+    const showOnlyRedundant = $('#btnFilterRedundant').hasClass('is-primary');
+
+    // Build params for server-side paged search. Use /api/library/search/paged which supports q, genre, owned, up_to_date
+    let url = `/api/library/search/paged?page=${page}&per_page=${PER_PAGE}`;
+    if (query) url += `&q=${encodeURIComponent(query)}`;
+    if (genre) url += `&genre=${encodeURIComponent(genre)}`;
+    // Map some UI flags to server params where possible
+    if (showOnlyBase) url += `&owned=true`; // show only owned
+    if (showOnlyUpdates) url += `&up_to_date=false`;
+
+    // Show loading UI
+    if (page === 1 && !append) {
+        $('#loadingIndicator').removeClass('is-hidden');
+        $('#loadingProgress').val(50);
+    } else {
+        $('#paginationLoader').removeClass('is-hidden');
+    }
+
+    $.getJSON(url, function (res) {
+        const payload = (res && res.data) ? res.data : res;
+        const items = (payload && payload.items && Array.isArray(payload.items)) ? payload.items : (payload.items || []);
+
+        if (append) {
+            games = [...games, ...items];
+        } else {
+            games = items;
+        }
+
+        // Update pagination / total
+        const pagination = payload && payload.pagination ? payload.pagination : (res && res.pagination ? res.pagination : null);
+        if (pagination) {
+            totalItems = pagination.total_items || pagination.total || games.length;
+            allGamesLoaded = pagination.has_next !== undefined ? !pagination.has_next : !pagination.has_more;
+            currentPage = pagination.page || page;
+        } else {
+            totalItems = games.length;
+            allGamesLoaded = true;
+        }
+
+        // For status/dlc/update tags we still need to compute client-side using ignorePreferences
+        games.forEach(g => {
+            const gameIgnore = ignorePreferences[g.id] || {};
+            const ignoredDlcs = gameIgnore.dlcs || {};
+            const ignoredUpdates = gameIgnore.updates || {};
+
+            let hasNonIgnoredUpdates = false;
+            if (g.has_base && g.updates && Array.isArray(g.updates)) {
+                const ownedVersion = parseInt(g.owned_version) || 0;
+                hasNonIgnoredUpdates = g.updates.some(u => {
+                    const v = parseInt(u.version);
+                    return v > ownedVersion && !u.owned && !ignoredUpdates[v.toString()];
+                });
+            }
+            g.has_non_ignored_updates = hasNonIgnoredUpdates;
+
+            let hasNonIgnoredDlcs = false;
+            if (g.has_base && g.dlcs && Array.isArray(g.dlcs)) {
+                hasNonIgnoredDlcs = g.dlcs.some(dlc => {
+                    const appIdKey = typeof dlc.app_id === 'string' ? dlc.app_id : (dlc.appId || '');
+                    const isIgnored = appIdKey ? (ignoredDlcs[appIdKey.toUpperCase()] || ignoredDlcs[appIdKey.toLowerCase()]) : false;
+                    const isNotOwned = !dlc.owned;
+                    return isNotOwned && !isIgnored;
+                });
+            }
+            g.has_non_ignored_dlcs = hasNonIgnoredDlcs;
+
+            if (!g.has_base) {
+                g.status_color = 'orange';
+                g.status_score = 0;
+            } else if (g.has_non_ignored_updates || g.has_non_ignored_dlcs) {
+                g.status_color = 'orange';
+                g.status_score = 1;
+            } else {
+                g.status_color = 'green';
+                g.status_score = 2;
+            }
+        });
+
+        // Use server results as filteredGames
+        window.filteredGames = games.slice();
+
+        // Update UI counts
+        $('#totalItemsCount, #totalItemsCountMobile').text(`${totalItems} ${t('Jogos')}`);
+
+        // Render results
+        resetInfiniteScroll();
+
+        $('#loadingIndicator').addClass('is-hidden');
+        $('#paginationLoader').addClass('is-hidden');
+    }).fail((jqXHR, textStatus, err) => {
+        console.error('Server search failed:', textStatus, err, jqXHR.responseText);
+        $('#loadingIndicator').addClass('is-hidden');
+        $('#paginationLoader').addClass('is-hidden');
+    });
 }
 
 // ========== INFINITE SCROLL ==========
