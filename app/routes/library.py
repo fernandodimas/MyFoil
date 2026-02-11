@@ -3,6 +3,7 @@ Library Routes - Endpoints relacionados à biblioteca de jogos
 """
 
 from flask import Blueprint, request, jsonify
+import hashlib
 from sqlalchemy import func, and_, case, or_
 from sqlalchemy.orm import joinedload
 from db import (
@@ -193,15 +194,29 @@ def library_paged_api():
         cache_key = f"library_paged:{page}:{per_page}:{sort_by}:{order}"
         cached_data = redis_cache.cache_get(cache_key)
         if cached_data:
+            # cached_data is a JSON string
             logger.debug(f"Cache HIT for library_paged: page={page}, sort={sort_by}-{order}")
-            data = json.loads(cached_data)
-            resp, status = success_response(data=data)
-            resp.headers["X-Cache"] = "HIT"
-            resp.headers["X-Total-Count"] = str(data.get("pagination", {}).get("total_items", "0"))
-            resp.headers["X-Page"] = str(page)
-            resp.headers["X-Per-Page"] = str(per_page)
-            resp.headers["Cache-Control"] = "public, max-age=300"
-            return resp, status
+            try:
+                # Compute ETag from cached payload to support conditional GET
+                etag = hashlib.md5(cached_data.encode("utf-8")).hexdigest()
+                if request.headers.get("If-None-Match") == etag:
+                    return "", 304
+
+                data = json.loads(cached_data)
+            except Exception:
+                # If cached content is invalid, treat as cache miss
+                logger.warning("Invalid cached payload, treating as cache miss")
+                data = None
+
+            if data is not None:
+                resp = jsonify(data if isinstance(data, dict) else json.loads(data))
+                resp.set_etag(etag)
+                resp.headers["X-Cache"] = "HIT"
+                resp.headers["X-Total-Count"] = str(data.get("pagination", {}).get("total_items", "0"))
+                resp.headers["X-Page"] = str(page)
+                resp.headers["X-Per-Page"] = str(per_page)
+                resp.headers["Cache-Control"] = "public, max-age=300"
+                return resp, 200
 
     # Use repository for pagination
     paginated = TitlesRepository.get_paged(page=page, per_page=per_page, sort_by=sort_by, order=order)
@@ -234,7 +249,11 @@ def library_paged_api():
 
     # Cache the response (Phase 4.1)
     if CACHE_ENABLED:
-        redis_cache.cache_set(cache_key, data, ttl=300)  # 5 min cache
+        try:
+            # Ensure we store JSON string in cache for consistency
+            redis_cache.cache_set(cache_key, json.dumps(data), ttl=300)  # 5 min cache
+        except Exception as e:
+            logger.warning(f"Failed to set cache for {cache_key}: {e}")
 
     # Build response payload with both envelope and top-level fields for compatibility
     response_payload = {
