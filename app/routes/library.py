@@ -298,73 +298,41 @@ def library_search_paged_api():
     per_page = min(max(1, per_page), MAX_PER_PAGE)
 
     # Use repository for pagination with filters
-    filters = {"owned_only": owned_only, "up_to_date": up_to_date}
+    filters = {
+        "owned_only": owned_only,
+        "up_to_date": up_to_date,
+        "missing": missing_only,
+        "pending": pending,
+        "genre": genre,
+        "tag": tag,
+    }
+
     paginated = TitlesRepository.get_paged(
         page=page, per_page=per_page, query_text=query_text, filters=filters, sort_by="name", order="asc"
     )
 
-    # Serialize and filter by genre if needed (genre filtering is post-query for simplicity)
+    # Serialize items directly without secondary filtering
     items = []
     for title in paginated.items:
         try:
             item = _serialize_title_with_apps(title)
-
-            # Apply additional filters server-side to ensure accurate results
-            # Genre
-            if genre and genre != "Todos os Gêneros":
-                categories = item.get("category", [])
-                if isinstance(categories, str):
-                    categories = categories.split(",") if categories else []
-                if genre not in categories:
-                    continue
-
-            # Tag (match tag in item's tags list)
-            if tag:
-                tags = item.get("tags") or []
-                if isinstance(tags, str):
-                    tags = [tags]
-                if tag not in tags:
-                    continue
-
-            # Ownership and missing
-            is_owned = item.get("have_base", False)
-            if owned_only and not is_owned:
-                continue
-            if missing_only and is_owned:
-                continue
-
-            # up_to_date filter
-            is_up_to_date = item.get("up_to_date", False)
-            if up_to_date and not is_up_to_date:
-                continue
-
-            # pending filter (owned and not up_to_date)
-            has_pending = (not is_up_to_date) and is_owned
-            if pending and not has_pending:
-                continue
-
-            items.append(item)
+            if item:
+                items.append(item)
         except Exception as e:
             logger.error(f"Error serializing title {title.title_id}: {e}")
             continue
 
-    # Recalculate pagination after filtering
-    total_items = len(items)
-    total_pages = (total_items + per_page - 1) // per_page
-    start_idx = (page - 1) * per_page
-    end_idx = start_idx + per_page
-    paginated_items = items[start_idx:end_idx]
-
+    # Return paginated results directly from DB
     return success_response(
         data={
-            "items": paginated_items,
+            "items": items,
             "pagination": {
-                "page": page,
-                "per_page": per_page,
-                "total_items": total_items,
-                "total_pages": total_pages,
-                "has_next": page < total_pages,
-                "has_prev": page > 1,
+                "page": paginated.page,
+                "per_page": paginated.per_page,
+                "total_items": paginated.total,
+                "total_pages": paginated.pages,
+                "has_next": paginated.has_next,
+                "has_prev": paginated.has_prev,
             },
         }
     )

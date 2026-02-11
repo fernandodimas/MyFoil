@@ -58,6 +58,18 @@ class TitlesRepository:
                 # pending means owned but not up_to_date
                 query = query.filter(Titles.have_base == True, Titles.up_to_date == False)
 
+            if filters.get("missing"):
+                query = query.filter(or_(Titles.have_base == False, Titles.have_base == None))
+
+            if filters.get("genre") and filters.get("genre") != "Todos os Gêneros":
+                # Assuming JSON list stored as text, simple contains check
+                g = filters.get("genre")
+                query = query.filter(Titles.genres_json.ilike(f"%{g}%"))
+
+            if filters.get("tag"):
+                t = filters.get("tag")
+                query = query.filter(Titles.tags_json.ilike(f"%{t}%"))
+
         # Apply sorting
         sort_field = getattr(Titles, sort_by, Titles.name)
         if order == "desc":
