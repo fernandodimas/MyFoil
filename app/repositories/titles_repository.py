@@ -3,11 +3,12 @@ Repository for Titles database operations
 Phase 3.1: Database refactoring - Separate queries from models
 """
 
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError
 from db import db
 from models.titles import Titles
+from models.apps import Apps
 
 
 class TitlesRepository:
@@ -69,6 +70,22 @@ class TitlesRepository:
             if filters.get("tag"):
                 t = filters.get("tag")
                 query = query.filter(Titles.tags_json.ilike(f"%{t}%"))
+
+            if filters.get("dlc"):
+                # DLC filter: Owned games that have missing DLCs (complete=False)
+                query = query.filter(Titles.have_base == True, Titles.complete == False)
+
+            if filters.get("redundant"):
+                # Redundant filter: Games with more than 1 owned update file
+                # We use a subquery to find title_ids (int PK) that have multiple owned updates
+                subq = (
+                    db.session.query(Apps.title_id)
+                    .filter(Apps.app_type == "UPD", Apps.owned == True)
+                    .group_by(Apps.title_id)
+                    .having(func.count(Apps.id) > 1)
+                    .subquery()
+                )
+                query = query.join(subq, Titles.id == subq.c.title_id)
 
         # Apply sorting
         sort_field = getattr(Titles, sort_by, Titles.name)

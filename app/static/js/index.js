@@ -687,6 +687,9 @@ function searchLibraryServer(page = 1, append = false) {
         // no-op; keep default
     }
 
+    if (showOnlyDlcs) url += `&dlc=true`;
+    if (showOnlyRedundant) url += `&redundant=true`;
+
     // Show loading UI
     if (page === 1 && !append) {
         $('#loadingIndicator').removeClass('is-hidden');
@@ -986,6 +989,10 @@ $(document).ready(() => {
         $(this).toggleClass('is-primary is-light');
         if ($(this).hasClass('is-primary')) $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
         applyFilters();
+    });
+
+    $('#clearFiltersBtn').on('click', function() {
+        clearFilters();
     });
 
     $('.filterInput').on('change', applyFilters);

@@ -289,6 +289,8 @@ def library_search_paged_api():
     missing_only = request.args.get("missing") == "true"
     up_to_date = request.args.get("up_to_date") == "true"
     pending = request.args.get("pending") == "true"
+    dlc = request.args.get("dlc") == "true"
+    redundant = request.args.get("redundant") == "true"
 
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
@@ -303,6 +305,8 @@ def library_search_paged_api():
         "up_to_date": up_to_date,
         "missing": missing_only,
         "pending": pending,
+        "dlc": dlc,
+        "redundant": redundant,
         "genre": genre,
         "tag": tag,
     }
