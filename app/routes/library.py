@@ -169,7 +169,11 @@ def library_paged_api():
     # Parse parameters
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
-    sort_by = request.args.get("sort", "name", type=str)
+
+    # Accept both frontend param `sort_by` and legacy `sort` for compatibility
+    sort_by = request.args.get("sort_by")
+    if not sort_by:
+        sort_by = request.args.get("sort", "name")
     order = request.args.get("order", "asc", type=str)
 
     # Validate parameters
@@ -232,14 +236,24 @@ def library_paged_api():
     if CACHE_ENABLED:
         redis_cache.cache_set(cache_key, data, ttl=300)  # 5 min cache
 
-    resp, status = success_response(data=data)
+    # Build response payload with both envelope and top-level fields for compatibility
+    response_payload = {
+        "code": ErrorCode.SUCCESS,
+        "success": True,
+        "data": data,
+        # include top-level shortcuts so older clients or different consumers can read items directly
+        "items": data.get("items", []),
+        "pagination": data.get("pagination", {}),
+    }
+
+    resp = jsonify(response_payload)
     resp.headers["X-Total-Count"] = str(paginated.total)
     resp.headers["X-Page"] = str(paginated.page)
     resp.headers["X-Per-Page"] = str(paginated.per_page)
     resp.headers["X-Total-Pages"] = str(paginated.pages)
     resp.headers["X-Cache"] = "MISS"
     resp.headers["Cache-Control"] = "public, max-age=300"  # 5 min cache
-    return resp, status
+    return resp, 200
 
 
 @library_bp.route("/library/search/paged")

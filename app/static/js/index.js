@@ -113,16 +113,19 @@ function loadLibraryPaginated(page = 1, append = false) {
         // Update progress bar to 80% (data received)
         $('#loadingProgress').val(80);
         
+        // Normalize response: support both envelope { code, data: { items } } and direct responses
+        const payload = (data && data.data) ? data.data : data;
+
         // Check response format
         let newGames = [];
-        
+
         if (useLegacyFallback) {
-            newGames = (data && data.items) ? data.items : (Array.isArray(data) ? data : []);
+            newGames = (payload && payload.items) ? payload.items : (Array.isArray(payload) ? payload : []);
         } else {
-            if (data && data.items && Array.isArray(data.items)) {
-                newGames = data.items;
-            } else if (Array.isArray(data)) {
-                newGames = data;
+            if (payload && payload.items && Array.isArray(payload.items)) {
+                newGames = payload.items;
+            } else if (Array.isArray(payload)) {
+                newGames = payload;
             }
         }
         
@@ -141,10 +144,12 @@ function loadLibraryPaginated(page = 1, append = false) {
         }
 
         // Update total count from server
-        if (data && data.pagination) {
-            totalItems = data.pagination.total_items || 0;
-            allGamesLoaded = !data.pagination.has_next;
-            currentPage = data.pagination.page || page;
+        const paginationSource = (payload && payload.pagination) ? payload.pagination : (data && data.pagination ? data.pagination : null);
+        if (paginationSource) {
+            totalItems = paginationSource.total_items || paginationSource.total || 0;
+            // Support both has_next and hasMore naming
+            allGamesLoaded = paginationSource.has_next !== undefined ? !paginationSource.has_next : !paginationSource.has_more;
+            currentPage = paginationSource.page || page;
             
             // Update progress calculation
             if (totalItems > 0) {
@@ -152,8 +157,8 @@ function loadLibraryPaginated(page = 1, append = false) {
                 const progress = Math.min(100, Math.round((loadedCount / totalItems) * 100));
                 $('#loadingProgress').val(100);
             }
-        } else if (Array.isArray(data)) {
-            totalItems = data.length;
+        } else if (Array.isArray(payload)) {
+            totalItems = payload.length;
             allGamesLoaded = true;
             $('#loadingProgress').val(100);
         }
