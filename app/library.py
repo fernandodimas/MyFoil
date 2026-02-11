@@ -1103,6 +1103,24 @@ def update_titles():
             )
             complete = all(d in owned_dlc_ids for d in all_possible_dlc_ids)
 
+        # Materialized counters (to speed up common filters)
+        try:
+            # Count owned update apps with files (redundant updates counter)
+            redundant_updates = len(
+                [a for a in title.apps if a.app_type == APP_TYPE_UPD and a.owned and len(a.files) > 0]
+            )
+            title.redundant_updates_count = redundant_updates
+
+            # Missing DLCs counter: number of DLCs known in TitleDB that are not owned
+            missing_dlcs = 0
+            if all_possible_dlc_ids:
+                owned_dlc_ids_upper = owned_dlc_ids
+                missing_dlcs = max(0, len(all_possible_dlc_ids) - len(owned_dlc_ids_upper))
+            title.missing_dlcs_count = missing_dlcs
+        except Exception:
+            # In case the DB model doesn't have these columns yet (pre-migration), skip silently
+            pass
+
         if title.up_to_date != up_to_date:
             logger.info(f"Title {title_id} update status changed: {title.up_to_date} -> {up_to_date}")
 

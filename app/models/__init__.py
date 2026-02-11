@@ -25,7 +25,8 @@ from .tag import Tag
 from .titletag import TitleTag
 from .wishlist import Wishlist
 from .wishlistignore import WishlistIgnore
-from .webhook import Webhook
+
+# Webhooks model removed
 from .titlemetadata import TitleMetadata
 from .metadatafetchlog import MetadataFetchLog
 from .systemjob import SystemJob

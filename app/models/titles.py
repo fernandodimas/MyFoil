@@ -6,6 +6,7 @@ Extracted from db.py during Phase 3.1 refactoring
 from db import db, now_utc
 from flask_login import UserMixin
 
+
 class Titles(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title_id = db.Column(db.String, unique=True, index=True)  # Index for faster lookups
@@ -44,6 +45,10 @@ class Titles(db.Model):
     genres_json = db.Column(db.JSON)  # ["Action", "Adventure"]
     tags_json = db.Column(db.JSON)  # ["Open World", "RPG"]
     screenshots_json = db.Column(db.JSON)  # [{"url": "...", "source": "rawg"}]
+
+    # Materialized counters to speed up common filters (populated by update_titles)
+    redundant_updates_count = db.Column(db.Integer, default=0, index=True)
+    missing_dlcs_count = db.Column(db.Integer, default=0, index=True)
 
     # === API TRACKING ===
     rawg_id = db.Column(db.Integer)  # ID no RAWG

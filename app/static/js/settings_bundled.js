@@ -896,40 +896,13 @@ function fillCloudStatus() {
 }
 
 function fillPluginsList() {
-    $.getJSON('/api/plugins', (plugins) => {
-        const container = $('#pluginsList').empty();
-        const list = coerceArray(plugins);
-        if (list.length === 0) { container.append(`<p class="is-size-7 opacity-50 has-text-centered py-4">${t('Nenhum plugin encontrado.')}</p>`); return; }
-        list.forEach(p => {
-            const isEnabled = p.enabled !== false;
-            container.append(`
-                <div class="box is-shadowless border p-4 mb-3" style="border: 1px solid rgba(0,0,0,0.05);">
-                    <div class="columns is-vcentered">
-                        <div class="column">
-                            <p class="is-size-6 has-text-weight-bold ${isEnabled ? 'has-text-primary' : 'opacity-40'} mb-1">
-                                ${escapeHtml(p.name)} <span class="tag is-light is-rounded ml-2">v${p.version}</span>
-                            </p>
-                            <p class="is-size-7 opacity-70">${escapeHtml(p.description)}</p>
-                        </div>
-                        <div class="column is-narrow">
-                            <div class="field">
-                                <input id="plugin_${p.id}" type="checkbox" class="switch is-rounded is-primary is-small" ${isEnabled ? 'checked' : ''} onchange="togglePlugin('${p.id}', this.checked)">
-                                <label for="plugin_${p.id}" class="is-size-7 has-text-weight-semibold">${isEnabled ? t('Ativo') : t('Desativado')}</label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `);
-        });
-    });
+    // Plugins feature removed - show informational message
+    const container = $('#pluginsList').empty();
+    container.append(`<div class="notification is-ghost border p-4 mb-3"><p class="has-text-weight-bold">${t('Plugins feature removed')}</p><p class="is-size-7 opacity-60">${t('Plugin management has been removed from this build. Install plugins manually in the app/plugins directory if required.')}</p></div>`);
 }
 
 function togglePlugin(pluginId, enabled) {
-    $.ajax({
-        url: '/api/plugins/toggle', type: 'POST', contentType: 'application/json', data: JSON.stringify({ id: pluginId, enabled }),
-        success: (res) => { if (res.success) { showToast(t('Plugin ') + (enabled ? t('ativado') : t('desativado')) + t(' com sucesso!')); fillPluginsList(); } else showToast(t('Erro ao alterar status: ') + res.error, 'error'); },
-        error: () => showToast(t('Erro de comunicação com o servidor.'), 'error')
-    });
+    showToast(t('Plugins feature removed'), 'warning');
 }
 
 let allFiles = [];
@@ -1091,26 +1064,17 @@ $(document).on('input', '#fileSearchInput', _debounce(renderFilesExplorer, 300))
 $(document).on('change', '#fileTypeFilter, #fileStatusFilter', renderFilesExplorer);
 
 function fillWebhooksList() {
-    $.getJSON('/api/settings/webhooks', (ws) => {
-        const c = $('#webhooksList').empty();
-        const list = coerceArray(ws);
-        if (!list || list.length === 0) { c.append(`<p class="is-size-7 opacity-50 has-text-centered py-4">${t('Nenhum webhook configurado.')}</p>`); return; }
-        list.forEach(w => {
-            const icon = w.active ? '<i class="bi bi-check-circle-fill has-text-success mr-2"></i>' : '<i class="bi bi-x-circle-fill has-text-danger mr-2"></i>';
-            c.append(`<div class="box is-shadowless border p-3 mb-2" style="border-left: 4px solid var(--color-info) !important;"><div class="columns is-vcentered is-mobile"><div class="column"><div class="is-flex is-align-items-center mb-1">${icon}<span class="tag is-small ${w.active ? 'is-success' : 'is-light'} is-light">${w.active ? t('Ativo') : t('Inativo')}</span></div><p class="is-size-7 has-text-weight-bold truncate" title="${escapeHtml(w.url)}">${escapeHtml(w.url)}</p><p class="is-size-7 opacity-50">${t('Eventos')}: ${escapeHtml(w.events.join(', '))}</p></div><div class="column is-narrow"><button class="button is-danger is-small is-light" onclick="deleteWebhook(${w.id})" title="${t('Excluir webhook')}"><i class="bi bi-trash3"></i></button></div></div></div>`);
-        });
-    }).fail(() => $('#webhooksList').html(`<p class="is-size-7 has-text-danger has-text-centered py-4">${t('Erro ao carregar webhooks.')}</p>`));
+    // Webhooks removed - show informational message
+    const c = $('#webhooksList').empty();
+    c.append(`<div class="notification is-ghost border p-4 mb-3"><p class="has-text-weight-bold">${t('Webhooks feature removed')}</p><p class="is-size-7 opacity-60">${t('Webhook integrations have been removed in this build.')}</p></div>`);
 }
 
 function addWebhook() {
-    const url = $('#webhookUrl').val(), secret = $('#webhookSecret').val(), events = [];
-    if ($('#eventLibraryUpdated').is(':checked')) events.push('library_updated');
-    if (!url) return showToast(t('URL é obrigatória'), 'error');
-    $.ajax({ url: "/api/settings/webhooks", type: 'POST', data: JSON.stringify({ url, secret, events }), contentType: "application/json", success: () => { showToast(t('Webhook adicionado!')); $('#webhookUrl, #webhookSecret').val(''); fillWebhooksList(); } });
+    showToast(t('Webhooks feature removed'), 'warning');
 }
 
 function deleteWebhook(id) {
-    confirmAction({ title: t('Excluir Webhook'), message: t('Deseja realmente excluir este webhook?'), confirmText: t('Excluir'), confirmClass: 'is-danger', onConfirm: () => $.ajax({ url: `/api/settings/webhooks/${id}`, type: 'DELETE', success: () => { showToast(t('Webhook removido')); fillWebhooksList(); } }) });
+    showToast(t('Webhooks feature removed'), 'warning');
 }
 
 function loadRenamingSettings() {

@@ -921,7 +921,8 @@ from models.tag import Tag
 from models.titletag import TitleTag
 from models.wishlist import Wishlist
 from models.wishlistignore import WishlistIgnore
-from models.webhook import Webhook
+
+# Webhook model removed
 from models.titlemetadata import TitleMetadata
 from models.metadatafetchlog import MetadataFetchLog
 from models.systemjob import SystemJob

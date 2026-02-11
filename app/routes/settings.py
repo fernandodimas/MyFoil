@@ -328,27 +328,17 @@ def titledb_sources_api():
 @access_required("admin")
 @handle_api_errors
 def get_webhooks_api():
-    """Obter webhooks configurados"""
-    webhooks = WebhookRepository.get_all()
-    return success_response(data=[w.to_dict() for w in webhooks])
+    """Webhooks feature removed"""
+    # Webhooks removed: return empty list to avoid frontend errors
+    return success_response(data=[])
 
 
 @settings_bp.post("/settings/webhooks")
 @access_required("admin")
 @handle_api_errors
 def add_webhook_api():
-    """Adicionar webhook"""
-    data = request.json
-    webhook = WebhookRepository.create(
-        url=data["url"],
-        events=json.dumps(data.get("events", ["library_updated"])),
-        secret=data.get("secret"),
-        active=data.get("active", True),
-    )
-    from db import log_activity
-
-    log_activity("webhook_created", details={"url": webhook.url}, user_id=current_user.id)
-    return success_response(data={"webhook": webhook.to_dict()}, message="Webhook added")
+    """Webhook management removed"""
+    return error_response(ErrorCode.VALIDATION_ERROR, message="Webhooks feature removed", status_code=410)
 
 
 @settings_bp.delete("/settings/webhooks/<int:id>")
@@ -356,10 +346,7 @@ def add_webhook_api():
 @handle_api_errors
 def delete_webhook_api(id):
     """Remover webhook"""
-    success = WebhookRepository.delete(id)
-    if success:
-        return success_response(message="Webhook deleted")
-    return not_found_response("Webhook")
+    return error_response(ErrorCode.VALIDATION_ERROR, message="Webhooks feature removed", status_code=410)
 
 
 @settings_bp.route("/settings/webhooks/<int:id>", methods=["PUT"])
@@ -367,22 +354,7 @@ def delete_webhook_api(id):
 @handle_api_errors
 def update_webhook_api(id):
     """Atualizar webhook"""
-    data = request.json
-    update_data = {}
-    if "url" in data:
-        update_data["url"] = data["url"]
-    if "events" in data:
-        update_data["events"] = json.dumps(data["events"])
-    if "secret" in data:
-        update_data["secret"] = data["secret"]
-    if "active" in data:
-        update_data["active"] = data["active"]
-
-    webhook = WebhookRepository.update(id, **update_data)
-    if not webhook:
-        return not_found_response("Webhook")
-
-    return success_response(data={"webhook": webhook.to_dict()}, message="Webhook updated")
+    return error_response(ErrorCode.VALIDATION_ERROR, message="Webhooks feature removed", status_code=410)
 
 
 @settings_bp.route("/settings/titledb/sources/reorder", methods=["POST"])

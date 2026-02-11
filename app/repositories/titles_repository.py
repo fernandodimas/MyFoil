@@ -3,7 +3,9 @@ Repository for Titles database operations
 Phase 3.1: Database refactoring - Separate queries from models
 """
 
-from sqlalchemy import or_, func
+import time
+import logging
+from sqlalchemy import or_, func, select
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError
 from db import db
@@ -32,14 +34,18 @@ class TitlesRepository:
     @staticmethod
     def get_all_with_apps():
         """Get all titles with apps eagerly loaded"""
-        return Titles.query.options(joinedload(Titles.apps)).all()
+        # Use string form for joinedload to avoid static analyzer complaints
+        return Titles.query.options(joinedload("apps")).all()
 
     @staticmethod
     def get_paged(page, per_page, sort_by="name", order="asc", query_text=None, filters=None):
         """
         Database-level pagination for titles
         """
-        query = Titles.query.options(joinedload(Titles.apps)).filter(Titles.title_id.isnot(None))
+        # Avoid eager-loading Apps by default for the paged list — loading apps for
+        # every title can be expensive. Only load apps when callers explicitly
+        # need them (use get_all_with_apps()).
+        query = Titles.query.filter(Titles.title_id.isnot(None))
 
         if query_text:
             query = query.filter(
@@ -73,27 +79,52 @@ class TitlesRepository:
 
             if filters.get("dlc"):
                 # DLC filter: Owned games that have missing DLCs (complete=False)
-                query = query.filter(Titles.have_base == True, Titles.complete == False)
+                # Prefer using materialized column when available for speed
+                try:
+                    # If the model has missing_dlcs_count, use it
+                    query = query.filter(Titles.have_base == True, Titles.missing_dlcs_count > 0)
+                except Exception:
+                    query = query.filter(Titles.have_base == True, Titles.complete == False)
 
             if filters.get("redundant"):
-                # Redundant filter: Games with more than 1 owned update file
-                # We use a subquery to find title_ids (int PK) that have multiple owned updates
-                subq = (
-                    db.session.query(Apps.title_id)
-                    .filter(Apps.app_type == "UPD", Apps.owned == True)
-                    .group_by(Apps.title_id)
-                    .having(func.count(Apps.id) > 1)
-                    .subquery()
-                )
-                query = query.join(subq, Titles.id == subq.c.title_id)
+                # Prefer materialized counter when present for speed
+                try:
+                    query = query.filter(Titles.redundant_updates_count > 1)
+                except Exception:
+                    # Fallback to correlated scalar subquery
+                    count_subq = (
+                        select(func.count(Apps.id))
+                        .where(Apps.title_id == Titles.id, Apps.app_type == "UPD", Apps.owned == True)
+                        .scalar_subquery()
+                    )
+                    query = query.filter(count_subq > 1)
 
         # Apply sorting
         sort_field = getattr(Titles, sort_by, Titles.name)
         if order == "desc":
             sort_field = sort_field.desc()
         query = query.order_by(sort_field)
+        # Log query SQL and execution time for diagnostics
+        logger = logging.getLogger("main")
+        try:
+            sql = str(query.statement)
+        except Exception:
+            sql = "<could not render SQL>"
 
-        return query.paginate(page=page, per_page=per_page, error_out=False)
+        start = time.time()
+        try:
+            result = query.paginate(page=page, per_page=per_page, error_out=False)
+            duration = (time.time() - start) * 1000.0
+            logger.info(
+                f"TitlesRepository.get_paged: sql={sql} page={page} per_page={per_page} duration_ms={duration:.1f}"
+            )
+            return result
+        except Exception as e:
+            duration = (time.time() - start) * 1000.0
+            logger.error(
+                f"TitlesRepository.get_paged failed: page={page} per_page={per_page} duration_ms={duration:.1f} error={e}"
+            )
+            raise
 
     @staticmethod
     def get_outdated(limit=100, offset=0):

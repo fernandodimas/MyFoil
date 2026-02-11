@@ -46,12 +46,12 @@ def index():
 
     # Tinfoil headers check - Relaxed to only require Uid or Hauth as identifiers
     has_tinfoil_headers = any(h in request.headers for h in ["Uid", "Hauth", "Version"])
-    
+
     # Check if specifically requesting JSON
     is_api_requested = (
-        request.path.endswith(".json") or 
-        request.headers.get("Accept") == "application/json" or
-        request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        request.path.endswith(".json")
+        or request.headers.get("Accept") == "application/json"
+        or request.headers.get("X-Requested-With") == "XMLHttpRequest"
     )
 
     logger.debug(
@@ -118,35 +118,8 @@ def tinfoil_error(error):
 
 def trigger_webhook(event_type, data):
     """Disparar webhooks configurados"""
-    import app
-    with app.app_context():
-        try:
-            webhooks = Webhook.query.filter_by(active=True).all()
-            for webhook in webhooks:
-                # Check if this webhook is interested in this event
-                import json
-
-                events = json.loads(webhook.events) if webhook.events else []
-                if event_type not in events:
-                    continue
-
-                from utils import now_utc
-                payload = {"event": event_type, "timestamp": now_utc().isoformat(), "data": data}
-
-                headers = {"Content-Type": "application/json"}
-                if webhook.secret:
-                    signature = hmac.new(
-                        webhook.secret.encode(), json.dumps(payload).encode(), hashlib.sha256
-                    ).hexdigest()
-                    headers["X-MyFoil-Signature"] = signature
-
-                try:
-                    requests.post(webhook.url, json=payload, headers=headers, timeout=5)
-                    logger.debug(f"Webhook {webhook.url} triggered for {event_type}")
-                except Exception as e:
-                    logger.warning(f"Failed to trigger webhook {webhook.url}: {e}")
-        except Exception as e:
-            logger.error(f"Error in trigger_webhook: {e}")
+    # Webhooks removed - placeholder function
+    logger.info(f"trigger_webhook called for {event_type} but webhooks feature is removed")
 
 
 @web_bp.route("/api/renaming/preview", methods=["POST"])
@@ -206,6 +179,7 @@ def run_renaming_api():
     # Run in background to avoid timeout
     def run_wrapper():
         import app
+
         with app.app_context():
             start_renaming_job(patterns)
 

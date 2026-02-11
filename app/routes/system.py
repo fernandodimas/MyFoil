@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, request, jsonify, send_from_direct
 import socket
 from flask_login import current_user
 from sqlalchemy import text
-from db import (
+    from db import (
     db,
     Apps,
     Titles,
@@ -18,7 +18,6 @@ from db import (
     get_all_unidentified_files,
     logger,
     joinedload,
-    Webhook,
 )
 from api_responses import (
     success_response,
@@ -32,7 +31,7 @@ from repositories.files_repository import FilesRepository
 from repositories.apps_repository import AppsRepository
 from repositories.systemjob_repository import SystemJobRepository
 from repositories.activitylog_repository import ActivityLogRepository
-from repositories.webhook_repository import WebhookRepository
+# Webhooks removed
 from repositories.wishlistignore_repository import WishlistIgnoreRepository
 
 from settings import load_settings
@@ -1218,13 +1217,8 @@ def activity_api():
 @handle_api_errors
 def plugins_api():
     """Obter lista de plugins"""
-    from app import plugin_manager
-
-    if not plugin_manager:
-        return success_response(data=[])
-
-    # Return all discovered plugins with their enabled status
-    return success_response(data=plugin_manager.discovered_plugins)
+    # Plugins feature removed: return empty list to avoid frontend errors
+    return success_response(data=[])
 
 
 @system_bp.post("/plugins/toggle")
@@ -1236,21 +1230,7 @@ def toggle_plugin_api():
     plugin_id = data.get("id")
     enabled = data.get("enabled", True)
 
-    if not plugin_id:
-        return error_response(ErrorCode.VALIDATION_ERROR, message="Plugin ID required", status_code=400)
-
-    # 1. Update settings file
-    import settings
-
-    settings.toggle_plugin_settings(plugin_id, enabled)
-
-    # 2. Reload plugins in the manager to reflect changes
-    from app import plugin_manager
-
-    disabled_plugins = load_settings(force=True).get("plugins", {}).get("disabled", [])
-    plugin_manager.load_plugins(disabled_plugins)
-
-    return success_response(message=f"Plugin {'enabled' if enabled else 'disabled'} successfully")
+    return error_response(ErrorCode.VALIDATION_ERROR, message="Plugins feature removed", status_code=410)
 
 
 @system_bp.route("/system/jobs", methods=["GET"])
