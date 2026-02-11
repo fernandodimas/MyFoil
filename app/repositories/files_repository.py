@@ -32,13 +32,20 @@ class FilesRepository:
     @staticmethod
     def get_unidentified_or_error():
         """Get files that are not identified or have an error"""
-        return Files.query.filter((Files.identified == False) | (Files.identification_error.isnot(None))).all()
+        # Eager-load apps and titles to avoid lazy-loading related-attribute errors
+        return (
+            Files.query.options(joinedload(Files.apps).joinedload(Apps.title))
+            .filter(db.or_(Files.identified == False, Files.identification_error.isnot(None)))
+            .all()
+        )
 
     @staticmethod
     def get_identified_unknown_titles():
         """Get identified files where the title name is unknown"""
+        # Use eager loading so returned File objects already include apps/title relationships
         return (
-            Files.query.join(Files.apps)
+            Files.query.options(joinedload(Files.apps).joinedload(Apps.title))
+            .join(Files.apps)
             .join(Apps.title)
             .filter(Files.identified == True)
             .filter(db.or_(Apps.title.name.is_(None), Apps.title.name.ilike("Unknown%")))

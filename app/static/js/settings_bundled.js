@@ -7,6 +7,16 @@ const getInputVal = (id) => $(`#${id}`).val();
 const getCheckboxStatus = (id) => $(`#${id}`).is(":checked");
 // openModal and closeModal are defined in modals_shared.html (included globally)
 
+// Normalize envelope-style API responses: { code, success, data } or direct payload
+const unwrap = (res) => {
+    try {
+        if (res && res.data !== undefined) return res.data;
+    } catch (e) {
+        // ignore
+    }
+    return res;
+}
+
 // --- External API Settings ---
 window.saveAPISettings = function () {
     const rawg_api_key = $('#rawgApiKey').val();
@@ -36,7 +46,8 @@ window.saveAPISettings = function () {
 
 window.fillMetadataStats = function () {
     $.getJSON('/api/stats', (stats) => {
-        $('#statMetadataGames').text(stats.metadata_games || 0);
+        const payload = unwrap(stats);
+        $('#statMetadataGames').text(payload.metadata_games || 0);
         // RAWG status
         if ($('#rawgApiKey').val()) {
             $('#statusRAWG').removeClass('is-danger').addClass('is-success').text(t('Ativa'));
@@ -243,11 +254,12 @@ $('#toggleAddSource').on('click', function () {
 // Populate Functions
 function fillLibraryTable() {
     $.getJSON("/api/settings/library/paths", (result) => {
+        const payload = unwrap(result);
         const tbody = $('#pathsTable tbody').empty();
-        if (!result.paths?.length) {
+        if (!payload.paths?.length) {
             tbody.append(`<tr><td colspan="6" class="has-text-centered py-6 opacity-40 italic">${t("No paths configured")}</td></tr>`);
         } else {
-            result.paths.forEach(p => {
+            payload.paths.forEach(p => {
                 tbody.append(`
                     <tr>
                         <td>
@@ -273,25 +285,27 @@ function fillLibraryTable() {
 // Check watchdog status
 function checkWatchdogStatus() {
     $.getJSON("/api/status", (status) => {
+        const payload = unwrap(status);
         const banner = $('#watchdogStatusBanner');
         const text = $('#watchdogStatusText');
         const headerStatus = $('#watchdogStatus');
 
-        if (status && status.watching !== undefined) {
-            banner.removeClass('is-info is-warning is-danger').addClass(status.watching ? 'is-success' : 'is-warning');
-            headerStatus.find('.icon i').removeClass('bi-check-circle bi-pause-circle').addClass(status.watching ? 'bi-check-circle' : 'bi-pause-circle');
-            headerStatus.find('span:last-child').text(`Watchdog: ${status.watching ? t("Monitoring") : t("Not monitoring")}`);
+        if (payload && payload.watching !== undefined) {
+            banner.removeClass('is-info is-warning is-danger').addClass(payload.watching ? 'is-success' : 'is-warning');
+            headerStatus.find('.icon i').removeClass('bi-check-circle bi-pause-circle').addClass(payload.watching ? 'bi-check-circle' : 'bi-pause-circle');
+            headerStatus.find('span:last-child').text(`Watchdog: ${payload.watching ? t("Monitoring") : t("Not monitoring")}`);
 
-            const icon = status.watching ? 'bi-broadcast' : 'bi-pause-circle';
-            const count = status.libraries || 0;
+            const icon = payload.watching ? 'bi-broadcast' : 'bi-pause-circle';
+            const count = payload.libraries || 0;
             const libText = count === 1 ? t("library") : t("libraries");
 
             text.html(`<span class="icon mr-2"><i class="bi ${icon}"></i></span>
-                Watchdog: ${status.watching ? t("Monitoring") : t("Not monitoring")} | 
+                Watchdog: ${payload.watching ? t("Monitoring") : t("Not monitoring")} | 
                 ${count} ${libText}`);
         } else {
             $.getJSON("/api/settings/library/paths", (paths) => {
-                const hasPaths = paths.paths && paths.paths.length > 0;
+                const pp = unwrap(paths);
+                const hasPaths = pp.paths && pp.paths.length > 0;
                 banner.removeClass('is-info is-warning is-danger').addClass(hasPaths ? 'is-success' : 'is-warning');
                 headerStatus.find('span:last-child').text(`Watchdog: ${hasPaths ? t("Monitoring") : t("No libraries configured")}`);
 
@@ -302,7 +316,8 @@ function checkWatchdogStatus() {
         }
     }).fail(() => {
         $.getJSON("/api/settings/library/paths", (paths) => {
-            const hasPaths = paths.paths && paths.paths.length > 0;
+            const pp = unwrap(paths);
+            const hasPaths = pp.paths && pp.paths.length > 0;
             const banner = $('#watchdogStatusBanner');
             const text = $('#watchdogStatusText');
             const headerStatus = $('#watchdogStatus');
