@@ -77,12 +77,13 @@ class SystemStatusManager {
 
     async fetchStatus() {
         try {
-            // Using safeFetch to strip any credentials from current URL 
-            // that modern browsers block in fetch requests (e.g. user:pass@host)
+            // Using safeFetch to strip any credentials from current URL
             const response = await window.safeFetch('/api/system/jobs');
             if (response.ok) {
-                const data = await response.json();
-                this.updateStatus(data.jobs, data.titledb);
+                const raw = await response.json();
+                // Support both envelope-style responses { code, success, data } and raw payloads
+                const payload = raw && raw.data !== undefined ? raw.data : raw;
+                this.updateStatus(payload.jobs, payload.titledb);
             }
         } catch (error) {
             console.error('Failed to fetch jobs:', error);
@@ -469,7 +470,8 @@ async function refreshTdbRemote() {
         const icon = document.getElementById('refreshRemoteIcon');
         if (icon) icon.classList.add('spin');
 
-        const response = await fetch('/api/settings/titledb/refresh_remote', { method: 'POST' });
+        // Correct endpoint to refresh remote dates for TitleDB sources
+        const response = await fetch('/api/settings/titledb/sources/refresh-dates', { method: 'POST' });
         if (response.ok) {
             // Wait a bit then fetch status
             setTimeout(() => {
@@ -478,5 +480,8 @@ async function refreshTdbRemote() {
         }
     } catch (error) {
         console.error('Error refreshing TDB remote:', error);
+    } finally {
+        const icon = document.getElementById('refreshRemoteIcon');
+        if (icon) icon.classList.remove('spin');
     }
 }

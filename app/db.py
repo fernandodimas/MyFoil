@@ -89,8 +89,33 @@ def init_db(app):
                 logger.info("Initializing database tables...")
                 db.create_all()
                 from alembic import command
+                from alembic.script import ScriptDirectory
 
-                command.stamp(get_alembic_cfg(), "head")
+                # Stamp the database to the latest migration. In some dev/test trees
+                # there may be multiple migration heads (branches). Alembic will
+                # raise if 'head' is ambiguous. Handle that gracefully for tests by
+                # selecting a head deterministically (first one) and stamping to it.
+                try:
+                    command.stamp(get_alembic_cfg(), "head")
+                except Exception as e:
+                    # Detect multiple heads error and handle by stamping to a single head
+                    msg = str(e)
+                    if "Multiple heads" in msg or "Multiple heads are present" in msg:
+                        cfg = get_alembic_cfg()
+                        script = ScriptDirectory.from_config(cfg)
+                        heads = script.get_heads()
+                        if heads:
+                            chosen = heads[0]
+                            logger.warning(
+                                f"Multiple alembic heads detected ({heads}), stamping DB to {chosen} to proceed in test environment."
+                            )
+                            command.stamp(cfg, chosen)
+                        else:
+                            # fallback: re-raise original error
+                            raise
+                    else:
+                        raise
+
                 logger.info("Database created and stamped to the latest migration version.")
             else:
                 # Ensure new tables are created even if DB exists

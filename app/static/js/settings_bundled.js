@@ -151,10 +151,13 @@ function createTag() {
 }
 
 function fillTagsTable() {
-    $.getJSON('/api/tags', (tags) => {
+    $.getJSON('/api/tags', (tagsRes) => {
         const tbody = $('#tagsTable tbody').empty();
-        tags.forEach(t => {
-            const iconHtml = t.icon.startsWith('bi-') ? `<i class="bi ${t.icon} mr-1"></i>` : `<i class="fas ${t.icon} mr-1"></i>`;
+        let list = tagsRes;
+        if (typeof coerceArray === 'function') list = coerceArray(tagsRes);
+        if (!Array.isArray(list)) list = [];
+        list.forEach(t => {
+            const iconHtml = (t && t.icon && typeof t.icon === 'string' && t.icon.startsWith('bi-')) ? `<i class="bi ${t.icon} mr-1"></i>` : `<i class="fas ${t && t.icon ? t.icon : ''} mr-1"></i>`;
             tbody.append(`
                 <tr>
                     <td><strong>${escapeHtml(t.name)}</strong></td>
@@ -195,41 +198,43 @@ function deleteTag(id) {
 }
 
 function fillActivityLogs() {
-    $.getJSON('/api/activity', (logs) => {
-        const list = $('#activityLogsList').empty();
-        if (!logs.length) {
-            list.append(`<p class="has-text-centered py-6 opacity-40 italic">${t('Nenhuma atividade registrada.')}</p>`);
+    $.getJSON('/api/activity', (logsRes) => {
+        const listEl = $('#activityLogsList').empty();
+        let list = logsRes;
+        if (typeof coerceArray === 'function') list = coerceArray(logsRes);
+        if (!Array.isArray(list) || list.length === 0) {
+            listEl.append(`<p class="has-text-centered py-6 opacity-40 italic">${t('Nenhuma atividade registrada.')}</p>`);
             return;
         }
-        logs.forEach(log => {
+        list.forEach(log => {
             const date = new Date(log.timestamp).toLocaleString();
             let iconClass = 'bi-info-circle';
             let color = '#7c3aed';
 
-            if (log.action.includes('error') || log.action.includes('failed')) {
+            if (log.action && (log.action.includes('error') || log.action.includes('failed'))) {
                 iconClass = 'bi-exclamation-circle-fill';
                 color = '#ef4444';
-            } else if (log.action.includes('file_added')) {
+            } else if (log.action && log.action.includes('file_added')) {
                 iconClass = 'bi-file-earmark-plus';
                 color = '#10b981';
-            } else if (log.action.includes('scan')) {
+            } else if (log.action && log.action.includes('scan')) {
                 iconClass = 'bi-search';
-            } else if (log.action.includes('backup')) {
+            } else if (log.action && log.action.includes('backup')) {
                 iconClass = 'bi-safe';
             }
 
-            list.append(`
+            listEl.append(`
                 <div class="activity-item">
                     <div class="activity-dot" style="border-color: ${color}"></div>
                     <div class="activity-content">
                         <span class="activity-meta">${date}</span>
                         <p class="has-text-weight-bold mb-1">
                             <i class="bi ${iconClass} mr-2" style="color: ${color}"></i>
-                            ${escapeHtml(log.action.toUpperCase().replace(/_/g, ' '))}
+                            ${escapeHtml((log.action || '').toUpperCase().replace(/_/g, ' '))}
                         </p>
                         <div class="is-size-7 opacity-70">
                             ${log.title_id ? `<span class="tag is-info is-light is-small mr-2">${log.title_id}</span>` : ''}
-                            ${escapeHtml(JSON.stringify(log.details).replace(/[{}"]/g, '').replace(/:/g, ': ').replace(/,/g, ' | '))}
+                            ${escapeHtml(JSON.stringify(log.details || {}).replace(/[{}\"]/g, '').replace(/:/g, ': ').replace(/,/g, ' | '))}
                         </div>
                     </div>
                 </div>
@@ -1131,9 +1136,12 @@ function previewRenaming() {
     const data = { pattern_base: $('#patternBase').val(), pattern_upd: $('#patternUpd').val(), pattern_dlc: $('#patternDlc').val() };
     $.ajax({
         url: '/api/renaming/preview', type: 'POST', contentType: 'application/json', data: JSON.stringify(data), success: (r) => {
-            if (r.success) {
+                if (r.success) {
                 let h = '';
-                r.preview.forEach(p => h += `<div class="mb-2"><span class="tag is-white border mr-2">${p.type}</span><span class="has-text-grey-light strikethrough mr-2">${escapeHtml(p.original)}</span><i class="bi bi-arrow-right mr-2 opacity-50"></i><span class="has-text-success has-text-weight-bold">${escapeHtml(p.new)}</span></div>`);
+                let previewList = [];
+                if (typeof coerceArray === 'function') previewList = coerceArray(r.preview);
+                else previewList = Array.isArray(r.preview) ? r.preview : [];
+                previewList.forEach(p => h += `<div class="mb-2"><span class="tag is-white border mr-2">${p.type}</span><span class="has-text-grey-light strikethrough mr-2">${escapeHtml(p.original)}</span><i class="bi bi-arrow-right mr-2 opacity-50"></i><span class="has-text-success has-text-weight-bold">${escapeHtml(p.new)}</span></div>`);
                 $('#previewContent').html(h || t('Nenhum arquivo encontrado para pré-visualização.'));
                 $('#renamingPreview').removeClass('is-hidden');
             }
@@ -1270,12 +1278,14 @@ $(document).ready(async () => {
         ]);
 
         const selR = $('#selectRegion').empty();
-        reg.regions.forEach(r => selR.append(new Option(r, r)));
-        if (set['titles/region']) selR.val(set['titles/region']);
+        const regions = (reg && Array.isArray(reg.regions)) ? reg.regions : [];
+        regions.forEach(r => selR.append(new Option(r, r)));
+        if (set && set['titles/region']) selR.val(set['titles/region']);
 
         const selL = $('#selectLanguage').empty();
-        lang.languages.forEach(l => selL.append(new Option(l, l)));
-        if (set['titles/language']) selL.val(set['titles/language']);
+        const languages = (lang && Array.isArray(lang.languages)) ? lang.languages : [];
+        languages.forEach(l => selL.append(new Option(l, l)));
+        if (set && set['titles/language']) selL.val(set['titles/language']);
 
         $('#autoUseLatest').prop('checked', set['titles/auto_use_latest'] === true);
         $('#languageSelect').val(document.cookie.match(/language=([^;]+)/)?.[1] || 'en');
