@@ -67,15 +67,19 @@ async function loadUpcomingGames() {
         const response = await window.safeFetch('/api/upcoming');
         const data = await response.json();
 
+        // Normalize envelope-style responses: { code, success, data }
+        const payload = (data && data.data !== undefined) ? data.data : data;
+
         if (loading) loading.classList.add('is-hidden');
 
         if (response.status === 400) {
             if (apiMessage) apiMessage.classList.remove('is-hidden');
-            if (apiMessageText) apiMessageText.innerText = data.message || 'Erro ao configurar API.';
+            const msg = data.message || (payload && payload.message) || 'Erro ao configurar API.';
+            if (apiMessageText) apiMessageText.innerText = msg;
             return;
         }
 
-        allGames = data.games || [];
+        allGames = (payload && Array.isArray(payload.games)) ? payload.games : (payload.games || payload || []);
 
         if (allGames.length === 0) {
             if (empty) empty.classList.remove('is-hidden');
