@@ -922,6 +922,12 @@ from models.titletag import TitleTag
 from models.wishlist import Wishlist
 from models.wishlistignore import WishlistIgnore
 
+# Backwards-compatibility: Webhook model placeholder (introduced for removed feature)
+try:
+    from models.webhook import Webhook
+except Exception:
+    Webhook = None
+
 # Webhook model removed
 from models.titlemetadata import TitleMetadata
 from models.metadatafetchlog import MetadataFetchLog
