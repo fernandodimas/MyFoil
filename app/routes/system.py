@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, request, jsonify, send_from_direct
 import socket
 from flask_login import current_user
 from sqlalchemy import text
-    from db import (
+from db import (
     db,
     Apps,
     Titles,
@@ -31,6 +31,7 @@ from repositories.files_repository import FilesRepository
 from repositories.apps_repository import AppsRepository
 from repositories.systemjob_repository import SystemJobRepository
 from repositories.activitylog_repository import ActivityLogRepository
+
 # Webhooks removed
 from repositories.wishlistignore_repository import WishlistIgnoreRepository
 
