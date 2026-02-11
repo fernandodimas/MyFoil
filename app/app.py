@@ -709,12 +709,21 @@ def create_app():
     app.config["SQLALCHEMY_DATABASE_URI"] = MYFOIL_DB
     app.config["SECRET_KEY"] = get_or_create_secret_key()
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "pool_pre_ping": True,  # Verify connections before using
-        "pool_size": 20,  # Increase pool size for concurrent workers
-        "max_overflow": 30,  # Allow extra connections during high load
-        "pool_recycle": 3600,  # Recycle connections every hour
-    }
+    # Configure engine options. Some options (pool_size, max_overflow) are
+    # incompatible with SQLite in-memory / StaticPool; avoid setting them
+    # when using sqlite URIs (commonly used in tests).
+    engine_options = {"pool_pre_ping": True}
+    db_uri = str(app.config.get("SQLALCHEMY_DATABASE_URI", "")).lower()
+    if not db_uri.startswith("sqlite"):
+        engine_options.update(
+            {
+                "pool_size": 20,  # Increase pool size for concurrent workers
+                "max_overflow": 30,  # Allow extra connections during high load
+                "pool_recycle": 3600,  # Recycle connections every hour
+            }
+        )
+
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_options
 
     # Initialize components
     db.init_app(app)
