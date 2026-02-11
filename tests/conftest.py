@@ -14,8 +14,8 @@ import sys
 import pytest
 from unittest.mock import MagicMock, patch
 
-# Add app directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "app"))
+# Add project root to path so `import app.app` resolves to the package in repository root
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 @pytest.fixture(scope="session")
