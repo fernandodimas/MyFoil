@@ -39,7 +39,8 @@ function updateViewButtons() {
     const buttons = document.querySelectorAll('#viewToggleButtons .button');
     buttons.forEach(btn => btn.classList.remove('is-primary'));
 
-    const activeBtn = document.getElementById(`btnView${currentWishlistView.charAt(0).toUpperCase() + currentWishlistView.slice(1)}`);
+    const viewName = (currentWishlistView && currentWishlistView.charAt) ? currentWishlistView.charAt(0).toUpperCase() + currentWishlistView.slice(1) : '';
+    const activeBtn = document.getElementById(`btnView${viewName}`);
     if (activeBtn) activeBtn.classList.add('is-primary');
 }
 

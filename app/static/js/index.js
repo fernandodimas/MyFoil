@@ -316,7 +316,8 @@ function setView(view) {
     currentView = view;
     localStorage.setItem('viewMode', view);
     $('#viewToggleButtons .button').removeClass('is-primary');
-    $(`#btnView${view.charAt(0).toUpperCase() + view.slice(1)}`).addClass('is-primary');
+    const viewBtnId = `#btnView${(view && view.charAt ? view.charAt(0).toUpperCase() + view.slice(1) : '')}`;
+    if ($(viewBtnId).length) $(viewBtnId).addClass('is-primary');
     renderLibrary();
 }
 
@@ -562,7 +563,8 @@ function applyFilters() {
         let hasNonIgnoredDlcs = false;
         if (g.has_base && g.dlcs && Array.isArray(g.dlcs)) {
             hasNonIgnoredDlcs = g.dlcs.some(dlc => {
-                const isIgnored = ignoredDlcs[dlc.app_id.toUpperCase()] || ignoredDlcs[dlc.app_id.toLowerCase()];
+                const appIdKey = typeof dlc.app_id === 'string' ? dlc.app_id : (dlc.appId || '');
+                const isIgnored = appIdKey ? (ignoredDlcs[appIdKey.toUpperCase()] || ignoredDlcs[appIdKey.toLowerCase()]) : false;
                 const isNotOwned = !dlc.owned;
                 return isNotOwned && !isIgnored;
             });

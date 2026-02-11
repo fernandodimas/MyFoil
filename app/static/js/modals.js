@@ -508,6 +508,9 @@ function loadGameTagsAndWishlist(titleId) {
     // Defensive handling for titleId (may be undefined/null)
     if (titleId && typeof titleId === 'string') {
         titleId = titleId.toUpperCase();
+    } else if (typeof titleId === 'string') {
+        // empty string -> treat as null
+        titleId = null;
     } else {
         titleId = null;
     }
@@ -622,7 +625,7 @@ function toggleItemIgnore(titleId, type, itemId, value) {
         }),
         success: (res) => {
             if (res.success) {
-                const msg = value ? t('{type} {id} será ignorado').replace('{type}', type.toUpperCase()).replace('{id}', itemId) : t('{type} {id} voltará a aparecer').replace('{type}', type.toUpperCase()).replace('{id}', itemId);
+                const msg = value ? t('{type} {id} será ignorado').replace('{type}', (type || '').toUpperCase()).replace('{id}', itemId) : t('{type} {id} voltará a aparecer').replace('{type}', (type || '').toUpperCase()).replace('{id}', itemId);
                 showToast(msg, 'success');
             } else {
                 showToast(t('Erro ao salvar preferência'), 'error');
