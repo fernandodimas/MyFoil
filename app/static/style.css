@@ -144,6 +144,12 @@ body {
     box-shadow: var(--card-shadow) !important;
 }
 
+/* Make explicit: boxes marked as bg-transparent must not show card background */
+.box.bg-transparent {
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
 /* Text */
 .title, .label, strong {
     color: var(--bulma-text-strong) !important;

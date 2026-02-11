@@ -541,9 +541,9 @@ function applyFilters() {
     const hasActiveFilters = !!(query || gender || tag || showOnlyBase || showOnlyUpdates || showOnlyDlcs || showOnlyRedundant);
     $('#clearFiltersBtn').toggleClass('has-active', !!hasActiveFilters);
 
-    // If the user has active filters or a search query, use the server-side paged search
+    // If the user has active filters or a search query, use the server-side SEARCH (full results)
+    // The paged endpoint doesn't support negative filters like 'pending', so use /api/library/search
     if (hasActiveFilters) {
-        // Use server-side search to operate against the whole library (not only loaded page)
         searchLibraryServer(1, false);
         return;
     }
