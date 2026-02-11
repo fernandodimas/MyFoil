@@ -20,6 +20,16 @@ let hasMoreItems = true;  // Track if there are more items to render
 const PER_PAGE = 75;  // Items per page (optimized for performance - 75 is sweet spot)
 const SCROLL_BATCH_SIZE = 30;  // Render 30 items at a time for smoothness
 
+// Ensure we prefer the server-side paged endpoint by default.
+// Clear any legacy fallback toggles that may be stored in localStorage
+// (this prevents old clients or cached state from forcing the legacy endpoint).
+try {
+    localStorage.removeItem('myfoil_use_legacy_endpoint');
+} catch (e) {
+    // localStorage may be disabled in some privacy contexts; fail silently
+    console.warn('Failed to clear myfoil_use_legacy_endpoint from localStorage', e);
+}
+
 // Fetch all ignore preferences on load
 function loadIgnorePreferences() {
     return $.getJSON('/api/wishlist/ignore', (data) => {
