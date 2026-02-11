@@ -676,9 +676,16 @@ function searchLibraryServer(page = 1, append = false) {
     let url = `/api/library/search/paged?page=${page}&per_page=${PER_PAGE}`;
     if (query) url += `&q=${encodeURIComponent(query)}`;
     if (genre) url += `&genre=${encodeURIComponent(genre)}`;
+    if (tag) url += `&tag=${encodeURIComponent(tag)}`;
     // Map some UI flags to server params where possible
-    if (showOnlyBase) url += `&owned=true`; // show only owned
-    if (showOnlyUpdates) url += `&up_to_date=false`;
+    // showOnlyBase means "missing base" in UI, map to missing=true
+    if (showOnlyBase) url += `&missing=true`;
+    // showOnlyUpdates -> pending (owned && not up_to_date)
+    if (showOnlyUpdates) url += `&pending=true`;
+    // owned_only mapping: if user explicitly selects owned-only behavior, send owned=true
+    if (!showOnlyBase && !showOnlyUpdates && showOnlyDlcs === false) {
+        // no-op; keep default
+    }
 
     // Show loading UI
     if (page === 1 && !append) {

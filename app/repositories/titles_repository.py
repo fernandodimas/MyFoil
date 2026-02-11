@@ -54,6 +54,9 @@ class TitlesRepository:
                 query = query.filter(Titles.have_base == True)
             if filters.get("up_to_date"):
                 query = query.filter(Titles.up_to_date == True)
+            if filters.get("pending"):
+                # pending means owned but not up_to_date
+                query = query.filter(Titles.have_base == True, Titles.up_to_date == False)
 
         # Apply sorting
         sort_field = getattr(Titles, sort_by, Titles.name)

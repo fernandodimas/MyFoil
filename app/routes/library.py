@@ -284,8 +284,11 @@ def library_search_paged_api():
     """
     query_text = request.args.get("q", "").lower().strip()
     genre = request.args.get("genre")
+    tag = request.args.get("tag")
     owned_only = request.args.get("owned") == "true"
+    missing_only = request.args.get("missing") == "true"
     up_to_date = request.args.get("up_to_date") == "true"
+    pending = request.args.get("pending") == "true"
 
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
@@ -305,12 +308,41 @@ def library_search_paged_api():
     for title in paginated.items:
         try:
             item = _serialize_title_with_apps(title)
+
+            # Apply additional filters server-side to ensure accurate results
+            # Genre
             if genre and genre != "Todos os Gêneros":
                 categories = item.get("category", [])
                 if isinstance(categories, str):
                     categories = categories.split(",") if categories else []
                 if genre not in categories:
                     continue
+
+            # Tag (match tag in item's tags list)
+            if tag:
+                tags = item.get("tags") or []
+                if isinstance(tags, str):
+                    tags = [tags]
+                if tag not in tags:
+                    continue
+
+            # Ownership and missing
+            is_owned = item.get("have_base", False)
+            if owned_only and not is_owned:
+                continue
+            if missing_only and is_owned:
+                continue
+
+            # up_to_date filter
+            is_up_to_date = item.get("up_to_date", False)
+            if up_to_date and not is_up_to_date:
+                continue
+
+            # pending filter (owned and not up_to_date)
+            has_pending = (not is_up_to_date) and is_owned
+            if pending and not has_pending:
+                continue
+
             items.append(item)
         except Exception as e:
             logger.error(f"Error serializing title {title.title_id}: {e}")
