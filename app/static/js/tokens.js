@@ -107,15 +107,18 @@ const tokensManager = {
                 body: JSON.stringify({ name: name })
             });
 
-            const result = await response.json();
+            const raw = await response.json();
+            // Support envelope: { code, success, data } or direct payload
+            const payload = raw && raw.data !== undefined ? raw.data : raw;
+            const ok = (raw && raw.success) || (payload && payload.success);
 
-            if (result.success) {
-                document.getElementById('generatedTokenValue').value = result.token;
+            if (ok) {
+                document.getElementById('generatedTokenValue').value = payload.token || '';
                 document.getElementById('generatedTokenContainer').classList.remove('is-hidden');
                 btn.disabled = true;
                 // Don't close immediately, let user copy
             } else {
-                alert('Erro ao gerar token: ' + (result.error || 'Erro desconhecido'));
+                alert('Erro ao gerar token: ' + (payload && (payload.error || payload.message) ? (payload.error || payload.message) : (raw.error || 'Erro desconhecido')));
             }
         } catch (error) {
             console.error('Error generating token:', error);
