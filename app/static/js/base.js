@@ -147,11 +147,13 @@ document.addEventListener('DOMContentLoaded', function () {
     document.documentElement.setAttribute('data-theme', savedTheme);
 
     // Load system information for footer
-    $.getJSON('/api/system/info', function (data) {
+    $.getJSON('/api/system/info', function (raw) {
+        // Normalize envelope { code, success, data } or direct payload
+        const data = (raw && raw.data !== undefined) ? raw.data : raw;
         const idSource = document.getElementById('idSource');
         const buildDisplay = document.getElementById('buildVersionDisplay');
-        if (idSource) idSource.innerText = data.id_source || 'N/A';
-        if (buildDisplay) buildDisplay.innerText = data.build_version || 'Unknown';
+        if (idSource) idSource.innerText = data?.id_source || 'N/A';
+        if (buildDisplay) buildDisplay.innerText = data?.build_version || 'Unknown';
     }).fail(function () {
         const idSource = document.getElementById('idSource');
         const buildDisplay = document.getElementById('buildVersionDisplay');

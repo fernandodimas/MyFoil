@@ -2,7 +2,14 @@
 Pytest fixtures and configuration for MyFoil tests
 """
 
+# Ensure tests use an in-memory SQLite DB unless DATABASE_URL already provided.
+# This must be set before any app modules import `constants` so MYFOIL_DB is populated.
 import os
+
+if not os.environ.get("DATABASE_URL"):
+    os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+
+import sys
 import sys
 import pytest
 from unittest.mock import MagicMock, patch
@@ -76,6 +83,10 @@ def client(app_config):
     a instância `app` já criada. Aplica as configurações de teste (app_config) antes
     de retornar o cliente.
     """
+    # Ensure DATABASE_URL is set for tests (use SQLite in-memory by default)
+    if not os.environ.get("DATABASE_URL"):
+        os.environ["DATABASE_URL"] = app_config.get("DATABASE_URL", "sqlite:///:memory:")
+
     try:
         # Prefer factory when disponível
         from app.app import create_app

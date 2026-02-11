@@ -24,6 +24,15 @@ window.confirmAction = function (options) {
 
 function showGameDetails(id) {
     $.getJSON(`/api/app_info/${id}`, (game) => {
+        // normalize possible envelope responses (e.g. { code, success, data })
+        if (typeof unwrap === 'function') {
+            game = unwrap(game) || {};
+        } else if (game && game.data !== undefined) {
+            game = game.data || {};
+        } else {
+            game = game || {};
+        }
+
         $('#modalTitle').text(game.name);
 
         // Update screenshot state
@@ -496,56 +505,109 @@ function deleteGameFile(fileId, titleId) {
 }
 
 function loadGameTagsAndWishlist(titleId) {
-    titleId = titleId.toUpperCase();
-    $.getJSON('/api/tags', (tags) => {
+    // Defensive handling for titleId (may be undefined/null)
+    if (titleId && typeof titleId === 'string') {
+        titleId = titleId.toUpperCase();
+    } else {
+        titleId = null;
+    }
+
+    // Load all available tags for the select
+    $.getJSON('/api/tags', (tagsRes) => {
+        let tags = tagsRes;
+        if (typeof unwrap === 'function') tags = unwrap(tagsRes) || tagsRes;
+        if (typeof coerceArray === 'function') tags = coerceArray(tags);
+        if (!Array.isArray(tags)) tags = [];
+
         const select = $('#modalAddTagSelect');
         if (select.length) {
             select.find('option:not(:first)').remove();
             tags.forEach(tag => {
-                select.append(`<option value="${tag.id}">${escapeHtml(tag.name)}</option>`);
+                const id = tag && (tag.id || tag.tag_id) ? (tag.id || tag.tag_id) : (typeof tag === 'string' ? tag : '');
+                const name = tag && (tag.name || tag.label) ? (tag.name || tag.label) : (typeof tag === 'string' ? tag : '');
+                select.append(`<option value="${escapeHtml(id)}">${escapeHtml(name)}</option>`);
             });
         }
     });
-    $.getJSON(`/api/titles/${titleId}/tags`, (tags) => {
-        const container = $('#gameModalTags').empty();
-        tags.forEach(tag => {
-            container.append(`
-                <span class="tag" style="background-color: ${escapeHtml(tag.color)}; color: #fff;">
-                    ${escapeHtml(tag.name)}
-                    <button class="delete is-small" onclick="removeTagFromGame('${escapeHtml(titleId)}', ${tag.id})"></button>
-                </span>
-            `);
+
+    // Load tags for this specific title (if we have an id)
+    if (titleId) {
+        $.getJSON(`/api/titles/${titleId}/tags`, (tagsRes) => {
+            let tags = tagsRes;
+            if (typeof unwrap === 'function') tags = unwrap(tagsRes) || tagsRes;
+            if (typeof coerceArray === 'function') tags = coerceArray(tags);
+            if (!Array.isArray(tags)) tags = [];
+
+            const container = $('#gameModalTags').empty();
+            tags.forEach(tag => {
+                const color = tag && tag.color ? tag.color : '#888';
+                const name = tag && (tag.name || tag.label) ? (tag.name || tag.label) : (typeof tag === 'string' ? tag : '');
+                const id = tag && (tag.id || tag.tag_id) ? (tag.id || tag.tag_id) : '';
+                container.append(`
+                    <span class="tag" style="background-color: ${escapeHtml(color)}; color: #fff;">
+                        ${escapeHtml(name)}
+                        <button class="delete is-small" onclick="removeTagFromGame('${escapeHtml(titleId)}', ${id})"></button>
+                    </span>
+                `);
+            });
         });
-    });
-    $.getJSON('/api/wishlist', (wishlist) => {
-        const inWishlist = wishlist.find(i => i.title_id === titleId);
+    } else {
+        $('#gameModalTags').empty();
+    }
+
+    // Wishlist handling - normalize response shapes
+    $.getJSON('/api/wishlist', (wishlistRes) => {
+        let wishlist = wishlistRes;
+        if (typeof unwrap === 'function') wishlist = unwrap(wishlistRes) || wishlistRes;
+        if (typeof coerceArray === 'function') wishlist = coerceArray(wishlist);
+        if (!Array.isArray(wishlist)) wishlist = [];
+
         const btn = $('#btnWishlist');
-        if (inWishlist) {
-            btn.removeClass('is-light').addClass('is-danger is-light')
-                .find('i').removeClass('bi-heart').addClass('bi-heart-fill');
+        if (!btn.length) return;
+
+        if (titleId) {
+            const inWishlist = wishlist.find(i => (i.title_id || i.titleId || i.title) === titleId);
+            if (inWishlist) {
+                btn.removeClass('is-light').addClass('is-danger is-light')
+                    .find('i').removeClass('bi-heart').addClass('bi-heart-fill');
+            } else {
+                btn.removeClass('is-danger').addClass('is-light')
+                    .find('i').removeClass('bi-heart-fill').addClass('bi-heart');
+            }
         } else {
+            // Reset to default if we don't have an id
             btn.removeClass('is-danger').addClass('is-light')
                 .find('i').removeClass('bi-heart-fill').addClass('bi-heart');
         }
     });
-    // Load ignore preferences for DLCs and Updates
-    $.getJSON(`/api/library/ignore/${titleId}`, (data) => {
-        if (data.dlcs) {
-            Object.entries(data.dlcs).forEach(([app_id, ignored]) => {
-                const cb = document.getElementById(`ignore-dlc-${app_id}`);
-                if (cb) cb.checked = ignored;
-            });
-        }
-        if (data.updates) {
-            Object.entries(data.updates).forEach(([version, ignored]) => {
-                const cb = document.getElementById(`ignore-upd-${version}`);
-                if (cb) cb.checked = ignored;
-            });
-        }
-    }).fail(() => {
-        // Clear all checkboxes on error
+
+    // Load ignore preferences for DLCs and Updates (only if we have a titleId)
+    if (titleId) {
+        $.getJSON(`/api/library/ignore/${titleId}`, (dataRes) => {
+            let data = dataRes;
+            if (typeof unwrap === 'function') data = unwrap(dataRes) || dataRes;
+            data = data || {};
+
+            if (data.dlcs) {
+                Object.entries(data.dlcs).forEach(([app_id, ignored]) => {
+                    const cb = document.getElementById(`ignore-dlc-${app_id}`);
+                    if (cb) cb.checked = ignored;
+                });
+            }
+            if (data.updates) {
+                Object.entries(data.updates).forEach(([version, ignored]) => {
+                    const cb = document.getElementById(`ignore-upd-${version}`);
+                    if (cb) cb.checked = ignored;
+                });
+            }
+        }).fail(() => {
+            // Clear all checkboxes on error
+            $('input[id^="ignore-dlc-"], input[id^="ignore-upd-"]').prop('checked', false);
+        });
+    } else {
+        // No titleId -> clear checkboxes
         $('input[id^="ignore-dlc-"], input[id^="ignore-upd-"]').prop('checked', false);
-    });
+    }
 }
 
 function toggleItemIgnore(titleId, type, itemId, value) {
