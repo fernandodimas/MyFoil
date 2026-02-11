@@ -1148,9 +1148,14 @@ function runRenamingJob() {
 // --- Backup Management ---
 function fillBackupsTable() {
     $.getJSON('/api/backup/list', (res) => {
-        if (!res.success) return;
+        const list = coerceArray(res);
         const tbody = $('#backupsTable tbody').empty();
-        res.backups.forEach(b => {
+        if (!list || list.length === 0) {
+            tbody.append(`<tr><td colspan="5" class="has-text-centered has-text-grey">${t('Nenhum backup encontrado.')}</td></tr>`);
+            return;
+        }
+
+        list.forEach(b => {
             const date = b.created.replace('T', ' ').split('.')[0];
             const size = (b.size / 1024 / 1024).toFixed(2) + ' MB';
             let typeColor = 'is-info';
