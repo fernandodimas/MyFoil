@@ -23,6 +23,9 @@ logger = logging.getLogger("main")
 db = SQLAlchemy()
 migrate = Migrate()
 
+# Ensure Webhook symbol exists for compatibility imports even if model isn't available
+Webhook = None
+
 
 # Alembic functions
 def get_alembic_cfg():
