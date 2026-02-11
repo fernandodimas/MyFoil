@@ -55,6 +55,18 @@ def access_required(access: str):
             # 3. Try Bearer Token Authentication
             token_valid, _, user_obj = check_api_token(request)
             if token_valid:
+                # If token is valid, temporarily set the request user so
+                # handlers that rely on `current_user` (e.g. to read id or roles)
+                # behave the same as session-authenticated requests.
+                try:
+                    # login_user will mark the user for this request context
+                    # without setting a persistent 'remember' cookie.
+                    login_user(user_obj, remember=False)
+                except Exception:
+                    # If login_user fails for some reason, continue without
+                    # raising; permission checks below will still use user_obj
+                    pass
+
                 # Check permissions using the user object linked to the token
                 if not user_obj.has_access(access):
                     return "Forbidden", 403

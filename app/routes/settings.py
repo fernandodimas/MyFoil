@@ -603,7 +603,28 @@ def create_token_api():
 
     data = request.json
     name = data.get("name")
-    user_id = data.get("user_id") or current_user.id
+
+    # Determine target user_id for the token. Prefer explicit payload, then
+    # the logged-in session user, then a valid bearer token's user.
+    user_id = data.get("user_id") if data else None
+    if not user_id:
+        try:
+            if current_user and getattr(current_user, "is_authenticated", False):
+                user_id = current_user.id
+        except Exception:
+            user_id = None
+
+    # If still no user_id, attempt to extract from Authorization Bearer token
+    if not user_id:
+        try:
+            from auth import check_api_token
+
+            token_valid, _, user_obj = check_api_token(request)
+            if token_valid and user_obj:
+                user_id = user_obj.id
+        except Exception:
+            # ignore and let validation below catch missing user
+            pass
 
     if not name:
         return error_response(message="Name is required")
