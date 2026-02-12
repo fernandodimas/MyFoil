@@ -402,12 +402,28 @@ def refresh_sources_dates_api():
     import titledb_sources
 
     manager = titledb_sources.TitleDBSourceManager(CONFIG_DIR)
-    success = manager.refresh_remote_dates()
-    return (
-        success_response(message="Sources dates refreshed")
-        if success
-        else error_response(message="Failed to refresh sources dates")
-    )
+    # Apenas dispare a atualização assincronamente; o manager executa um worker thread.
+    # Não confiamos em um valor de retorno síncrono, já que a operação é assíncrona.
+    try:
+        manager.refresh_remote_dates(force=True)
+        logger.info("Disparado refresh_remote_dates para fontes do TitleDB via API de settings")
+        return success_response(message="Refresh das datas das fontes iniciado")
+    except Exception as e:
+        # Log request details to help debugging client 400/Bad Request issues
+        try:
+            body = request.get_data(as_text=True)
+        except Exception:
+            body = "<could not read body>"
+        logger.exception(f"Falha ao disparar refresh_remote_dates: {e} | headers={dict(request.headers)} | body={body}")
+        # Return a 500 with more diagnostic information for debugging purposes.
+        # include_traceback=True will attach the server traceback to the JSON response
+        # which is useful while debugging client/server integration issues.
+        return error_response(
+            ErrorCode.INTERNAL_ERROR,
+            message="Falha ao iniciar refresh das fontes do TitleDB",
+            status_code=500,
+            include_traceback=True,
+        )
 
 
 @settings_bp.route("/settings/titledb/refresh_remote", methods=["POST"])
