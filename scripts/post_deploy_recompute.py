@@ -14,7 +14,7 @@ holds the advisory lock.
 import subprocess
 import sys
 import time
-from db import db
+from app.db import db
 
 
 def acquire_lock(conn, lock_id: int) -> bool:
@@ -76,7 +76,7 @@ def main():
             # 3) Regenerate library cache (force)
             print("Regenerating library cache (force=True)")
             try:
-                import library
+                import app.library as library
 
                 library.invalidate_library_cache()
                 # Force regenerate in current process (will load TitleDB)
