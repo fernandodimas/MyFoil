@@ -78,67 +78,26 @@ class TitlesRepository:
                 query = query.filter(Titles.tags_json.ilike(f"%{t}%"))
 
             if filters.get("dlc"):
-                # DLC filter: Owned games that have missing DLCs.
-                # Prefer using materialized column when available for speed, but fall back
-                # to a correlated subquery that compares total DLCs known in TitleDB vs owned DLC apps with files.
+                # DLC filter: Owned games that have missing DLCs (complete=False)
+                # Prefer using materialized column when available for speed
                 try:
-                    # If the model has missing_dlcs_count, use it (coalesce to handle NULL)
-                    query = query.filter(Titles.have_base == True, (Titles.missing_dlcs_count or 0) > 0)
+                    # If the model has missing_dlcs_count, use it
+                    query = query.filter(Titles.have_base == True, Titles.missing_dlcs_count > 0)
                 except Exception:
-                    # Fallback: correlated subqueries
-                    from models.titledbdlcs import TitleDBDLCs
-                    from models.apps import Apps
-                    from db import app_files, Files
-
-                    # total DLCs known for this base title
-                    total_dlcs_subq = (
-                        select(func.count(TitleDBDLCs.id))
-                        .where(TitleDBDLCs.base_title_id == Titles.title_id)
-                        .scalar_subquery()
-                    )
-
-                    # owned DLC files count (only count DLC apps that have files linked)
-                    owned_dlc_files_subq = (
-                        select(func.count(func.distinct(Files.id)))
-                        .select_from(Apps)
-                        .join(app_files, Apps.id == app_files.c.app_id)
-                        .join(Files, Files.id == app_files.c.file_id)
-                        .where(Apps.title_id == Titles.id, Apps.app_type == "DLC", Apps.owned == True)
-                        .scalar_subquery()
-                    )
-
-                    # Compare totals (treat NULL as 0)
-                    query = query.filter(
-                        Titles.have_base == True,
-                        func.coalesce(total_dlcs_subq, 0) > func.coalesce(owned_dlc_files_subq, 0),
-                    )
+                    query = query.filter(Titles.have_base == True, Titles.complete == False)
 
             if filters.get("redundant"):
-                # Redundant updates filter: prefer materialized counter when present.
-                # Fallback: count distinct owned update FILES excluding XCI/XCZ bundles (those should not count as redundant).
+                # Prefer materialized counter when present for speed
                 try:
                     query = query.filter(Titles.redundant_updates_count > 1)
                 except Exception:
-                    from models.apps import Apps
-                    from db import app_files, Files
-
-                    upd_files_count_subq = (
-                        select(func.count(func.distinct(Files.id)))
-                        .select_from(Apps)
-                        .join(app_files, Apps.id == app_files.c.app_id)
-                        .join(Files, Files.id == app_files.c.file_id)
-                        .where(
-                            Apps.title_id == Titles.id,
-                            Apps.app_type == "UPD",
-                            Apps.owned == True,
-                            Files.identified == True,
-                            func.lower(Files.filepath).notlike("%.xci"),
-                            func.lower(Files.filepath).notlike("%.xcz"),
-                        )
+                    # Fallback to correlated scalar subquery
+                    count_subq = (
+                        select(func.count(Apps.id))
+                        .where(Apps.title_id == Titles.id, Apps.app_type == "UPD", Apps.owned == True)
                         .scalar_subquery()
                     )
-
-                    query = query.filter(func.coalesce(upd_files_count_subq, 0) > 1)
+                    query = query.filter(count_subq > 1)
 
         # Apply sorting
         sort_field = getattr(Titles, sort_by, Titles.name)
