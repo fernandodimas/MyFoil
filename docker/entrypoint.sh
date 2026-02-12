@@ -5,6 +5,9 @@ set -euo pipefail
 mkdir -p /var/log/myfoil
 chown -R "${PUID:-1000}":"${PGID:-1000}" /var/log/myfoil || true
 
+# Set PYTHONPATH so scripts can import app modules
+export PYTHONPATH=/app:$PYTHONPATH
+
 echo "MyFoil entrypoint starting..." | tee -a /var/log/myfoil/entrypoint.log
 
 # Run database migrations if requested (default: enabled)
