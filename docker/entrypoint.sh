@@ -6,7 +6,7 @@ mkdir -p /var/log/myfoil
 chown -R "${PUID:-1000}":"${PGID:-1000}" /var/log/myfoil || true
 
 # Set PYTHONPATH so scripts can import app modules
-export PYTHONPATH=/app:$PYTHONPATH
+export PYTHONPATH=/app${PYTHONPATH:+:$PYTHONPATH}
 
 echo "MyFoil entrypoint starting..." | tee -a /var/log/myfoil/entrypoint.log
 
