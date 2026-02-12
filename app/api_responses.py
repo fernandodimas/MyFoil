@@ -38,7 +38,14 @@ def success_response(data=None, message=None, status_code=200):
     return jsonify(response), status_code
 
 
-def error_response(error_code, message=None, details=None, status_code=400, log_error=True, include_traceback=False):
+def error_response(
+    error_code=ErrorCode.INTERNAL_ERROR,
+    message=None,
+    details=None,
+    status_code=400,
+    log_error=True,
+    include_traceback=False,
+):
     """
     Standard error response format for API endpoints
     """
