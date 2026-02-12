@@ -85,7 +85,23 @@ def library_api():
     per_page = min(max(1, per_page), MAX_PER_PAGE)  # Limitar ao máximo configurável
 
     lib_data = library.generate_library()
-    total_items = len(lib_data)
+
+    # Support server-side simple filters for the dashboard cache endpoint
+    # so clients can request filtered views without relying on potentially stale client-side logic.
+    def _flag_true(v):
+        return str(v).lower() in ("1", "true", "yes", "on")
+
+    dlc_filter = _flag_true(request.args.get("dlc"))
+    redundant_filter = _flag_true(request.args.get("redundant"))
+
+    # lib_data is a list of game dicts
+    filtered_lib = lib_data
+    if dlc_filter:
+        filtered_lib = [g for g in filtered_lib if g.get("has_base") and not g.get("has_all_dlcs")]
+    if redundant_filter:
+        filtered_lib = [g for g in filtered_lib if g.get("has_redundant_updates")]
+
+    total_items = len(filtered_lib)
     logger.info(f"Library API returning {total_items} items. Page: {page}, Per Page: {per_page}")
 
     # Calcular paginação
@@ -94,7 +110,7 @@ def library_api():
     end_idx = start_idx + per_page
 
     # Aplicar paginação
-    paginated_data = lib_data[start_idx:end_idx]
+    paginated_data = filtered_lib[start_idx:end_idx]
 
     # We need the hash for the header, so we reload from disk to get the full dict
     full_cache = library.load_library_from_disk()
@@ -219,33 +235,90 @@ def library_paged_api():
                 return resp, 200
 
     # Use repository for pagination
-    paginated = TitlesRepository.get_paged(page=page, per_page=per_page, sort_by=sort_by, order=order)
+    def _flag_true(v):
+        return str(v).lower() in ("1", "true", "yes", "on")
 
-    # Serialize items
-    items = []
-    for title in paginated.items:
-        try:
-            item = _serialize_title_with_apps(title)
-            if item:
-                items.append(item)
-        except Exception as e:
-            logger.error(f"Error serializing title {title.title_id}: {e}")
-            continue
+    dlc_filter = _flag_true(request.args.get("dlc"))
+    redundant_filter = _flag_true(request.args.get("redundant"))
 
-    # Build response data
-    data = {
-        "items": items,
-        "pagination": {
-            "page": paginated.page,
-            "per_page": paginated.per_page,
-            "total_items": paginated.total,
-            "total_pages": paginated.pages,
-            "has_next": paginated.has_next,
-            "has_prev": paginated.has_prev,
-            "sort_by": sort_by,
-            "order": order,
-        },
-    }
+    # If dlc or redundant filters are requested, do filtering at the serialization level
+    # because the DB-level counters may be stale or conservative. We'll fetch a large
+    # page of titles to process in memory and then paginate the filtered results.
+    if dlc_filter or redundant_filter:
+        # Fetch a large set (reasonable upper bound) to filter in memory
+        FETCH_LIMIT = 5000
+        paginated_all = TitlesRepository.get_paged(page=1, per_page=FETCH_LIMIT, sort_by=sort_by, order=order)
+        all_titles = paginated_all.items
+
+        items_all = []
+        for title in all_titles:
+            try:
+                item = _serialize_title_with_apps(title)
+                if not item:
+                    continue
+
+                # Apply requested post-serialization filters
+                if dlc_filter:
+                    # Wants games that have base but missing DLCs
+                    if not (item.get("has_base") and not item.get("has_all_dlcs")):
+                        continue
+                if redundant_filter:
+                    if not item.get("has_redundant_updates"):
+                        continue
+
+                items_all.append(item)
+            except Exception as e:
+                logger.error(f"Error serializing title {title.title_id}: {e}")
+                continue
+
+        # Manual pagination on filtered results
+        total_items = len(items_all)
+        total_pages = (total_items + per_page - 1) // per_page
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        items = items_all[start_idx:end_idx]
+
+        data = {
+            "items": items,
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total_items": total_items,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1,
+                "sort_by": sort_by,
+                "order": order,
+            },
+        }
+    else:
+        paginated = TitlesRepository.get_paged(page=page, per_page=per_page, sort_by=sort_by, order=order)
+
+        # Serialize items
+        items = []
+        for title in paginated.items:
+            try:
+                item = _serialize_title_with_apps(title)
+                if item:
+                    items.append(item)
+            except Exception as e:
+                logger.error(f"Error serializing title {title.title_id}: {e}")
+                continue
+
+        # Build response data
+        data = {
+            "items": items,
+            "pagination": {
+                "page": paginated.page,
+                "per_page": paginated.per_page,
+                "total_items": paginated.total,
+                "total_pages": paginated.pages,
+                "has_next": paginated.has_next,
+                "has_prev": paginated.has_prev,
+                "sort_by": sort_by,
+                "order": order,
+            },
+        }
 
     # Cache the response (Phase 4.1)
     if CACHE_ENABLED:
@@ -528,6 +601,89 @@ def search_library_api():
         results.append(game)
 
     return success_response(data={"count": len(results), "results": results})
+
+
+@library_bp.route("/debug/library-dlc-report")
+@access_required("shop")
+@handle_api_errors
+def debug_library_dlc_report():
+    """Relatório diagnóstico para discrepâncias no filtro DLC/Redundant.
+
+    Retorna contagens e exemplos usando (1) colunas materializadas em Titles,
+    (2) flags 'complete' e (3) a versão construída em memória via generate_library().
+    """
+    from db import Files
+
+    # 1) From Titles materialized counters
+    try:
+        rows_counter = (
+            Titles.query.filter(Titles.have_base == True, func.coalesce(Titles.missing_dlcs_count, 0) > 0)
+            .with_entities(Titles.title_id, Titles.name, Titles.missing_dlcs_count)
+            .limit(200)
+            .all()
+        )
+        counter_list = [{"title_id": r[0], "name": r[1], "missing_dlcs_count": int(r[2] or 0)} for r in rows_counter]
+        counter_total = Titles.query.filter(
+            Titles.have_base == True, func.coalesce(Titles.missing_dlcs_count, 0) > 0
+        ).count()
+    except Exception as e:
+        counter_list = []
+        counter_total = 0
+
+    # 2) From 'complete' flag (have_base=True AND complete=False)
+    try:
+        rows_complete = (
+            Titles.query.filter(Titles.have_base == True, Titles.complete == False)
+            .with_entities(Titles.title_id, Titles.name)
+            .limit(200)
+            .all()
+        )
+        complete_list = [{"title_id": r[0], "name": r[1]} for r in rows_complete]
+        complete_total = Titles.query.filter(Titles.have_base == True, Titles.complete == False).count()
+    except Exception as e:
+        complete_list = []
+        complete_total = 0
+
+    # 3) From in-memory generated library
+    try:
+        lib = library.generate_library()
+        lib_missing = [g for g in lib if g.get("has_base") and not g.get("has_all_dlcs")]
+        lib_redundant = [g for g in lib if g.get("has_redundant_updates")]
+        lib_missing_examples = [{"title_id": g.get("title_id"), "name": g.get("name")} for g in lib_missing[:200]]
+        lib_total_missing = len(lib_missing)
+        lib_total_redundant = len(lib_redundant)
+    except Exception as e:
+        lib_missing_examples = []
+        lib_total_missing = 0
+        lib_total_redundant = 0
+
+    # 4) For a few examples, fetch TitleDB known DLC count
+    try:
+        sample_titles = [x.get("title_id") for x in (counter_list[:5] or complete_list[:5] or lib_missing_examples[:5])]
+        titledb_info = []
+        for tid in sample_titles:
+            if not tid:
+                continue
+            try:
+                dlcs = titles.get_all_existing_dlc(tid) or []
+            except Exception:
+                dlcs = []
+            titledb_info.append({"title_id": tid, "titledb_dlcs_count": len(dlcs), "titledb_dlcs": dlcs[:20]})
+    except Exception:
+        titledb_info = []
+
+    return success_response(
+        data={
+            "titles_missing_by_counter_total": int(counter_total),
+            "titles_missing_by_counter_examples": counter_list[:50],
+            "titles_missing_by_complete_total": int(complete_total),
+            "titles_missing_by_complete_examples": complete_list[:50],
+            "library_missing_total": int(lib_total_missing),
+            "library_missing_examples": lib_missing_examples,
+            "library_redundant_total": int(lib_total_redundant),
+            "titledb_sample_info": titledb_info,
+        }
+    )
 
 
 @library_bp.route("/library/outdated-games")

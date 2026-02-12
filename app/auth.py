@@ -3,6 +3,7 @@ from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from db import db, User, ApiToken, logger
+from api_responses import error_response, ErrorCode
 from flask_login import LoginManager
 from utils import sanitize_sensitive_data
 from constants import BUILD_VERSION
@@ -41,7 +42,7 @@ def access_required(access: str):
             # 1. Try Session Authentication (Browser)
             if current_user.is_authenticated:
                 if not current_user.has_access(access):
-                    return "Forbidden", 403
+                    return error_response(ErrorCode.FORBIDDEN, message="Forbidden", status_code=403)
                 return f(*args, **kwargs)
 
             # 2. Try Basic Authentication (API/Automation)
@@ -49,7 +50,7 @@ def access_required(access: str):
                 success, error, is_admin = basic_auth(request)
                 if success:
                     if access == "admin" and not is_admin:
-                        return "Forbidden", 403
+                        return error_response(ErrorCode.FORBIDDEN, message="Forbidden", status_code=403)
                     return f(*args, **kwargs)
 
             # 3. Try Bearer Token Authentication
@@ -69,7 +70,7 @@ def access_required(access: str):
 
                 # Check permissions using the user object linked to the token
                 if not user_obj.has_access(access):
-                    return "Forbidden", 403
+                    return error_response(ErrorCode.FORBIDDEN, message="Forbidden", status_code=403)
                 return f(*args, **kwargs)
 
             # 4. Public access check
@@ -80,8 +81,8 @@ def access_required(access: str):
                 if settings.get("shop", {}).get("public_profile", False):
                     return f(*args, **kwargs)
 
-            # 5. Failed
-            return login_manager.unauthorized()
+            # 5. Failed - return JSON unauthorized for API usage
+            return error_response(ErrorCode.UNAUTHORIZED, message="Unauthorized", status_code=401)
 
         return decorated_view
 

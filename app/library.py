@@ -1354,16 +1354,23 @@ def get_game_info_item(tid, title_data):
     game["has_latest_version"] = game["owned_version"] >= game["latest_version_available"]
 
     # Determine if ALL possible DLCs are owned
-    all_possible_dlc_ids = [d.upper() for d in titles_lib.get_all_existing_dlc(tid)]
-    # We only count as owned if there's actually a file attached
-    owned_dlc_ids = list(
-        set(
-            [
-                a["app_id"].upper()
-                for a in all_title_apps
-                if a["app_type"] == APP_TYPE_DLC and a["owned"] and len(a.get("files_info", [])) > 0
-            ]
-        )
+    # Start with TitleDB-known DLCs, but also include any DLC apps present in our DB to be robust
+    try:
+        titledb_dlcs = [d.upper() for d in titles_lib.get_all_existing_dlc(tid) or []]
+    except Exception:
+        titledb_dlcs = []
+
+    dlc_apps_seen = set([a["app_id"].upper() for a in all_title_apps if a.get("app_type") == APP_TYPE_DLC])
+
+    all_possible_dlc_ids = sorted(set(titledb_dlcs) | dlc_apps_seen)
+
+    # We only count a DLC as owned if it has files attached
+    owned_dlc_ids = set(
+        [
+            a["app_id"].upper()
+            for a in all_title_apps
+            if a.get("app_type") == APP_TYPE_DLC and a.get("owned") and len(a.get("files_info", [])) > 0
+        ]
     )
 
     # Filter out self-mapping if it somehow appeared
@@ -1669,6 +1676,14 @@ def generate_library(force=False):
     logger.info(f"generate_library: Finished processing Titles. Total games found: {len(games_info)}")
 
     sorted_library = sorted(games_info, key=lambda x: x.get("name", "Unrecognized") or "Unrecognized")
+
+    # Diagnostic: log how many games are missing DLCs and how many have redundant updates
+    try:
+        missing_dlcs_count = sum(1 for g in games_info if not g.get("has_all_dlcs", True) and g.get("has_base", False))
+        redundant_count = sum(1 for g in games_info if g.get("has_redundant_updates", False))
+        logger.info(f"Library diagnostic: missing_dlcs={missing_dlcs_count}, redundant_updates={redundant_count}")
+    except Exception as e:
+        logger.debug(f"Failed to compute library diagnostic counts: {e}")
 
     library_data = {"hash": current_db_hash, "library": sorted_library}
 

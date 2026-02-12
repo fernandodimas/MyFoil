@@ -41,6 +41,12 @@ if [ "${ENABLE_UPDATE_TITLES:-0}" = "1" ]; then
   python3 /app/scripts/run_update_titles.py 2>&1 | tee -a /var/log/myfoil/update_titles.log || true
 fi
 
+# Post-deploy recompute hook: runs after image update when explicitly enabled
+if [ "${RUN_POST_DEPLOY_RECOMPUTE:-0}" = "1" ]; then
+  echo "RUN_POST_DEPLOY_RECOMPUTE set, running post-deploy recompute" | tee -a /var/log/myfoil/entrypoint.log
+  python3 /app/scripts/post_deploy_recompute.py 2>&1 | tee -a /var/log/myfoil/post_deploy_recompute.log || true
+fi
+
 echo "Entrypoint finished setup, handing off to run.sh" | tee -a /var/log/myfoil/entrypoint.log
 
 # Exec original run script (starts web or celery depending on args)
