@@ -1106,9 +1106,16 @@ def update_titles():
         # Materialized counters (to speed up common filters)
         try:
             # Count owned update apps with files (redundant updates counter)
-            redundant_updates = len(
-                [a for a in title.apps if a.app_type == APP_TYPE_UPD and a.owned and len(a.files) > 0]
-            )
+            # Ignore XCI/XCZ files (cartridge dumps often include updates)
+            redundant_updates = 0
+            for a in title.apps:
+                if a.app_type == APP_TYPE_UPD and a.owned and len(a.files) > 0:
+                    # Count only non-XCI/XCZ files
+                    non_xci_files = [
+                        f for f in a.files if f.filepath and not f.filepath.lower().endswith((".xci", ".xcz"))
+                    ]
+                    if non_xci_files:
+                        redundant_updates += 1
             title.redundant_updates_count = redundant_updates
 
             # Missing DLCs counter: number of DLCs known in TitleDB that are not owned
