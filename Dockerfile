@@ -35,7 +35,8 @@ COPY ./app /app
 
 # Copy run script specifically from docker folder
 COPY ./docker/run.sh /app/run.sh
-RUN chmod +x /app/run.sh
+COPY ./docker/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/run.sh /app/entrypoint.sh
 
 # Create necessary directories
 RUN mkdir -p /app/config /app/data /games
@@ -44,4 +45,4 @@ RUN mkdir -p /app/config /app/data /games
 EXPOSE 8465
 
 # Run the application
-ENTRYPOINT [ "/app/run.sh" ]
+ENTRYPOINT [ "/app/entrypoint.sh" ]
