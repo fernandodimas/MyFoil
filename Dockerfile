@@ -33,6 +33,9 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
 # Copy application code
 COPY ./app /app
 
+# Copy scripts directory
+COPY ./scripts /app/scripts
+
 # Copy run script specifically from docker folder
 COPY ./docker/run.sh /app/run.sh
 COPY ./docker/entrypoint.sh /app/entrypoint.sh
