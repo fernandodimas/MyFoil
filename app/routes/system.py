@@ -1,11 +1,9 @@
-"""
-System Routes - Endpoints relacionados ao sistema (stats, backups, etc.)
-"""
+"""System Routes - Endpoints relacionados ao sistema (stats, backups, etc.)"""
 
 from flask import Blueprint, render_template, request, jsonify, send_from_directory
-import socket
 from flask_login import current_user
 from sqlalchemy import text
+
 from db import (
     db,
     Apps,
@@ -988,18 +986,11 @@ def reidentify_all_api():
 
     return success_response(message="Re-identification job started")
 
-
-@system_bp.post("/settings/titledb/sources/refresh-dates")
-@access_required("admin")
-@handle_api_errors
-def refresh_titledb_sources_dates_api():
-    """Atualizar datas remotas das fontes TitleDB"""
-    from settings import CONFIG_DIR
-    import titledb_sources
-
-    manager = titledb_sources.TitleDBSourceManager(CONFIG_DIR)
-    manager.refresh_remote_dates()
-    return success_response(message="Datas das fontes TitleDB atualizadas")
+    # NOTE: Handler for POST /settings/titledb/sources/refresh-dates was removed from
+    # this module to avoid duplicate route registration. Keep the implementation in
+    # app/routes/settings.py which provides the canonical endpoint and better
+    # diagnostic logging. This placeholder prevents accidental accidental
+    # re-introduction without review.
 
 
 @system_bp.route("/titles", methods=["GET"])
