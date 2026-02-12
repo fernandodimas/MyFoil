@@ -18,7 +18,7 @@ import time
 from db import db
 
 try:
-    from app.app import create_app
+    from app import create_app
     from library import invalidate_library_cache, generate_library
 except Exception as e:
     print("Failed to import application modules:", e)
