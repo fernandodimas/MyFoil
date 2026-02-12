@@ -14,7 +14,15 @@ holds the advisory lock.
 import subprocess
 import sys
 import time
-from app.db import db
+
+from db import db
+
+try:
+    from app.app import create_app
+    from library import invalidate_library_cache, generate_library
+except Exception as e:
+    print("Failed to import application modules:", e)
+    sys.exit(2)
 
 
 def acquire_lock(conn, lock_id: int) -> bool:
@@ -44,17 +52,7 @@ def run_cmd(cmd):
 
 
 def main():
-    # Use separate connection for advisory lock
-    app = None
-    try:
-        # Import create_app lazily to avoid side effects at import time
-        from app.app import create_app
-
-        app = create_app()
-    except Exception as e:
-        print("Failed to import application factory:", e)
-        sys.exit(2)
-
+    app = create_app()
     with app.app_context():
         conn = db.engine.connect()
         LOCK_ID = 999999999
@@ -76,11 +74,8 @@ def main():
             # 3) Regenerate library cache (force)
             print("Regenerating library cache (force=True)")
             try:
-                import app.library as library
-
-                library.invalidate_library_cache()
-                # Force regenerate in current process (will load TitleDB)
-                library.generate_library(force=True)
+                invalidate_library_cache()
+                generate_library(force=True)
                 print("Library regeneration completed.")
             except Exception as e:
                 print("Library regeneration failed:", e)
