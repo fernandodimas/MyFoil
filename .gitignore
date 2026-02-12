@@ -35,5 +35,9 @@ check_db.py
 debug_watcher.py
 get_library_path.py
 
+# Allow bin/ and scripts/ helper execution scripts to be committed when necessary
+!bin/
+!scripts/
+
 # Grep output
 grep_results.txt
