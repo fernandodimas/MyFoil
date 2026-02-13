@@ -24,6 +24,7 @@ services:
       - TZ=America/Sao_Paulo
       - REDIS_URL=redis://redis:6379/0
       - RUN_POST_DEPLOY_RECOMPUTE=1
+      - WATCHDOG_INTERVAL=10  # Watchdog polling interval in seconds
     volumes:
       - /path/to/your/games:/games # ⚠️ UPDATE THIS PATH!
       - ./config:/app/config
@@ -35,6 +36,14 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1.5G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   worker:
     container_name: myfoil-worker
@@ -55,3 +64,11 @@ services:
       - /path/to/your/games:/games # ⚠️ UPDATE THIS PATH!
       - ./config:/app/config
       - ./data:/app/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
