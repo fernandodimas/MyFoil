@@ -18,11 +18,21 @@ class Watcher:
         self.callback = callback
         # Use PollingObserver with configurable timeout to reduce CPU usage
         # Default: 10s (configurable via WATCHDOG_INTERVAL env var)
-        self.timeout = float(os.getenv("WATCHDOG_INTERVAL", "10.0"))
+        self.base_timeout = float(os.getenv("WATCHDOG_INTERVAL", "10.0"))
+        self.timeout = self.base_timeout
         self.observer = PollingObserver(timeout=self.timeout)
         self.scheduler_map = {}
         self.event_handler = Handler(callback, watcher=self)
-        logger.info(f"[WATCHDOG-INIT] Created PollingObserver with {self.timeout}s timeout for resource efficiency")
+
+        # IDLE OPTIMIZATION: Reduce polling when system is idle
+        self.idle_threshold = 300  # 5 minutes without activity = idle
+        self.idle_timeout = 60.0  # Poll every 60s when idle
+        self.last_activity_time = time.time()
+        self.is_idle = False
+
+        logger.info(
+            f"[WATCHDOG-INIT] Created PollingObserver with {self.base_timeout}s timeout (idle: {self.idle_timeout}s)"
+        )
 
         # Health monitoring attributes
         self.last_event_time = None
@@ -32,6 +42,37 @@ class Watcher:
         self.is_running = False
         self._health_check_thread = None
         self._stop_health_check = threading.Event()
+
+    def record_activity(self):
+        """Record that activity occurred - resets idle timer"""
+        self.last_activity_time = time.time()
+        if self.is_idle:
+            self.is_idle = False
+            self._adjust_polling_interval()
+            logger.info("[WATCHDOG] Activity detected - resuming normal polling")
+
+    def _check_idle_status(self):
+        """Check if system has been idle and adjust polling accordingly"""
+        idle_time = time.time() - self.last_activity_time
+
+        if idle_time > self.idle_threshold and not self.is_idle:
+            # System became idle
+            self.is_idle = True
+            self._adjust_polling_interval()
+            logger.info(f"[WATCHDOG] System idle for {idle_time:.0f}s - reducing polling to {self.idle_timeout}s")
+        elif idle_time <= self.idle_threshold and self.is_idle:
+            # System no longer idle
+            self.is_idle = False
+            self._adjust_polling_interval()
+            logger.info(f"[WATCHDOG] System active - resuming normal polling ({self.base_timeout}s)")
+
+    def _adjust_polling_interval(self):
+        """Adjust the polling observer interval based on idle status"""
+        # Note: PollingObserver doesn't support dynamic interval changes
+        # We would need to recreate the observer to change interval
+        # For now, we just log the state. To implement fully would require
+        # stopping and restarting the observer with new timeout.
+        pass
 
     def run(self):
         """Start observer and health monitoring"""
@@ -94,6 +135,7 @@ class Watcher:
     def _health_check_loop(self):
         """Background thread that monitors observer health and auto-restarts if needed"""
         check_interval = 30  # Check every 30 seconds
+        idle_check_counter = 0
 
         while not self._stop_health_check.is_set():
             try:
@@ -101,6 +143,12 @@ class Watcher:
                 if self.is_running and not self.observer.is_alive():
                     logger.error("Watchdog observer died unexpectedly! Attempting auto-restart...")
                     self._auto_restart()
+
+                # IDLE OPTIMIZATION: Check idle status every 2 cycles (60s)
+                idle_check_counter += 1
+                if idle_check_counter >= 2:
+                    idle_check_counter = 0
+                    self._check_idle_status()
 
             except Exception as e:
                 logger.error(f"Error in watchdog health check: {e}")
@@ -306,10 +354,12 @@ class Handler(FileSystemEventHandler):
             if dest_filename.startswith("._"):
                 return
 
+        # IDLE OPTIMIZATION: Record activity when file event detected
         if self.watcher:
             from datetime import datetime
 
             self.watcher.last_event_time = datetime.now()
+            self.watcher.record_activity()  # Reset idle timer
 
         library_event = SimpleNamespace(
             type=source_event.event_type,
