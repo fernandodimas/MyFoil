@@ -16,13 +16,14 @@ class Watcher:
     def __init__(self, callback):
         self.directories = set()  # Use a set to store directories
         self.callback = callback
-        # Use PollingObserver with conservative timeout to reduce CPU usage
-        # 5.0s is enough for background detection without stressing the system
-        self.observer = PollingObserver(timeout=5.0)
+        # Use PollingObserver with configurable timeout to reduce CPU usage
+        # Default: 10s (configurable via WATCHDOG_INTERVAL env var)
+        self.timeout = float(os.getenv("WATCHDOG_INTERVAL", "10.0"))
+        self.observer = PollingObserver(timeout=self.timeout)
         self.scheduler_map = {}
         self.event_handler = Handler(callback, watcher=self)
-        logger.info("[WATCHDOG-INIT] Created PollingObserver with 5.0s timeout for resource efficiency")
-        
+        logger.info(f"[WATCHDOG-INIT] Created PollingObserver with {self.timeout}s timeout for resource efficiency")
+
         # Health monitoring attributes
         self.last_event_time = None
         self.error_count = 0
@@ -38,16 +39,16 @@ class Watcher:
             # IMPORTANT: Re-initialize observer if it was stopped.
             # Watchdog observers are threads and cannot be restarted once stopped.
             if self.observer is None or not self.observer.is_alive():
-                 self.observer = PollingObserver(timeout=5.0)
-                 # Re-schedule all directories
-                 for directory in self.directories:
-                     task = self.observer.schedule(self.event_handler, directory, recursive=True)
-                     self.scheduler_map[directory] = task
-            
+                self.observer = PollingObserver(timeout=self.timeout)
+                # Re-schedule all directories
+                for directory in self.directories:
+                    task = self.observer.schedule(self.event_handler, directory, recursive=True)
+                    self.scheduler_map[directory] = task
+
             self.observer.start()
             self.is_running = True
             logger.info("Watchdog observer started successfully.")
-            
+
             # Start health check thread
             self._start_health_monitoring()
         except Exception as e:
@@ -62,12 +63,12 @@ class Watcher:
     def stop(self):
         """Stop observer and health monitoring"""
         logger.debug("Stopping watchdog observer...")
-        
+
         # Stop health monitoring first
         self._stop_health_check.set()
         if self._health_check_thread and self._health_check_thread.is_alive():
             self._health_check_thread.join(timeout=5)
-        
+
         # Stop observer
         try:
             if self.observer:
@@ -78,13 +79,13 @@ class Watcher:
         except Exception as e:
             logger.error(f"Error stopping observer: {e}")
         finally:
-            self.observer = None # Clear it so run() recreates it
+            self.observer = None  # Clear it so run() recreates it
 
     def _start_health_monitoring(self):
         """Start background health check thread"""
         if self._health_check_thread and self._health_check_thread.is_alive():
             return
-        
+
         self._stop_health_check.clear()
         self._health_check_thread = threading.Thread(target=self._health_check_loop, daemon=True)
         self._health_check_thread.start()
@@ -93,17 +94,17 @@ class Watcher:
     def _health_check_loop(self):
         """Background thread that monitors observer health and auto-restarts if needed"""
         check_interval = 30  # Check every 30 seconds
-        
+
         while not self._stop_health_check.is_set():
             try:
                 # Check if observer is alive
                 if self.is_running and not self.observer.is_alive():
                     logger.error("Watchdog observer died unexpectedly! Attempting auto-restart...")
                     self._auto_restart()
-                
+
             except Exception as e:
                 logger.error(f"Error in watchdog health check: {e}")
-            
+
             # Wait for next check (allows early exit on stop)
             self._stop_health_check.wait(timeout=check_interval)
 
@@ -111,13 +112,13 @@ class Watcher:
         """Attempt to restart the observer"""
         max_retries = 3
         base_delay = 5
-        
+
         if self.restart_count >= max_retries:
             logger.error(f"Watchdog auto-restart failed after {max_retries} attempts. Manual intervention required.")
             self.is_running = False
             self.last_error = f"Auto-restart failed after {max_retries} attempts"
             return
-        
+
         try:
             # Stop old observer
             try:
@@ -125,14 +126,14 @@ class Watcher:
                 self.observer.join(timeout=5)
             except:
                 pass
-            
+
             # Create new observer
             self.observer = PollingObserver()
-            
+
             # Re-schedule all directories
             old_scheduler_map = self.scheduler_map.copy()
             self.scheduler_map = {}
-            
+
             for directory in list(self.directories):
                 try:
                     if os.path.exists(directory):
@@ -141,23 +142,23 @@ class Watcher:
                         logger.debug(f"Re-scheduled {directory} after restart")
                 except Exception as e:
                     logger.error(f"Failed to re-schedule {directory}: {e}")
-            
+
             # Start new observer
             self.observer.start()
             self.is_running = True
             self.restart_count += 1
-            
+
             logger.info(f"Watchdog observer auto-restarted successfully (attempt {self.restart_count}/{max_retries})")
-            
+
         except Exception as e:
             self.restart_count += 1
             self.error_count += 1
             self.last_error = str(e)
             self.is_running = False
             logger.error(f"Failed to auto-restart watchdog (attempt {self.restart_count}/{max_retries}): {e}")
-            
+
             # Exponential backoff before next health check tries again
-            time.sleep(base_delay * (2 ** self.restart_count))
+            time.sleep(base_delay * (2**self.restart_count))
 
     def restart(self):
         """Manually restart the observer (for API endpoint)"""
@@ -191,11 +192,10 @@ class Watcher:
                 self.scheduler_map[directory] = task
                 self.directories.add(directory)
                 self.event_handler.add_directory(directory)
-                
-                
+
                 # Diagnostic: verify observer is alive and schedule worked
                 logger.debug(f"Added observer for {directory}, is_alive: {self.observer.is_alive()}")
-                
+
                 return True
             except Exception as e:
                 logger.error(f"Failed to add directory {directory} to watchdog: {e}")
@@ -308,6 +308,7 @@ class Handler(FileSystemEventHandler):
 
         if self.watcher:
             from datetime import datetime
+
             self.watcher.last_event_time = datetime.now()
 
         library_event = SimpleNamespace(
@@ -325,7 +326,7 @@ class Handler(FileSystemEventHandler):
         if library_event.type == "deleted":
             logger.info(f"Watchdog: File deleted - {library_event.src_path}")
             self._raw_callback([library_event])
-        
+
         elif library_event.type == "created":
             logger.info(f"Watchdog: File created, tracking stability - {library_event.src_path}")
             # Track file on create for stability
@@ -345,8 +346,8 @@ class Handler(FileSystemEventHandler):
         found = False
         for directory in self.directories:
             is_src_in = event.src_path.startswith(directory)
-            is_dest_in = hasattr(event, 'dest_path') and event.dest_path and event.dest_path.startswith(directory)
-            
+            is_dest_in = hasattr(event, "dest_path") and event.dest_path and event.dest_path.startswith(directory)
+
             if is_src_in or is_dest_in:
                 # logger.debug(f"Event matched directory {directory}, processing...")
                 self.collect_event(event, directory)

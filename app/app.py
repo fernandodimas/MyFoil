@@ -539,7 +539,7 @@ def create_automatic_backup():
 
 
 def init_internal(app):
-    """Initialize internal components"""
+    """Initialize internal components - OPTIMIZED for fast startup"""
     global watcher_thread
 
     # Cleanup stale jobs first (Reset stuck 'RUNNING'/'SCHEDULED' jobs from previous session)
@@ -551,43 +551,62 @@ def init_internal(app):
     job_tracker.cleanup_stale_jobs()
     logger.info("STARTUP: Job cleanup completed")
 
-    # Load TitleDB cache on startup (CRITICAL for versions_db)
-    # This prevents "Call load_titledb first" errors during scans
-    print("DEBUG: init_internal loading titledb...", flush=True)
+    # Stage 0: Load library cache IMMEDIATELY (before anything else)
+    # This ensures the UI can respond instantly
+    logger.info("Startup: Stage 0 - Loading library cache from disk...")
     try:
-        with app.app_context():
-            logger.info("Startup: Loading TitleDB cache...")
-            import titles
+        from library import load_library_from_disk
+        import library
 
-            titles.load_titledb()
-            print("DEBUG: init_internal titledb loaded.", flush=True)
+        saved = load_library_from_disk()
+        if saved and "library" in saved:
+            library._LIBRARY_CACHE = saved["library"]
+            logger.info(f"✓ Pre-loaded {len(saved['library'])} items from disk cache (READY)")
+        else:
+            logger.info("⚠ No cache found, library will be generated on first request")
     except Exception as e:
-        print(f"DEBUG: init_internal titledb failed: {e}", flush=True)
-        logger.error(f"Startup: Failed to load TitleDB: {e}")
+        logger.warning(f"⚠ Stage 0 cache load failed: {e}")
 
-    # Start file watcher
+    # Stage 1: Start TitleDB loading ASYNCHRONOUSLY (don't block)
+    # This prevents the 30-60s delay on startup
+    print("DEBUG: init_internal starting titledb async load...", flush=True)
+
+    def _load_titledb_async():
+        """Load TitleDB in background thread"""
+        try:
+            with app.app_context():
+                logger.info("Background: Loading TitleDB cache...")
+                import titles
+
+                titles.load_titledb()
+                logger.info("✓ TitleDB loaded successfully in background")
+        except Exception as e:
+            logger.error(f"✗ Background TitleDB load failed: {e}")
+
+    # Start TitleDB loading in background
+    titledb_thread = threading.Thread(target=_load_titledb_async, daemon=True, name="titledb-loader")
+    titledb_thread.start()
+    logger.info("✓ TitleDB loading started in background (non-blocking)")
+
+    # Stage 2: Start file watcher
     print("DEBUG: init_internal starting watcher...", flush=True)
-    # Start file watcher
-    print("DEBUG: init_internal starting watcher...", flush=True)
-    # start_watcher legacy check removed as it is handled in stage2_watchdog
 
     # Staged initialization to prevent CPU spike killing Gunicorn worker
     def stage1_cache():
-        logger.info("Init Stage 1: Pre-loading Library Cache...")
+        logger.info("Init Stage 1: Verifying library cache...")
+        # Cache already loaded in Stage 0, just verify it's valid
         try:
-            from library import load_library_from_disk
+            import library
 
-            saved = load_library_from_disk()
-            if saved and "library" in saved:
-                import library
-
-                library._LIBRARY_CACHE = saved["library"]
-                logger.info(f"Pre-loaded {len(saved['library'])} items from disk cache")
+            if library._LIBRARY_CACHE:
+                logger.info(f"✓ Library cache verified: {len(library._LIBRARY_CACHE)} items")
+            else:
+                logger.info("⚠ No cache in memory, will load on first request")
         except Exception as e:
-            logger.warning(f"Stage 1 failed: {e}")
+            logger.warning(f"Stage 1 verification failed: {e}")
 
-        # Schedule Stage 2
-        threading.Timer(10.0, stage2_watchdog).start()
+        # Schedule Stage 2 (watcher) - reduced delay for faster startup
+        threading.Timer(2.0, stage2_watchdog).start()
 
     def stage2_watchdog():
         logger.info("Init Stage 2: initializing Watchdog...")
@@ -598,10 +617,10 @@ def init_internal(app):
             # This ensures observer.is_alive() == True when directories are scheduled
             state.watcher.run()
 
-            # Give observer 500ms to fully start
+            # Give observer 200ms to fully start (reduced from 500ms)
             import time
 
-            time.sleep(0.5)
+            time.sleep(0.2)
 
             # Setup paths from Database (Source of Truth)
             # Sync YAML -> DB if DB is empty but YAML has paths (Migration scenario)
@@ -631,31 +650,32 @@ def init_internal(app):
             init_libraries(app, state.watcher, library_paths)
             logger.info(f"Initialized {len(library_paths)} library paths")
 
-        # Schedule Stage 3
-        threading.Timer(15.0, stage3_scan).start()
+        # Schedule Stage 3 - reduced delay for faster startup
+        threading.Timer(5.0, stage3_scan).start()
 
     def stage3_scan():
         logger.info("Init Stage 3: Checking for updates/scans...")
         with app.app_context():
             check_initial_scan(app)
 
-    # Start Stage 1 after 5 seconds (fast boot)
-    threading.Timer(5.0, stage1_cache).start()
+    # Start Stage 1 immediately (cache already loaded in Stage 0)
+    # Just verify after 1 second
+    threading.Timer(1.0, stage1_cache).start()
 
     # Initialize job scheduler immediately (it's light)
     init_scheduler(app)
 
-    # Schedule metadata fetch (2x per day = every 12h)
+    # Schedule metadata fetch (1x per day = every 24h) - as requested by user
     from metadata_service import metadata_fetcher
     from datetime import timedelta
 
     app.scheduler.add_job(
         job_id="scheduled_metadata_fetch",
         func=lambda: metadata_fetcher.fetch_all_metadata(force=False),
-        interval=timedelta(hours=12),
+        interval=timedelta(hours=24),
         run_first=False,  # Do NOT run on boot to save resources
     )
-    logger.info("Scheduled automated metadata fetch (every 12 hours)")
+    logger.info("Scheduled automated metadata fetch (every 24 hours)")
 
 
 def check_initial_scan(app):
