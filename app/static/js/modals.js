@@ -587,27 +587,35 @@ function loadGameTagsAndWishlist(titleId) {
     // Load ignore preferences for DLCs and Updates (only if we have a titleId)
     if (titleId) {
         $.getJSON(`/api/library/ignore/${titleId}`, (dataRes) => {
+            console.log('DEBUG: Raw response from ignore API:', dataRes);
             let data = dataRes;
             if (typeof unwrap === 'function') data = unwrap(dataRes) || dataRes;
+            // Handle nested data structure from API
+            if (data.data) data = data.data;
             data = data || {};
 
-            console.log('DEBUG: Loading ignore preferences for', titleId, data);
+            console.log('DEBUG: Processed data for ignore preferences:', data);
+            console.log('DEBUG: data.dlcs:', data.dlcs);
+            console.log('DEBUG: data.updates:', data.updates);
 
-            if (data.dlcs) {
+            if (data.dlcs && Object.keys(data.dlcs).length > 0) {
+                console.log('DEBUG: Setting DLC ignore preferences:', data.dlcs);
                 Object.entries(data.dlcs).forEach(([app_id, ignored]) => {
                     const cb = document.getElementById(`ignore-dlc-${app_id}`);
-                    console.log('DEBUG: Setting DLC', app_id, 'ignored=', ignored, 'checkbox=', cb);
+                    console.log('DEBUG: Setting DLC', app_id, 'ignored=', ignored, 'checkbox found=', !!cb);
                     if (cb) cb.checked = ignored;
                 });
             }
-            if (data.updates) {
+            if (data.updates && Object.keys(data.updates).length > 0) {
+                console.log('DEBUG: Setting Update ignore preferences:', data.updates);
                 Object.entries(data.updates).forEach(([version, ignored]) => {
                     const cb = document.getElementById(`ignore-upd-${version}`);
-                    console.log('DEBUG: Setting Update', version, 'ignored=', ignored, 'checkbox=', cb);
+                    console.log('DEBUG: Setting Update', version, 'ignored=', ignored, 'checkbox found=', !!cb);
                     if (cb) cb.checked = ignored;
                 });
             }
-        }).fail(() => {
+        }).fail((xhr, status, error) => {
+            console.error('DEBUG: Failed to load ignore preferences:', status, error);
             // Clear all checkboxes on error
             $('input[id^="ignore-dlc-"], input[id^="ignore-upd-"]').prop('checked', false);
         });
