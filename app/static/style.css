@@ -1689,17 +1689,24 @@ input[type=range].slider.is-small {
     position: absolute;
     top: 8px;
     right: 8px;
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
+    background: rgba(255, 193, 7, 0.9); /* Amarelo/ouro para destacar */
+    color: #000;
+    padding: 6px 8px;
+    border-radius: 50%;
+    font-size: 0.8rem;
     z-index: 10;
     backdrop-filter: blur(4px);
     transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    min-width: 24px;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .notes-badge:hover {
-    background: rgba(0, 0, 0, 0.9);
-    transform: scale(1.1);
+    background: rgba(255, 193, 7, 1);
+    transform: scale(1.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }

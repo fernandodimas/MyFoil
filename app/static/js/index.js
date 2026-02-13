@@ -413,6 +413,7 @@ function renderCardView(items) {
                         </div>
                         <div class="is-flex gap-1 is-justify-content-end ml-auto">
                             ${game.description ? (() => {
+                                console.log('DEBUG: Game has description:', game.description);
                                 const safeDesc = (game.description || '').replace(/"/g, '&quot;');
                                 return `<div class="notes-badge" title="${safeDesc}"><i class="bi bi-star-fill"></i></div>`;
                             })() : ''}
@@ -571,6 +572,8 @@ function applyFilters() {
         const ignoredDlcs = gameIgnore.dlcs || {};
         const ignoredUpdates = gameIgnore.updates || {};
 
+        console.log('DEBUG: Processing game', g.id, 'ignoredDlcs:', ignoredDlcs);
+
         let hasNonIgnoredUpdates = false;
         if (g.has_base && !g.has_latest_version) {
             if (g.updates && Array.isArray(g.updates)) {
@@ -591,10 +594,13 @@ function applyFilters() {
                 const appIdKey = typeof dlc.app_id === 'string' ? dlc.app_id : (dlc.appId || '');
                 const isIgnored = appIdKey ? (ignoredDlcs[appIdKey.toUpperCase()] || ignoredDlcs[appIdKey.toLowerCase()]) : false;
                 const isNotOwned = !dlc.owned;
+                console.log('DEBUG: DLC', appIdKey, 'isNotOwned:', isNotOwned, 'isIgnored:', isIgnored);
                 return isNotOwned && !isIgnored;
             });
         }
         g.has_non_ignored_dlcs = hasNonIgnoredDlcs;
+
+        console.log('DEBUG: Final flags for', g.id, 'has_non_ignored_dlcs:', hasNonIgnoredDlcs, 'has_non_ignored_updates:', hasNonIgnoredUpdates);
 
         // Determine status color for UI
         if (!g.has_base) {
