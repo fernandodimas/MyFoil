@@ -986,25 +986,41 @@ $(document).ready(() => {
     // Filter Buttons
     $('#btnFilterPendingBase').on('click', function () {
         $(this).toggleClass('is-primary is-light');
-        if ($(this).hasClass('is-primary')) $('#btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
+        if ($(this).hasClass('is-primary')) {
+            // DESATIVAR OUTROS FILTROS quando Pending Base for ativado
+            $('#btnFilterPendingUpd, #btnFilterPendingDlc, #btnFilterRedundant')
+                .removeClass('is-primary').addClass('is-light');
+        }
         applyFilters();
     });
 
     $('#btnFilterPendingUpd').on('click', function () {
         $(this).toggleClass('is-primary is-light');
-        if ($(this).hasClass('is-primary')) $('#btnFilterPendingBase, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
+        if ($(this).hasClass('is-primary')) {
+            // DESATIVAR OUTROS FILTROS quando Pending Updates for ativado
+            $('#btnFilterPendingBase, #btnFilterPendingDlc, #btnFilterRedundant')
+                .removeClass('is-primary').addClass('is-light');
+        }
         applyFilters();
     });
 
     $('#btnFilterPendingDlc').on('click', function () {
         $(this).toggleClass('is-primary is-light');
-        if ($(this).hasClass('is-primary')) $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterRedundant').removeClass('is-primary').addClass('is-light');
+        if ($(this).hasClass('is-primary')) {
+            // DESATIVAR OUTROS FILTROS quando Pending DLC for ativado
+            $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterRedundant')
+                .removeClass('is-primary').addClass('is-light');
+        }
         applyFilters();
     });
 
     $('#btnFilterRedundant').on('click', function () {
         $(this).toggleClass('is-primary is-light');
-        if ($(this).hasClass('is-primary')) $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterPendingDlc').removeClass('is-primary').addClass('is-light');
+        if ($(this).hasClass('is-primary')) {
+            // DESATIVAR OUTROS FILTROS quando Redundante for ativado
+            $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterPendingDlc')
+                .removeClass('is-primary').addClass('is-light');
+        }
         applyFilters();
     });
 
