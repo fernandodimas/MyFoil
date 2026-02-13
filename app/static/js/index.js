@@ -769,6 +769,12 @@ function searchLibraryServer(page = 1, append = false) {
             }
         });
 
+        // Filter out games where all missing DLCs are ignored (when DLC filter is active)
+        if (showOnlyDlcs) {
+            games = games.filter(g => g.has_non_ignored_dlcs);
+            totalItems = games.length;
+        }
+
         // Use server results as filteredGames
         window.filteredGames = games.slice();
 
