@@ -585,9 +585,14 @@ function applyFilters() {
         if (g.has_base && g.dlcs && Array.isArray(g.dlcs)) {
             hasNonIgnoredDlcs = g.dlcs.some(dlc => {
                 const appIdKey = typeof dlc.app_id === 'string' ? dlc.app_id : (dlc.appId || '');
-                const isIgnored = appIdKey ? (ignoredDlcs[appIdKey.toUpperCase()] || ignoredDlcs[appIdKey.toLowerCase()]) : false;
+                // Verificar em todos os formatos possíveis
+                const isIgnored = appIdKey ? (
+                    ignoredDlcs[appIdKey] || 
+                    ignoredDlcs[appIdKey.toUpperCase()] || 
+                    ignoredDlcs[appIdKey.toLowerCase()]
+                ) : false;
                 const isNotOwned = !dlc.owned;
-                console.log('DEBUG: DLC', appIdKey, 'isNotOwned:', isNotOwned, 'isIgnored:', isIgnored);
+                console.log('DEBUG: DLC', appIdKey, 'isNotOwned:', isNotOwned, 'isIgnored:', isIgnored, 'ignoredDlcs:', ignoredDlcs);
                 return isNotOwned && !isIgnored;
             });
         }
