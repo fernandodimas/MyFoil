@@ -1530,6 +1530,21 @@ def get_game_info_item(tid, title_data):
     else:
         game["has_redundant_updates"] = game["updates_count"] > 1
 
+    # Calculate has_non_ignored_redundant (respect ignore_preferences for redundant updates)
+    game["has_non_ignored_redundant"] = False
+    if game["has_redundant_updates"]:
+        try:
+            game_ignore = ignore_preferences.get(tid, {})
+            ignored_updates = game_ignore.get("updates", {})
+
+            # Check if there are redundant updates NOT ignored
+            for u in game.get("updates", []):
+                if not u.get("owned") and not ignored_updates.get(str(u.get("version"))):
+                    game["has_non_ignored_redundant"] = True
+                    break
+        except:
+            pass
+
     game["owned"] = len(owned_apps) > 0
 
     # Include apps for frontend filtering

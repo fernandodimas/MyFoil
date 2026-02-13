@@ -84,32 +84,15 @@ class TitlesRepository:
                 query = query.filter(Titles.have_base == True, Titles.complete == False)
 
             if filters.get("redundant"):
-                # Redundant updates filter: prefer materialized counter when present.
+                # Redundant updates filter: prefer has_non_ignored_redundant flag when available.
                 try:
-                    query = query.filter(func.coalesce(Titles.redundant_updates_count, 0) > 1)
+                    query = query.filter(Titles.has_non_ignored_redundant == True)
                 except Exception:
+                    # Fallback to materialized counter
                     try:
-                        from db import app_files, Files
-
-                        upd_files_count_subq = (
-                            select(func.count(func.distinct(Files.id)))
-                            .select_from(Apps)
-                            .join(app_files, Apps.id == app_files.c.app_id)
-                            .join(Files, Files.id == app_files.c.file_id)
-                            .where(
-                                Apps.title_id == Titles.id,
-                                Apps.app_type == "UPD",
-                                Apps.owned == True,
-                                Files.identified == True,
-                                func.lower(Files.filepath).notlike("%.xci"),
-                                func.lower(Files.filepath).notlike("%.xcz"),
-                            )
-                            .scalar_subquery()
-                        )
-
-                        query = query.filter(func.coalesce(upd_files_count_subq, 0) > 1)
+                        query = query.filter(func.coalesce(Titles.redundant_updates_count, 0) > 1)
                     except Exception:
-                        # Conservative fallback: count owned update apps
+                        # Last resort: count owned update apps
                         count_subq = (
                             select(func.count(Apps.id))
                             .where(Apps.title_id == Titles.id, Apps.app_type == "UPD", Apps.owned == True)
