@@ -641,6 +641,62 @@ function toggleItemIgnore(titleId, type, itemId, value) {
             if (res.success) {
                 const msg = value ? t('{type} {id} será ignorado').replace('{type}', (type || '').toUpperCase()).replace('{id}', itemId) : t('{type} {id} voltará a aparecer').replace('{type}', (type || '').toUpperCase()).replace('{id}', itemId);
                 showToast(msg, 'success');
+                
+                // NOVO: Recarregar preferências para este jogo e recalcular badges
+                if (ignorePreferences[titleId]) {
+                    if (type === 'dlc') {
+                        ignorePreferences[titleId].dlcs = ignorePreferences[titleId].dlcs || {};
+                        ignorePreferences[titleId].dlcs[itemId] = value;
+                    } else if (type === 'update') {
+                        ignorePreferences[titleId].updates = ignorePreferences[titleId].updates || {};
+                        ignorePreferences[titleId].updates[itemId] = value;
+                    }
+                }
+                
+                // Recalcular badges para este jogo na biblioteca
+                const game = games.find(g => g.id === titleId);
+                if (game) {
+                    if (type === 'dlc') {
+                        const dlc = game.dlcs.find(d => d.app_id === itemId);
+                        if (dlc) dlc.ignored = value;
+                    } else if (type === 'update') {
+                        const upd = game.updates.find(u => u.version === itemId);
+                        if (upd) upd.ignored = value;
+                    }
+                    
+                    // Recalcular has_non_ignored_dlcs e has_non_ignored_updates
+                    const gameIgnore = ignorePreferences[titleId] || {};
+                    const ignoredDlcs = gameIgnore.dlcs || {};
+                    const ignoredUpdates = gameIgnore.updates || {};
+                    
+                    let hasNonIgnoredDlcs = false;
+                    if (game.has_base && game.dlcs && Array.isArray(game.dlcs)) {
+                        hasNonIgnoredDlcs = game.dlcs.some(dlc => {
+                            const appIdKey = typeof dlc.app_id === 'string' ? dlc.app_id : (dlc.appId || '');
+                            const isIgnored = appIdKey ? (ignoredDlcs[appIdKey.toUpperCase()] || ignoredDlcs[appIdKey.toLowerCase()]) : false;
+                            const isNotOwned = !dlc.owned;
+                            return isNotOwned && !isIgnored;
+                        });
+                    }
+                    game.has_non_ignored_dlcs = hasNonIgnoredDlcs;
+                    
+                    let hasNonIgnoredUpdates = false;
+                    if (game.has_base && !game.has_latest_version) {
+                        if (game.updates && Array.isArray(game.updates)) {
+                            const ownedVersion = parseInt(game.owned_version) || 0;
+                            hasNonIgnoredUpdates = game.updates.some(u => {
+                                const v = parseInt(u.version);
+                                return v > ownedVersion && !u.owned && !ignoredUpdates[v.toString()];
+                            });
+                        } else {
+                            hasNonIgnoredUpdates = true;
+                        }
+                    }
+                    game.has_non_ignored_updates = hasNonIgnoredUpdates;
+                    
+                    // Re-renderizar se necessário
+                    renderLibrary();
+                }
             } else {
                 showToast(t('Erro ao salvar preferência'), 'error');
             }
