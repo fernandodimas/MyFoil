@@ -412,10 +412,10 @@ function renderCardView(items) {
                             <span class="is-size-7 opacity-70 font-mono">${game.size_formatted || '--'}</span>
                         </div>
                         <div class="is-flex gap-1 is-justify-content-end ml-auto">
-                            ${game.description ? `<div class="notes-badge" title="${escapeHtml(game.description)}"><i class="bi bi-card-text"></i></div>` : ''}
+                            ${game.description ? `<div class="notes-badge" title="${escapeHtml(game.description)}"><i class="bi bi-star-fill"></i></div>` : ''}
                             ${game.has_redundant_updates ? `<span class="tag tag-redundant has-text-weight-bold is-small">${t('REDUNDANT')}</span>` : ''}
                             ${game.has_non_ignored_updates ? `<span class="tag tag-update has-text-weight-bold is-small">${t('UPDATE')}</span>` : ''}
-                            ${game.has_non_ignored_dlcs ? `<span class="tag tag-dlc has-text-weight-bold is-small">${t('DLC')}</span>` : ''}
+                            ${game.has_non_ignored_dlcs ? `<span class="tag tag-dlc has-text-weight-bold is-small">${t('DLC')}</span>` : ''
                         </div>
                     </div>
                 </div>
@@ -461,7 +461,7 @@ function renderIconView(items) {
                     <div class="card-image">
                          <figure class="image is-square bg-light relative">
                             ${ratingBadge}
-                            ${game.description ? `<div class="notes-badge" title="${escapeHtml(game.description)}"><i class="bi bi-card-text"></i></div>` : ''}
+                            ${game.description ? `<div class="notes-badge" title="${escapeHtml(game.description)}"><i class="bi bi-star-fill"></i></div>` : ''}
                             <img src="/static/img/no-icon.png" 
                                  data-src="${game.iconUrl || '/static/img/no-icon.png'}" 
                                  alt="${safeName}" 
