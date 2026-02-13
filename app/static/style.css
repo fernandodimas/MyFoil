@@ -1683,3 +1683,23 @@ input[type=range].slider.is-small {
 [data-theme="dark"] .loading-spinner::after {
     border-top-color: var(--bulma-primary);
 }
+
+/* Notes Badge - shows icon when game has description/notes */
+.notes-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    z-index: 10;
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+}
+
+.notes-badge:hover {
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(1.1);
+}
