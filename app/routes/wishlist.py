@@ -281,6 +281,14 @@ def set_wishlist_ignore(title_id):
         updates[item_id] = ignored
         WishlistIgnoreRepository.update(ignore_record.id, ignore_updates=json.dumps(updates))
 
+    # Invalidate per-user flattened cache so subsequent filtering sees new prefs
+    try:
+        from repositories.wishlistignore_repository import get_flattened_ignores_for_user
+
+        get_flattened_ignores_for_user.cache_clear()
+    except Exception:
+        pass
+
     return success_response(message="Ignore preference updated")
 
 

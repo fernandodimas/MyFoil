@@ -11,6 +11,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from db import db
 from models.titles import Titles
 from models.apps import Apps
+from repositories.wishlistignore_repository import get_flattened_ignores_for_user
+from services.user_title_flags_service import upsert_user_title_flags, compute_flags_for_user_title
 
 
 class TitlesRepository:
@@ -35,7 +37,7 @@ class TitlesRepository:
     def get_all_with_apps():
         """Get all titles with apps eagerly loaded"""
         # Use string form for joinedload to avoid static analyzer complaints
-        return Titles.query.options(joinedload("apps")).all()
+        return Titles.query.options(joinedload(Titles.apps)).all()
 
     @staticmethod
     def get_paged(page, per_page, sort_by="name", order="asc", query_text=None, filters=None):
@@ -56,6 +58,9 @@ class TitlesRepository:
                 )
             )
 
+        user_id = None
+        if filters:
+            user_id = filters.get("user_id")
         if filters:
             if filters.get("owned_only"):
                 query = query.filter(Titles.have_base == True)
@@ -81,18 +86,40 @@ class TitlesRepository:
                 # DLC filter: Owned games that have missing DLCs.
                 # Use the 'complete' flag which is reliably updated by update_titles().
                 # The materialized counter 'missing_dlcs_count' may be stale.
-                query = query.filter(Titles.have_base == True, Titles.complete == False)
+                # If user-specific precomputed flags exist, prefer them for precise filtering
+                if user_id:
+                    # Join to user_title_flags table if available
+                    utf = db.metadata.tables.get("user_title_flags")
+                    if utf is not None:
+                        query = query.join(utf, (utf.c.title_id == Titles.title_id) & (utf.c.user_id == user_id))
+                        query = query.filter(utf.c.has_non_ignored_dlcs == True)
+                    else:
+                        query = query.filter(Titles.have_base == True, Titles.complete == False)
+                else:
+                    query = query.filter(Titles.have_base == True, Titles.complete == False)
 
             if filters.get("redundant"):
                 # Redundant updates filter: prefer has_non_ignored_redundant flag when available.
-                try:
-                    query = query.filter(Titles.has_non_ignored_redundant == True)
-                except Exception:
-                    # Fallback to materialized counter
+                if user_id:
+                    utf = db.metadata.tables.get("user_title_flags")
+                    if utf is not None:
+                        query = query.join(utf, (utf.c.title_id == Titles.title_id) & (utf.c.user_id == user_id))
+                        query = query.filter(utf.c.has_non_ignored_redundant == True)
+                    else:
+                        # Fallback to materialized counter
+                        try:
+                            query = query.filter(func.coalesce(Titles.redundant_updates_count, 0) > 1)
+                        except Exception:
+                            count_subq = (
+                                select(func.count(Apps.id))
+                                .where(Apps.title_id == Titles.id, Apps.app_type == "UPD", Apps.owned == True)
+                                .scalar_subquery()
+                            )
+                            query = query.filter(count_subq > 1)
+                else:
                     try:
                         query = query.filter(func.coalesce(Titles.redundant_updates_count, 0) > 1)
                     except Exception:
-                        # Last resort: count owned update apps
                         count_subq = (
                             select(func.count(Apps.id))
                             .where(Apps.title_id == Titles.id, Apps.app_type == "UPD", Apps.owned == True)
@@ -126,6 +153,31 @@ class TitlesRepository:
                 f"TitlesRepository.get_paged failed: page={page} per_page={per_page} duration_ms={duration:.1f} error={e}"
             )
             raise
+
+    @staticmethod
+    def precompute_flags_for_user(user_id, limit=1000):
+        """Walk recent titles and precompute per-user flags into user_title_flags table.
+
+        This is intended to be run periodically (cron/job) or on demand after
+        the user changes ignore preferences.
+        """
+        titles = Titles.query.limit(limit).all()
+        for t in titles:
+            # Build minimal apps list for compute_flags
+            apps = [
+                {
+                    "app_id": a.app_id,
+                    "app_type": a.app_type.lower(),
+                    "app_version": a.app_version,
+                    "owned": a.owned,
+                }
+                for a in t.apps
+            ]
+            flags = compute_flags_for_user_title(user_id, t.title_id, apps)
+            try:
+                upsert_user_title_flags(user_id, t.title_id, flags)
+            except Exception:
+                continue
 
     @staticmethod
     def get_outdated(limit=100, offset=0):

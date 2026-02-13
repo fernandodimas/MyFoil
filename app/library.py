@@ -36,6 +36,47 @@ from db import (
 )
 from metrics import files_identified_total, library_size_bytes
 import titles as titles_lib
+import functools
+
+
+# Lightweight LRU caches for expensive TitleDB lookups used heavily during
+# server-side filtering/serialization. These are safe because TitleDB is
+# (re)loaded during library regeneration; caches are cleared at that point.
+@functools.lru_cache(maxsize=4096)
+def _cached_get_all_existing_dlc(tid):
+    try:
+        return titles_lib.get_all_existing_dlc(tid) or []
+    except Exception:
+        return []
+
+
+@functools.lru_cache(maxsize=4096)
+def _cached_get_all_existing_versions(tid):
+    try:
+        return titles_lib.get_all_existing_versions(tid) or []
+    except Exception:
+        return []
+
+
+@functools.lru_cache(maxsize=4096)
+def _cached_get_all_app_existing_versions(app_id):
+    try:
+        return titles_lib.get_all_app_existing_versions(app_id) or []
+    except Exception:
+        return []
+
+
+def _clear_titledb_caches():
+    try:
+        _cached_get_all_existing_dlc.cache_clear()
+    except Exception:
+        pass
+    try:
+        _cached_get_all_existing_versions.cache_clear()
+    except Exception:
+        pass
+
+
 import datetime
 from pathlib import Path
 from utils import format_size_py, now_utc, ensure_utc, safe_write_json
@@ -1386,7 +1427,7 @@ def invalidate_library_cache():
                 logger.error(f"Failed to delete library cache file: {e}")
 
 
-def get_game_info_item(tid, title_data):
+def get_game_info_item(tid, title_data, ignore_preferences=None):
     """Generate a single game item for the library list"""
     try:
         # All apps for this title (already pre-loaded in title_data['apps'])
@@ -1464,6 +1505,65 @@ def get_game_info_item(tid, title_data):
 
     game["has_latest_version"] = game["owned_version"] >= game["latest_version_available"]
 
+    # === Compute non-ignored flags using provided ignore_preferences ===
+    try:
+        _ignore_prefs = ignore_preferences or {}
+        if isinstance(_ignore_prefs, dict) and tid in _ignore_prefs:
+            game_ignore = _ignore_prefs.get(tid, {})
+        else:
+            # Caller may pass already-scoped preferences for this title
+            game_ignore = _ignore_prefs if isinstance(_ignore_prefs, dict) else {}
+
+        ignored_dlcs_map = {k.upper(): v for k, v in (game_ignore.get("dlcs", {}) or {}).items()}
+        ignored_updates_map = {str(k): v for k, v in (game_ignore.get("updates", {}) or {}).items()}
+    except Exception:
+        ignored_dlcs_map = {}
+        ignored_updates_map = {}
+
+    # has_non_ignored_updates: there exists an available version > owned_version that is not owned and not ignored
+    has_non_ignored_updates = False
+    try:
+        if game.get("has_base") and not game.get("has_latest_version"):
+            available_versions = titles_lib.get_all_existing_versions(tid) or []
+            owned_update_versions = set(
+                [
+                    int(a["app_version"] or 0)
+                    for a in all_title_apps
+                    if a.get("app_type") == APP_TYPE_UPD and a.get("owned")
+                ]
+            )
+            current_owned_version = int(game.get("owned_version") or 0)
+            for vinfo in available_versions:
+                v = int(vinfo.get("version") or 0)
+                if v <= current_owned_version:
+                    continue
+                # If there's an owned update for this version, skip
+                if v in owned_update_versions:
+                    continue
+                if not ignored_updates_map.get(str(v)):
+                    has_non_ignored_updates = True
+                    break
+    except Exception:
+        has_non_ignored_updates = False
+
+    game["has_non_ignored_updates"] = has_non_ignored_updates
+
+    # has_non_ignored_dlcs: any DLC in all_possible_dlc_ids that is not owned and not ignored
+    has_non_ignored_dlcs = False
+    try:
+        if game.get("has_base") and all_possible_dlc_ids:
+            for d in all_possible_dlc_ids:
+                d_up = d.upper()
+                if d_up in owned_dlc_ids:
+                    continue
+                if not ignored_dlcs_map.get(d_up):
+                    has_non_ignored_dlcs = True
+                    break
+    except Exception:
+        has_non_ignored_dlcs = False
+
+    game["has_non_ignored_dlcs"] = has_non_ignored_dlcs
+
     # Determine if ALL possible DLCs are owned
     # Start with TitleDB-known DLCs, but also include any DLC apps present in our DB to be robust
     try:
@@ -1534,7 +1634,15 @@ def get_game_info_item(tid, title_data):
     game["has_non_ignored_redundant"] = False
     if game["has_redundant_updates"]:
         try:
-            game_ignore = ignore_preferences.get(tid, {})
+            # Accept ignore preferences passed in per-call; default to empty dict
+            _ignore_prefs = ignore_preferences or {}
+            # If the caller passed a mapping for this title, use it; otherwise assume empty
+            if isinstance(_ignore_prefs, dict) and tid in _ignore_prefs:
+                game_ignore = _ignore_prefs.get(tid, {})
+            else:
+                # Caller may pass already-scoped preferences for this title
+                game_ignore = _ignore_prefs if isinstance(_ignore_prefs, dict) else {}
+
             ignored_updates = game_ignore.get("updates", {})
 
             # Check if there are redundant updates NOT ignored
@@ -1542,7 +1650,8 @@ def get_game_info_item(tid, title_data):
                 if not u.get("owned") and not ignored_updates.get(str(u.get("version"))):
                     game["has_non_ignored_redundant"] = True
                     break
-        except:
+        except Exception:
+            # Be defensive: don't fail the whole serialization for ignore lookup issues
             pass
 
     game["owned"] = len(owned_apps) > 0
@@ -1775,6 +1884,11 @@ def generate_library(force=False):
     logger.info(f"Generating library (force={force})...")
     logger.info("generate_library: Loading TitleDB...")
     titles_lib.load_titledb()
+    # Clear in-process TitleDB caches so we reflect newest TitleDB state
+    try:
+        _clear_titledb_caches()
+    except Exception:
+        pass
     logger.info("generate_library: TitleDB loaded.")
 
     # Get all Titles known to the system with their apps and files pre-loaded
@@ -1821,6 +1935,11 @@ def generate_library(force=False):
 
     titles_lib.identification_in_progress_count -= 1
     titles_lib.unload_titledb()
+    # Clear caches after unload as well
+    try:
+        _clear_titledb_caches()
+    except Exception:
+        pass
 
     # Update library size metric
     total_size = sum(g.get("size", 0) for g in games_info)
@@ -1852,6 +1971,76 @@ def generate_library(force=False):
         logger.warning(f"Library is empty! DB Stats: Files={count_files}, Titles={count_titles}, Apps={count_apps}")
 
     return sorted_library
+
+
+def apply_ignore_preferences_to_game(game: dict, ignore_pref_for_title: dict | None):
+    """
+    Apply per-title ignore preferences to a serialized game dict.
+    This sets/updates the keys:
+      - has_non_ignored_updates
+      - has_non_ignored_dlcs
+      - has_non_ignored_redundant
+
+    The function is defensive and won't raise on malformed input.
+    """
+    try:
+        prefs = ignore_pref_for_title or {}
+        ignored_dlcs_map = {k.upper(): v for k, v in (prefs.get("dlcs", {}) or {}).items()}
+        ignored_updates_map = {str(k): v for k, v in (prefs.get("updates", {}) or {}).items()}
+
+        # Non-ignored updates
+        has_non_ignored_updates = False
+        if game.get("has_base") and not game.get("has_latest_version"):
+            owned_version = int(game.get("owned_version") or 0)
+            # game.updates is expected to be list of {version, owned}
+            for u in game.get("updates", []) or []:
+                try:
+                    v = int(u.get("version") or 0)
+                except Exception:
+                    continue
+                if v > owned_version and not u.get("owned") and not ignored_updates_map.get(str(v)):
+                    has_non_ignored_updates = True
+                    break
+
+        game["has_non_ignored_updates"] = has_non_ignored_updates
+
+        # Non-ignored DLCs
+        has_non_ignored_dlcs = False
+        if game.get("has_base"):
+            # all possible DLC ids may be available as 'dlcs' list (with app_id and owned)
+            dlcs_list = game.get("dlcs") or []
+            for d in dlcs_list:
+                app_id = d.get("app_id") if isinstance(d, dict) else (d or "")
+                app_id_up = str(app_id).upper()
+                owned = bool(d.get("owned")) if isinstance(d, dict) else False
+                if owned:
+                    continue
+                if not ignored_dlcs_map.get(app_id_up):
+                    has_non_ignored_dlcs = True
+                    break
+
+        game["has_non_ignored_dlcs"] = has_non_ignored_dlcs
+
+        # Non-ignored redundant updates fallback: check updates list similar to above
+        has_non_ignored_redundant = False
+        if game.get("has_redundant_updates"):
+            for u in game.get("updates", []) or []:
+                try:
+                    v = int(u.get("version") or 0)
+                except Exception:
+                    continue
+                if not u.get("owned") and not ignored_updates_map.get(str(v)):
+                    has_non_ignored_redundant = True
+                    break
+        game["has_non_ignored_redundant"] = has_non_ignored_redundant
+
+    except Exception:
+        # Be defensive: ensure keys exist
+        game.setdefault("has_non_ignored_updates", False)
+        game.setdefault("has_non_ignored_dlcs", False)
+        game.setdefault("has_non_ignored_redundant", False)
+
+    return game
 
 
 from utils import debounce

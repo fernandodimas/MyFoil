@@ -96,10 +96,35 @@ def library_api():
 
     # lib_data is a list of game dicts
     filtered_lib = lib_data
+
+    # Apply per-user ignore preferences so badges and filters match
+    try:
+        ignores = WishlistIgnoreRepository.get_all_by_user(current_user.id)
+        ignores_map = {}
+        for rec in ignores:
+            try:
+                ignores_map[rec.title_id] = {
+                    "dlcs": json.loads(rec.ignore_dlcs or "{}"),
+                    "updates": json.loads(rec.ignore_updates or "{}"),
+                }
+            except Exception:
+                ignores_map[rec.title_id] = {"dlcs": {}, "updates": {}}
+    except Exception:
+        ignores_map = {}
+
+    # Mutate each game in filtered_lib to include has_non_ignored_* flags computed with ignore prefs
+    for g in filtered_lib:
+        try:
+            tid = g.get("title_id") or g.get("id")
+            pref = ignores_map.get(tid)
+            library.apply_ignore_preferences_to_game(g, pref)
+        except Exception:
+            continue
+
     if dlc_filter:
-        filtered_lib = [g for g in filtered_lib if g.get("has_base") and not g.get("has_all_dlcs")]
+        filtered_lib = [g for g in filtered_lib if g.get("has_base") and g.get("has_non_ignored_dlcs")]
     if redundant_filter:
-        filtered_lib = [g for g in filtered_lib if g.get("has_redundant_updates")]
+        filtered_lib = [g for g in filtered_lib if g.get("has_non_ignored_redundant")]
 
     total_items = len(filtered_lib)
     logger.info(f"Library API returning {total_items} items. Page: {page}, Per Page: {per_page}")
@@ -139,7 +164,7 @@ def library_api():
     return resp, status
 
 
-def _serialize_title_with_apps(title: Titles) -> dict:
+def _serialize_title_with_apps(title: Titles, ignore_map=None) -> dict:
     """
     Serialize a title with its apps for the paginated library endpoint.
     Uses the library.get_game_info_item function for serialization.
@@ -151,27 +176,26 @@ def _serialize_title_with_apps(title: Titles) -> dict:
     # Get all title apps (owned and unowned)
     all_title_apps_dict = get_all_title_apps(title_id)
 
-    # Get the full game object using the existing library function
-    # This ensures consistency with the cached version
-    game_info = library.get_game_info_item(
-        title_id,
-        {
-            "title_id": title_id,
-            "name": title.name,
-            "iconUrl": title.icon_url,
-            "bannerUrl": title.banner_url,
-            "category": title.category,
-            "release_date": title.release_date,
-            "publisher": title.publisher,
-            "description": title.description,
-            "size": title.size,
-            "nsuid": title.nsuid,
-            "have_base": title.have_base,
-            "up_to_date": title.up_to_date,
-            "complete": title.complete,
-            "apps": all_title_apps_dict,
-        },
-    )
+    # Build title_data structure expected by library.get_game_info_item
+    title_data = {
+        "title_id": title_id,
+        "name": title.name,
+        "iconUrl": title.icon_url,
+        "bannerUrl": title.banner_url,
+        "category": title.category,
+        "release_date": title.release_date,
+        "publisher": title.publisher,
+        "description": title.description,
+        "size": title.size,
+        "nsuid": title.nsuid,
+        "have_base": title.have_base,
+        "up_to_date": title.up_to_date,
+        "complete": title.complete,
+        "apps": all_title_apps_dict,
+    }
+
+    # Pass per-user ignore_map into serializer so badges and flags match user's preferences
+    game_info = library.get_game_info_item(title_id, title_data, ignore_preferences=ignore_map)
 
     return game_info
 
@@ -247,13 +271,55 @@ def library_paged_api():
     if dlc_filter or redundant_filter:
         # Fetch a large set (reasonable upper bound) to filter in memory
         FETCH_LIMIT = 5000
-        paginated_all = TitlesRepository.get_paged(page=1, per_page=FETCH_LIMIT, sort_by=sort_by, order=order)
+        # Narrow initial DB result using materialized counters where possible
+        filter_args = {}
+        if dlc_filter:
+            filter_args["dlc"] = True
+        if redundant_filter:
+            filter_args["redundant"] = True
+        paginated_all = TitlesRepository.get_paged(
+            page=1, per_page=FETCH_LIMIT, sort_by=sort_by, order=order, filters=filter_args
+        )
         all_titles = paginated_all.items
 
         items_all = []
+        # Preload ignore preferences for performance and correctness when filtering
+        ignores_by_user = {}
+        try:
+            # Use flattened cached helper to get normalized ignore prefs
+            flat = WishlistIgnoreRepository.get_flattened_ignores_for_user(current_user.id)
+            for tid, sets in flat.items():
+                ignores_by_user[tid] = {
+                    "dlcs": {k: True for k in sets.get("dlcs", set())},
+                    "updates": {v: True for v in sets.get("updates", set())},
+                }
+        except Exception:
+            ignores_by_user = {}
+
         for title in all_titles:
             try:
-                item = _serialize_title_with_apps(title)
+                # Pass per-title ignore preferences into serializer so it can compute
+                # 'has_non_ignored' flags consistently server-side.
+                item = library.get_game_info_item(
+                    title.title_id,
+                    {
+                        "title_id": title.title_id,
+                        "name": title.name,
+                        "iconUrl": title.icon_url,
+                        "bannerUrl": title.banner_url,
+                        "category": title.category,
+                        "release_date": title.release_date,
+                        "publisher": title.publisher,
+                        "description": title.description,
+                        "size": title.size,
+                        "nsuid": title.nsuid,
+                        "have_base": title.have_base,
+                        "up_to_date": title.up_to_date,
+                        "complete": title.complete,
+                        "apps": get_all_title_apps(title.title_id),
+                    },
+                    ignore_preferences=ignores_by_user,
+                )
                 if not item:
                     continue
 
@@ -384,6 +450,88 @@ def library_search_paged_api():
         "tag": tag,
     }
 
+    # If dlc or redundant filters are requested, do post-serialization filtering with per-user ignore prefs
+    if dlc or redundant:
+        FETCH_LIMIT = 5000
+        paginated_all = TitlesRepository.get_paged(
+            page=1, per_page=FETCH_LIMIT, query_text=query_text, filters=filters, sort_by="name", order="asc"
+        )
+        all_titles = paginated_all.items
+
+        # Preload user ignore prefs
+        ignores_by_user = {}
+        try:
+            flat = WishlistIgnoreRepository.get_flattened_ignores_for_user(current_user.id)
+            for tid, sets in flat.items():
+                ignores_by_user[tid] = {
+                    "dlcs": {k: True for k in sets.get("dlcs", set())},
+                    "updates": {v: True for v in sets.get("updates", set())},
+                }
+        except Exception:
+            ignores_by_user = {}
+
+        items_all = []
+        for title in all_titles:
+            try:
+                title_data = {
+                    "title_id": title.title_id,
+                    "name": title.name,
+                    "iconUrl": title.icon_url,
+                    "bannerUrl": title.banner_url,
+                    "category": title.category,
+                    "release_date": title.release_date,
+                    "publisher": title.publisher,
+                    "description": title.description,
+                    "size": title.size,
+                    "nsuid": title.nsuid,
+                    "have_base": title.have_base,
+                    "up_to_date": title.up_to_date,
+                    "complete": title.complete,
+                    "apps": None,
+                }
+
+                # Build apps on demand to avoid heavy DB load unless needed
+                from db import get_all_title_apps
+
+                title_data["apps"] = get_all_title_apps(title.title_id)
+
+                item = library.get_game_info_item(title.title_id, title_data, ignore_preferences=ignores_by_user)
+                if not item:
+                    continue
+
+                # Use badge logic (has_non_ignored_*) for filtering
+                if dlc and not item.get("has_non_ignored_dlcs"):
+                    continue
+                if redundant and not item.get("has_non_ignored_redundant"):
+                    continue
+
+                items_all.append(item)
+            except Exception as e:
+                logger.error(f"Error serializing title {title.title_id}: {e}")
+                continue
+
+        # Manual pagination on filtered results
+        total_items = len(items_all)
+        total_pages = (total_items + per_page - 1) // per_page
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        items = items_all[start_idx:end_idx]
+
+        return success_response(
+            data={
+                "items": items,
+                "pagination": {
+                    "page": page,
+                    "per_page": per_page,
+                    "total_items": total_items,
+                    "total_pages": total_pages,
+                    "has_next": page < total_pages,
+                    "has_prev": page > 1,
+                },
+            }
+        )
+
+    # Default path: no dlc/redundant post-filtering required
     paginated = TitlesRepository.get_paged(
         page=page, per_page=per_page, query_text=query_text, filters=filters, sort_by="name", order="asc"
     )

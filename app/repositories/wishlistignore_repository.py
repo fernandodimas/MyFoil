@@ -6,6 +6,8 @@ Phase 3.1: Database refactoring - Separate queries from models
 from sqlalchemy.exc import SQLAlchemyError
 from db import db
 from models.wishlistignore import WishlistIgnore
+import json
+import functools
 
 
 class WishlistIgnoreRepository:
@@ -31,6 +33,32 @@ class WishlistIgnoreRepository:
         """Get all ignore preferences for a user"""
         return WishlistIgnore.query.filter_by(user_id=user_id).all()
 
+
+# Cached flattened view per-user: { title_id: { 'dlcs': set(UPPER_APP_IDs), 'updates': set(version_strs) } }
+@functools.lru_cache(maxsize=128)
+def get_flattened_ignores_for_user(user_id):
+    try:
+        records = WishlistIgnore.query.filter_by(user_id=user_id).all()
+        result = {}
+        for rec in records:
+            try:
+                dlcs = json.loads(rec.ignore_dlcs) if rec.ignore_dlcs else {}
+            except Exception:
+                dlcs = {}
+            try:
+                updates = json.loads(rec.ignore_updates) if rec.ignore_updates else {}
+            except Exception:
+                updates = {}
+
+            # Normalize to sets for fast membership checks
+            result[rec.title_id] = {
+                "dlcs": set(k.upper() for k, v in dlcs.items() if v),
+                "updates": set(str(k) for k, v in updates.items() if v),
+            }
+        return result
+    except Exception:
+        return {}
+
     @staticmethod
     def create(**kwargs):
         """Create new WishlistIgnore record"""
@@ -39,13 +67,18 @@ class WishlistIgnoreRepository:
             db.session.add(item)
             db.session.commit()
             db.session.refresh(item)
+            # Invalidate flattened cache for this user
+            try:
+                get_flattened_ignores_for_user.cache_clear()
+            except Exception:
+                pass
             return item
         except SQLAlchemyError as e:
             db.session.rollback()
             raise e
 
     @staticmethod
-    def update(id, **kwargs):
+def update(id, **kwargs):
         """Update WishlistIgnore record"""
         item = WishlistIgnore.query.get(id)
         if not item:
@@ -56,6 +89,11 @@ class WishlistIgnoreRepository:
                 setattr(item, key, value)
 
         db.session.commit()
+        # Invalidate flattened cache for this user
+        try:
+            get_flattened_ignores_for_user.cache_clear()
+        except Exception:
+            pass
         return item
 
     @staticmethod
