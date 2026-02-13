@@ -538,6 +538,24 @@ def create_automatic_backup():
             logger.error("Automatic backup failed")
 
 
+def incremental_library_update_job():
+    """Incremental library update job (Phase 3.2)"""
+    logger.info("Starting incremental library update job...")
+    with app.app_context():
+        job_id = job_tracker.register_job("incremental_library_update")
+        job_tracker.start_job(job_id)
+
+        try:
+            from library import incremental_library_update
+
+            incremental_library_update()
+            job_tracker.complete_job(job_id)
+            logger.info("Incremental library update job completed successfully")
+        except Exception as e:
+            logger.error(f"Incremental library update job failed: {e}")
+            job_tracker.fail_job(job_id, str(e))
+
+
 def init_internal(app):
     """Initialize internal components - OPTIMIZED for fast startup"""
     global watcher_thread
@@ -722,6 +740,14 @@ def check_initial_scan(app):
             interval=timedelta(hours=6),
             run_first=True,
         )
+
+        app.scheduler.add_job(
+            job_id="incremental_library_update",
+            func=lambda: incremental_library_update_job(),
+            interval=timedelta(hours=6),
+            run_first=False,
+        )
+        logger.info("Scheduled incremental library update (every 6 hours)")
 
         # Weekly metadata refresh for existing games
         if CELERY_ENABLED:

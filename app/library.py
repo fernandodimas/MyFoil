@@ -1254,6 +1254,110 @@ def save_library_to_disk(library_data):
     safe_write_json(cache_path, library_data)
 
 
+def update_single_game_in_cache(title_id):
+    """Update a single game in library cache (incremental update)"""
+    global _LIBRARY_CACHE, _LIBRARY_CACHE_HASH
+
+    if not _LIBRARY_CACHE:
+        return False
+
+    try:
+        titles_lib.load_titledb()
+    except:
+        pass
+
+    from db import get_all_titles_with_apps
+
+    all_titles = get_all_titles_with_apps()
+    title_data = None
+    for t in all_titles:
+        if t.title_id == title_id:
+            title_data = {"title_id": t.title_id, "apps": []}
+            for a in t.apps:
+                title_data["apps"].append(
+                    {
+                        "app_id": a.app_id,
+                        "app_type": a.app_type,
+                        "app_version": a.app_version,
+                        "owned": a.owned,
+                        "files_info": [],
+                    }
+                )
+                for f in a.files:
+                    title_data["apps"][-1]["files_info"].append(
+                        {"id": f.id, "path": f.filepath, "size": f.size, "identified": f.identified}
+                    )
+            break
+
+    if not title_data:
+        return False
+
+    game = get_game_info_item(title_id, title_data)
+    if not game:
+        return False
+
+    with _CACHE_LOCK:
+        _LIBRARY_CACHE = [g for g in _LIBRARY_CACHE if g.get("title_id") != title_id]
+        _LIBRARY_CACHE.append(game)
+        _LIBRARY_CACHE_HASH = None
+
+    save_library_to_disk(_LIBRARY_CACHE)
+
+    try:
+        import redis_cache
+
+        if redis_cache.is_cache_enabled():
+            redis_cache.invalidate_library_cache()
+    except ImportError:
+        pass
+
+    logger.info(f"Incremental update completed for title {title_id}")
+    return True
+
+
+def detect_changed_titles(since_seconds=None):
+    """Detect titles that have changed recently"""
+    from db import db, Titles, Files
+    from datetime import datetime, timedelta
+    from utils import now_utc
+
+    if since_seconds is None:
+        since_seconds = 300
+
+    cutoff_time = now_utc()() - timedelta(seconds=since_seconds)
+
+    query = db.session.query(Titles.id, Titles.title_id).join(Files).filter(Files.modified_at >= cutoff_time).distinct()
+
+    changed_titles = [(tid, title_id) for tid, title_id in query.all()]
+
+    if changed_titles:
+        logger.info(f"Detected {len(changed_titles)} changed titles: {changed_titles}")
+
+    return changed_titles
+
+
+def incremental_library_update():
+    """Perform incremental library update (only changed titles)"""
+    logger.info("Starting incremental library update...")
+
+    changed_titles = detect_changed_titles(since_seconds=300)
+
+    if not changed_titles:
+        logger.info("No changed titles detected, skipping incremental update")
+        return True
+
+    updated_count = 0
+    for title_id in changed_titles:
+        if update_single_game_in_cache(title_id):
+            updated_count += 1
+
+    logger.info(f"Incremental update completed: {updated_count}/{len(changed_titles)} titles updated")
+
+    trigger_library_update_notification()
+
+    return True
+
+
 def load_library_from_disk():
     cache_path = Path(LIBRARY_CACHE_FILE)
     if not cache_path.exists():
