@@ -289,6 +289,34 @@ def set_wishlist_ignore(title_id):
     except Exception:
         pass
 
+    # Also update precomputed per-user title flags for this single title so
+    # server-side filters that rely on user_title_flags stay in sync.
+    try:
+        from services.user_title_flags_service import compute_flags_for_user_title, upsert_user_title_flags
+        from repositories.titles_repository import TitlesRepository
+
+        # Build minimal apps list for the title
+        t = TitlesRepository.get_by_title_id(title_id)
+        if t is not None:
+            apps = [
+                {
+                    "app_id": a.app_id,
+                    "app_type": a.app_type.lower(),
+                    "app_version": a.app_version,
+                    "owned": a.owned,
+                }
+                for a in t.apps
+            ]
+            flags = compute_flags_for_user_title(current_user.id, title_id, apps)
+            # Best-effort upsert; do not fail the request if DB/migration isn't ready
+            try:
+                upsert_user_title_flags(current_user.id, title_id, flags)
+            except Exception:
+                pass
+    except Exception:
+        # Do not let background sync errors affect API response
+        pass
+
     return success_response(message="Ignore preference updated")
 
 

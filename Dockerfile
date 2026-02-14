@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED=1
 ENV CONFIG_DIR=/app/config
 ENV DATA_DIR=/app/data
 
-# Install system dependencies
+# Install system dependencies (including postgresql client for pg_dump)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libffi-dev \
@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     sudo \
     curl \
     procps \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -35,6 +36,10 @@ COPY ./app /app
 
 # Copy scripts directory
 COPY ./scripts /app/scripts
+
+# Place docker-ready migrate+backfill helper into /usr/local/bin
+COPY ./scripts/docker/migrate_and_backfill.sh /usr/local/bin/migrate_and_backfill.sh
+RUN chmod +x /usr/local/bin/migrate_and_backfill.sh
 
 # Copy run script specifically from docker folder
 COPY ./docker/run.sh /app/run.sh
