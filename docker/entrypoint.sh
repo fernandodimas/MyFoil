@@ -35,5 +35,25 @@ fi
 if [[ $# -gt 0 ]]; then
   exec "$@"
 else
-  exec gunicorn -b 0.0.0.0:8465 --chdir /app "app.app:create_app()"
+  # Decide gunicorn app target depending on package layout inside the container.
+  # If the repository was copied so that /app is the package root, importing
+  # "app.app" may fail because 'app' is a module. Try to detect the correct
+  # module to pass to gunicorn.
+  PY_CHECK='''
+import importlib, sys
+for candidate in ("app.app", "app"):
+    try:
+        importlib.import_module(candidate)
+        print(candidate)
+        sys.exit(0)
+    except Exception:
+        pass
+print("app")
+'''
+  TARGET=$(python3 - <<PY
+${PY_CHECK}
+PY
+)
+  echo "[entrypoint] Using gunicorn target: ${TARGET}:create_app()"
+  exec gunicorn -b 0.0.0.0:8465 --chdir /app "${TARGET}:create_app()"
 fi
