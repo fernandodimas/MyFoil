@@ -7,14 +7,24 @@ set -euo pipefail
 if [[ "${DISABLE_AUTO_MIGRATE:-0}" != "1" ]]; then
   if [[ -n "${DATABASE_URL:-}" ]]; then
     echo "[entrypoint] Running alembic upgrade head"
-    # Use absolute path to alembic.ini to avoid relative-path issues in some runtimes
+    # Prefer running migrations via the in-app helper which runs flask-migrate
+    # under the application context to avoid "Working outside of application context"
+    MIGRATE_HELPER="/app/scripts/docker/run_migrations_under_app.py"
+    if [[ -f "$MIGRATE_HELPER" ]]; then
+      echo "[entrypoint] Running migrations via $MIGRATE_HELPER"
+      python3 "$MIGRATE_HELPER" || {
+        echo "[entrypoint] migration helper failed; falling back to alembic CLI"
+      }
+    fi
+    # Fallback: try alembic CLI if present (some deployments prefer it)
     ALEMBIC_CONF="/app/migrations/alembic.ini"
-    if [[ -f "$ALEMBIC_CONF" ]]; then
+    if command -v alembic >/dev/null 2>&1 && [[ -f "$ALEMBIC_CONF" ]]; then
+      echo "[entrypoint] Running alembic CLI as fallback"
       python3 -m alembic -c "$ALEMBIC_CONF" upgrade head || {
-        echo "[entrypoint] Alembic upgrade failed; continuing startup"
+        echo "[entrypoint] Alembic CLI upgrade failed; continuing startup"
       }
     else
-      echo "[entrypoint] Alembic config not found at $ALEMBIC_CONF; skipping"
+      echo "[entrypoint] Alembic CLI not available or config missing; skipping CLI step"
     fi
   else
     echo "[entrypoint] DATABASE_URL not set; skipping alembic"
