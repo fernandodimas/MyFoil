@@ -39,7 +39,7 @@ else
   # If the repository was copied so that /app is the package root, importing
   # "app.app" may fail because 'app' is a module. Try to detect the correct
   # module to pass to gunicorn.
-  PY_CHECK='''
+  TARGET=$(python3 - <<'PY' | tail -n1
 import importlib, sys, contextlib, io
 _devnull = open('/dev/null', 'w')
 for candidate in ("app.app", "app"):
@@ -53,9 +53,6 @@ for candidate in ("app.app", "app"):
         pass
 print("app")
 _devnull.close()
-'''
-  TARGET=$(python3 - <<PY | tail -n1
-${PY_CHECK}
 PY
 )
   echo "[entrypoint] Using gunicorn target: ${TARGET}:create_app()"
