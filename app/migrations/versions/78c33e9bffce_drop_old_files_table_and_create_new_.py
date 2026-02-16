@@ -19,6 +19,12 @@ def upgrade():
     bind = op.get_bind()
     inspector = sa.inspect(bind)
 
+    if 'app_files' in inspector.get_table_names():
+        op.drop_table('app_files')
+    
+    if 'apps' in inspector.get_table_names():
+        op.drop_table('apps')
+
     if 'files' in inspector.get_table_names():
         op.drop_table('files')
     
