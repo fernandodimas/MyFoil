@@ -56,5 +56,5 @@ _devnull.close()
 PY
 )
   echo "[entrypoint] Using gunicorn target: ${TARGET}:create_app()"
-  exec gunicorn -b 0.0.0.0:8465 --chdir /app "${TARGET}:create_app()"
+  exec gunicorn -k gevent -b 0.0.0.0:8465 --chdir /app "${TARGET}:create_app()"
 fi
