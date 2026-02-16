@@ -5,6 +5,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV CONFIG_DIR=/app/config
 ENV DATA_DIR=/app/data
+ENV PYTHONPATH=/app
 
 # Install system dependencies (including postgresql client for pg_dump)
 RUN apt-get update && apt-get install -y --no-install-recommends \

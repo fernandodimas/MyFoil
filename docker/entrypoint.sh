@@ -40,20 +40,24 @@ else
   # "app.app" may fail because 'app' is a module. Try to detect the correct
   # module to pass to gunicorn.
   PY_CHECK='''
-import importlib, sys
+import importlib, sys, contextlib, io
+_devnull = open('/dev/null', 'w')
 for candidate in ("app.app", "app"):
     try:
-        importlib.import_module(candidate)
+        # suppress stdout/stderr during import to avoid capturing module prints
+        with contextlib.redirect_stdout(_devnull), contextlib.redirect_stderr(_devnull):
+            importlib.import_module(candidate)
         print(candidate)
         sys.exit(0)
     except Exception:
         pass
 print("app")
+_devnull.close()
 '''
   TARGET=$(python3 - <<PY
 ${PY_CHECK}
 PY
-)
+  | tail -n1)
   echo "[entrypoint] Using gunicorn target: ${TARGET}:create_app()"
   exec gunicorn -b 0.0.0.0:8465 --chdir /app "${TARGET}:create_app()"
 fi

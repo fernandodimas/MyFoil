@@ -9,6 +9,14 @@ Usage: python3 /app/scripts/docker/run_migrations_under_app.py
 
 import sys
 import logging
+import os
+
+# Ensure the application directory is on sys.path when running inside a container
+# The container layout places the code at /app; add it so imports like `import app`
+# succeed even when the current working dir is different.
+APP_ROOT = os.environ.get("APP_ROOT", "/app")
+if APP_ROOT not in sys.path:
+    sys.path.insert(0, APP_ROOT)
 
 try:
     # Try common import locations for the application factory

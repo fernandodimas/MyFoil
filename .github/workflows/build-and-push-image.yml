@@ -1,35 +1,39 @@
-name: Build and Push Docker image
+name: Build and Push Docker Image
 
 on:
   push:
-    branches:
-      - master
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      - name: Login to GitHub Container Registry
+
+      - name: Log in to registry
         uses: docker/login-action@v2
         with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: ${{ secrets.REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile
-          platforms: linux/amd64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/myfoil:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/myfoil:latest
+            ${{ secrets.REGISTRY }}/${{ secrets.IMAGE_NAME }}:${{ github.sha }}
+            ${{ secrets.REGISTRY }}/${{ secrets.IMAGE_NAME }}:latest
+
+      - name: Output image reference
+        run: |
+          echo "IMAGE=${{ secrets.REGISTRY }}/${{ secrets.IMAGE_NAME }}:${{ github.sha }}" >> $GITHUB_OUTPUT

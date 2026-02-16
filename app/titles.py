@@ -14,7 +14,7 @@ except ImportError:
 import titledb
 
 # import titledb_cache_file  # REMOVED: File cache deprecated
-print("DEBUG: titles.py imported", flush=True)
+
 from constants import (
     APP_TYPE_BASE,
     APP_TYPE_UPD,
