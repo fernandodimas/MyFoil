@@ -1157,15 +1157,23 @@ def update_titles():
         try:
             # Count owned update apps with files (redundant updates counter)
             # Ignore XCI/XCZ files (cartridge dumps often include updates)
+            # CORRECT LOGIC: Redundant means we own an update OLDER than the active one (max_owned_version)
             redundant_updates = 0
             for a in title.apps:
                 if a.app_type == APP_TYPE_UPD and a.owned and len(a.files) > 0:
-                    # Count only non-XCI/XCZ files
-                    non_xci_files = [
-                        f for f in a.files if f.filepath and not f.filepath.lower().endswith((".xci", ".xcz"))
-                    ]
-                    if non_xci_files:
-                        redundant_updates += 1
+                    try:
+                        app_ver = int(a.app_version or 0)
+                    except (ValueError, TypeError):
+                        app_ver = 0
+                    
+                    # Only count as redundant if it's strictly older than our best version
+                    if app_ver < max_owned_version:
+                        # Count only non-XCI/XCZ files
+                        non_xci_files = [
+                            f for f in a.files if f.filepath and not f.filepath.lower().endswith((".xci", ".xcz"))
+                        ]
+                        if non_xci_files:
+                            redundant_updates += 1
             title.redundant_updates_count = redundant_updates
 
             # Missing DLCs counter: number of DLCs known in TitleDB that are not owned
