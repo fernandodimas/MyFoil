@@ -1,4 +1,5 @@
 import logging
+from logging.config import fileConfig
 
 from flask import current_app
 
@@ -8,8 +9,10 @@ from alembic import context
 # access to the values within the .ini file in use.
 config = context.config
 
-# Retrieve main logger
-logger = logging.getLogger('main')
+# Interpret the config file for Python logging.
+# This line sets up loggers basically.
+fileConfig(config.config_file_name)
+logger = logging.getLogger('alembic.env')
 
 
 def get_engine():
@@ -18,18 +21,7 @@ def get_engine():
         return current_app.extensions['migrate'].db.get_engine()
     except (TypeError, AttributeError):
         # this works with Flask-SQLAlchemy>=3
-        if current_app:
-             return current_app.extensions['migrate'].db.engine
-        
-        # Fallback: Create app if running specific alembic commands without flask context
-        from app.app import create_app
-        app = create_app()
-        return app.extensions['migrate'].db.engine
-    except RuntimeError:
-         # No application context
-        from app.app import create_app
-        app = create_app()
-        return app.extensions['migrate'].db.engine
+        return current_app.extensions['migrate'].db.engine
 
 
 def get_engine_url():
@@ -45,13 +37,7 @@ def get_engine_url():
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 config.set_main_option('sqlalchemy.url', get_engine_url())
-
-try:
-    target_db = current_app.extensions['migrate'].db
-except (RuntimeError, AttributeError):
-    from app.app import create_app
-    app = create_app()
-    target_db = app.extensions['migrate'].db
+target_db = current_app.extensions['migrate'].db
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -97,7 +83,6 @@ def run_migrations_online():
     # this callback is used to prevent an auto-migration from being generated
     # when there are no changes to the schema
     # reference: http://alembic.zzzcomputing.com/en/latest/cookbook.html
-    # reference: http://alembic.zzzcomputing.com/en/latest/cookbook.html
     def process_revision_directives(context, revision, directives):
         if getattr(config.cmd_opts, 'autogenerate', False):
             script = directives[0]
@@ -105,20 +90,11 @@ def run_migrations_online():
                 directives[:] = []
                 logger.info('No changes in schema detected.')
 
-    connectable = get_engine()
-    
-    try:
-        conf_args = current_app.extensions['migrate'].configure_args
-    except (RuntimeError, AttributeError):
-        # Try to get from connectable if possible or default empty
-        # If we created an app in get_engine(), we can't easily access it here without refactoring get_engine to return app
-        # Re-creating app is safe but inefficient. 
-        from app.app import create_app
-        app = create_app()
-        conf_args = app.extensions['migrate'].configure_args
-
+    conf_args = current_app.extensions['migrate'].configure_args
     if conf_args.get("process_revision_directives") is None:
         conf_args["process_revision_directives"] = process_revision_directives
+
+    connectable = get_engine()
 
     with connectable.connect() as connection:
         context.configure(
