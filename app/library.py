@@ -1613,14 +1613,15 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
 
                 if file_id:
                     update_files_ids.add(file_id)
-                            {
-                                "id": file_id,
-                                "path": filepath,
-                                "version": int(a.get("app_version") or 0),
-                                "owned": True,
-                                "is_xci": filepath.endswith(".xci") or filepath.endswith(".xcz"),
-                            }
-                        )
+                    updates_info.append(
+                        {
+                            "id": file_id,
+                            "path": filepath,
+                            "version": int(a.get("app_version") or 0),
+                            "owned": True,
+                            "is_xci": filepath.endswith(".xci") or filepath.endswith(".xcz"),
+                        }
+                    )
 
     # Refined logic: If we have an XCI/XCZ that contains the update, ignore it for redundancy
     # (assuming XCI is the "canonical" cartridge dump which often includes updates)
@@ -1645,7 +1646,25 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
     game["has_non_ignored_redundant"] = False
     
     # Expose updates list to game object for frontend and logic below
-    game["updates"] = updates_info
+    # Merge available versions (TitleDB) into updates list for frontend display
+    all_updates_list = list(updates_info)
+    owned_update_versions = set([int(u.get("version") or 0) for u in updates_info])
+    
+    for av in available_versions:
+        try:
+            av_ver = int(av.get("version") or 0)
+            if av_ver not in owned_update_versions:
+                all_updates_list.append({
+                    "version": av_ver,
+                    "release_date": av.get("release_date"),
+                    "owned": False,
+                    "path": None
+                })
+        except Exception:
+            continue
+            
+    all_updates_list.sort(key=lambda x: int(x.get("version") or 0), reverse=True)
+    game["updates"] = all_updates_list
 
     if game["has_redundant_updates"]:
         try:
