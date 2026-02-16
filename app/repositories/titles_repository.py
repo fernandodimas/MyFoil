@@ -108,17 +108,23 @@ class TitlesRepository:
                     else:
                         # Fallback to materialized counter
                         try:
-                            query = query.filter(func.coalesce(Titles.redundant_updates_count, 0) > 1)
+                            query = query.filter(func.coalesce(Titles.redundant_updates_count, 0) > 0)
                         except Exception:
                             count_subq = (
                                 select(func.count(Apps.id))
                                 .where(Apps.title_id == Titles.id, Apps.app_type == "UPD", Apps.owned == True)
                                 .scalar_subquery()
                             )
+                            # Note: This subquery fallback is still counting ALL updates, so it technically 
+                            # needs to be > 1 to detect redundancy if the materialized column isn't there.
+                            # But since we are relying on materialized count mostly, we update this to be safe or keep > 1?
+                            # If DB schema is old, using > 1 is safer for "count of all updates".
+                            # But we should rely on the model. 
+                            # Let's assume migration passed.
                             query = query.filter(count_subq > 1)
                 else:
                     try:
-                        query = query.filter(func.coalesce(Titles.redundant_updates_count, 0) > 1)
+                        query = query.filter(func.coalesce(Titles.redundant_updates_count, 0) > 0)
                     except Exception:
                         count_subq = (
                             select(func.count(Apps.id))
