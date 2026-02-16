@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "zz_add_user_title_flags"
-down_revision = None
+down_revision = "d3f4e5a6b7c8"
 branch_labels = None
 depends_on = None
 

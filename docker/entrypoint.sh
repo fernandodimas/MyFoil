@@ -54,10 +54,10 @@ for candidate in ("app.app", "app"):
 print("app")
 _devnull.close()
 '''
-  TARGET=$(python3 - <<PY
+  TARGET=$(python3 - <<PY | tail -n1
 ${PY_CHECK}
 PY
-  | tail -n1)
+)
   echo "[entrypoint] Using gunicorn target: ${TARGET}:create_app()"
   exec gunicorn -b 0.0.0.0:8465 --chdir /app "${TARGET}:create_app()"
 fi
