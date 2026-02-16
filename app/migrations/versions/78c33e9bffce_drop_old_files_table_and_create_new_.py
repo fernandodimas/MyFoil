@@ -31,6 +31,12 @@ def upgrade():
     if 'libraries' in inspector.get_table_names():
         op.drop_table('libraries')
 
+    if 'title_tag' in inspector.get_table_names():
+        op.drop_table('title_tag')
+
+    if 'title_metadata' in inspector.get_table_names():
+        op.drop_table('title_metadata')
+
     if 'titles' in inspector.get_table_names():
         op.drop_table('titles')
     
