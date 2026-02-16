@@ -769,7 +769,7 @@ def check_initial_scan(app):
     log_activity("system_startup", details={"version": BUILD_VERSION})
 
 
-def create_app():
+def create_app(minimal=False):
     """Application factory"""
     app = Flask(__name__)
     if not MYFOIL_DB:
@@ -889,15 +889,18 @@ def create_app():
         init_db(app)
         init_users(app)
 
-        # Initialize job tracker with app context
-        from job_tracker import job_tracker
+        if not minimal:
+            # Initialize job tracker with app context
+            from job_tracker import job_tracker
 
-        job_tracker.init_app(app)
+            job_tracker.init_app(app)
 
-        # Initialize file watcher and libraries
-        print("DEBUG: Calling init_internal...", flush=True)
-        init_internal(app)
-        print("DEBUG: init_internal done.", flush=True)
+            # Initialize file watcher and libraries
+            print("DEBUG: Calling init_internal...", flush=True)
+            init_internal(app)
+            print("DEBUG: init_internal done.", flush=True)
+        else:
+            print("DEBUG: minimal app created, skipping internal init.", flush=True)
 
         # Initialize plugins
         plugin_manager = get_plugin_manager(PLUGINS_DIR, app)

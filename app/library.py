@@ -1130,6 +1130,9 @@ def update_titles():
         max_available_version = max([v["version"] for v in available_versions], default=0)
 
         # check up_to_date - consider current max owned vs max available
+        if title_id.upper() == "010089C00B026800":
+            logger.info(f"DEBUG UPDATE_TITLES {title_id}: Owned={owned_versions} MaxOwned={max_owned_version} MaxAvail={max_available_version}")
+        
         up_to_date = max_owned_version >= max_available_version
 
         # check complete - check against TitleDB known DLCs
@@ -2052,7 +2055,10 @@ def post_library_change():
     import gevent
 
     def _do_post_library_change():
-        import app
+        from app.app import create_app
+
+        # Use minimal app to avoid side effects (watchers, threads) in background task
+        app = create_app(minimal=True)
 
         with app.app_context():
             global _LIBRARY_CACHE
