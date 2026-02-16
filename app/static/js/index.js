@@ -48,13 +48,13 @@ function loadLibraryPaginated(page = 1, append = false) {
     // Try paged endpoint first, fall back to legacy endpoint if it fails
     let API_ENDPOINT = '/api/library/paged';
     let useLegacyFallback = false;
-    
+
     // Check if we've already tried and failed with paged endpoint
     if (localStorage.getItem('myfoil_use_legacy_endpoint') === 'true') {
         API_ENDPOINT = '/api/library';
         useLegacyFallback = true;
     }
-    
+
     // If page 1 and not appending, clear games
     if (page === 1 && !append) {
         games = [];
@@ -72,7 +72,7 @@ function loadLibraryPaginated(page = 1, append = false) {
     }
 
     isLoadingMore = true;
-    
+
     // Show appropriate loading indicator
     if (append) {
         // Show pagination loader at bottom
@@ -82,17 +82,17 @@ function loadLibraryPaginated(page = 1, append = false) {
         $('#loadingIndicator').removeClass('is-hidden');
         $('#loadingProgress').val(0);
         $('#loadingProgress').attr('max', 100);
-        
+
         // Update loading text based on page
-        let loadingText = page === 1 
-            ? t('Carregando Biblioteca...') 
+        let loadingText = page === 1
+            ? t('Carregando Biblioteca...')
             : t('Carregando página') + ` ${page}...`;
         $('#loadingText').text(loadingText);
     }
-    
+
     // Build URL parameters
     let url = `${API_ENDPOINT}?page=${page}&per_page=${PER_PAGE}`;
-    
+
     // Parse sort preference (for paged endpoint)
     let sort_by = 'name';
     let order = 'asc';
@@ -101,7 +101,7 @@ function loadLibraryPaginated(page = 1, append = false) {
         sort_by = parts[0];
         order = parts[1];
     }
-    
+
     // Add pagination/sort parameters
     if (!useLegacyFallback) {
         url += `&sort_by=${sort_by}&order=${order}`;
@@ -113,7 +113,7 @@ function loadLibraryPaginated(page = 1, append = false) {
     $.getJSON(url, function (data) {
         // Update progress bar to 80% (data received)
         $('#loadingProgress').val(80);
-        
+
         isServerSideFiltered = false;
 
         // Normalize response: support both envelope { code, data: { items } } and direct responses
@@ -131,7 +131,7 @@ function loadLibraryPaginated(page = 1, append = false) {
                 newGames = payload;
             }
         }
-        
+
         if (append) {
             games = [...games, ...newGames];
         } else {
@@ -153,7 +153,7 @@ function loadLibraryPaginated(page = 1, append = false) {
             // Support both has_next and hasMore naming
             allGamesLoaded = paginationSource.has_next !== undefined ? !paginationSource.has_next : !paginationSource.has_more;
             currentPage = paginationSource.page || page;
-            
+
             // Update progress calculation
             if (totalItems > 0) {
                 const loadedCount = games.length;
@@ -173,32 +173,32 @@ function loadLibraryPaginated(page = 1, append = false) {
         $('#loadingIndicator').addClass('is-hidden');
         $('#paginationLoader').addClass('is-hidden');
         isLoadingMore = false;
-        
+
         if (!append) {
-            const loadedPercent = totalItems > 0 
-                ? `${Math.round((Math.min(PER_PAGE, totalItems) / totalItems) * 100)}%` 
+            const loadedPercent = totalItems > 0
+                ? `${Math.round((Math.min(PER_PAGE, totalItems) / totalItems) * 100)}%`
                 : '100%';
             showToast(t('Library updated!') + ` (${loadedPercent})`, 'success');
         }
 
         // Setup infinite scroll observer
         setupInfiniteScroll();
-        
+
     }).fail((jqXHR, textStatus, errorThrown) => {
         $('#loadingIndicator').addClass('is-hidden');
         $('#paginationLoader').addClass('is-hidden');
         isLoadingMore = false;
-        
+
         console.error('Failed to load library:', textStatus, errorThrown);
         console.error('Response:', jqXHR.responseText);
-        
+
         // If this was the first attempt with paged endpoint, try legacy fallback
         if (!useLegacyFallback && page === 1 && !append) {
             console.log('Paged endpoint failed, falling back to legacy endpoint...');
             localStorage.setItem('myfoil_use_legacy_endpoint', 'true');
             $('#loadingText').text(t('Mudando para endpoint legado...'));
             $('#loadingIndicator').removeClass('is-hidden');
-            
+
             setTimeout(() => {
                 loadLibraryPaginated(page, false);
             }, 500);
@@ -224,7 +224,7 @@ function observeImages() {
                         // Add smooth fade-in effect
                         img.style.transition = 'opacity 0.3s ease-in-out';
                         img.style.opacity = '0.3';
-                        
+
                         img.src = src;
                         img.onload = () => {
                             img.style.opacity = '1';
@@ -328,15 +328,15 @@ function setView(view) {
 
 function renderLibrary() {
     const container = $('#libraryContainer');
-    
+
     // Only re-render if we're on a new filter or view change
     // Don't re-render on infinite scroll append (that's handled separately)
     if (!isNewRender && scrollOffset > 0) {
         return;
     }
-    
+
     isNewRender = false;
-    
+
     // Clear container
     container.empty();
 
@@ -389,7 +389,7 @@ function renderCardView(items) {
             <div class="grid-item" data-index="${index}" data-game-id="${safeId}" tabindex="0" role="button" aria-label="${safeName}" onclick="focusAndOpenGame('${safeId}')">
                 <div class="card game-card is-paddingless">
                     <div class="card-image">
-                        <figure class="image is-16by9 bg-light-soft">
+                        <figure class="image is-16by9 bg-light-soft" style="position: relative;">
                             ${ratingBadge}
                             <img src="/static/img/no-icon.png" 
                                  data-src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" 
@@ -537,7 +537,7 @@ function applyFilters() {
     const showOnlyUpdates = $('#btnFilterPendingUpd').hasClass('is-primary');
     const showOnlyDlcs = $('#btnFilterPendingDlc').hasClass('is-primary');
     const showOnlyRedundant = $('#btnFilterRedundant').hasClass('is-primary');
-    
+
     // Mark for full re-render
     isNewRender = true;
 
@@ -587,8 +587,8 @@ function applyFilters() {
                 const appIdKey = typeof dlc.app_id === 'string' ? dlc.app_id : (dlc.appId || '');
                 // Verificar em todos os formatos possíveis
                 const isIgnored = appIdKey ? (
-                    ignoredDlcs[appIdKey] || 
-                    ignoredDlcs[appIdKey.toUpperCase()] || 
+                    ignoredDlcs[appIdKey] ||
+                    ignoredDlcs[appIdKey.toUpperCase()] ||
                     ignoredDlcs[appIdKey.toLowerCase()]
                 ) : false;
                 const isNotOwned = !dlc.owned;
@@ -829,26 +829,26 @@ function renderMoreFilteredItems() {
     // Get next batch of filtered games that haven't been rendered yet
     const filtered = window.filteredGames;
     const renderedCount = document.querySelectorAll('.grid-item').length;
-    
+
     // Skip if we've already rendered all filtered games
     if (renderedCount >= filtered.length) {
         $('#paginationLoader').addClass('is-hidden');
         return;
     }
-    
+
     // Show pagination loader
     $('#paginationLoader').removeClass('is-hidden');
-    
+
     // Get next batch
     const startIdx = renderedCount;
     const endIdx = Math.min(startIdx + SCROLL_BATCH_SIZE, filtered.length);  // Render 30 at a time
     const batch = filtered.slice(startIdx, endIdx);
-    
+
     if (batch.length === 0) {
         $('#paginationLoader').addClass('is-hidden');
         return;
     }
-    
+
     // Render the batch
     if (currentView === 'card') renderCardView(batch);
     else if (currentView === 'icon') renderIconView(batch);
@@ -856,7 +856,7 @@ function renderMoreFilteredItems() {
 
     setupKeyboardNavigation();
     observeImages();
-    
+
     // Hide loader after a brief delay
     setTimeout(() => {
         $('#paginationLoader').addClass('is-hidden');
@@ -871,7 +871,7 @@ function loadMoreItems() {
         $('#scrollSentinel').hide();
         return;
     }
-    
+
     // Render first batch
     const firstBatch = filtered.slice(0, SCROLL_BATCH_SIZE);
     if (currentView === 'card') renderCardView(firstBatch);
@@ -1034,7 +1034,7 @@ $(document).ready(() => {
         applyFilters();
     });
 
-    $('#clearFiltersBtn').on('click', function() {
+    $('#clearFiltersBtn').on('click', function () {
         clearFilters();
     });
 

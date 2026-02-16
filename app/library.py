@@ -1613,13 +1613,14 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
 
                 if file_id:
                     update_files_ids.add(file_id)
-                    updates_info.append(
-                        {
-                            "id": file_id,
-                            "path": filepath,
-                            "is_xci": filepath.endswith(".xci") or filepath.endswith(".xcz"),
-                        }
-                    )
+                            {
+                                "id": file_id,
+                                "path": filepath,
+                                "version": int(a.get("app_version") or 0),
+                                "owned": True,
+                                "is_xci": filepath.endswith(".xci") or filepath.endswith(".xcz"),
+                            }
+                        )
 
     # Refined logic: If we have an XCI/XCZ that contains the update, ignore it for redundancy
     # (assuming XCI is the "canonical" cartridge dump which often includes updates)
@@ -1640,7 +1641,12 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
         game["has_redundant_updates"] = game["updates_count"] > 1
 
     # Calculate has_non_ignored_redundant (respect ignore_preferences for redundant updates)
+    # Calculate has_non_ignored_redundant (respect ignore_preferences for redundant updates)
     game["has_non_ignored_redundant"] = False
+    
+    # Expose updates list to game object for frontend and logic below
+    game["updates"] = updates_info
+
     if game["has_redundant_updates"]:
         try:
             # Accept ignore preferences passed in per-call; default to empty dict
@@ -1655,10 +1661,17 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
             ignored_updates = game_ignore.get("updates", {})
 
             # Check if there are redundant updates NOT ignored
+            # A redundant update is an owned update that is NOT the currently active (highest) version
+            current_version = int(game.get("owned_version") or 0)
+            
             for u in game.get("updates", []):
-                if not u.get("owned") and not ignored_updates.get(str(u.get("version"))):
-                    game["has_non_ignored_redundant"] = True
-                    break
+                u_ver = int(u.get("version") or 0)
+                # If we own this update, and it's older than our best version, it's redundant
+                if u.get("owned") and u_ver < current_version:
+                    # Unless explicitly ignored
+                    if not ignored_updates.get(str(u_ver)):
+                        game["has_non_ignored_redundant"] = True
+                        break
         except Exception:
             # Be defensive: don't fail the whole serialization for ignore lookup issues
             pass
@@ -2061,7 +2074,7 @@ def post_library_change():
     import gevent
 
     def _do_post_library_change():
-        from app.app import create_app
+        from app import create_app
 
         # Use minimal app to avoid side effects (watchers, threads) in background task
         app = create_app(minimal=True)
