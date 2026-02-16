@@ -27,6 +27,12 @@ def upgrade():
 
     if 'files' in inspector.get_table_names():
         op.drop_table('files')
+
+    if 'libraries' in inspector.get_table_names():
+        op.drop_table('libraries')
+
+    if 'titles' in inspector.get_table_names():
+        op.drop_table('titles')
     
     # Create Libraries table
     op.create_table('libraries',
