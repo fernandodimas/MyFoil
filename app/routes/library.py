@@ -368,11 +368,22 @@ def library_paged_api():
     else:
         paginated = TitlesRepository.get_paged(page=page, per_page=per_page, sort_by=sort_by, order=order)
 
+        ignores_by_user = {}
+        try:
+            # Use flattened cached helper to get normalized ignore prefs
+            # (Repo returns sets, which app/library.py now handles correctly)
+            flat = WishlistIgnoreRepository.get_flattened_ignores_for_user(current_user.id)
+            ignores_by_user = flat
+        except Exception:
+            ignores_by_user = {}
+
         # Serialize items
         items = []
         for title in paginated.items:
             try:
-                item = _serialize_title_with_apps(title)
+                # Pass ignores so badges are correct
+                ignore_prefs = ignores_by_user.get(title.title_id)
+                item = _serialize_title_with_apps(title, ignore_map=ignore_prefs)
                 if item:
                     items.append(item)
             except Exception as e:
