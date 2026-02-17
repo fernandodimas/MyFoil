@@ -1694,9 +1694,10 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
                 for cand in candidates:
                     c_ver = str(int(cand.get("version") or 0))
                     # If this specific version is NOT ignored, then we have a visible redundant update
-                    if not ignored_updates.get(c_ver):
                         game["has_non_ignored_redundant"] = True
                         break
+        except Exception:
+            pass
 
     game["owned"] = len(owned_apps) > 0
 
