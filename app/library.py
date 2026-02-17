@@ -1677,21 +1677,26 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
 
             ignored_updates = game_ignore.get("updates", {})
 
-            # Check if there are redundant updates NOT ignored
-            # A redundant update is an owned update that is NOT the currently active (highest) version
-            current_version = int(game.get("owned_version") or 0)
+            # Redundant Logic: Keep the "best" update (highest version), check if OTHERS are ignored.
+            owned_updates = [u for u in game.get("updates", []) if u.get("owned")]
             
-            for u in game.get("updates", []):
-                u_ver = int(u.get("version") or 0)
-                # If we own this update, and it's older than our best version, it's redundant
-                if u.get("owned") and u_ver < current_version:
-                    # Unless explicitly ignored
-                    if not ignored_updates.get(str(u_ver)):
+            # Sort by version descending. The first one is our "Active" update.
+            # If multiple have same version, it doesn't matter which we pick as active, 
+            # the others are redundant.
+            owned_updates.sort(key=lambda x: int(x.get("version") or 0), reverse=True)
+
+            if len(owned_updates) > 1:
+                # We have at least 2 updates. 
+                # The first one (index 0) is kept as "Active".
+                # All subsequent ones (index 1+) are redundant candidates.
+                candidates = owned_updates[1:]
+                
+                for cand in candidates:
+                    c_ver = str(int(cand.get("version") or 0))
+                    # If this specific version is NOT ignored, then we have a visible redundant update
+                    if not ignored_updates.get(c_ver):
                         game["has_non_ignored_redundant"] = True
                         break
-        except Exception:
-            # Be defensive: don't fail the whole serialization for ignore lookup issues
-            pass
 
     game["owned"] = len(owned_apps) > 0
 
