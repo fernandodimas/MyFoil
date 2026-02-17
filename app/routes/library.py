@@ -13,6 +13,7 @@ from db import (
     Libraries,
     Files,
     get_libraries,
+    get_all_title_apps,
     logger,
     app_files,
     TitleMetadata,
