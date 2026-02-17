@@ -1521,7 +1521,7 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
             # Caller may pass already-scoped preferences for this title
             game_ignore = _ignore_prefs if isinstance(_ignore_prefs, dict) else {}
 
-        ignored_dlcs_map = {k.upper(): v for k, v in (game_ignore.get("dlcs", {}) or {}).items()}
+        ignored_dlcs_map = {str(k).upper().strip(): v for k, v in (game_ignore.get("dlcs", {}) or {}).items()}
         ignored_updates_map = {str(k): v for k, v in (game_ignore.get("updates", {}) or {}).items()}
     except Exception:
         ignored_dlcs_map = {}
@@ -1561,7 +1561,7 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
                 [
                     int(a["app_version"] or 0)
                     for a in all_title_apps
-                    if a.get("app_type") == APP_TYPE_UPD and a.get("owned")
+                    if a.get("app_type") in (APP_TYPE_UPD, "UPD") and a.get("owned")
                 ]
             )
             current_owned_version = int(game.get("owned_version") or 0)
@@ -1601,7 +1601,7 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
     updates_info = []
 
     for a in all_title_apps:
-        if a["app_type"] == APP_TYPE_UPD and a["owned"]:
+        if a["app_type"] in (APP_TYPE_UPD, "UPD") and a["owned"]:
             for f in a.get("files_info", []):
                 # Skip files with explicit errors, not identified, or missing path
                 if f.get("error") or not f.get("identified") or not f.get("path"):
