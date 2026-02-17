@@ -409,7 +409,7 @@ function renderCardView(items) {
                          
                         <div class="is-flex is-justify-content-between is-align-items-center mt-auto pt-2" style="width: 100%;">
                             <span class="status-dot ${statusDotClass}"></span>
-                            <span class="is-size-7 opacity-70 font-mono"> ${game.size_formatted || '--'}</span>
+                            <span class="is-size-7 opacity-70 font-mono">&nbsp; ${game.size_formatted || '--'}</span>
                         </div>
                         <div class="is-flex gap-1 is-justify-content-end ml-auto">
                             ${game.metacritic_score ? `<div class="metacritic-badge" title="Metacritic: ${game.metacritic_score}">${game.metacritic_score}</div>` : ''}
