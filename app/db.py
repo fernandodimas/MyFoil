@@ -501,6 +501,10 @@ def get_shop_files():
             logger.debug(f"File {file.id} ({file.filename}) has no app/title, skipping")
             continue
 
+        if not file.extension:
+            logger.debug(f"File {file.id} ({file.filename}) has no extension, skipping")
+            continue
+
         if file.multicontent or file.extension.startswith("x"):
             title_id = app.title.title_id
             final_filename = f"[{title_id}].{file.extension}"

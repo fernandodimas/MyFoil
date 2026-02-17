@@ -1127,6 +1127,7 @@ def update_titles():
 
         # Available updates from titledb via versions.json
         available_versions = titles_lib.get_all_existing_versions(title_id)
+        max_available_version = max((v["version"] for v in available_versions), default=0)
         
         # check up_to_date - consider current max owned vs max available
         up_to_date = max_owned_version >= max_available_version
@@ -1579,7 +1580,7 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
                 # If there's an owned update for this version, skip
                 if v in owned_update_versions:
                     continue
-                if not ignored_updates_map.get(str(v)):
+                if str(v) not in ignored_updates_set:
                     has_non_ignored_updates = True
                     break
     except Exception:
@@ -1605,7 +1606,9 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
 
     game["has_non_ignored_dlcs"] = has_non_ignored_dlcs
 
-    # Check for redundant updates (more than 1 unique update file, excluding files with errors)
+    # Check for redundant updates: more than 1 owned update FILE (excluding XCI/XCZ and errors)
+    # "Redundant" means having multiple update files where only the latest version is needed.
+    # The base file does NOT count towards redundancy.
     update_files_ids = set()
     updates_info = []
 
@@ -1631,17 +1634,16 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
                     )
 
     # Refined logic: If we have an XCI/XCZ that contains the update, ignore it for redundancy
-    # (assuming XCI is the "canonical" cartridge dump which often includes updates)
     non_xci_updates = [u for u in updates_info if not u["is_xci"]]
 
-    # If we have mixed content (XCI + NSP), only count the independent NSPs as "redundant" candidates
-    # effectively ignoring the XCI's bundled update from the count
+    # If we have mixed content (XCI + NSP), only count the independent NSPs
     if len(updates_info) > len(non_xci_updates):
         game["updates_count"] = len(non_xci_updates)
     else:
         game["updates_count"] = len(update_files_ids)
 
-    # Skip redundant check if the title itself is not recognized (Unknown)
+    # Redundant = more than 1 owned update file (base file does NOT count)
+    # Skip if title is not recognized
     display_name = title_data.get("name", "")
     if not display_name or "Unknown" in (display_name or ""):
         game["has_redundant_updates"] = False
@@ -1675,23 +1677,10 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
 
     if game["has_redundant_updates"]:
         try:
-            # Accept ignore preferences passed in per-call; default to empty dict
-            _ignore_prefs = ignore_preferences or {}
-            # If the caller passed a mapping for this title, use it; otherwise assume empty
-            if isinstance(_ignore_prefs, dict) and tid in _ignore_prefs:
-                game_ignore = _ignore_prefs.get(tid, {})
-            else:
-                # Caller may pass already-scoped preferences for this title
-                game_ignore = _ignore_prefs if isinstance(_ignore_prefs, dict) else {}
-
-            ignored_updates = game_ignore.get("updates", {})
-
             # Redundant Logic: Keep the "best" update (highest version), check if OTHERS are ignored.
             owned_updates = [u for u in game.get("updates", []) if u.get("owned")]
             
             # Sort by version descending. The first one is our "Active" update.
-            # If multiple have same version, it doesn't matter which we pick as active, 
-            # the others are redundant.
             owned_updates.sort(key=lambda x: int(x.get("version") or 0), reverse=True)
 
             if len(owned_updates) > 1:
@@ -2076,17 +2065,27 @@ def apply_ignore_preferences_to_game(game: dict, ignore_pref_for_title: dict | N
 
         game["has_non_ignored_dlcs"] = has_non_ignored_dlcs
 
-        # Non-ignored redundant updates fallback: check updates list similar to above
+        # Non-ignored redundant updates: check if there are owned updates with versions
+        # LOWER than the max owned version that are NOT ignored.
+        # Redundancy = having multiple owned update files (the older ones are redundant).
         has_non_ignored_redundant = False
         if game.get("has_redundant_updates"):
-            for u in game.get("updates", []) or []:
-                try:
-                    v = int(u.get("version") or 0)
-                except Exception:
-                    continue
-                if not u.get("owned") and not ignored_updates_map.get(str(v)):
-                    has_non_ignored_redundant = True
-                    break
+            owned_updates = sorted(
+                [u for u in (game.get("updates", []) or []) if u.get("owned")],
+                key=lambda x: int(x.get("version") or 0),
+                reverse=True,
+            )
+            if len(owned_updates) > 1:
+                # The first (highest version) is the "active" update.
+                # All subsequent ones are redundant candidates.
+                for cand in owned_updates[1:]:
+                    try:
+                        c_ver = str(int(cand.get("version") or 0))
+                    except Exception:
+                        continue
+                    if not ignored_updates_map.get(c_ver):
+                        has_non_ignored_redundant = True
+                        break
         game["has_non_ignored_redundant"] = has_non_ignored_redundant
 
     except Exception:

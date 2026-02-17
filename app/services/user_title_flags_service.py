@@ -56,8 +56,16 @@ def compute_flags_for_user_title(user_id, title_id, title_apps):
             has_non_ignored_updates = True
             break
 
-    # redundant - reuse updates logic as conservative check
-    has_non_ignored_redundant = has_non_ignored_updates
+    # redundant: owned update apps with version lower than max that are not ignored
+    has_non_ignored_redundant = False
+    owned_update_apps = [a for a in title_apps if a.get("app_type") == "upd" and a.get("owned")]
+    if len(owned_update_apps) > 1:
+        max_ver = max(int(a.get("app_version") or 0) for a in owned_update_apps)
+        for a in owned_update_apps:
+            v = int(a.get("app_version") or 0)
+            if v < max_ver and str(v) not in ignored_updates:
+                has_non_ignored_redundant = True
+                break
 
     return {
         "has_non_ignored_dlcs": has_non_ignored_dlcs,
