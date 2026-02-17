@@ -273,10 +273,13 @@ def library_paged_api():
         FETCH_LIMIT = 5000
         # Narrow initial DB result using materialized counters where possible
         filter_args = {}
-        if dlc_filter:
-            filter_args["dlc"] = True
-        if redundant_filter:
-            filter_args["redundant"] = True
+        # For DLC and Redundant filters, we rely on the RUNTIME check (Python loop below)
+        # because the DB status flags (complete, redundant_updates_count) might be stale
+        # or computed with slightly different logic (e.g. ignoring 'ignores').
+        # However, checking for DLC/Redundant implies looking at OWNED games.
+        # So we restrict the DB fetch to owned items to optimize performance.
+        filter_args["owned_only"] = True
+        
         paginated_all = TitlesRepository.get_paged(
             page=1, per_page=FETCH_LIMIT, sort_by=sort_by, order=order, filters=filter_args
         )
