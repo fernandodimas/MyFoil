@@ -407,10 +407,11 @@ def library_paged_api():
     }
 
     resp = jsonify(response_payload)
-    resp.headers["X-Total-Count"] = str(paginated.total)
-    resp.headers["X-Page"] = str(paginated.page)
-    resp.headers["X-Per-Page"] = str(paginated.per_page)
-    resp.headers["X-Total-Pages"] = str(paginated.pages)
+    pagination = data.get("pagination", {})
+    resp.headers["X-Total-Count"] = str(pagination.get("total_items", 0))
+    resp.headers["X-Page"] = str(pagination.get("page", 1))
+    resp.headers["X-Per-Page"] = str(pagination.get("per_page", 50))
+    resp.headers["X-Total-Pages"] = str(pagination.get("total_pages", 1))
     resp.headers["X-Cache"] = "MISS"
     resp.headers["Cache-Control"] = "public, max-age=300"  # 5 min cache
     return resp, 200
