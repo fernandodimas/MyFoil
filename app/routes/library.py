@@ -324,12 +324,14 @@ def library_paged_api():
                     continue
 
                 # Apply requested post-serialization filters
+                # Apply requested post-serialization filters
                 if dlc_filter:
-                    # Wants games that have base but missing DLCs
-                    if not (item.get("has_base") and not item.get("has_all_dlcs")):
+                    # Wants games that have base but missing DLCs (respecting ignores)
+                    if not (item.get("has_base") and item.get("has_non_ignored_dlcs")):
                         continue
                 if redundant_filter:
-                    if not item.get("has_redundant_updates"):
+                    # Wants games with redundant updates (respecting ignores)
+                    if not item.get("has_non_ignored_redundant"):
                         continue
 
                 items_all.append(item)
