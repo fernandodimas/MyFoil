@@ -1537,6 +1537,31 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
         ignored_dlcs_map = {}
         ignored_updates_map = {}
 
+    # Determine if ALL possible DLCs are owned
+    # Start with TitleDB-known DLCs, but also include any DLC apps present in our DB to be robust
+    try:
+        titledb_dlcs = [d.upper() for d in titles_lib.get_all_existing_dlc(tid) or []]
+    except Exception:
+        titledb_dlcs = []
+
+    dlc_apps_seen = set([a["app_id"].upper() for a in all_title_apps if a.get("app_type") == APP_TYPE_DLC])
+
+    all_possible_dlc_ids = sorted(set(titledb_dlcs) | dlc_apps_seen)
+
+    # We only count a DLC as owned if it has files attached
+    owned_dlc_ids = set(
+        [
+            a["app_id"].upper()
+            for a in all_title_apps
+            if a.get("app_type") == APP_TYPE_DLC and a.get("owned") and len(a.get("files_info", [])) > 0
+        ]
+    )
+
+    # Filter out self-mapping if it somehow appeared
+    all_possible_dlc_ids = [d for d in all_possible_dlc_ids if d != tid.upper()]
+
+    game["has_all_dlcs"] = all(d in owned_dlc_ids for d in all_possible_dlc_ids) if all_possible_dlc_ids else True
+
     # has_non_ignored_updates: there exists an available version > owned_version that is not owned and not ignored
     has_non_ignored_updates = False
     try:
@@ -1580,31 +1605,6 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
         has_non_ignored_dlcs = False
 
     game["has_non_ignored_dlcs"] = has_non_ignored_dlcs
-
-    # Determine if ALL possible DLCs are owned
-    # Start with TitleDB-known DLCs, but also include any DLC apps present in our DB to be robust
-    try:
-        titledb_dlcs = [d.upper() for d in titles_lib.get_all_existing_dlc(tid) or []]
-    except Exception:
-        titledb_dlcs = []
-
-    dlc_apps_seen = set([a["app_id"].upper() for a in all_title_apps if a.get("app_type") == APP_TYPE_DLC])
-
-    all_possible_dlc_ids = sorted(set(titledb_dlcs) | dlc_apps_seen)
-
-    # We only count a DLC as owned if it has files attached
-    owned_dlc_ids = set(
-        [
-            a["app_id"].upper()
-            for a in all_title_apps
-            if a.get("app_type") == APP_TYPE_DLC and a.get("owned") and len(a.get("files_info", [])) > 0
-        ]
-    )
-
-    # Filter out self-mapping if it somehow appeared
-    all_possible_dlc_ids = [d for d in all_possible_dlc_ids if d != tid.upper()]
-
-    game["has_all_dlcs"] = all(d in owned_dlc_ids for d in all_possible_dlc_ids) if all_possible_dlc_ids else True
 
     # Check for redundant updates (more than 1 unique update file, excluding files with errors)
     update_files_ids = set()
