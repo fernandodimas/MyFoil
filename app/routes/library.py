@@ -229,13 +229,20 @@ def library_paged_api():
     if order not in ["asc", "desc"]:
         order = "asc"
 
+    def _flag_true(v):
+        return str(v).lower() in ("1", "true", "yes", "on")
+
+    dlc_filter = _flag_true(request.args.get("dlc"))
+    redundant_filter = _flag_true(request.args.get("redundant"))
+
     # Try to get from cache (Phase 4.1)
     if CACHE_ENABLED:
-        cache_key = f"library_paged:{page}:{per_page}:{sort_by}:{order}"
+        # Include filters in cache key!
+        cache_key = f"library_paged:{page}:{per_page}:{sort_by}:{order}:dlc={dlc_filter}:red={redundant_filter}"
         cached_data = redis_cache.cache_get(cache_key)
         if cached_data:
             # cached_data is a JSON string
-            logger.debug(f"Cache HIT for library_paged: page={page}, sort={sort_by}-{order}")
+            logger.debug(f"Cache HIT for library_paged: page={page}, sort={sort_by}-{order}, dlc={dlc_filter}, red={redundant_filter}")
             try:
                 # Compute ETag from cached payload to support conditional GET
                 etag = hashlib.md5(cached_data.encode("utf-8")).hexdigest()
@@ -258,12 +265,7 @@ def library_paged_api():
                 resp.headers["Cache-Control"] = "public, max-age=300"
                 return resp, 200
 
-    # Use repository for pagination
-    def _flag_true(v):
-        return str(v).lower() in ("1", "true", "yes", "on")
-
-    dlc_filter = _flag_true(request.args.get("dlc"))
-    redundant_filter = _flag_true(request.args.get("redundant"))
+    # Filters are already parsed above for cache key generation
 
     # If dlc or redundant filters are requested, do filtering at the serialization level
     # because the DB-level counters may be stale or conservative. We'll fetch a large
