@@ -17,15 +17,16 @@ if [[ "${DISABLE_AUTO_MIGRATE:-0}" != "1" ]]; then
       }
     fi
     # Fallback: try alembic CLI if present (some deployments prefer it)
-    ALEMBIC_CONF="/app/migrations/alembic.ini"
-    if command -v alembic >/dev/null 2>&1 && [[ -f "$ALEMBIC_CONF" ]]; then
-      echo "[entrypoint] Running alembic CLI as fallback"
-      python3 -m alembic -c "$ALEMBIC_CONF" upgrade head || {
-        echo "[entrypoint] Alembic CLI upgrade failed; continuing startup"
-      }
-    else
-      echo "[entrypoint] Alembic CLI not available or config missing; skipping CLI step"
-    fi
+    # Disabled to avoid confusion/errors when Migrate helper succeeds (which it usually does)
+    # ALEMBIC_CONF="/app/migrations/alembic.ini"
+    # if command -v alembic >/dev/null 2>&1 && [[ -f "$ALEMBIC_CONF" ]]; then
+    #   echo "[entrypoint] Running alembic CLI as fallback"
+    #   python3 -m alembic -c "$ALEMBIC_CONF" upgrade head || {
+    #     echo "[entrypoint] Alembic CLI upgrade failed; continuing startup"
+    #   }
+    # else
+    #   echo "[entrypoint] Alembic CLI not available or config missing; skipping CLI step"
+    # fi
   else
     echo "[entrypoint] DATABASE_URL not set; skipping alembic"
   fi

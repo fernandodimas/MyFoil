@@ -1127,20 +1127,13 @@ def update_titles():
 
         # Available updates from titledb via versions.json
         available_versions = titles_lib.get_all_existing_versions(title_id)
-        max_available_version = max([v["version"] for v in available_versions], default=0)
-
-        # check up_to_date - consider current max owned vs max available
-        if title_id.upper() == "010089C00B026000":
-            logger.info(f"DEBUG BRAID: OwnedVers={owned_versions} MaxOwned={max_owned_version} MaxAvail={max_available_version}")
         
+        # check up_to_date - consider current max owned vs max available
         up_to_date = max_owned_version >= max_available_version
 
         # check complete - check against TitleDB known DLCs
         all_possible_dlc_ids = [d.upper() for d in titles_lib.get_all_existing_dlc(title_id)]
         all_possible_dlc_ids = [d for d in all_possible_dlc_ids if d != title_id.upper()]
-
-        if title_id.upper() == "010089C00B026000":
-             logger.info(f"DEBUG BRAID DLCs: Possible={len(all_possible_dlc_ids)} {all_possible_dlc_ids[:5]}...")
 
         if not all_possible_dlc_ids:
             complete = True
@@ -1148,9 +1141,6 @@ def update_titles():
             owned_dlc_ids = set(
                 [a.app_id.upper() for a in title.apps if a.app_type == APP_TYPE_DLC and a.owned and len(a.files) > 0]
             )
-            if title_id.upper() == "010089C00B026000":
-                logger.info(f"DEBUG BRAID DLCs: Owned={len(owned_dlc_ids)} {list(owned_dlc_ids)[:5]}...")
-            
             complete = all(d in owned_dlc_ids for d in all_possible_dlc_ids)
 
         # Materialized counters (to speed up common filters)
