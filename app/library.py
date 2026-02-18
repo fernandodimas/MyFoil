@@ -1149,18 +1149,23 @@ def update_titles():
             # Count owned update apps with files (redundant updates counter)
             # Ignore XCI/XCZ files (cartridge dumps often include updates)
             # CORRECT LOGIC: Redundant means we own an update OLDER than the active one (max_owned_version)
-            # CORRECT LOGIC: Redundant means we own more than one version of update.
-            # Match logic from get_game_info_item but for persistence.
-            owned_update_app_ids = set()
+            # CORRECT LOGIC: Redundant = more than 1 owned update FILE (excluding XCI/XCZ bundled updates)
+            # Match logic from get_game_info_item
+            owned_update_files = []
             for a in title.apps:
-                a_type = (a.app_type or "").upper()
-                if (a_type == APP_TYPE_UPD or a_type == "UPD") and a.owned:
-                    # Only count if the update app has actual identified files
-                    if any(f.identified and not (f.filepath or "").lower().endswith((".xci", ".xcz")) for f in a.files):
-                        owned_update_app_ids.add(a.id)
+                if (a.app_type == APP_TYPE_UPD or a.app_type == "UPD") and a.owned:
+                    for f in a.files:
+                        if not f.filepath:
+                            continue
+                        fpath = f.filepath.lower()
+                        # Skip XCI/XCZ as they serve as base+update usually
+                        if fpath.endswith((".xci", ".xcz")):
+                            continue
+                        owned_update_files.append(f.id)
             
-            # If we have more than 1 owned update app (distinct versions), we have redundancy
-            title.redundant_updates_count = max(0, len(owned_update_app_ids) - 1)
+            # If we have more than 1 owned update file (NSP/NSZ), we have redundancy
+            # The "latest" installed update is one, anything else is redundant.
+            title.redundant_updates_count = max(0, len(owned_update_files) - 1)
 
             # Missing DLCs counter: number of DLCs known in TitleDB that are not owned
             missing_dlcs = 0
@@ -1608,8 +1613,7 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
     updates_info = []
 
     for a in all_title_apps:
-        a_type = (a.get("app_type") or "").upper()
-        if (a_type == APP_TYPE_UPD or a_type == "UPD") and a.owned:
+        if a["app_type"] in (APP_TYPE_UPD, "UPD") and a["owned"]:
             for f in a.get("files_info", []):
                 # Skip files with explicit errors, not identified, or missing path
                 if f.get("error") or not f.get("identified") or not f.get("path"):
@@ -2134,18 +2138,6 @@ def post_library_change():
                 # This is critical for updating 'up_to_date' and 'complete' status flags
                 # which control the badges (UPDATE, DLC) and filters
                 update_titles()
-
-                # 3.5. Update user-specific flags for all users
-                try:
-                    from models.user import User
-                    from repositories.titles_repository import TitlesRepository
-
-                    users = User.query.all()
-                    for u in users:
-                        TitlesRepository.precompute_flags_for_user(u.id)
-                        logger.info(f"Precomputed library flags for user {u.id}")
-                except Exception as e:
-                    logger.warning(f"Failed to precompute user flags: {e}")
 
                 # 4. Regenerate library cache (force=False)
                 # We use force=False to allow it to skip if hash matches (safety check)

@@ -473,8 +473,7 @@ def library_search_paged_api():
 
     # If dlc or redundant filters are requested, do post-serialization filtering with per-user ignore prefs
     if dlc or redundant:
-        # Increase limit since we might filter out many items
-        FETCH_LIMIT = 2000
+        FETCH_LIMIT = 5000
         paginated_all = TitlesRepository.get_paged(
             page=1, per_page=FETCH_LIMIT, query_text=query_text, filters=filters, sort_by="name", order="asc"
         )
