@@ -212,6 +212,8 @@ def init_db(app):
                         ("genres_json", "TEXT"),
                         ("tags_json", "TEXT"),
                         ("screenshots_json", "TEXT"),
+                        ("redundant_updates_count", "INTEGER DEFAULT 0"),
+                        ("missing_dlcs_count", "INTEGER DEFAULT 0"),
                         ("rawg_id", "INTEGER"),
                         ("igdb_id", "INTEGER"),
                         ("api_last_update", "DATETIME"),
@@ -299,6 +301,28 @@ def init_db(app):
                         )
                         conn.commit()
                         logger.info("wishlist_ignore table created.")
+
+                    # Create user_title_flags table if not exists (2026-02-18)
+                    if "user_title_flags" not in tables:
+                        logger.info("Creating user_title_flags table...")
+                        conn.execute(
+                            text("""
+                            CREATE TABLE IF NOT EXISTS user_title_flags (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                user_id INTEGER NOT NULL,
+                                title_id VARCHAR NOT NULL,
+                                has_non_ignored_dlcs BOOLEAN DEFAULT 0,
+                                has_non_ignored_updates BOOLEAN DEFAULT 0,
+                                has_non_ignored_redundant BOOLEAN DEFAULT 0,
+                                updated_at DATETIME,
+                                FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE,
+                                FOREIGN KEY (title_id) REFERENCES titles (title_id) ON DELETE CASCADE,
+                                UNIQUE (user_id, title_id)
+                            )
+                        """)
+                        )
+                        conn.commit()
+                        logger.info("user_title_flags table created.")
                     else:
                         existing_cols = [c["name"] for c in inspector.get_columns("wishlist_ignore")]
                         if "ignore_dlc" in existing_cols and "ignore_dlcs" not in existing_cols:
