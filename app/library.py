@@ -1149,23 +1149,17 @@ def update_titles():
             # Count owned update apps with files (redundant updates counter)
             # Ignore XCI/XCZ files (cartridge dumps often include updates)
             # CORRECT LOGIC: Redundant means we own an update OLDER than the active one (max_owned_version)
-            # CORRECT LOGIC: Redundant = more than 1 owned update FILE (excluding XCI/XCZ bundled updates)
-            # Match logic from get_game_info_item
-            owned_update_files = []
+            # CORRECT LOGIC: Redundant means we own more than one version of update.
+            # Match logic from get_game_info_item but for persistence.
+            owned_update_app_ids = set()
             for a in title.apps:
                 if (a.app_type == APP_TYPE_UPD or a.app_type == "UPD") and a.owned:
-                    for f in a.files:
-                        if not f.filepath:
-                            continue
-                        fpath = f.filepath.lower()
-                        # Skip XCI/XCZ as they serve as base+update usually
-                        if fpath.endswith((".xci", ".xcz")):
-                            continue
-                        owned_update_files.append(f.id)
+                    # Only count if the update app has actual identified files
+                    if any(f.identified and not (f.filepath or "").lower().endswith((".xci", ".xcz")) for f in a.files):
+                        owned_update_app_ids.add(a.id)
             
-            # If we have more than 1 owned update file (NSP/NSZ), we have redundancy
-            # The "latest" installed update is one, anything else is redundant.
-            title.redundant_updates_count = max(0, len(owned_update_files) - 1)
+            # If we have more than 1 owned update app (distinct versions), we have redundancy
+            title.redundant_updates_count = max(0, len(owned_update_app_ids) - 1)
 
             # Missing DLCs counter: number of DLCs known in TitleDB that are not owned
             missing_dlcs = 0
