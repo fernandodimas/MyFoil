@@ -587,30 +587,29 @@ function loadGameTagsAndWishlist(titleId) {
     // Load ignore preferences for DLCs and Updates (only if we have a titleId)
     if (titleId) {
         $.getJSON(`/api/library/ignore/${titleId}`, (dataRes) => {
-            console.log('DEBUG: Raw response from ignore API:', dataRes);
+
             let data = dataRes;
             if (typeof unwrap === 'function') data = unwrap(dataRes) || dataRes;
             // Handle nested data structure from API
             if (data.data) data = data.data;
             data = data || {};
 
-            console.log('DEBUG: Processed data for ignore preferences:', data);
-            console.log('DEBUG: data.dlcs:', data.dlcs);
-            console.log('DEBUG: data.updates:', data.updates);
+
+
 
             if (data.dlcs && Object.keys(data.dlcs).length > 0) {
-                console.log('DEBUG: Setting DLC ignore preferences:', data.dlcs);
+
                 Object.entries(data.dlcs).forEach(([app_id, ignored]) => {
                     const cb = document.getElementById(`ignore-dlc-${app_id}`);
-                    console.log('DEBUG: Setting DLC', app_id, 'ignored=', ignored, 'checkbox found=', !!cb);
+
                     if (cb) cb.checked = ignored;
                 });
             }
             if (data.updates && Object.keys(data.updates).length > 0) {
-                console.log('DEBUG: Setting Update ignore preferences:', data.updates);
+
                 Object.entries(data.updates).forEach(([version, ignored]) => {
                     const cb = document.getElementById(`ignore-upd-${version}`);
-                    console.log('DEBUG: Setting Update', version, 'ignored=', ignored, 'checkbox found=', !!cb);
+
                     if (cb) cb.checked = ignored;
                 });
             }
@@ -626,7 +625,7 @@ function loadGameTagsAndWishlist(titleId) {
 }
 
 function toggleItemIgnore(titleId, type, itemId, value) {
-    console.log('DEBUG: Saving ignore preference', { titleId, type, itemId, value });
+
     $.ajax({
         url: `/api/library/ignore/${titleId}`,
         type: 'POST',
@@ -637,7 +636,7 @@ function toggleItemIgnore(titleId, type, itemId, value) {
             ignored: value
         }),
         success: (res) => {
-            console.log('DEBUG: Save response', res);
+
             if (res.success) {
                 const msg = value ? t('{type} {id} será ignorado').replace('{type}', (type || '').toUpperCase()).replace('{id}', itemId) : t('{type} {id} voltará a aparecer').replace('{type}', (type || '').toUpperCase()).replace('{id}', itemId);
                 showToast(msg, 'success');

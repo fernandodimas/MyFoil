@@ -1,7 +1,7 @@
 /**
  * MyFoil Global Utilities & Initialization
  */
-console.log('MyFoil: base.js loaded');
+
 
 // Debug logging
 window.debugLog = function (...args) {

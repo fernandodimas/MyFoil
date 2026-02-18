@@ -1,4 +1,4 @@
-from db import *
+from db import get_shop_files, logger as db_logger
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Hash import SHA256

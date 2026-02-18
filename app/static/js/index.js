@@ -566,7 +566,7 @@ function applyFilters() {
         const ignoredDlcs = gameIgnore.dlcs || {};
         const ignoredUpdates = gameIgnore.updates || {};
 
-        console.log('DEBUG: Processing game', g.id, 'ignoredDlcs:', ignoredDlcs);
+
 
         let hasNonIgnoredUpdates = false;
         if (g.has_base && !g.has_latest_version) {
@@ -594,7 +594,7 @@ function applyFilters() {
                     ignoredDlcs[appIdKey.toLowerCase()]
                 ) : false;
                 const isNotOwned = !dlc.owned;
-                console.log('DEBUG: DLC', appIdKey, 'isNotOwned:', isNotOwned, 'isIgnored:', isIgnored, 'ignoredDlcs:', ignoredDlcs);
+
                 return isNotOwned && !isIgnored;
             });
         }
@@ -613,7 +613,7 @@ function applyFilters() {
         }
         g.has_non_ignored_redundant = hasNonIgnoredRedundant;
 
-        console.log('DEBUG: Final flags for', g.id, 'has_non_ignored_dlcs:', hasNonIgnoredDlcs, 'has_non_ignored_updates:', hasNonIgnoredUpdates, 'has_non_ignored_redundant:', hasNonIgnoredRedundant);
+
 
         // Determine status color for UI
         if (!g.has_base) {
