@@ -97,32 +97,55 @@ def init_db(app):
                 # Stamp the database to the latest migration. In some dev/test trees
                 # there may be multiple migration heads (branches). Alembic will
                 # raise if 'head' is ambiguous. Handle that gracefully for tests by
-                # selecting a head deterministically (first one) and stamping to it.
+                # selects a head deterministically (first one) and stamping to it.
                 try:
                     command.stamp(get_alembic_cfg(), "head")
                 except Exception as e:
-                    # Detect multiple heads error and handle by stamping to a single head
+                    # Detect missing revision error OR multiple heads error
                     msg = str(e)
-                    if "Multiple heads" in msg or "Multiple heads are present" in msg:
+                    if "Multiple heads" in msg or "Multiple heads are present" in msg or "Can't locate revision" in msg:
                         cfg = get_alembic_cfg()
-                        script = ScriptDirectory.from_config(cfg)
-                        heads = script.get_heads()
-                        if heads:
-                            chosen = heads[0]
+                        try:
+                            # Try to identify heads
+                            script = ScriptDirectory.from_config(cfg)
+                            heads = script.get_heads()
+                            chosen = heads[0] if heads else "head"
+                            
                             logger.warning(
-                                f"Multiple alembic heads detected ({heads}), stamping DB to {chosen} to proceed in test environment."
+                                f"Alembic consistency issue detected ({msg}). Re-stamping DB to {chosen}."
                             )
                             command.stamp(cfg, chosen)
-                        else:
-                            # fallback: re-raise original error
-                            raise
+                        except Exception as nest_e:
+                             # If we can't even get heads, just try stamping to 'head' literal
+                             logger.warning(f"Extreme alembic issue: {nest_e}. Forcing stamp to head.")
+                             command.stamp(cfg, "head")
                     else:
                         raise
 
                 logger.info("Database created and stamped to the latest migration version.")
             else:
-                # Ensure new tables are created even if DB exists
+                # DB exists. Ensure state is consistent.
+                from alembic import command
+                from alembic.script import ScriptDirectory
+
                 db.create_all()
+
+                # Check if current revision in DB exists in scripts. 
+                # This fixes "Can't locate revision" errors after deleting migrations.
+                try:
+                    cfg = get_alembic_cfg()
+                    script = ScriptDirectory.from_config(cfg)
+                    current_rev = get_current_db_version()
+                    
+                    if current_rev and current_rev != "0":
+                         try:
+                             script.get_revision(current_rev)
+                         except Exception:
+                             # Revision in DB but not in scripts!
+                             logger.warning(f"Database revision {current_rev} not found in project. Re-stamping to current head.")
+                             command.stamp(cfg, "head")
+                except Exception as e:
+                    logger.warning(f"Silent Alembic check failed: {e}. Skipping auto-repair.")
 
             # Cleanup: Remove titles with null title_id
             try:

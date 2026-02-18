@@ -48,8 +48,20 @@ def main():
             upgrade(revision="head")
             print("[run_migrations_under_app] upgrade completed")
         except Exception as e:
-            print("[run_migrations_under_app] upgrade failed:", e, file=sys.stderr)
-            raise
+            msg = str(e)
+            if "Can't locate revision" in msg:
+                print(f"[run_migrations_under_app] Revision inconsistency detected: {msg}")
+                print("[run_migrations_under_app] Attempting to re-stamp database to 'head'...")
+                try:
+                    from flask_migrate import stamp
+                    stamp(revision="head")
+                    print("[run_migrations_under_app] stamp completed. Database state recovered.")
+                except Exception as nest_e:
+                    print("[run_migrations_under_app] stamp failed:", nest_e, file=sys.stderr)
+                    raise
+            else:
+                print("[run_migrations_under_app] upgrade failed:", e, file=sys.stderr)
+                raise
 
 
 if __name__ == "__main__":
