@@ -1153,7 +1153,8 @@ def update_titles():
             # Match logic from get_game_info_item but for persistence.
             owned_update_app_ids = set()
             for a in title.apps:
-                if (a.app_type == APP_TYPE_UPD or a.app_type == "UPD") and a.owned:
+                a_type = (a.app_type or "").upper()
+                if (a_type == APP_TYPE_UPD or a_type == "UPD") and a.owned:
                     # Only count if the update app has actual identified files
                     if any(f.identified and not (f.filepath or "").lower().endswith((".xci", ".xcz")) for f in a.files):
                         owned_update_app_ids.add(a.id)
@@ -1607,7 +1608,8 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
     updates_info = []
 
     for a in all_title_apps:
-        if a["app_type"] in (APP_TYPE_UPD, "UPD") and a["owned"]:
+        a_type = (a.get("app_type") or "").upper()
+        if (a_type == APP_TYPE_UPD or a_type == "UPD") and a.owned:
             for f in a.get("files_info", []):
                 # Skip files with explicit errors, not identified, or missing path
                 if f.get("error") or not f.get("identified") or not f.get("path"):
@@ -2132,6 +2134,18 @@ def post_library_change():
                 # This is critical for updating 'up_to_date' and 'complete' status flags
                 # which control the badges (UPDATE, DLC) and filters
                 update_titles()
+
+                # 3.5. Update user-specific flags for all users
+                try:
+                    from models.user import User
+                    from repositories.titles_repository import TitlesRepository
+
+                    users = User.query.all()
+                    for u in users:
+                        TitlesRepository.precompute_flags_for_user(u.id)
+                        logger.info(f"Precomputed library flags for user {u.id}")
+                except Exception as e:
+                    logger.warning(f"Failed to precompute user flags: {e}")
 
                 # 4. Regenerate library cache (force=False)
                 # We use force=False to allow it to skip if hash matches (safety check)

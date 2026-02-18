@@ -11,6 +11,7 @@ import datetime
 from repositories.wishlistignore_repository import get_flattened_ignores_for_user
 import titles as titles_lib
 from sqlalchemy.dialects.postgresql import insert
+from constants import APP_TYPE_UPD, APP_TYPE_DLC, APP_TYPE_BASE
 
 
 def compute_flags_for_user_title(user_id, title_id, title_apps):
@@ -26,7 +27,7 @@ def compute_flags_for_user_title(user_id, title_id, title_apps):
         dlcs = []
 
     owned_dlc_ids = set(
-        [a.get("app_id", "").upper() for a in title_apps if a.get("app_type") == "dlc" and a.get("owned")]
+        [a.get("app_id", "").upper() for a in title_apps if a.get("app_type") == APP_TYPE_DLC.lower() and a.get("owned")]
     )
 
     has_non_ignored_dlcs = False
@@ -43,7 +44,7 @@ def compute_flags_for_user_title(user_id, title_id, title_apps):
         versions = []
 
     owned_versions = set(
-        int(a.get("app_version") or 0) for a in title_apps if a.get("app_type") == "upd" and a.get("owned")
+        int(a.get("app_version") or 0) for a in title_apps if a.get("app_type") == APP_TYPE_UPD.lower() and a.get("owned")
     )
     current_owned_version = max(owned_versions) if owned_versions else 0
 
@@ -58,7 +59,7 @@ def compute_flags_for_user_title(user_id, title_id, title_apps):
 
     # redundant: owned update apps with version lower than max that are not ignored
     has_non_ignored_redundant = False
-    owned_update_apps = [a for a in title_apps if a.get("app_type") == "upd" and a.get("owned")]
+    owned_update_apps = [a for a in title_apps if a.get("app_type") == APP_TYPE_UPD.lower() and a.get("owned")]
     if len(owned_update_apps) > 1:
         max_ver = max(int(a.get("app_version") or 0) for a in owned_update_apps)
         for a in owned_update_apps:
