@@ -33,7 +33,8 @@ try {
 
 // Fetch all ignore preferences on load
 function loadIgnorePreferences() {
-    return $.getJSON('/api/wishlist/ignore', (data) => {
+    return $.getJSON('/api/wishlist/ignore', (res) => {
+        const data = (res && res.data) ? res.data : res;
         ignorePreferences = data || {};
         debugLog('Ignore preferences loaded:', ignorePreferences);
     }).fail(() => {
@@ -412,8 +413,8 @@ function renderCardView(items) {
                             <span class="is-size-7 opacity-70 font-mono">&nbsp; ${game.size_formatted || '--'}</span>
                         </div>
                         <div class="is-flex gap-1 is-justify-content-end ml-auto">
-                            ${game.metacritic_score ? `<div class="metacritic-badge" title="Metacritic: ${game.metacritic_score}">${game.metacritic_score}</div>` : ''}
-                            ${game.has_redundant_updates ? `<span class="tag tag-redundant has-text-weight-bold is-small">${t('REDUNDANT')}</span>` : ''}
+                             ${game.metacritic_score ? `<div class="metacritic-badge" title="Metacritic: ${game.metacritic_score}">${game.metacritic_score}</div>` : ''}
+                            ${game.has_non_ignored_redundant ? `<span class="tag tag-redundant has-text-weight-bold is-small">${t('REDUNDANT')}</span>` : ''}
                             ${game.has_non_ignored_updates ? `<span class="tag tag-update has-text-weight-bold is-small">${t('UPDATE')}</span>` : ''}
                             ${game.has_non_ignored_dlcs ? `<span class="tag tag-dlc has-text-weight-bold is-small">${t('DLC')}</span>` : ''}
                         </div>
@@ -468,8 +469,8 @@ function renderIconView(items) {
                                  loading="lazy"
                                  class="lazy-image p-0" 
                                  style="object-fit: cover; width: 100%; height: 100%; opacity: 0; transition: opacity 0.3s;">
-                            <div class="status-indicator position-absolute">
-                                ${game.has_redundant_updates ? `<span class="tag tag-redundant is-tiny" style="position: absolute; top: -35px; right: -5px; font-size: 0.5rem; padding: 0 4px; border-radius: 4px;">${t('R')}</span>` : ''}
+                             <div class="status-indicator position-absolute">
+                                ${game.has_non_ignored_redundant ? `<span class="tag tag-redundant is-tiny" style="position: absolute; top: -35px; right: -5px; font-size: 0.5rem; padding: 0 4px; border-radius: 4px;">${t('R')}</span>` : ''}
                                 <span class="status-dot ${statusDotClass}"></span>
                             </div>
                         </figure>
@@ -511,9 +512,9 @@ function renderListView(items) {
         table.find('tbody').append(`
             <tr data-index="${index}" data-game-id="${game.id}" tabindex="0" role="button" onclick="focusAndOpenGame('${game.id}')">
                 <td class="p-1 has-text-centered"><img src="${game.iconUrl || '/static/img/no-icon.png'}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;"></td>
-                <td class="is-vcentered">
+                 <td class="is-vcentered">
                     <strong class="is-size-7-mobile">${game.name || 'Unknown'}</strong>
-                    ${game.has_redundant_updates ? `<span class="tag tag-redundant ml-2 has-text-weight-bold">${t('REDUNDANT')}</span>` : ''}
+                    ${game.has_non_ignored_redundant ? `<span class="tag tag-redundant ml-2 has-text-weight-bold">${t('REDUNDANT')}</span>` : ''}
                 </td>
                 <td class="font-mono is-size-7 is-vcentered">${game.id || '--'}</td>
                 <td class="is-vcentered has-text-centered"><span class="tag is-light is-small">v${game.display_version || '0'}</span></td>
@@ -598,7 +599,20 @@ function applyFilters() {
         }
         g.has_non_ignored_dlcs = hasNonIgnoredDlcs;
 
-        console.log('DEBUG: Final flags for', g.id, 'has_non_ignored_dlcs:', hasNonIgnoredDlcs, 'has_non_ignored_updates:', hasNonIgnoredUpdates);
+        let hasNonIgnoredRedundant = false;
+        if (g.has_redundant_updates && g.updates && Array.isArray(g.updates)) {
+            const ownedUpdates = g.updates.filter(u => u.owned).sort((a, b) => (parseInt(b.version) || 0) - (parseInt(a.version) || 0));
+            if (ownedUpdates.length > 1) {
+                // Keep the latest one as active, check if any of the older ones are not ignored
+                hasNonIgnoredRedundant = ownedUpdates.slice(1).some(u => {
+                    const v = (u.version || 0).toString();
+                    return !ignoredUpdates[v];
+                });
+            }
+        }
+        g.has_non_ignored_redundant = hasNonIgnoredRedundant;
+
+        console.log('DEBUG: Final flags for', g.id, 'has_non_ignored_dlcs:', hasNonIgnoredDlcs, 'has_non_ignored_updates:', hasNonIgnoredUpdates, 'has_non_ignored_redundant:', hasNonIgnoredRedundant);
 
         // Determine status color for UI
         if (!g.has_base) {
@@ -766,6 +780,18 @@ function searchLibraryServer(page = 1, append = false) {
                 });
             }
             g.has_non_ignored_dlcs = hasNonIgnoredDlcs;
+
+            let hasNonIgnoredRedundant = false;
+            if (g.has_redundant_updates && g.updates && Array.isArray(g.updates)) {
+                const ownedUpdates = g.updates.filter(u => u.owned).sort((a, b) => (parseInt(b.version) || 0) - (parseInt(a.version) || 0));
+                if (ownedUpdates.length > 1) {
+                    hasNonIgnoredRedundant = ownedUpdates.slice(1).some(u => {
+                        const v = (u.version || 0).toString();
+                        return !ignoredUpdates[v];
+                    });
+                }
+            }
+            g.has_non_ignored_redundant = hasNonIgnoredRedundant;
 
             if (!g.has_base) {
                 g.status_color = 'orange';

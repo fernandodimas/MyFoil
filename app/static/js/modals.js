@@ -626,7 +626,7 @@ function loadGameTagsAndWishlist(titleId) {
 }
 
 function toggleItemIgnore(titleId, type, itemId, value) {
-    console.log('DEBUG: Saving ignore preference', {titleId, type, itemId, value});
+    console.log('DEBUG: Saving ignore preference', { titleId, type, itemId, value });
     $.ajax({
         url: `/api/library/ignore/${titleId}`,
         type: 'POST',
@@ -641,34 +641,40 @@ function toggleItemIgnore(titleId, type, itemId, value) {
             if (res.success) {
                 const msg = value ? t('{type} {id} será ignorado').replace('{type}', (type || '').toUpperCase()).replace('{id}', itemId) : t('{type} {id} voltará a aparecer').replace('{type}', (type || '').toUpperCase()).replace('{id}', itemId);
                 showToast(msg, 'success');
-                
-                // NOVO: Recarregar preferências para este jogo e recalcular badges
-                if (ignorePreferences[titleId]) {
-                    if (type === 'dlc') {
-                        ignorePreferences[titleId].dlcs = ignorePreferences[titleId].dlcs || {};
-                        ignorePreferences[titleId].dlcs[itemId] = value;
-                    } else if (type === 'update') {
-                        ignorePreferences[titleId].updates = ignorePreferences[titleId].updates || {};
-                        ignorePreferences[titleId].updates[itemId] = value;
-                    }
+
+                // NOVO: Assegurar inicialização e atualizar preferências locais
+                if (!ignorePreferences[titleId]) {
+                    ignorePreferences[titleId] = { dlcs: {}, updates: {} };
                 }
-                
+
+                if (type === 'dlc') {
+                    ignorePreferences[titleId].dlcs = ignorePreferences[titleId].dlcs || {};
+                    ignorePreferences[titleId].dlcs[itemId] = value;
+                } else if (type === 'update') {
+                    ignorePreferences[titleId].updates = ignorePreferences[titleId].updates || {};
+                    ignorePreferences[titleId].updates[itemId] = value;
+                }
+
                 // Recalcular badges para este jogo na biblioteca
                 const game = games.find(g => g.id === titleId);
                 if (game) {
                     if (type === 'dlc') {
-                        const dlc = game.dlcs.find(d => d.app_id === itemId);
-                        if (dlc) dlc.ignored = value;
+                        if (game.dlcs) {
+                            const dlc = game.dlcs.find(d => (d.app_id === itemId || d.appId === itemId));
+                            if (dlc) dlc.ignored = value;
+                        }
                     } else if (type === 'update') {
-                        const upd = game.updates.find(u => u.version === itemId);
-                        if (upd) upd.ignored = value;
+                        if (game.updates) {
+                            const upd = game.updates.find(u => u.version.toString() === itemId.toString());
+                            if (upd) upd.ignored = value;
+                        }
                     }
-                    
-                    // Recalcular has_non_ignored_dlcs e has_non_ignored_updates
+
+                    // Recalcular has_non_ignored_* flags
                     const gameIgnore = ignorePreferences[titleId] || {};
                     const ignoredDlcs = gameIgnore.dlcs || {};
                     const ignoredUpdates = gameIgnore.updates || {};
-                    
+
                     let hasNonIgnoredDlcs = false;
                     if (game.has_base && game.dlcs && Array.isArray(game.dlcs)) {
                         hasNonIgnoredDlcs = game.dlcs.some(dlc => {
@@ -679,7 +685,7 @@ function toggleItemIgnore(titleId, type, itemId, value) {
                         });
                     }
                     game.has_non_ignored_dlcs = hasNonIgnoredDlcs;
-                    
+
                     let hasNonIgnoredUpdates = false;
                     if (game.has_base && !game.has_latest_version) {
                         if (game.updates && Array.isArray(game.updates)) {
@@ -693,9 +699,26 @@ function toggleItemIgnore(titleId, type, itemId, value) {
                         }
                     }
                     game.has_non_ignored_updates = hasNonIgnoredUpdates;
-                    
-                    // Re-renderizar se necessário
-                    renderLibrary();
+
+                    let hasNonIgnoredRedundant = false;
+                    if (game.has_redundant_updates && game.updates && Array.isArray(game.updates)) {
+                        const ownedUpdates = game.updates.filter(u => u.owned).sort((a, b) => (parseInt(b.version) || 0) - (parseInt(a.version) || 0));
+                        if (ownedUpdates.length > 1) {
+                            hasNonIgnoredRedundant = ownedUpdates.slice(1).some(u => {
+                                const v = (u.version || 0).toString();
+                                return !ignoredUpdates[v];
+                            });
+                        }
+                    }
+                    game.has_non_ignored_redundant = hasNonIgnoredRedundant;
+
+                    // Re-renderizar biblioteca para atualizar badges e status
+                    if (typeof applyFilters === 'function') {
+                        // Se houver filtros ativos, talvez sumir com o card
+                        applyFilters();
+                    } else if (typeof renderLibrary === 'function') {
+                        renderLibrary();
+                    }
                 }
             } else {
                 showToast(t('Erro ao salvar preferência'), 'error');

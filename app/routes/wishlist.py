@@ -103,17 +103,17 @@ def add_to_wishlist():
     if title_id:
         existing = WishlistRepository.get_by_user_and_title(current_user.id, title_id)
         if existing:
-            return error_response(ErrorCode.ALREADY_EXISTS, "Jogo já está na wishlist")
+            return error_response(ErrorCode.CONFLICT, "Jogo já está na wishlist")
 
         # Verificar se está na biblioteca
         owned_ids = TitlesRepository.get_owned_ids_from_list([title_id])
         if owned_ids:
-            return error_response(ErrorCode.ALREADY_EXISTS, "Jogo já está na sua biblioteca")
+            return error_response(ErrorCode.CONFLICT, "Jogo já está na sua biblioteca")
     elif name:
         # Evitar duplicatas por nome se não tiver title_id
         items = WishlistRepository.get_all_by_user(current_user.id)
         if any(item.name == name for item in items):
-            return error_response(ErrorCode.ALREADY_EXISTS, "Jogo já está na wishlist")
+            return error_response(ErrorCode.CONFLICT, "Jogo já está na wishlist")
 
     display_name = name
     release_date = data.get("release_date")

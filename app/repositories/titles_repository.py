@@ -86,13 +86,16 @@ class TitlesRepository:
                 # DLC filter: Owned games that have missing DLCs.
                 # Use the 'complete' flag which is reliably updated by update_titles().
                 # The materialized counter 'missing_dlcs_count' may be stale.
-                # If user-specific precomputed flags exist, prefer them for precise filtering
                 if user_id:
                     # Join to user_title_flags table if available
                     utf = db.metadata.tables.get("user_title_flags")
                     if utf is not None:
-                        query = query.join(utf, (utf.c.title_id == Titles.title_id) & (utf.c.user_id == user_id))
-                        query = query.filter(utf.c.has_non_ignored_dlcs == True)
+                        # Use outerjoin to avoid filtering out titles with no entry in utf table
+                        query = query.outerjoin(utf, (utf.c.title_id == Titles.title_id) & (utf.c.user_id == user_id))
+                        # Filter for has_non_ignored_dlcs == True OR (if row is missing) fallback to standard logic
+                        # But wait, if row is missing, the games SHOULD be checked.
+                        # To keep it simple and performant:
+                        query = query.filter(func.coalesce(utf.c.has_non_ignored_dlcs, (Titles.have_base == True) & (Titles.complete == False)) == True)
                     else:
                         query = query.filter(Titles.have_base == True, Titles.complete == False)
                 else:
@@ -103,8 +106,8 @@ class TitlesRepository:
                 if user_id:
                     utf = db.metadata.tables.get("user_title_flags")
                     if utf is not None:
-                        query = query.join(utf, (utf.c.title_id == Titles.title_id) & (utf.c.user_id == user_id))
-                        query = query.filter(utf.c.has_non_ignored_redundant == True)
+                        query = query.outerjoin(utf, (utf.c.title_id == Titles.title_id) & (utf.c.user_id == user_id))
+                        query = query.filter(func.coalesce(utf.c.has_non_ignored_redundant, Titles.redundant_updates_count > 0) == True)
                     else:
                         # Fallback to materialized counter
                         try:
