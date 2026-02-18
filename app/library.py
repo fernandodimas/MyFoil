@@ -1615,8 +1615,8 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
     for a in all_title_apps:
         if a["app_type"] in (APP_TYPE_UPD, "UPD") and a["owned"]:
             for f in a.get("files_info", []):
-                # Skip files with explicit errors, not identified, or missing path
-                if f.get("error") or not f.get("identified") or not f.get("path"):
+                # Skip files with explicit errors or missing path
+                if f.get("error") or not f.get("path"):
                     continue
                 file_id = f.get("id")
                 filepath = f.get("path", "").lower()

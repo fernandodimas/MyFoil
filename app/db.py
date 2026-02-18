@@ -711,7 +711,7 @@ def get_all_title_apps(title_id):
     tags = [tag.name for tag in title.tags]
     for a in title.apps:
         a_dict = to_dict(a)
-        a_dict["files_info"] = [{"path": f.filepath, "size": f.size, "id": f.id} for f in a.files]
+        a_dict["files_info"] = [{"path": f.filepath, "size": f.size, "id": f.id, "identified": f.identified} for f in a.files]
         a_dict["tags"] = tags
         results.append(a_dict)
     return results
