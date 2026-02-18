@@ -468,6 +468,7 @@ def library_search_paged_api():
         "redundant": redundant,
         "genre": genre,
         "tag": tag,
+        "user_id": current_user.id if current_user and current_user.is_authenticated else None,
     }
 
     # If dlc or redundant filters are requested, do post-serialization filtering with per-user ignore prefs

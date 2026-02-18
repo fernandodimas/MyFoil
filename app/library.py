@@ -1149,23 +1149,23 @@ def update_titles():
             # Count owned update apps with files (redundant updates counter)
             # Ignore XCI/XCZ files (cartridge dumps often include updates)
             # CORRECT LOGIC: Redundant means we own an update OLDER than the active one (max_owned_version)
-            redundant_updates = 0
+            # CORRECT LOGIC: Redundant = more than 1 owned update FILE (excluding XCI/XCZ bundled updates)
+            # Match logic from get_game_info_item
+            owned_update_files = []
             for a in title.apps:
-                if a.app_type == APP_TYPE_UPD and a.owned and len(a.files) > 0:
-                    try:
-                        app_ver = int(a.app_version or 0)
-                    except (ValueError, TypeError):
-                        app_ver = 0
-                    
-                    # Only count as redundant if it's strictly older than our best version
-                    if app_ver < max_owned_version:
-                        # Count only non-XCI/XCZ files
-                        non_xci_files = [
-                            f for f in a.files if f.filepath and not f.filepath.lower().endswith((".xci", ".xcz"))
-                        ]
-                        if non_xci_files:
-                            redundant_updates += 1
-            title.redundant_updates_count = redundant_updates
+                if (a.app_type == APP_TYPE_UPD or a.app_type == "UPD") and a.owned:
+                    for f in a.files:
+                        if not f.filepath:
+                            continue
+                        fpath = f.filepath.lower()
+                        # Skip XCI/XCZ as they serve as base+update usually
+                        if fpath.endswith((".xci", ".xcz")):
+                            continue
+                        owned_update_files.append(f.id)
+            
+            # If we have more than 1 owned update file (NSP/NSZ), we have redundancy
+            # The "latest" installed update is one, anything else is redundant.
+            title.redundant_updates_count = max(0, len(owned_update_files) - 1)
 
             # Missing DLCs counter: number of DLCs known in TitleDB that are not owned
             missing_dlcs = 0
