@@ -124,7 +124,7 @@ body {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     display: flex;
     flex-direction: column;
-    min-height: 100vh;
+    min-height: calc(100vh - var(--bulma-navbar-height, 3.25rem));
     overflow-x: hidden;
 }
 
@@ -1068,6 +1068,7 @@ p.game-description {
     border-radius: 16px;
     border: none !important;
     box-shadow: none !important;
+    overflow-y: auto;
 }
 
 .is-clickable {
