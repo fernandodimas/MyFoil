@@ -140,9 +140,7 @@ main {
     flex-shrink: 0;
 }
 
-.container.is-fluid {
-    overflow-x: hidden;
-}
+
 
 /* Cards and Boxes */
 .card, .box, .navbar, .modal-card-body, .modal-card-head, .modal-card-foot {

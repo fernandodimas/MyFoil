@@ -594,8 +594,13 @@ function loadGameTagsAndWishlist(titleId) {
             if (data.data) data = data.data;
             data = data || {};
 
-
-
+            // Sincronizar com a variável global
+            if (titleId) {
+                ignorePreferences[titleId] = {
+                    dlcs: data.dlcs || {},
+                    updates: data.updates || {}
+                };
+            }
 
             if (data.dlcs && Object.keys(data.dlcs).length > 0) {
 

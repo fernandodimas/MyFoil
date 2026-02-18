@@ -32,7 +32,7 @@ try {
 }
 
 // Fetch all ignore preferences on load
-function loadIgnorePreferences() {
+function loadAllIgnorePreferences() {
     return $.getJSON('/api/wishlist/ignore', (res) => {
         const data = (res && res.data) ? res.data : res;
         ignorePreferences = data || {};
@@ -44,7 +44,6 @@ function loadIgnorePreferences() {
     });
 }
 
-// Load library with server-side pagination (Phase 2.2) with UX improvements
 function loadLibraryPaginated(page = 1, append = false) {
     // Try paged endpoint first, fall back to legacy endpoint if it fails
     let API_ENDPOINT = '/api/library/paged';
@@ -583,32 +582,39 @@ function applyFilters() {
         }
         g.has_non_ignored_updates = hasNonIgnoredUpdates;
 
-        let hasNonIgnoredDlcs = false;
-        if (g.has_base && g.dlcs && Array.isArray(g.dlcs)) {
-            hasNonIgnoredDlcs = g.dlcs.some(dlc => {
-                const appIdKey = typeof dlc.app_id === 'string' ? dlc.app_id : (dlc.appId || '');
-                // Verificar em todos os formatos possíveis
-                const isIgnored = appIdKey ? (
-                    ignoredDlcs[appIdKey] ||
-                    ignoredDlcs[appIdKey.toUpperCase()] ||
-                    ignoredDlcs[appIdKey.toLowerCase()]
-                ) : false;
-                const isNotOwned = !dlc.owned;
+        if (g.has_base) {
+            if (g.dlcs && Array.isArray(g.dlcs)) {
+                hasNonIgnoredDlcs = g.dlcs.some(dlc => {
+                    const appIdKey = typeof dlc.app_id === 'string' ? dlc.app_id : (dlc.appId || '');
+                    const isIgnored = appIdKey ? (
+                        ignoredDlcs[appIdKey] ||
+                        ignoredDlcs[appIdKey.toUpperCase()] ||
+                        ignoredDlcs[appIdKey.toLowerCase()]
+                    ) : false;
+                    const isNotOwned = !dlc.owned;
 
-                return isNotOwned && !isIgnored;
-            });
+                    return isNotOwned && !isIgnored;
+                });
+            } else {
+                // Fallback to backend-computed value if dlcs array is not available
+                hasNonIgnoredDlcs = !!g.has_non_ignored_dlcs;
+            }
         }
         g.has_non_ignored_dlcs = hasNonIgnoredDlcs;
 
         let hasNonIgnoredRedundant = false;
-        if (g.has_redundant_updates && g.updates && Array.isArray(g.updates)) {
-            const ownedUpdates = g.updates.filter(u => u.owned).sort((a, b) => (parseInt(b.version) || 0) - (parseInt(a.version) || 0));
-            if (ownedUpdates.length > 1) {
-                // Keep the latest one as active, check if any of the older ones are not ignored
-                hasNonIgnoredRedundant = ownedUpdates.slice(1).some(u => {
-                    const v = (u.version || 0).toString();
-                    return !ignoredUpdates[v];
-                });
+        if (g.has_redundant_updates) {
+            if (g.updates && Array.isArray(g.updates)) {
+                const ownedUpdates = g.updates.filter(u => u.owned).sort((a, b) => (parseInt(b.version) || 0) - (parseInt(a.version) || 0));
+                if (ownedUpdates.length > 1) {
+                    hasNonIgnoredRedundant = ownedUpdates.slice(1).some(u => {
+                        const v = (u.version || 0).toString();
+                        return !ignoredUpdates[v];
+                    });
+                }
+            } else {
+                // Fallback to backend-computed value if updates array is not available
+                hasNonIgnoredRedundant = !!g.has_non_ignored_redundant;
             }
         }
         g.has_non_ignored_redundant = hasNonIgnoredRedundant;
@@ -1099,7 +1105,7 @@ $(document).ready(() => {
     });
 
     // Initial Load
-    loadIgnorePreferences().then(() => {
+    loadAllIgnorePreferences().then(() => {
         refreshLibrary();
     });
 
