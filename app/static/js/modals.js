@@ -695,7 +695,8 @@ function toggleItemIgnore(titleId, type, itemId, value) {
                                 return v > ownedVersion && !u.owned && !ignoredUpdates[v.toString()];
                             });
                         } else {
-                            hasNonIgnoredUpdates = true;
+                            // Fallback to backend-computed value when updates array is not available
+                            hasNonIgnoredUpdates = !!game.has_non_ignored_updates;
                         }
                     }
                     game.has_non_ignored_updates = hasNonIgnoredUpdates;

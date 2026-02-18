@@ -577,7 +577,8 @@ function applyFilters() {
                     return v > ownedVersion && !u.owned && !ignoredUpdates[v.toString()];
                 });
             } else {
-                hasNonIgnoredUpdates = true;
+                // Fallback to backend-computed value when updates array is not available
+                hasNonIgnoredUpdates = !!g.has_non_ignored_updates;
             }
         }
         g.has_non_ignored_updates = hasNonIgnoredUpdates;
