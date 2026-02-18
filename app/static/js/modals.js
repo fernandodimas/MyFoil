@@ -630,6 +630,9 @@ function loadGameTagsAndWishlist(titleId) {
 }
 
 function toggleItemIgnore(titleId, type, itemId, value) {
+    if (titleId && typeof titleId === 'string') {
+        titleId = titleId.toUpperCase();
+    }
 
     $.ajax({
         url: `/api/library/ignore/${titleId}`,

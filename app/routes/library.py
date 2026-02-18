@@ -104,30 +104,38 @@ def library_api():
         ignores_map = {}
         for rec in ignores:
             try:
-                ignores_map[rec.title_id] = {
+                # Normalize key to uppercase to match title objects
+                tid_key = str(rec.title_id or "").upper().strip()
+                if not tid_key:
+                    continue
+                ignores_map[tid_key] = {
                     "dlcs": json.loads(rec.ignore_dlcs or "{}"),
                     "updates": json.loads(rec.ignore_updates or "{}"),
                 }
             except Exception:
-                ignores_map[rec.title_id] = {"dlcs": {}, "updates": {}}
+                pass
     except Exception:
         ignores_map = {}
 
-    # Mutate each game in filtered_lib to include has_non_ignored_* flags computed with ignore prefs
+    # Create a user-specific list with computed flags without mutating shared cache
+    user_lib = []
     for g in filtered_lib:
         try:
-            tid = g.get("title_id") or g.get("id")
+            tid = str(g.get("title_id") or g.get("id") or "").upper().strip()
             pref = ignores_map.get(tid)
-            library.apply_ignore_preferences_to_game(g, pref)
+            # Shallow clone dict to avoid mutating shared cache objects
+            g_user = g.copy()
+            library.apply_ignore_preferences_to_game(g_user, pref)
+            user_lib.append(g_user)
         except Exception:
-            continue
+            user_lib.append(g)
 
     if dlc_filter:
-        filtered_lib = [g for g in filtered_lib if g.get("has_base") and g.get("has_non_ignored_dlcs")]
+        user_lib = [g for g in user_lib if g.get("has_base") and g.get("has_non_ignored_dlcs")]
     if redundant_filter:
-        filtered_lib = [g for g in filtered_lib if g.get("has_non_ignored_redundant")]
+        user_lib = [g for g in user_lib if g.get("has_non_ignored_redundant")]
 
-    total_items = len(filtered_lib)
+    total_items = len(user_lib)
     logger.info(f"Library API returning {total_items} items. Page: {page}, Per Page: {per_page}")
 
     # Calcular paginação
@@ -136,7 +144,7 @@ def library_api():
     end_idx = start_idx + per_page
 
     # Aplicar paginação
-    paginated_data = filtered_lib[start_idx:end_idx]
+    paginated_data = user_lib[start_idx:end_idx]
 
     # We need the hash for the header, so we reload from disk to get the full dict
     full_cache = library.load_library_from_disk()

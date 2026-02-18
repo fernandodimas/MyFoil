@@ -561,7 +561,8 @@ function applyFilters() {
     // Compute status flags based on ignore preferences
     games.forEach(g => {
         if (!g) return;
-        const gameIgnore = ignorePreferences[g.id] || {};
+        const titleId = (g.id || '').toUpperCase();
+        const gameIgnore = ignorePreferences[titleId] || {};
         const ignoredDlcs = gameIgnore.dlcs || {};
         const ignoredUpdates = gameIgnore.updates || {};
 
