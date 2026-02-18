@@ -1672,12 +1672,12 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
         try:
             # Redundant Logic: Keep the "best" update (highest version), check if OTHERS are ignored.
             owned_updates = [u for u in game.get("updates", []) if u.get("owned")]
-            
+
             # Sort by version descending. The first one is our "Active" update.
             owned_updates.sort(key=lambda x: int(x.get("version") or 0), reverse=True)
 
-                if len(owned_updates) > 1:
-                    game["has_non_ignored_redundant"] = True
+            if len(owned_updates) > 1:
+                game["has_non_ignored_redundant"] = True
         except Exception:
             pass
 
