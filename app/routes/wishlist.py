@@ -277,9 +277,7 @@ def set_wishlist_ignore(title_id):
         dlcs[item_id] = ignored
         WishlistIgnoreRepository.update(ignore_record.id, ignore_dlcs=json.dumps(dlcs))
     else:
-        updates = json.loads(ignore_record.ignore_updates) if ignore_record.ignore_updates else {}
-        updates[item_id] = ignored
-        WishlistIgnoreRepository.update(ignore_record.id, ignore_updates=json.dumps(updates))
+        return error_response(ErrorCode.INVALID_PARAMS, "Only dlc type is supported for ignore")
 
     # Invalidate per-user flattened cache so subsequent filtering sees new prefs
     try:
@@ -329,12 +327,10 @@ def get_wishlist_ignore(title_id):
 
     if ignore_record:
         dlcs = json.loads(ignore_record.ignore_dlcs) if ignore_record.ignore_dlcs else {}
-        updates = json.loads(ignore_record.ignore_updates) if ignore_record.ignore_updates else {}
     else:
         dlcs = {}
-        updates = {}
 
-    return success_response(data={"dlcs": dlcs, "updates": updates})
+    return success_response(data={"dlcs": dlcs})
 
 
 @wishlist_bp.route("/wishlist/ignore")
@@ -347,8 +343,7 @@ def get_all_wishlist_ignore():
     result = {}
     for record in ignore_records:
         result[record.title_id] = {
-            "dlcs": json.loads(record.ignore_dlcs) if record.ignore_dlcs else {},
-            "updates": json.loads(record.ignore_updates) if record.ignore_updates else {},
+            "dlcs": json.loads(record.ignore_dlcs) if record.ignore_dlcs else {}
         }
 
     return success_response(data=result)

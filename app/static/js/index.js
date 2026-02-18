@@ -564,9 +564,6 @@ function applyFilters() {
         const titleId = (g.id || '').toUpperCase();
         const gameIgnore = ignorePreferences[titleId] || {};
         const ignoredDlcs = gameIgnore.dlcs || {};
-        const ignoredUpdates = gameIgnore.updates || {};
-
-
 
         let hasNonIgnoredUpdates = false;
         if (g.has_base && !g.has_latest_version) {
@@ -574,10 +571,9 @@ function applyFilters() {
                 const ownedVersion = parseInt(g.owned_version) || 0;
                 hasNonIgnoredUpdates = g.updates.some(u => {
                     const v = parseInt(u.version);
-                    return v > ownedVersion && !u.owned && !ignoredUpdates[v.toString()];
+                    return v > ownedVersion && !u.owned;
                 });
             } else {
-                // Fallback to backend-computed value when updates array is not available
                 hasNonIgnoredUpdates = !!g.has_non_ignored_updates;
             }
         }
@@ -608,13 +604,9 @@ function applyFilters() {
             if (g.updates && Array.isArray(g.updates)) {
                 const ownedUpdates = g.updates.filter(u => u.owned).sort((a, b) => (parseInt(b.version) || 0) - (parseInt(a.version) || 0));
                 if (ownedUpdates.length > 1) {
-                    hasNonIgnoredRedundant = ownedUpdates.slice(1).some(u => {
-                        const v = (u.version || 0).toString();
-                        return !ignoredUpdates[v];
-                    });
+                    hasNonIgnoredRedundant = true;
                 }
             } else {
-                // Fallback to backend-computed value if updates array is not available
                 hasNonIgnoredRedundant = !!g.has_non_ignored_redundant;
             }
         }

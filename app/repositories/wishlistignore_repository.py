@@ -98,15 +98,10 @@ def get_flattened_ignores_for_user(user_id):
                 dlcs = json.loads(rec.ignore_dlcs) if rec.ignore_dlcs else {}
             except Exception:
                 dlcs = {}
-            try:
-                updates = json.loads(rec.ignore_updates) if rec.ignore_updates else {}
-            except Exception:
-                updates = {}
 
             # Normalize to sets for fast membership checks
             result[rec.title_id] = {
-                "dlcs": set(k.upper() for k, v in dlcs.items() if v),
-                "updates": set(str(k) for k, v in updates.items() if v),
+                "dlcs": set(k.upper() for k, v in dlcs.items() if v)
             }
         return result
     except Exception:

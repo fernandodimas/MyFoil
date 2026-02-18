@@ -1526,14 +1526,8 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
             ignored_dlcs_set = game_ignore.get("dlcs", set())
         else:
             ignored_dlcs_set = set(str(k).upper().strip() for k, v in (game_ignore.get("dlcs", {}) or {}).items() if v)
-
-        if isinstance(game_ignore.get("updates"), set):
-            ignored_updates_set = game_ignore.get("updates", set())
-        else:
-            ignored_updates_set = set(str(k).strip() for k, v in (game_ignore.get("updates", {}) or {}).items() if v)
     except Exception:
         ignored_dlcs_set = set()
-        ignored_updates_set = set()
 
     # Determine if ALL possible DLCs are owned
     # Start with TitleDB-known DLCs, but also include any DLC apps present in our DB to be robust
@@ -1580,9 +1574,8 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
                 # If there's an owned update for this version, skip
                 if v in owned_update_versions:
                     continue
-                if str(v) not in ignored_updates_set:
-                    has_non_ignored_updates = True
-                    break
+                has_non_ignored_updates = True
+                break
     except Exception:
         has_non_ignored_updates = False
 
@@ -1683,18 +1676,8 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
             # Sort by version descending. The first one is our "Active" update.
             owned_updates.sort(key=lambda x: int(x.get("version") or 0), reverse=True)
 
-            if len(owned_updates) > 1:
-                # We have at least 2 updates. 
-                # The first one (index 0) is kept as "Active".
-                # All subsequent ones (index 1+) are redundant candidates.
-                candidates = owned_updates[1:]
-                
-                for cand in candidates:
-                    c_ver = str(int(cand.get("version") or 0))
-                    # If this specific version is NOT ignored, then we have a visible redundant update
-                    if c_ver not in ignored_updates_set:
-                        game["has_non_ignored_redundant"] = True
-                        break
+                if len(owned_updates) > 1:
+                    game["has_non_ignored_redundant"] = True
         except Exception:
             pass
 

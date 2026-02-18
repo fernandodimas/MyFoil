@@ -18,7 +18,6 @@ def compute_flags_for_user_title(user_id, title_id, title_apps):
     # title_apps: list of app dicts as used elsewhere
     ignores = get_flattened_ignores_for_user(user_id).get(title_id, {})
     ignored_dlcs = set(k.upper() for k in ignores.get("dlcs", []))
-    ignored_updates = set(str(k) for k in ignores.get("updates", []))
 
     # compute possible dlcs from TitleDB (cheap cached calls)
     try:
@@ -55,20 +54,16 @@ def compute_flags_for_user_title(user_id, title_id, title_apps):
         v = int(vinfo.get("version") or 0)
         if v <= current_owned_version:
             continue
-        if str(v) not in ignored_updates:
-            has_non_ignored_updates = True
-            break
+        # If there's an available version > owned_version that we don't have, mark as pending
+        has_non_ignored_updates = True
+        break
 
     # redundant: owned update apps with version lower than max that are not ignored
     has_non_ignored_redundant = False
     owned_update_apps = [a for a in title_apps if a.get("app_type") in _UPD_TYPES and a.get("owned")]
     if len(owned_update_apps) > 1:
-        max_ver = max(int(a.get("app_version") or 0) for a in owned_update_apps)
-        for a in owned_update_apps:
-            v = int(a.get("app_version") or 0)
-            if v < max_ver and str(v) not in ignored_updates:
-                has_non_ignored_redundant = True
-                break
+        # If we have multiple update files, the old ones are effectively redundant
+        has_non_ignored_redundant = True
 
     return {
         "has_non_ignored_dlcs": has_non_ignored_dlcs,

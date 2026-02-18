@@ -109,8 +109,7 @@ def library_api():
                 if not tid_key:
                     continue
                 ignores_map[tid_key] = {
-                    "dlcs": json.loads(rec.ignore_dlcs or "{}"),
-                    "updates": json.loads(rec.ignore_updates or "{}"),
+                    "dlcs": json.loads(rec.ignore_dlcs or "{}")
                 }
             except Exception:
                 pass

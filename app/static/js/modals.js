@@ -89,7 +89,6 @@ function showGameDetails(id) {
             const renderUpdateRow = (u) => {
                 const file = u.files && u.files.length > 0 ? u.files[0] : null;
                 const isRedundant = u !== latest && game.updates.length > 1;
-                const ignoreId = `ignore-upd-${u.version}`;
                 return `
                     <tr>
                         <td class="has-text-weight-bold">v${escapeHtml(u.version)}</td>
@@ -113,10 +112,6 @@ function showGameDetails(id) {
                             ` : (u.owned ? `<span class="tag is-warning is-light is-small">${t('Erro')}</span>` : `
                                 <div class="field is-grouped is-grouped-centered is-align-items-center">
                                     <span class="tag is-danger is-light is-small mr-2">${t('Falta')}</span>
-                                    <input type="checkbox" class="is-small" 
-                                        id="${ignoreId}"
-                                        title="${t('Ignorar esta atualização')}"
-                                        onchange="toggleItemIgnore('${escapeHtml(game.id)}', 'update', '${escapeHtml(u.version)}', this.checked)">
                                 </div>
                             `)}
                         </td>
@@ -603,29 +598,19 @@ function loadGameTagsAndWishlist(titleId) {
             }
 
             if (data.dlcs && Object.keys(data.dlcs).length > 0) {
-
                 Object.entries(data.dlcs).forEach(([app_id, ignored]) => {
                     const cb = document.getElementById(`ignore-dlc-${app_id}`);
-
-                    if (cb) cb.checked = ignored;
-                });
-            }
-            if (data.updates && Object.keys(data.updates).length > 0) {
-
-                Object.entries(data.updates).forEach(([version, ignored]) => {
-                    const cb = document.getElementById(`ignore-upd-${version}`);
-
                     if (cb) cb.checked = ignored;
                 });
             }
         }).fail((xhr, status, error) => {
             console.error('DEBUG: Failed to load ignore preferences:', status, error);
             // Clear all checkboxes on error
-            $('input[id^="ignore-dlc-"], input[id^="ignore-upd-"]').prop('checked', false);
+            $('input[id^="ignore-dlc-"]').prop('checked', false);
         });
     } else {
         // No titleId -> clear checkboxes
-        $('input[id^="ignore-dlc-"], input[id^="ignore-upd-"]').prop('checked', false);
+        $('input[id^="ignore-dlc-"]').prop('checked', false);
     }
 }
 
@@ -651,15 +636,12 @@ function toggleItemIgnore(titleId, type, itemId, value) {
 
                 // NOVO: Assegurar inicialização e atualizar preferências locais
                 if (!ignorePreferences[titleId]) {
-                    ignorePreferences[titleId] = { dlcs: {}, updates: {} };
+                    ignorePreferences[titleId] = { dlcs: {} };
                 }
 
                 if (type === 'dlc') {
                     ignorePreferences[titleId].dlcs = ignorePreferences[titleId].dlcs || {};
                     ignorePreferences[titleId].dlcs[itemId] = value;
-                } else if (type === 'update') {
-                    ignorePreferences[titleId].updates = ignorePreferences[titleId].updates || {};
-                    ignorePreferences[titleId].updates[itemId] = value;
                 }
 
                 // Recalcular badges para este jogo na biblioteca
@@ -670,17 +652,11 @@ function toggleItemIgnore(titleId, type, itemId, value) {
                             const dlc = game.dlcs.find(d => (d.app_id === itemId || d.appId === itemId));
                             if (dlc) dlc.ignored = value;
                         }
-                    } else if (type === 'update') {
-                        if (game.updates) {
-                            const upd = game.updates.find(u => u.version.toString() === itemId.toString());
-                            if (upd) upd.ignored = value;
-                        }
                     }
 
                     // Recalcular has_non_ignored_* flags
                     const gameIgnore = ignorePreferences[titleId] || {};
                     const ignoredDlcs = gameIgnore.dlcs || {};
-                    const ignoredUpdates = gameIgnore.updates || {};
 
                     let hasNonIgnoredDlcs = false;
                     if (game.has_base && game.dlcs && Array.isArray(game.dlcs)) {
@@ -693,36 +669,8 @@ function toggleItemIgnore(titleId, type, itemId, value) {
                     }
                     game.has_non_ignored_dlcs = hasNonIgnoredDlcs;
 
-                    let hasNonIgnoredUpdates = false;
-                    if (game.has_base && !game.has_latest_version) {
-                        if (game.updates && Array.isArray(game.updates)) {
-                            const ownedVersion = parseInt(game.owned_version) || 0;
-                            hasNonIgnoredUpdates = game.updates.some(u => {
-                                const v = parseInt(u.version);
-                                return v > ownedVersion && !u.owned && !ignoredUpdates[v.toString()];
-                            });
-                        } else {
-                            // Fallback to backend-computed value when updates array is not available
-                            hasNonIgnoredUpdates = !!game.has_non_ignored_updates;
-                        }
-                    }
-                    game.has_non_ignored_updates = hasNonIgnoredUpdates;
-
-                    let hasNonIgnoredRedundant = false;
-                    if (game.has_redundant_updates && game.updates && Array.isArray(game.updates)) {
-                        const ownedUpdates = game.updates.filter(u => u.owned).sort((a, b) => (parseInt(b.version) || 0) - (parseInt(a.version) || 0));
-                        if (ownedUpdates.length > 1) {
-                            hasNonIgnoredRedundant = ownedUpdates.slice(1).some(u => {
-                                const v = (u.version || 0).toString();
-                                return !ignoredUpdates[v];
-                            });
-                        }
-                    }
-                    game.has_non_ignored_redundant = hasNonIgnoredRedundant;
-
                     // Re-renderizar biblioteca para atualizar badges e status
                     if (typeof applyFilters === 'function') {
-                        // Se houver filtros ativos, talvez sumir com o card
                         applyFilters();
                     } else if (typeof renderLibrary === 'function') {
                         renderLibrary();
