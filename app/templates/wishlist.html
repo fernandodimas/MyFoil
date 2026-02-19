@@ -109,6 +109,34 @@
     </div>
 </div>
 
+
+<!-- Add to Wishlist Modal -->
+<div class="modal" id="addToWishlistModal">
+    <div class="modal-background" onclick="closeModal('addToWishlistModal')"></div>
+    <div class="modal-card" style="max-width: 600px;">
+        <header class="modal-card-head">
+            <p class="modal-card-title"><i class="bi bi-search mr-2"></i> {{ t('wishlist.add_game_modal_title') }}</p>
+            <button class="delete" aria-label="close" onclick="closeModal('addToWishlistModal')"></button>
+        </header>
+        <section class="modal-card-body pb-6">
+            <div class="field">
+                <label class="label is-small">{{ t('wishlist.search_titledb') }}</label>
+                <div class="control has-icons-left">
+                    <input class="input" type="text" id="wishlistSearchInput" placeholder="{{ t('wishlist.search_placeholder_input') }}" autocomplete="off" onkeyup="searchTitleDBForWishlist()">
+                    <span class="icon is-left">
+                        <i class="bi bi-search"></i>
+                    </span>
+                </div>
+                <p class="help">{{ t('wishlist.search_help') }}</p>
+            </div>
+
+            <div id="wishlistSearchResults" class="mt-4 pb-4" style="max-height: 400px; overflow-y: auto;">
+                <!-- Results will be populated here -->
+            </div>
+        </section>
+    </div>
+</div>
+
 <style>
     /* Mimic behavior from upcoming and dashboard */
     #wishlistContainer {

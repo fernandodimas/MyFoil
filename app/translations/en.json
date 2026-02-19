@@ -650,5 +650,13 @@
     "settings.logs_cleared": "Logs successfully cleared",
     "settings.error_validating": "Error validating:",
     "settings.status_active": "Active",
-    "settings.status_inactive": "Missing/Inactive"
+    "settings.status_inactive": "Missing/Inactive",
+    "wishlist.add_game_modal_title": "Search Game to Add",
+    "wishlist.search_titledb": "Search in TitleDB",
+    "wishlist.search_placeholder_input": "Type game name...",
+    "wishlist.search_placeholder_modal": "Type to search games in TitleDB...",
+    "wishlist.search_min_chars": "Type at least 3 characters...",
+    "wishlist.no_results": "No games found",
+    "wishlist.search_error": "Search error. Check console.",
+    "wishlist.add_error": "Error adding to wishlist"
 }

@@ -650,5 +650,13 @@
     "settings.logs_cleared": "Registros borrados con éxito",
     "settings.error_validating": "Error validando:",
     "settings.status_active": "Activa",
-    "settings.status_inactive": "Ausente/Inactiva"
+    "settings.status_inactive": "Ausente/Inactiva",
+    "wishlist.add_game_modal_title": "Buscar Juego para Añadir",
+    "wishlist.search_titledb": "Buscar en TitleDB",
+    "wishlist.search_placeholder_input": "Escribe el nombre del juego...",
+    "wishlist.search_placeholder_modal": "Escribe para buscar juegos en TitleDB...",
+    "wishlist.search_min_chars": "Escribe al menos 3 caracteres...",
+    "wishlist.no_results": "No se encontraron juegos",
+    "wishlist.search_error": "Error de búsqueda. Revisa la consola.",
+    "wishlist.add_error": "Error al añadir a la lista de deseos"
 }

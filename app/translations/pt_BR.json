@@ -659,5 +659,13 @@
     "settings.logs_cleared": "Logs zerados com sucesso",
     "settings.error_validating": "Erro ao validar:",
     "settings.status_active": "Ativa",
-    "settings.status_inactive": "Ausente/Inativa"
+    "settings.status_inactive": "Ausente/Inativa",
+    "wishlist.add_game_modal_title": "Buscar Jogo para Adicionar",
+    "wishlist.search_titledb": "Buscar no TitleDB",
+    "wishlist.search_placeholder_input": "Digite o nome do jogo...",
+    "wishlist.search_placeholder_modal": "Digite para buscar jogos no TitleDB...",
+    "wishlist.search_min_chars": "Digite ao menos 3 caracteres...",
+    "wishlist.no_results": "Nenhum jogo encontrado",
+    "wishlist.search_error": "Erro ao buscar. Verifique o console.",
+    "wishlist.add_error": "Erro ao adicionar à wishlist"
 }
