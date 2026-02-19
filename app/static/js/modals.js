@@ -222,7 +222,6 @@ function showGameDetails(id) {
                                 <p class="is-size-6 has-text-weight-bold">${escapeHtml(game.publisher || '--')}</p>
                             </div>
                             <div class="mb-3">
-                            <div class="mb-3">
                                 <p class="is-size-7 heading mb-1 opacity-50">${t('common.release_date')}</p>
                                 <p class="is-size-6">${escapeHtml(game.release_date || '--')}</p>
                             </div>
