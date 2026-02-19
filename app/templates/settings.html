@@ -1247,8 +1247,8 @@
 
                                 <div class="box is-shadowless border p-4 mt-4">
                                     <h4 class="title is-6 mb-3">
-                                        <i class="bi bi-eye-fill has-text-primary mr-2"></i> Status do Watchdog
-                                        (Detecçãoautomática de arquivos)
+                                        <i class="bi bi-eye-fill has-text-primary mr-2"></i> {{
+                                        t('settings.watchdog_status') }}
                                         <button class="button is-ghost is-small float-right"
                                             onclick="refreshWatchdogStatus()">
                                             <i class="bi bi-arrow-clockwise"></i>
@@ -1260,7 +1260,8 @@
                                     <div class="buttons">
                                         <button class="button is-warning is-small" id="btnRestartWatchdog"
                                             onclick="restartWatchdog()">
-                                            <i class="bi bi-arrow-counterclockwise mr-2"></i> Reiniciar Watchdog
+                                            <i class="bi bi-arrow-counterclockwise mr-2"></i> {{
+                                            t('settings.watchdog_restart_button') }}
                                         </button>
                                     </div>
                                 </div>
@@ -1325,10 +1326,11 @@
                                 window.safeFetch('/api/system/watchdog/status')
                                     .then(r => r.json())
                                     .then(data => {
-                                        if (data.success && data.running) {
-                                            const statusColor = data.observer_alive ? 'has-text-success' : 'has-text-danger';
-                                            const statusIcon = data.observer_alive ? 'check-circle-fill' : 'exclamation-triangle-fill';
-                                            const statusText = data.observer_alive ? 'Rodando' : 'Parado/Erro';
+                                        const payload = data.data || {};
+                                        if (data.success && payload.running) {
+                                            const statusColor = payload.observer_alive ? 'has-text-success' : 'has-text-danger';
+                                            const statusIcon = payload.observer_alive ? 'check-circle-fill' : 'exclamation-triangle-fill';
+                                            const statusText = payload.observer_alive ? t("settings.running") : t("settings.stopped_error");
 
                                             let html = `
                                                 <p class="is-size-7 mb-2">
@@ -1336,44 +1338,44 @@
                                                     <i class="bi bi-${statusIcon} ${statusColor}"></i> 
                                                     <span class="${statusColor}">${statusText}</span>
                                                 </p>
-                                                <p class="is-size-7 mb-2"><strong>Diretórios Monitorados:</strong> ${data.directories.length}</p>
+                                                <p class="is-size-7 mb-2"><strong>${t('settings.monitored_directories')}</strong> ${payload.directories.length}</p>
                                             `;
 
-                                            if (data.directories.length > 0) {
+                                            if (payload.directories.length > 0) {
                                                 html += '<ul class="is-size-7 ml-4">';
-                                                data.directories.forEach(dir => {
+                                                payload.directories.forEach(dir => {
                                                     html += `<li>${dir}</li>`;
                                                 });
                                                 html += '</ul>';
                                             }
 
-                                            if (data.last_event_time) {
-                                                html += `<p class="is-size-7 mt-2"><strong>Último Evento:</strong> ${new Date(data.last_event_time).toLocaleString('pt-BR')}</p>`;
+                                            if (payload.last_event_time) {
+                                                html += `<p class="is-size-7 mt-2"><strong>${t('settings.last_event')}</strong> ${new Date(payload.last_event_time).toLocaleString()}</p>`;
                                             }
 
-                                            if (data.error_count > 0) {
-                                                html += `<p class="is-size-7 mt-2 has-text-warning"><strong>Erros:</strong> ${data.error_count}</p>`;
-                                                if (data.last_error) {
-                                                    html += `<p class="is-size-7 has-text-danger">Último erro: ${data.last_error}</p>`;
+                                            if (payload.error_count > 0) {
+                                                html += `<p class="is-size-7 mt-2 has-text-warning"><strong>${t('settings.errors')}</strong> ${payload.error_count}</p>`;
+                                                if (payload.last_error) {
+                                                    html += `<p class="is-size-7 has-text-danger">${t('settings.last_error')} ${payload.last_error}</p>`;
                                                 }
                                             }
 
-                                            if (data.restart_count > 0) {
-                                                html += `<p class="is-size-7 mt-2 has-text-info"><strong>Auto-Reinicializações:</strong> ${data.restart_count}</p>`;
+                                            if (payload.restart_count > 0) {
+                                                html += `<p class="is-size-7 mt-2 has-text-info"><strong>${t('settings.auto_restarts')}</strong> ${payload.restart_count}</p>`;
                                             }
 
                                             display.innerHTML = html;
                                         } else {
-                                            display.innerHTML = `<p class="is-size-7 has-text-danger"><i class="bi bi-x-circle-fill"></i> Watchdog não inicializado ou parado</p>`;
+                                            display.innerHTML = `<p class="is-size-7 has-text-danger"><i class="bi bi-x-circle-fill"></i> ${t('settings.watchdog_not_initialized')}</p>`;
                                         }
                                     })
                                     .catch(err => {
-                                        display.innerHTML = `<p class="is-size-7 has-text-danger">Erro ao buscar status: ${err}</p>`;
+                                        display.innerHTML = `<p class="is-size-7 has-text-danger">${t('settings.watchdog_fetch_error')} ${err}</p>`;
                                     });
                             }
 
                             function restartWatchdog() {
-                                if (!confirm("Reiniciar o watchdog? Ele será parado e iniciado novamente.")) return;
+                                if (!confirm(t('settings.restart_watchdog_confirm'))) return;
 
                                 const btn = document.getElementById('btnRestartWatchdog');
                                 btn.classList.add('is-loading');

@@ -13,98 +13,85 @@
             <!-- Left Group: Title -->
             <div class="is-flex gap-2 is-align-items-center">
                 <h1 class="title is-5 mb-0 has-text-weight-black tracking-tighter">
-                    <span class="has-text-primary"><i class="bi bi-calendar-event mr-2"></i></span>{{ t('Próximos') }}
-                    {% extends "base.html" %}
+                    <span class="has-text-primary"><i class="bi bi-calendar-event mr-2"></i></span>{{
+                    t('upcoming.title') }}
+                </h1>
+            </div>
 
-                    {% block title %}MyFoil - Próximos Lançamentos{% endblock %}
+            <!-- Middle Group: Search -->
+            <div class="is-flex-grow-1 is-flex gap-2">
+                <div class="control has-icons-left is-flex-grow-1" style="max-width: 300px;">
+                    <input class="input is-small is-rounded" type="text" id="upcomingSearch"
+                        placeholder="{{ t('upcoming.search_placeholder') }}">
+                    <span class="icon is-small is-left">
+                        <i class="bi bi-search"></i>
+                    </span>
+                </div>
+            </div>
 
-                    {% block content %}
-                    {% include 'nav.html' %}
+            <!-- Right Group: Zoom & View Controls -->
+            <div class="is-flex gap-3 is-align-items-center is-justify-content-center-mobile"
+                style="margin-left: auto;">
+                <div class="is-hidden-mobile mr-2">
+                    <span class="is-size-7 opacity-50 font-mono" id="totalItemsCount">-- {{ t('dashboard.items_count')
+                        }}</span>
+                </div>
 
-                    <div class="container is-fluid px-5 mt-5 pb-6">
-                        <!-- Controls Row (Mimic Dashboard) -->
-                        <div class="box p-3 mb-4 shadow-sm border-none bg-glass"
-                            style="position: relative; z-index: 20;">
-                            <div class="is-flex is-flex-wrap-wrap is-align-items-center gap-3 px-1">
+                <div class="is-flex is-align-items-center is-hidden-mobile" style="min-width: 100px;">
+                    <i class="bi bi-zoom-in is-size-7 mr-2 opacity-50"></i>
+                    <input id="gridZoom" class="slider is-small is-primary m-0" type="range" min="180" max="400"
+                        step="10" value="240">
+                </div>
 
-                                <!-- Left Group: Title -->
-                                <div class="is-flex gap-2 is-align-items-center">
-                                    <h1 class="title is-5 mb-0 has-text-weight-black tracking-tighter">
-                                        <span class="has-text-primary"><i
-                                                class="bi bi-calendar-event mr-2"></i></span>{{ t('Próximos') }}
-                                    </h1>
-                                </div>
+                <div class="buttons has-addons m-0 view-toggle" id="viewToggleButtons">
+                    <button class="button is-small" onclick="setView('card')" id="btnViewCard"
+                        title="{{ t('dashboard.view_card') }}"><span class="icon is-small"><i
+                                class="bi bi-grid-fill"></i></span></button>
+                    <button class="button is-small" onclick="setView('icon')" id="btnViewIcon"
+                        title="{{ t('dashboard.view_icon') }}"><span class="icon is-small"><i
+                                class="bi bi-image"></i></span></button>
+                    <button class="button is-small" onclick="setView('list')" id="btnViewList"
+                        title="{{ t('dashboard.view_list') }}"><span class="icon is-small"><i
+                                class="bi bi-list-ul"></i></span></button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                                <!-- Middle Group: Search -->
-                                <div class="is-flex-grow-1 is-flex gap-2">
-                                    <div class="control has-icons-left is-flex-grow-1" style="max-width: 300px;">
-                                        <input class="input is-small is-rounded" type="text" id="upcomingSearch"
-                                            placeholder="{{ t('upcoming.search_placeholder') }}">
-                                        <span class="icon is-small is-left">
-                                            <i class="bi bi-search"></i>
-                                        </span>
-                                    </div>
-                                </div>
+    <!-- API Message -->
+    <div id="apiMessage" class="notification is-warning is-light is-hidden mb-5 shadow-sm">
+        <button class="delete" onclick="this.parentElement.classList.add('is-hidden')"></button>
+        <div class="is-flex is-align-items-center">
+            <i class="bi bi-exclamation-triangle-fill is-size-4 mr-3"></i>
+            <div>
+                <p class="has-text-weight-bold">{{ t('common.config_required') }}</p>
+                <p id="apiMessageText"></p>
+                <a href="/settings" class="button is-small is-warning is-inverted mt-2">
+                    <i class="bi bi-gear-fill mr-1"></i> {{ t('common.configure_now') }}
+                </a>
+            </div>
+        </div>
+    </div>
 
-                                <!-- Right Group: Zoom & View Controls -->
-                                <div class="is-flex gap-3 is-align-items-center is-justify-content-center-mobile"
-                                    style="margin-left: auto;">
-                                    <div class="is-hidden-mobile mr-2">
-                                        <span class="is-size-7 opacity-50 font-mono" id="totalItemsCount">--
-                                            itens</span>
-                                    </div>
+    <!-- Empty State -->
+    <div id="upcomingEmpty" class="is-hidden has-text-centered py-6">
+        <div class="card p-5">
+            <i class="bi bi-calendar-x is-size-1 opacity-20 block mb-4"></i>
+            <h3 class="title is-4">{{ t('upcoming.empty') }}</h3>
+        </div>
+    </div>
 
-                                    <div class="is-flex is-align-items-center is-hidden-mobile"
-                                        style="min-width: 100px;">
-                                        <i class="bi bi-zoom-in is-size-7 mr-2 opacity-50"></i>
-                                        <input id="gridZoom" class="slider is-small is-primary m-0" type="range"
-                                            min="180" max="400" step="10" value="240">
-                                    </div>
+    <!-- Loading Indicator -->
+    <div id="upcomingLoading" class="has-text-centered py-6">
+        <span class="loader is-loading is-inline-block" style="width: 48px; height: 48px; border-width: 4px;"></span>
+        <p class="is-size-6 mt-4 opacity-60">{{ t('upcoming.loading') }}</p>
+    </div>
 
-                                    <div class="buttons has-addons m-0 view-toggle" id="viewToggleButtons">
-                                        <button class="button is-small" onclick="setView('card')" id="btnViewCard"
-                                            title="{{ t('Grade') }}">
-                                            <span class="icon is-small"><i class="bi bi-grid-fill"></i></span>
-                                        </button>
-                                        <button class="button is-small" onclick="setView('icon')" id="btnViewIcon"
-                                            title="{{ t('Ícones') }}">
-                                            <span class="icon is-small"><i class="bi bi-image"></i></span>
-                                        </button>
-                                        <button class="button is-small" onclick="setView('list')" id="btnViewList"
-                                            title="{{ t('Lista') }}">
-                                            <span class="icon is-small"><i class="bi bi-list-ul"></i></span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+    <!-- Games Container -->
+    <div id="upcomingContainer" class="mt-2">
+        <!-- Dynamic content injected via JS -->
+    </div>
+</div>
 
-                        <!-- API Message -->
-                        <div id="apiMessage" class="notification is-warning is-light is-hidden mb-5 shadow-sm">
-                            <button class="delete" onclick="this.parentElement.classList.add('is-hidden')"></button>
-                            <div class="is-flex is-align-items-center">
-                                <i class="bi bi-exclamation-triangle-fill is-size-4 mr-3"></i>
-                                <div>
-                                    <p class="has-text-weight-bold">{{ t('common.config_required') }}</p>
-                                    <p id="apiMessageText"></p>
-                                    <a href="/settings" class="button is-small is-warning is-inverted mt-2">
-                                        <i class="bi bi-gear-fill mr-1"></i> {{ t('common.configure_now') }}
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Loading Indicator -->
-                        <div id="upcomingLoading" class="has-text-centered py-6">
-                            <span class="loader is-loading is-inline-block"
-                                style="width: 48px; height: 48px; border-width: 4px;"></span>
-                            <p class="is-size-6 mt-4 opacity-60">{{ t('upcoming.loading') }}</p>
-                        </div>
-
-                        <!-- Games Container -->
-                        <div id="upcomingContainer" class="mt-2">
-                            <!-- Dynamic content injected via JS -->
-                        </div>
-
-                        <script src="/static/js/upcoming.js?v={{ build_version }}"></script>
-                        {% endblock %}
+<script src="/static/js/upcoming.js?v={{ build_version }}"></script>
+{% endblock %}
