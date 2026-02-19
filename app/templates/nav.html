@@ -15,24 +15,24 @@
         <div id="navbarMain" class="navbar-menu">
             <div class="navbar-start">
                 <a class="navbar-item {% if title=='Library' %}is-active{% endif %}" href="/">
-                    <i class="bi bi-collection-play mr-2"></i> {{ t('Biblioteca') }}
+                    <i class="bi bi-collection-play mr-2"></i> {{ t('nav.library') }}
                 </a>
 
                 <a class="navbar-item {% if title=='Statistics' %}is-active{% endif %}" href="/stats">
-                    <i class="bi bi-bar-chart mr-2"></i> {{ t('Estatísticas') }}
+                    <i class="bi bi-bar-chart mr-2"></i> {{ t('nav.stats') }}
                 </a>
 
                 <a class="navbar-item {% if title=='Wishlist' %}is-active{% endif %}" href="/wishlist">
-                    <i class="bi bi-heart mr-2"></i> {{ t('Wishlist') }}
+                    <i class="bi bi-heart mr-2"></i> {{ t('nav.wishlist') }}
                 </a>
 
                 <a class="navbar-item {% if title=='Upcoming' %}is-active{% endif %}" href="/upcoming">
-                    <i class="bi bi-calendar-event mr-2"></i> {{ t('Próximos') }}
+                    <i class="bi bi-calendar-event mr-2"></i> {{ t('nav.upcoming') }}
                 </a>
 
                 {% if current_user.is_admin or admin_account_created == false %}
                 <a class="navbar-item {% if title=='Settings' %}is-active{% endif %}" href="/settings">
-                    <i class="bi bi-sliders mr-2"></i> {{ t('Configurações') }}
+                    <i class="bi bi-sliders mr-2"></i> {{ t('nav.settings') }}
                 </a>
                 {% endif %}
             </div>
@@ -58,7 +58,7 @@
                 <div class="navbar-item">
                     <div class="control has-icons-right">
                         <input class="input is-rounded is-small" id="navbarSearch" type="text"
-                            placeholder="{{ t('Buscar jogos...') }}" list="gameTitlesList"
+                            placeholder="{{ t('nav.search_placeholder') }}" list="gameTitlesList"
                             oninput="toggleSearchClearBtn()">
                         <span class="icon is-small is-right" id="searchIcon">
                             <i class="bi bi-search"></i>
@@ -75,7 +75,7 @@
                 <div class="navbar-item">
                     <div class="buttons">
                         <button class="button is-ghost is-small" id="themeToggle" onclick="toggleTheme()"
-                            title="{{ t('Alternar Tema') }}">
+                            title="{{ t('nav.toggle_theme') }}">
                             <span class="icon">
                                 <i class="bi bi-circle-half"></i>
                             </span>
@@ -83,11 +83,11 @@
 
                         {% if current_user.is_authenticated %}
                         <a href="/logout" class="button is-light is-small">
-                            <strong>{{ t('Sair') }}</strong>
+                            <strong>{{ t('nav.logout') }}</strong>
                         </a>
                         {% else %}
                         <a href="/login" class="button is-primary is-small">
-                            <strong>{{ t('Entrar') }}</strong>
+                            <strong>{{ t('nav.login') }}</strong>
                         </a>
                         {% endif %}
                     </div>

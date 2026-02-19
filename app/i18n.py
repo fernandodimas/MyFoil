@@ -51,11 +51,31 @@ class I18n:
         locale = self.get_locale()
         return self.translations.get(locale, self.translations.get(self.default_locale, {}))
 
+    def get_available_languages(self):
+        """Return dict of available languages with friendly names"""
+        names = {
+            'en': 'English',
+            'pt_BR': 'Português (Brasil)',
+            'es': 'Español'
+        }
+        available = {}
+        # Ensure loaded translations are included
+        for code in self.translations.keys():
+            available[code] = names.get(code, code)
+            
+        # Ensure default hardcoded ones exist even if file load failed
+        for code, name in names.items():
+            if code not in available and os.path.exists(os.path.join(self.app.root_path, 'translations', f'{code}.json')):
+                 available[code] = name
+                 
+        return available
+
     def context_processor(self):
         from constants import BUILD_VERSION
         return dict(
             t=self.t, 
             get_locale=self.get_locale, 
             get_translations=self.get_translations_dict,
+            get_available_languages=self.get_available_languages,
             build_version=BUILD_VERSION
         )
