@@ -375,6 +375,15 @@ function renderCardView(items) {
         const safeName = escapeHtml(game.name);
         const safeId = escapeHtml(game.id);
 
+        const metacriticScore = game.metacritic_score;
+        let ratingBadge = '';
+        if (metacriticScore) {
+            const scoreClass = metacriticScore >= 75 ? 'high' : (metacriticScore >= 50 ? 'mid' : 'low');
+            ratingBadge = `<div class="metacritic-badge" data-score="${scoreClass}" title="Metacritic: ${metacriticScore}">
+                ${metacriticScore}
+            </div>`;
+        }
+
 
 
         const card = $(`
@@ -382,6 +391,7 @@ function renderCardView(items) {
                 <div class="card game-card is-paddingless">
                     <div class="card-image">
                         <figure class="image is-16by9 bg-light-soft" style="position: relative;">
+                            ${ratingBadge}
                             <img src="/static/img/no-icon.png" 
                                  data-src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" 
                                  alt="${safeName}" 

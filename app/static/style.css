@@ -1696,3 +1696,40 @@ input[type=range].slider.is-small {
 }
 
 
+/* Metacritic Badge - shows Metascore on game cards */
+.metacritic-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #6c3; /* Verde Metacritic */
+    color: #000;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    z-index: 10;
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    min-width: 28px;
+    text-align: center;
+}
+
+/* Cores baseadas na nota */
+.metacritic-badge[data-score="high"] {
+    background: #6c3; /* Verde - 75-100 */
+}
+
+.metacritic-badge[data-score="mid"] {
+    background: #fc3; /* Amarelo - 50-74 */
+}
+
+.metacritic-badge[data-score="low"] {
+    background: #f00; /* Vermelho - 0-49 */
+    color: #fff;
+}
+
+.metacritic-badge:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
