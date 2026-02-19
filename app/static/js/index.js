@@ -408,14 +408,16 @@ function renderCardView(items) {
                          <h3 class="game-title title is-6 has-text-weight-bold mb-3 line-clamp-2" title="${safeName}">${safeName}</h3>
                          
                         <div class="is-flex is-justify-content-between is-align-items-center mt-auto pt-2" style="width: 100%;">
-                            <span class="status-dot ${statusDotClass}"></span>
-                            <span class="is-size-7 opacity-70 font-mono">&nbsp; ${game.size_formatted || '--'}</span>
-                        </div>
-                        <div class="is-flex gap-1 is-justify-content-end ml-auto">
-                             ${game.metacritic_score ? `<div class="metacritic-badge" title="Metacritic: ${game.metacritic_score}">${game.metacritic_score}</div>` : ''}
-                            ${game.has_non_ignored_redundant ? `<span class="tag tag-redundant has-text-weight-bold is-small">${t('REDUNDANT')}</span>` : ''}
-                            ${game.has_non_ignored_updates ? `<span class="tag tag-update has-text-weight-bold is-small">${t('UPDATE')}</span>` : ''}
-                            ${game.has_non_ignored_dlcs ? `<span class="tag tag-dlc has-text-weight-bold is-small">${t('DLC')}</span>` : ''}
+                            <div class="is-flex is-align-items-center">
+                                <span class="status-dot ${statusDotClass}"></span>
+                                <span class="is-size-7 opacity-70 font-mono">&nbsp; ${game.size_formatted || '--'}</span>
+                            </div>
+                            <div class="is-flex gap-1 is-justify-content-end ml-auto">
+                                ${game.metacritic_score ? `<div class="metacritic-badge" title="Metacritic: ${game.metacritic_score}">${game.metacritic_score}</div>` : ''}
+                                ${game.has_non_ignored_redundant ? `<span class="tag tag-redundant has-text-weight-bold is-small">${t('REDUNDANT')}</span>` : ''}
+                                ${game.has_non_ignored_updates ? `<span class="tag tag-update has-text-weight-bold is-small">${t('UPDATE')}</span>` : ''}
+                                ${game.has_non_ignored_dlcs ? `<span class="tag tag-dlc has-text-weight-bold is-small">${t('DLC')}</span>` : ''}
+                            </div>
                         </div>
                     </div>
                 </div>
