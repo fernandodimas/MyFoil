@@ -74,8 +74,7 @@ async function loadUpcomingGames() {
 
         if (response.status === 400) {
             if (apiMessage) apiMessage.classList.remove('is-hidden');
-            const msg = data.message || (payload && payload.message) || 'Erro ao configurar API.';
-            if (apiMessageText) apiMessageText.innerText = msg;
+            $('#apiMessageText').text(t('upcoming.api_error'));
             return;
         }
 
@@ -106,7 +105,7 @@ function applyFilters() {
 
     // Update count
     const countEl = document.getElementById('totalItemsCount');
-    if (countEl) countEl.innerText = `${filteredGames.length} itens`;
+    if (countEl) countEl.innerText = `${filteredGames.length} ${t('dashboard.items_count')}`;
 
     // Show/hide empty state
     const empty = document.getElementById('upcomingEmpty');
@@ -153,7 +152,7 @@ function renderCardView(games, container) {
                     <div class="date-badge">
                         <i class="bi bi-calendar-check mr-1"></i> ${game.release_date_formatted}
                     </div>
-                    <button class="button is-small is-dark is-rounded border-none shadow-sm" style="position: absolute; top: 8px; right: 8px; z-index: 10; opacity: 0.8;" onclick="event.stopPropagation(); addToWishlistFromObject(${index})" title="Adicionar à Wishlist">
+                    <button class="button is-small is-dark is-rounded border-none shadow-sm" style="position: absolute; top: 8px; right: 8px; z-index: 10; opacity: 0.8;" onclick="event.stopPropagation(); addToWishlistFromObject(${index})" title="${t('upcoming.btn_add_wishlist_tooltip')}">
                         <i class="bi bi-heart"></i>
                     </button>
                 </div>
@@ -199,7 +198,7 @@ function renderListView(games, container) {
             <td class="is-vcentered has-text-centered font-mono is-size-7">${game.release_date_formatted}</td>
             <td class="is-vcentered has-text-right p-3">
                 <button class="button is-small is-light" onclick="event.stopPropagation(); addToWishlistFromObject(${index})">
-                    <i class="bi bi-heart mr-1"></i> Wishlist
+                    <i class="bi bi-heart mr-1"></i> ${t('upcoming.card_wishlist')}
                 </button>
             </td>
         </tr>
@@ -209,10 +208,10 @@ function renderListView(games, container) {
         <table class="table is-fullwidth is-hoverable mb-0 bg-transparent">
             <thead>
                 <tr style="border-bottom: 2px solid var(--primary)">
-                    <th class="p-2">Capa</th>
-                    <th>Título</th>
-                    <th class="has-text-centered">Lançamento</th>
-                    <th class="has-text-right p-3">Ações</th>
+                    <th class="p-2">${t('dashboard.table_icon')}</th>
+                    <th>${t('dashboard.table_title')}</th>
+                    <th class="has-text-centered">${t('upcoming.card_launch')}</th>
+                    <th class="has-text-right p-3">${t('dashboard.actions')}</th>
                 </tr>
             </thead>
             <tbody>
@@ -251,10 +250,10 @@ function showUpcomingDetails(index) {
                         <img src="${game.cover_url}" style="height: 100%; width: 100%; object-fit: cover;">
                     </figure>
                     <div class="mt-4 box is-shadowless border bg-light-soft">
-                        <p class="heading mb-1 opacity-50">Lançamento</p>
+                        <p class="heading mb-1 opacity-50">${t('upcoming.card_launch')}</p>
                         <p class="is-size-6 has-text-weight-bold mb-3">${game.release_date_formatted}</p>
                         
-                        <p class="heading mb-1 opacity-50">Gêneros</p>
+                        <p class="heading mb-1 opacity-50">${t('upcoming.card_genres')}</p>
                         <div class="tags">
                             ${(game.genres || []).map(g => `<span class="tag is-small">${g.name}</span>`).join('')}
                         </div>
@@ -262,7 +261,7 @@ function showUpcomingDetails(index) {
                         <hr class="my-4 opacity-10">
                         
                         <button class="button is-primary is-fullwidth" onclick="addToWishlistFromObject(${index})">
-                            <i class="bi bi-heart-fill mr-1"></i> Wishlist
+                            <i class="bi bi-heart-fill mr-1"></i> ${t('upcoming.card_wishlist')}
                         </button>
                     </div>
                 </div>
@@ -271,12 +270,12 @@ function showUpcomingDetails(index) {
                     <p class="subtitle is-6 opacity-60 mb-5">${game.involved_companies?.[0]?.company?.name || ''}</p>
                     
                     <div class="content opacity-80" style="font-size: 0.95rem; line-height: 1.6;">
-                        ${game.summary || 'Sem descrição disponível.'}
+                        ${game.summary || `<em>${t('upcoming.no_description')}</em>`}
                     </div>
                     
                     ${game.screenshots && game.screenshots.length > 0 ? `
                         <div class="mt-5">
-                            <p class="heading mb-3">Screenshots</p>
+                            <p class="heading mb-3">${t('upcoming.screenshots')}</p>
                             <div class="columns is-multiline is-mobile">
                                 ${game.screenshots.slice(0, 6).map((s, sIdx) => `
                                     <div class="column is-half" onclick="openScreenshotGallery(${sIdx})">
@@ -339,12 +338,12 @@ function addToWishlistByName(name, fallbackData = null) {
                     showToast(successMsg, 'success');
                     btn.removeClass('is-dark').addClass('is-danger').html('<i class="bi bi-heart-fill"></i>');
                 } else {
-                    showToast(res.error || t('Erro ao adicionar'), 'error');
+                    showToast(res.error || t('upcoming.error_adding'), 'error');
                 }
             },
             error: (xhr) => {
                 btn.removeClass('is-loading');
-                const error = xhr.responseJSON?.error || t('Erro ao adicionar');
+                const error = xhr.responseJSON?.error || t('upcoming.error_adding');
                 showToast(error, 'error');
             }
         });
@@ -362,7 +361,7 @@ function addToWishlistByName(name, fallbackData = null) {
             genres: fallbackData.genres || "",
             screenshots: fallbackData.screenshots || ""
         };
-        addViaApi(postData, `"${name}" ${t('adicionado à wishlist!')}`);
+        addViaApi(postData, `"${name}" ${t('upcoming.added_success')}`);
         return;
     }
 
@@ -378,7 +377,7 @@ function addToWishlistByName(name, fallbackData = null) {
             name: match.name,
             icon_url: match.iconUrl,
             banner_url: match.bannerUrl
-        }, `"${match.name}" ${t('adicionado à wishlist!')}`);
+        }, `"${match.name}" ${t('upcoming.added_success')}`);
     };
 
     trySearch(name).done(results => {
@@ -393,14 +392,14 @@ function addToWishlistByName(name, fallbackData = null) {
                         proceedToAdd(fallbackResults);
                     } else {
                         btn.removeClass('is-loading');
-                        showToast(t('Jogo não encontrado no TitleDB'), 'info');
+                        showToast(t('upcoming.not_found_titledb'), 'info');
                     }
                 }).fail(() => {
                     btn.removeClass('is-loading');
                 });
             } else {
                 btn.removeClass('is-loading');
-                showToast(t('Jogo não encontrado no TitleDB'), 'info');
+                showToast(t('upcoming.not_found_titledb'), 'info');
             }
         }
     }).fail(() => {

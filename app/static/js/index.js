@@ -85,8 +85,8 @@ function loadLibraryPaginated(page = 1, append = false) {
 
         // Update loading text based on page
         let loadingText = page === 1
-            ? t('Carregando Biblioteca...')
-            : t('Carregando página') + ` ${page}...`;
+            ? t('dashboard.loading_library')
+            : t('dashboard.loading_page') + ` ${page}...`;
         $('#loadingText').text(loadingText);
     }
 
@@ -178,7 +178,7 @@ function loadLibraryPaginated(page = 1, append = false) {
             const loadedPercent = totalItems > 0
                 ? `${Math.round((Math.min(PER_PAGE, totalItems) / totalItems) * 100)}%`
                 : '100%';
-            showToast(t('Library updated!') + ` (${loadedPercent})`, 'success');
+            showToast(t('dashboard.library_updated') + ` (${loadedPercent})`, 'success');
         }
 
         // Setup infinite scroll observer
@@ -196,7 +196,7 @@ function loadLibraryPaginated(page = 1, append = false) {
         if (!useLegacyFallback && page === 1 && !append) {
 
             localStorage.setItem('myfoil_use_legacy_endpoint', 'true');
-            $('#loadingText').text(t('Mudando para endpoint legado...'));
+            $('#loadingText').text(t('dashboard.switching_legacy'));
             $('#loadingIndicator').removeClass('is-hidden');
 
             setTimeout(() => {
@@ -204,7 +204,7 @@ function loadLibraryPaginated(page = 1, append = false) {
             }, 500);
         } else {
             $('#loadingProgress').removeClass('is-primary').addClass('is-danger');
-            showToast(t('Failed to refresh library: ') + (errorThrown || textStatus), 'error');
+            showToast(t('dashboard.error_refresh') + (errorThrown || textStatus), 'error');
         }
     });
 }
@@ -278,7 +278,7 @@ function initGenders(gamesList) {
     });
 
     const currentVal = $('#filterGender').val();
-    const genderSelect = $('#filterGender').empty().append(`<option value="">${t('All Genres')}</option>`);
+    const genderSelect = $('#filterGender').empty().append(`<option value="">${t('dashboard.all_genres')}</option>`);
     Array.from(genders).sort().forEach(g => genderSelect.append(new Option(g, g)));
     if (currentVal) $('#filterGender').val(currentVal);
 }
@@ -292,7 +292,7 @@ function initTags(gamesList) {
     });
 
     const currentVal = $('#filterTag').val();
-    const tagSelect = $('#filterTag').empty().append(`<option value="">${t('All Tags')}</option>`);
+    const tagSelect = $('#filterTag').empty().append(`<option value="">${t('dashboard.all_tags')}</option>`);
     Array.from(tags).sort().forEach(t => tagSelect.append(new Option(t, t)));
     if (currentVal) $('#filterTag').val(currentVal);
 }
@@ -418,9 +418,9 @@ function renderCardView(items) {
                                 <span class="is-size-7 opacity-70 font-mono">&nbsp; ${game.size_formatted || '--'}</span>
                             </div>
                             <div class="is-flex gap-1 is-justify-content-end ml-auto">
-                                ${game.has_non_ignored_redundant ? `<span class="tag tag-redundant has-text-weight-bold is-small">${t('REDUNDANT')}</span>` : ''}
-                                ${game.has_non_ignored_updates ? `<span class="tag tag-update has-text-weight-bold is-small">${t('UPDATE')}</span>` : ''}
-                                ${game.has_non_ignored_dlcs ? `<span class="tag tag-dlc has-text-weight-bold is-small">${t('DLC')}</span>` : ''}
+                                ${game.has_non_ignored_redundant ? `<span class="tag tag-redundant has-text-weight-bold is-small">${t('dashboard.badge_redundant')}</span>` : ''}
+                                ${game.has_non_ignored_updates ? `<span class="tag tag-update has-text-weight-bold is-small">${t('dashboard.badge_update')}</span>` : ''}
+                                ${game.has_non_ignored_dlcs ? `<span class="tag tag-dlc has-text-weight-bold is-small">${t('dashboard.badge_dlc')}</span>` : ''}
                             </div>
                         </div>
                     </div>
@@ -496,13 +496,13 @@ function renderListView(items) {
                 <table class="table is-fullwidth is-hoverable game-list-table mb-0">
                     <thead>
                         <tr class="has-background-light-soft" style="border-bottom: 2px solid var(--primary)">
-                            <th width="65" class="has-text-centered p-1">${t('Ícone')}</th>
-                            <th>${t('Título do Jogo')}</th>
-                            <th width="140">${t('Title ID')}</th>
-                            <th width="80" class="has-text-centered">${t('Versão')}</th>
-                            <th class="is-hidden-mobile" width="80">${t('Ratings')}</th>
-                            <th class="is-hidden-mobile" width="100">${t('Tamanho')}</th>
-                            <th class="is-hidden-mobile" width="100">${t('Status')}</th>
+                            <th width="65" class="has-text-centered p-1">${t('dashboard.table_icon')}</th>
+                            <th>${t('dashboard.table_title')}</th>
+                            <th width="140">${t('dashboard.table_tid')}</th>
+                            <th width="80" class="has-text-centered">${t('dashboard.table_version')}</th>
+                            <th class="is-hidden-mobile" width="80">${t('dashboard.table_ratings')}</th>
+                            <th class="is-hidden-mobile" width="100">${t('dashboard.table_size')}</th>
+                            <th class="is-hidden-mobile" width="100">${t('dashboard.table_status')}</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -512,14 +512,14 @@ function renderListView(items) {
     `);
     items.forEach((game, index) => {
         const statusColor = game.status_color === 'orange' ? 'has-text-warning' : (game.status_color === 'green' ? 'has-text-success' : 'has-text-grey');
-        const statusText = game.status_color === 'orange' ? t('Missing') : (game.status_color === 'green' ? t('Owned') : t('Incomplete'));
+        const statusText = game.status_color === 'orange' ? t('dashboard.status_missing') : (game.status_color === 'green' ? t('dashboard.status_owned') : t('dashboard.status_incomplete'));
 
         table.find('tbody').append(`
             <tr data-index="${index}" data-game-id="${game.id}" tabindex="0" role="button" onclick="focusAndOpenGame('${game.id}')">
                 <td class="p-1 has-text-centered"><img src="${game.iconUrl || '/static/img/no-icon.png'}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;"></td>
                  <td class="is-vcentered">
                     <strong class="is-size-7-mobile">${game.name || 'Unknown'}</strong>
-                    ${game.has_non_ignored_redundant ? `<span class="tag tag-redundant ml-2 has-text-weight-bold">${t('REDUNDANT')}</span>` : ''}
+                    ${game.has_non_ignored_redundant ? `<span class="tag tag-redundant ml-2 has-text-weight-bold">${t('dashboard.badge_redundant')}</span>` : ''}
                 </td>
                 <td class="font-mono is-size-7 is-vcentered">${game.id || '--'}</td>
                 <td class="is-vcentered has-text-centered"><span class="tag is-light is-small">v${game.display_version || '0'}</span></td>
@@ -664,7 +664,7 @@ function applyFilters() {
     const loadedCount = totalItems || games.length;
     const filteredCount = window.filteredGames.length;
     const countText = `${loadedCount}`;
-    $('#totalItemsCount, #totalItemsCountMobile').text(`${countText} ${t('Jogos')}`);
+    $('#totalItemsCount, #totalItemsCountMobile').text(`${countText} ${t('dashboard.games_count')}`);
 
     // Show/hide empty state
     if (window.filteredGames.length === 0) {

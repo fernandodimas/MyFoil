@@ -35,7 +35,7 @@ function loadStats(initFilter = false) {
 
         // Fill quick cards
         $('#stat-total-games').text(lib.total_titles || 0);
-        $('#stat-total-files-top').text((id.total_files || 0) + ' ' + t('Arquivos'));
+        $('#stat-total-files-top').text((id.total_files || 0) + ' ' + t('common.files'));
         $('#stat-total-size').text(lib.total_size_formatted || '0 B');
 
         // Breakdown
@@ -44,7 +44,7 @@ function loadStats(initFilter = false) {
         $('#stat-total-dlcs').text(lib.total_dlcs || 0);
 
         $('#stat-up-to-date-pct').text((lib.completion_rate || 0) + '%');
-        $('#stat-up-to-date-count').text((lib.up_to_date || 0) + ' ' + t('atualizados'));
+        $('#stat-up-to-date-count').text((lib.up_to_date || 0) + ' ' + t('common.updated_plural'));
         $('#stat-pending-count').text(lib.pending || 0);
 
         $('#stat-coverage-pct').text((tdb.coverage_pct || 0) + '%');
@@ -88,13 +88,14 @@ function renderGenreChart(genreData) {
     const ctx = chartCanvas.getContext('2d');
     const labels = Object.keys(genreData);
     const values = Object.values(genreData);
+    const total = values.reduce((sum, val) => sum + val, 0);
 
     genreChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [{
-                label: t('Jogos por Gênero'),
+                label: t('stats.games_by_genre'),
                 data: values,
                 backgroundColor: 'rgba(124, 58, 237, 0.7)',
                 borderColor: '#7c3aed',
@@ -107,7 +108,16 @@ function renderGenreChart(genreData) {
             maintainAspectRatio: false,
             indexAxis: 'y',
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function (tooltipItem) {
+                            const count = tooltipItem.raw;
+                            const pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+                            return `${tooltipItem.label}: ${count} ${t('common.files')} (${pct}%)`;
+                        }
+                    }
+                }
             },
             scales: {
                 x: { grid: { display: false } },
@@ -123,7 +133,7 @@ function renderRecentGames(games) {
 
     container.empty();
     if (!games.length) {
-        container.append(`<div class="column is-12 has-text-centered py-6 opacity-40">${t('Nenhum jogo encontrado.')}</div>`);
+        container.append(`<div class="column is-12 has-text-centered py-6 opacity-40">${t('stats.no_games_found')}</div>`);
         return;
     }
 

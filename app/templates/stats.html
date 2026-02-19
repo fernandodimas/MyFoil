@@ -12,18 +12,17 @@
                     <div class="level-left">
                         <div>
                             <h1 class="title is-2 mb-2" style="font-weight: 800; letter-spacing: -1px;">📊 {{
-                                t('Dashboard de Estatísticas') }}</h1>
-                            <p class="subtitle is-6 opacity-60">{{ t('Visão geral da sua coleção e comparação com o
-                                catálogo global.') }}</p>
+                                t('stats.dashboard_title') }}</h1>
+                            <p class="subtitle is-6 opacity-60">{{ t('stats.dashboard_subtitle') }}</p>
                         </div>
                     </div>
                     <div class="level-right">
                         <div class="field">
-                            <label class="label is-small opacity-50">{{ t('Filtrar por Biblioteca') }}</label>
+                            <label class="label is-small opacity-50">{{ t('stats.filter_library') }}</label>
                             <div class="control has-icons-left">
                                 <span class="select is-rounded is-small">
                                     <select id="libraryFilter" onchange="loadStats()">
-                                        <option value="">{{ t('Todas as Bibliotecas') }}</option>
+                                        <option value="">{{ t('stats.all_libraries') }}</option>
                                     </select>
                                 </span>
                                 <span class="icon is-small is-left">
@@ -38,64 +37,64 @@
             <!-- Stats Cards Row -->
             <div class="column is-3">
                 <div class="card box shadow-sm border-none p-5 h-100">
-                    <p class="heading is-size-7 opacity-50 mb-2">{{ t('Total da Biblioteca') }}</p>
+                    <p class="heading is-size-7 opacity-50 mb-2">{{ t('stats.card_total_library') }}</p>
                     <div class="is-flex is-align-items-center mb-3">
                         <span class="icon is-large has-text-primary mr-3">
                             <i class="bi bi-collection-play is-size-3"></i>
                         </span>
                         <div>
                             <p class="title is-3 m-0" id="stat-total-games">--</p>
-                            <p class="is-size-7" id="stat-total-files-top">-- {{ t('Arquivos') }}</p>
+                            <p class="is-size-7" id="stat-total-files-top">-- {{ t('stats.files') }}</p>
                         </div>
                     </div>
                     <div class="pt-3 border-top">
                         <p class="is-size-7 opacity-70"><i class="bi bi-hdd mr-1"></i> <span
-                                id="stat-total-size">--</span> {{ t('em disco') }}</p>
+                                id="stat-total-size">--</span> {{ t('stats.on_disk') }}</p>
                     </div>
                 </div>
             </div>
 
             <div class="column is-3">
                 <div class="card box shadow-sm border-none p-5 h-100">
-                    <p class="heading is-size-7 opacity-50 mb-2">{{ t('Status da Coleção') }}</p>
+                    <p class="heading is-size-7 opacity-50 mb-2">{{ t('stats.card_collection_status') }}</p>
                     <div class="is-flex is-align-items-center mb-3">
                         <span class="icon is-large has-text-success mr-3">
                             <i class="bi bi-check-circle-fill is-size-3"></i>
                         </span>
                         <div>
                             <p class="title is-3 m-0" id="stat-up-to-date-pct">-- %</p>
-                            <p class="is-size-7" id="stat-up-to-date-count">-- {{ t('atualizados') }}</p>
+                            <p class="is-size-7" id="stat-up-to-date-count">-- {{ t('stats.up_to_date') }}</p>
                         </div>
                     </div>
                     <div class="pt-3 border-top">
                         <p class="is-size-7 opacity-70"><i class="bi bi-clock-history mr-1"></i> <span
-                                id="stat-pending-count">--</span> {{ t('pendentes') }}</p>
+                                id="stat-pending-count">--</span> {{ t('stats.pending') }}</p>
                     </div>
                 </div>
             </div>
 
             <div class="column is-3">
                 <div class="card box shadow-sm border-none p-5 h-100">
-                    <p class="heading is-size-7 opacity-50 mb-2">{{ t('Cobertura TitleDB') }}</p>
+                    <p class="heading is-size-7 opacity-50 mb-2">{{ t('stats.card_titledb_coverage') }}</p>
                     <div class="is-flex is-align-items-center mb-3">
                         <span class="icon is-large has-text-warning mr-3">
                             <i class="bi bi-globe2 is-size-3"></i>
                         </span>
                         <div>
                             <p class="title is-3 m-0" id="stat-coverage-pct">-- %</p>
-                            <p class="is-size-7">{{ t('Catálogo Global') }}</p>
+                            <p class="is-size-7">{{ t('stats.global_catalog') }}</p>
                         </div>
                     </div>
                     <div class="pt-3 border-top">
                         <p class="is-size-7 opacity-70"><i class="bi bi-database mr-1"></i> <span
-                                id="stat-total-available">--</span> {{ t('títulos') }}</p>
+                                id="stat-total-available">--</span> {{ t('stats.titles') }}</p>
                     </div>
                 </div>
             </div>
 
             <div class="column is-3">
                 <div class="card box shadow-sm border-none p-5 h-100">
-                    <p class="heading is-size-7 opacity-50 mb-2">{{ t('Saúde da Identificação') }}</p>
+                    <p class="heading is-size-7 opacity-50 mb-2">{{ t('stats.card_id_health') }}</p>
                     <div class="is-flex is-align-items-center mb-3">
                         <span class="icon is-large has-text-info mr-3">
                             <i class="bi bi-fingerprint is-size-3"></i>
@@ -107,11 +106,11 @@
                     </div>
                     <div class="pt-3 border-top">
                         <div class="is-flex is-justify-content-between is-align-items-center">
-                            <p class="is-size-7 opacity-70" title="{{ t('Arquivos não identificados') }}">
+                            <p class="is-size-7 opacity-70" title="{{ t('stats.unidentified_files') }}">
                                 <i class="bi bi-file-earmark-x mr-1"></i> <span id="stat-unidentified-files"
                                     class="has-text-danger">--</span>
                             </p>
-                            <p class="is-size-7 opacity-70" title="{{ t('Títulos sem nome no Banco de Dados') }}">
+                            <p class="is-size-7 opacity-70" title="{{ t('stats.unnamed_titles') }}">
                                 <i class="bi bi-question-circle mr-1"></i> <span id="stat-unrecognized-count"
                                     class="has-text-warning">--</span>
                             </p>
@@ -125,25 +124,25 @@
                 <div class="level box py-3 px-5 mb-0 shadow-none border bg-light-soft">
                     <div class="level-item has-text-centered">
                         <div>
-                            <p class="heading opacity-50 m-0">{{ t('Jogos Base') }}</p>
+                            <p class="heading opacity-50 m-0">{{ t('stats.base_games') }}</p>
                             <p class="title is-5" id="stat-total-bases">--</p>
                         </div>
                     </div>
                     <div class="level-item has-text-centered">
                         <div>
-                            <p class="heading opacity-50 m-0">{{ t('Updates') }}</p>
+                            <p class="heading opacity-50 m-0">{{ t('stats.updates') }}</p>
                             <p class="title is-5" id="stat-total-updates">--</p>
                         </div>
                     </div>
                     <div class="level-item has-text-centered">
                         <div>
-                            <p class="heading opacity-50 m-0">{{ t('DLCs') }}</p>
+                            <p class="heading opacity-50 m-0">{{ t('stats.dlcs') }}</p>
                             <p class="title is-5" id="stat-total-dlcs">--</p>
                         </div>
                     </div>
                     <div class="level-item has-text-centered">
                         <div>
-                            <p class="heading opacity-50 m-0">{{ t('Fonte TitleDB') }}</p>
+                            <p class="heading opacity-50 m-0">{{ t('stats.titledb_source') }}</p>
                             <p class="title is-5 is-size-6" id="stat-source-name">--</p>
                         </div>
                     </div>
@@ -155,7 +154,7 @@
                 <div class="card box shadow-sm">
                     <header class="card-header border-none shadow-none">
                         <p class="card-header-title">
-                            <i class="bi bi-pie-chart-fill mr-2 has-text-primary"></i> {{ t('Distribuição por Gênero')
+                            <i class="bi bi-pie-chart-fill mr-2 has-text-primary"></i> {{ t('stats.genre_distribution')
                             }}
                         </p>
                     </header>

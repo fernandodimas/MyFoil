@@ -16,7 +16,7 @@
                     <div class="dropdown-trigger">
                         <button class="button is-primary is-small" aria-haspopup="true">
                             <span class="icon is-small"><i class="bi bi-funnel-fill"></i></span>
-                            <span class="is-hidden-mobile ml-1">{{ t('Filtros') }}</span>
+                            <span class="is-hidden-mobile ml-1">{{ t('dashboard.filters') }}</span>
                             <span class="icon is-small ml-1 is-hidden-tablet"><i class="bi bi-caret-down-fill"
                                     style="font-size: 0.5rem"></i></span>
                         </button>
@@ -24,21 +24,21 @@
                     <div class="dropdown-menu" id="dropdown-menu" role="menu" style="z-index: 200;">
                         <div class="dropdown-content p-4" style="min-width: 260px;">
                             <div class="field mb-3">
-                                <label class="label is-size-7 opacity-70">{{ t('Gênero') }}</label>
+                                <label class="label is-size-7 opacity-70">{{ t('dashboard.genre') }}</label>
                                 <div class="control">
                                     <div class="select is-small is-fullwidth">
                                         <select id="filterGender" class="filterInput">
-                                            <option value="">{{ t('Todos os Gêneros') }}</option>
+                                            <option value="">{{ t('dashboard.all_genres') }}</option>
                                         </select>
                                     </div>
                                 </div>
                             </div>
                             <div class="field">
-                                <label class="label is-size-7 opacity-70">{{ t('Tag') }}</label>
+                                <label class="label is-size-7 opacity-70">{{ t('dashboard.tag') }}</label>
                                 <div class="control">
                                     <div class="select is-small is-fullwidth">
                                         <select id="filterTag" class="filterInput">
-                                            <option value="">{{ t('Todas as Tags') }}</option>
+                                            <option value="">{{ t('dashboard.all_tags') }}</option>
                                         </select>
                                     </div>
                                 </div>
@@ -52,35 +52,35 @@
                     <div class="dropdown-trigger">
                         <button class="button is-info is-small is-light" aria-haspopup="true">
                             <span class="icon is-small"><i class="bi bi-sort-down"></i></span>
-                            <span class="is-hidden-mobile ml-1">{{ t('Ordenar') }}</span>
+                            <span class="is-hidden-mobile ml-1">{{ t('dashboard.sort') }}</span>
                         </button>
                     </div>
                     <div class="dropdown-menu" id="sort-menu" role="menu" style="z-index: 200;">
                         <div class="dropdown-content p-2" style="min-width: 200px;">
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="name-asc">{{ t('A-Z (Nome)')
-                                }}</a>
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="name-desc">{{ t('Z-A (Nome)')
-                                }}</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="name-asc">{{
+                                t('dashboard.sort_az') }}</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="name-desc">{{
+                                t('dashboard.sort_za') }}</a>
                             <hr class="dropdown-divider">
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-desc">{{ t('Lançamento
-                                (Novo)') }}</a>
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-asc">{{ t('Lançamento
-                                (Antigo)') }}</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-desc">{{
+                                t('dashboard.sort_release_new') }}</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="release-asc">{{
+                                t('dashboard.sort_release_old') }}</a>
                             <hr class="dropdown-divider">
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-desc">{{ t('Adicionado
-                                Recentemente') }}</a>
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-asc">{{ t('Adicionado
-                                Antigamente') }}</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-desc">{{
+                                t('dashboard.sort_added_new') }}</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="added-asc">{{
+                                t('dashboard.sort_added_old') }}</a>
                             <hr class="dropdown-divider">
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="id-asc">{{ t('Title ID
-                                (Crescente)') }}</a>
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="status-desc">{{ t('Status de
-                                Atualização') }}</a>
-                            <hr class="dropdown-divider">
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="size-desc">{{ t('Tamanho (Maior)')
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="id-asc">{{ t('dashboard.sort_tid')
                                 }}</a>
-                            <a class="dropdown-item is-size-7 sort-option" data-sort="size-asc">{{ t('Tamanho (Menor)')
-                                }}</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="status-desc">{{
+                                t('dashboard.sort_status') }}</a>
+                            <hr class="dropdown-divider">
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="size-desc">{{
+                                t('dashboard.sort_size_desc') }}</a>
+                            <a class="dropdown-item is-size-7 sort-option" data-sort="size-asc">{{
+                                t('dashboard.sort_size_asc') }}</a>
                         </div>
                     </div>
                 </div>
@@ -88,28 +88,29 @@
                 <!-- Quick Status Filters -->
                 <div class="buttons has-addons m-0">
                     <button class="button is-small is-light" id="btnFilterPendingBase"
-                        title="{{ t('Falta Arquivo Base') }}">
+                        title="{{ t('dashboard.filter_missing_base') }}">
                         <span class="icon is-small"><i class="bi bi-disc"></i></span>
                         <span class="is-hidden-mobile ml-1">Base</span>
                     </button>
                     <button class="button is-small is-light" id="btnFilterPendingUpd"
-                        title="{{ t('Pendente Atualização') }}">
+                        title="{{ t('dashboard.filter_pending_update') }}">
                         <span class="icon is-small"><i class="bi bi-arrow-up-circle"></i></span>
                         <span class="is-hidden-mobile ml-1">Update</span>
                     </button>
-                    <button class="button is-small is-light" id="btnFilterPendingDlc" title="{{ t('Pendente DLC') }}">
+                    <button class="button is-small is-light" id="btnFilterPendingDlc"
+                        title="{{ t('dashboard.filter_pending_dlc') }}">
                         <span class="icon is-small"><i class="bi bi-plus-circle"></i></span>
                         <span class="is-hidden-mobile ml-1">DLC</span>
                     </button>
                     <button class="button is-small is-light" id="btnFilterRedundant"
-                        title="{{ t('Arquivos Redundantes') }}">
+                        title="{{ t('dashboard.filter_redundant') }}">
                         <span class="icon is-small"><i class="bi bi-layers-half"></i></span>
                         <span class="is-hidden-mobile ml-1">Redundante</span>
                     </button>
                 </div>
 
                 <button id="clearFiltersBtn" class="button is-small is-outlined is-danger" onclick="clearFilters()"
-                    title="{{ t('Limpar Filtros') }}">
+                    title="{{ t('dashboard.clear_filters') }}">
                     <span class="icon is-small"><i class="bi bi-x"></i></span>
                 </button>
             </div>
@@ -118,7 +119,8 @@
             <div class="is-flex gap-2 is-align-items-center is-justify-content-center-mobile is-flex-grow-1-mobile"
                 style="margin-left: auto;">
                 <div class="is-hidden-mobile mr-2">
-                    <span class="is-size-7 opacity-50 font-mono" id="totalItemsCount">-- itens</span>
+                    <span class="is-size-7 opacity-50 font-mono" id="totalItemsCount">-- {{ t('dashboard.items_count')
+                        }}</span>
                 </div>
 
                 <div class="is-flex is-align-items-center is-hidden-mobile" style="min-width: 100px;">
@@ -129,19 +131,19 @@
 
                 <div class="buttons has-addons m-0 view-toggle" id="viewToggleButtons">
                     <button class="button is-small" onclick="setView('card')" id="btnViewCard"
-                        title="{{ t('Grade') }}"><span class="icon is-small"><i
+                        title="{{ t('dashboard.view_card') }}"><span class="icon is-small"><i
                                 class="bi bi-grid-fill"></i></span></button>
                     <button class="button is-small" onclick="setView('icon')" id="btnViewIcon"
-                        title="{{ t('Ícones') }}"><span class="icon is-small"><i
+                        title="{{ t('dashboard.view_icon') }}"><span class="icon is-small"><i
                                 class="bi bi-image"></i></span></button>
                     <button class="button is-small" onclick="setView('list')" id="btnViewList"
-                        title="{{ t('Lista') }}"><span class="icon is-small"><i
+                        title="{{ t('dashboard.view_list') }}"><span class="icon is-small"><i
                                 class="bi bi-list-ul"></i></span></button>
                 </div>
             </div>
 
             <div class="is-hidden-tablet is-flex-grow-1 has-text-centered">
-                <span class="is-size-7 opacity-50" id="totalItemsCountMobile">-- itens</span>
+                <span class="is-size-7 opacity-50" id="totalItemsCountMobile">-- {{ t('dashboard.items_count') }}</span>
             </div>
         </div>
     </div>
@@ -157,15 +159,15 @@
     <div id="noResults" class="is-hidden has-text-centered py-6">
         <div class="card p-5">
             <i class="bi bi-search is-size-1 opacity-20 block mb-4"></i>
-            <h3 class="title is-4">{{ t('Nenhum jogo encontrado') }}</h3>
-            <p class="subtitle is-6 opacity-50">{{ t('Tente ajustar seus filtros ou verifique as configurações.') }}</p>
+            <h3 class="title is-4">{{ t('dashboard.no_games_found') }}</h3>
+            <p class="subtitle is-6 opacity-50">{{ t('dashboard.try_adjusting_filters') }}</p>
         </div>
     </div>
 
     <!-- Infinite scroll loading indicator -->
     <div id="scrollLoading" class="has-text-centered py-4 is-hidden">
         <span class="loader is-loading is-inline-block" style="width: 24px; height: 24px; border-width: 3px;"></span>
-        <p class="is-size-7 mt-2 opacity-60">{{ t('Carregando mais jogos...') }}</p>
+        <p class="is-size-7 mt-2 opacity-60">{{ t('dashboard.loading_more') }}</p>
     </div>
 
     <!-- Loading indicator - Main -->
@@ -175,7 +177,8 @@
             <div class="progress-container mt-4 mx-auto" style="max-width: 200px;">
                 <progress class="progress is-small is-primary" value="0" max="100" id="loadingProgress">0%</progress>
             </div>
-            <p class="is-size-6 mt-4 opacity-60 has-text-weight-medium" id="loadingText">{{ t('Carregando Biblioteca...') }}</p>
+            <p class="is-size-6 mt-4 opacity-60 has-text-weight-medium" id="loadingText">{{
+                t('dashboard.loading_library') }}</p>
         </div>
     </div>
 
@@ -183,7 +186,7 @@
     <div id="paginationLoader" class="has-text-centered py-4 is-hidden bg-glass rounded">
         <div class="is-flex is-align-items-center is-justify-content-center gap-2">
             <span class="icon is-small has-text-primary"><i class="fas fa-spinner fa-spin"></i></span>
-            <span class="is-size-7 has-text-grey">{{ t('Carregando mais jogos...') }}</span>
+            <span class="is-size-7 has-text-grey">{{ t('dashboard.loading_more') }}</span>
         </div>
     </div>
 </div>

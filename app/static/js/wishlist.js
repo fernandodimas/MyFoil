@@ -106,13 +106,13 @@ async function loadWishlist() {
 
         // Update count
         const countEl = document.getElementById('totalItemsCount');
-        if (countEl) countEl.innerText = `${allWishlistItems.length} itens`;
+        if (countEl) countEl.innerText = `${allWishlistItems.length} ${t('dashboard.items_count')}`;
 
         renderWishlist();
     } catch (e) {
         console.error(e);
         if (loading) loading.classList.add('is-hidden');
-        if (container) container.innerHTML = `<div class="notification is-danger">${t('Erro ao carregar wishlist')}</div>`;
+        if (container) container.innerHTML = `<div class="notification is-danger">${t('wishlist.loading_error')}</div>`;
     }
 }
 
@@ -133,7 +133,7 @@ function renderWishlist() {
 }
 
 function formatDateDisplay(rawDate) {
-    if (!rawDate || rawDate === 'Unknown' || rawDate === '--') return { text: t('Desconhecida'), class: 'has-text-grey', icon: '' };
+    if (!rawDate || rawDate === 'Unknown' || rawDate === '--') return { text: t('common.unknown'), class: 'has-text-grey', icon: '' };
 
     let dateObj;
     let text = '';
@@ -201,7 +201,7 @@ function renderCardView(items, container) {
                     <div class="date-badge-wish ${date.class}">
                         ${date.icon}${date.text}
                     </div>
-                    <button class="button is-small is-danger is-light is-rounded" style="position: absolute; top: 8px; right: 8px; z-index: 10; opacity: 0.8;" onclick="event.stopPropagation(); removeFromWishlist(${item.id})" title="${t('Remover')}">
+                    <button class="button is-small is-danger is-light is-rounded" style="position: absolute; top: 8px; right: 8px; z-index: 10; opacity: 0.8;" onclick="event.stopPropagation(); removeFromWishlist(${item.id})" title="${t('common.remove')}">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
@@ -275,11 +275,11 @@ function renderListView(items, container) {
         <table class="table is-fullwidth is-hoverable mb-0 bg-transparent">
             <thead>
                 <tr style="border-bottom: 2px solid var(--primary)">
-                    <th class="p-2">Capa</th>
-                    <th>Título</th>
-                    <th class="is-hidden-mobile">Adicionado em</th>
-                    <th>Lançamento</th>
-                    <th class="has-text-right p-3">Ações</th>
+                    <th class="p-2">${t('dashboard.table_icon')}</th>
+                    <th>${t('dashboard.table_title')}</th>
+                    <th class="is-hidden-mobile">${t('wishlist.table_added_at')}</th>
+                    <th>${t('wishlist.table_release')}</th>
+                    <th class="has-text-right p-3">${t('dashboard.actions')}</th>
                 </tr>
             </thead>
             <tbody>
@@ -294,9 +294,9 @@ function removeFromWishlist(itemId) {
 
 
     confirmAction({
-        title: t('Remover da Wishlist'),
-        message: t('Deseja realmente remover este item da sua lista de desejos?'),
-        confirmText: t('Remover'),
+        title: t('wishlist.remove_title'),
+        message: t('wishlist.remove_confirm'),
+        confirmText: t('common.remove'),
         confirmClass: 'is-danger',
         onConfirm: async () => {
             try {
@@ -314,15 +314,15 @@ function removeFromWishlist(itemId) {
 
 
                 if (res.ok) {
-                    showToast(t('Item removido da wishlist'), 'success');
+                    showToast(t('wishlist.removed_success'), 'success');
                     loadWishlist();
                 } else {
                     console.error(`[WISHLIST] Error response: ${data.error}`);
-                    showToast(`${t('Erro ao remover item')}: ${data.error || t('Erro desconhecido')}`, 'error');
+                    showToast(`${t('wishlist.error_removing')}: ${data.error || t('common.unknown_error')}`, 'error');
                 }
             } catch (e) {
                 console.error(`[WISHLIST] Network error:`, e);
-                showToast(`${t('Erro ao remover item')}: ${e.message}`, 'error');
+                showToast(`${t('wishlist.error_removing')}: ${e.message}`, 'error');
             }
         }
     });
@@ -341,18 +341,18 @@ async function changePriority(tid, newPriority) {
         if (res.ok) {
             loadWishlist();
         } else {
-            showToast(t('Erro ao atualizar prioridade'), 'error');
+            showToast(t('wishlist.priority_error'), 'error');
         }
     } catch (e) {
         console.error(e);
-        showToast(t('Erro de conexão'), 'error');
+        showToast(t('common.connection_error'), 'error');
     }
 }
 
 function openAddToWishlistModal() {
     openModal('addToWishlistModal');
     $('#wishlistSearchInput').val('').focus();
-    $('#wishlistSearchResults').html(`<p class="has-text-centered py-4 opacity-50">${t('Digite para buscar jogos no TitleDB...')}</p>`);
+    $('#wishlistSearchResults').html(`<p class="has-text-centered py-4 opacity-50">${t('wishlist.search_placeholder_modal')}</p>`);
 }
 
 let wishlistSearchTimeout;
@@ -360,7 +360,7 @@ function searchTitleDBForWishlist() {
     const query = $('#wishlistSearchInput').val();
 
     if (!query || query.length < 3) {
-        $('#wishlistSearchResults').html(`<p class="has-text-centered py-4 opacity-50">${t('Digite ao menos 3 caracteres...')}</p>`);
+        $('#wishlistSearchResults').html(`<p class="has-text-centered py-4 opacity-50">${t('wishlist.search_min_chars')}</p>`);
         return;
     }
 
@@ -403,15 +403,15 @@ function searchTitleDBForWishlist() {
                     const shorter = parts[0].trim();
                     trySearch(shorter).done(fallbackResults => {
                         if (!renderResults(fallbackResults)) {
-                            $('#wishlistSearchResults').html(`<p class="has-text-centered py-4 opacity-50">${t('Nenhum jogo encontrado')}</p>`);
+                            $('#wishlistSearchResults').html(`<p class="has-text-centered py-4 opacity-50">${t('wishlist.no_results')}</p>`);
                         }
                     });
                 } else {
-                    $('#wishlistSearchResults').html(`<p class="has-text-centered py-4 opacity-50">${t('Nenhum jogo encontrado')}</p>`);
+                    $('#wishlistSearchResults').html(`<p class="has-text-centered py-4 opacity-50">${t('wishlist.no_results')}</p>`);
                 }
             }
         }).fail(() => {
-            $('#wishlistSearchResults').html(`<p class="has-text-centered py-4 has-text-danger">${t('Erro ao buscar. Verifique o console.')}</p>`);
+            $('#wishlistSearchResults').html(`<p class="has-text-centered py-4 has-text-danger">${t('wishlist.search_error')}</p>`);
         });
     }, 300);
 }
@@ -439,15 +439,15 @@ function addGameToWishlistWithData(data) {
         data: JSON.stringify(data),
         success: (res) => {
             if (res.success) {
-                showToast(`"${data.name}" ${t('adicionado à wishlist!')}`, 'success');
+                showToast(`"${data.name}" ${t('upcoming.added_success')}`, 'success');
                 closeModal('addToWishlistModal');
                 loadWishlist();
             } else {
-                showToast(res.error || t('Erro ao adicionar'), 'error');
+                showToast(res.error || t('upcoming.error_adding'), 'error');
             }
         },
         error: () => {
-            showToast(t('Erro ao adicionar à wishlist'), 'error');
+            showToast(t('wishlist.add_error'), 'error');
         }
     });
 }
