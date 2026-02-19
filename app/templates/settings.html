@@ -832,7 +832,7 @@
                                 </p>
                                 <div class="card-header-icon pt-4 pr-5">
                                     <button class="button is-small is-dark is-outlined" onclick="fillErrorsTable()">
-                                        <i class="bi bi-arrow-clockwise mr-1"></i> Atualizar
+                                        <i class="bi bi-arrow-clockwise mr-1"></i> {{ t('common.refresh') }}
                                     </button>
                                 </div>
                             </header>
@@ -916,7 +916,7 @@
                                     <table class="table is-fullwidth" id="tagsTable">
                                         <thead>
                                             <tr>
-                                                <th>Tag</th>
+                                                <th>{{ t('settings.tag') }}</th>
                                                 <th>Visualização</th>
                                                 <th class="has-text-right">{{ t('common.actions') }}</th>
                                             </tr>
@@ -933,11 +933,11 @@
                         <div class="card box shadow-sm">
                             <header class="card-header border-none shadow-none">
                                 <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-clock-history mr-2"></i> Histórico de Atividade
+                                    <i class="bi bi-clock-history mr-2"></i> {{ t('settings.activity_history') }}
                                 </p>
                                 <div class="card-header-icon pt-4 pr-5">
                                     <button class="button is-small is-ghost" onclick="fillActivityLogs()">
-                                        <i class="bi bi-arrow-clockwise mr-1"></i> Atualizar
+                                        <i class="bi bi-arrow-clockwise mr-1"></i> {{ t('common.refresh') }}
                                     </button>
                                 </div>
                             </header>
@@ -1011,7 +1011,7 @@
                         <div class="card box shadow-sm">
                             <header class="card-header border-none shadow-none">
                                 <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-cloud-arrow-down mr-2"></i> APIs Externas
+                                    <i class="bi bi-cloud-arrow-down mr-2"></i> {{ t('settings.external_apis') }}
                                 </p>
                             </header>
                             <div class="card-content pt-0">
@@ -1544,12 +1544,12 @@
                         <div class="card box shadow-sm">
                             <header class="card-header border-none shadow-none">
                                 <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-patch-check mr-2"></i> Plugins Instalados
+                                    <i class="bi bi-patch-check mr-2"></i> {{ t('settings.plugins_installed') }}
                                 </p>
                             </header>
                             <div class="card-content pt-0">
                                 <p class="is-size-7 opacity-60 mb-5">
-                                    Plugins permitem estender a funcionalidade do MyFoil com recursos personalizados.
+                                    {{ t('settings.plugins_desc') }}
                                 </p>
                                 <div id="pluginsList">
                                     <!-- Plugins injected by JS -->
@@ -1659,7 +1659,7 @@
                     <!-- API Tokens Section -->
                     <section id="section-ApiTokens" class="settings-section is-hidden">
                         <div class="mb-5">
-                            <h2 class="title is-4">Tokens de API</h2>
+                            <h2 class="title is-4">{{ t('settings.api_tokens') }}</h2>
                             <p class="subtitle is-6 has-text-grey">{{ t('settings.manage_access_tokens') }}
                                 automatizados.</p>
                         </div>
@@ -1676,7 +1676,7 @@
                                 <div class="level-right">
                                     <button class="button is-primary is-small"
                                         onclick="tokensManager.openCreateModal()">
-                                        <i class="bi bi-plus-lg mr-2"></i> Novo Token
+                                        <i class="bi bi-plus-lg mr-2"></i> {{ t('settings.new_token') }}
                                     </button>
                                 </div>
                             </div>
@@ -1687,7 +1687,7 @@
                                         <tr>
                                             <th>Nome</th>
                                             <th>Prefixo</th>
-                                            <th>Criado em</th>
+                                            <th>{{ t('settings.created_at') }}</th>
                                             <th>{{ t('settings.last_use') }}</th>
                                             <th class="has-text-right">{{ t('common.actions') }}</th>
                                         </tr>
@@ -1749,7 +1749,7 @@
                         <div class="modal-background" onclick="tokensManager.closeCreateModal()"></div>
                         <div class="modal-card">
                             <header class="modal-card-head">
-                                <p class="modal-card-title">Novo Token de API</p>
+                                <p class="modal-card-title">{{ t('settings.new_token') }} de API</p>
                                 <button class="delete" aria-label="close"
                                     onclick="tokensManager.closeCreateModal()"></button>
                             </header>
@@ -1758,12 +1758,12 @@
                                     <label class="label">{{ t('settings.token_name') }}</label>
                                     <div class="control">
                                         <input class="input" type="text" id="newTokenName"
-                                            placeholder="Ex: Meu Script Python">
+                                            placeholder="{{ t('settings.token_placeholder') }}">
                                     </div>
                                 </div>
                                 <div id="generatedTokenContainer"
                                     class="is-hidden notification is-success is-light mt-4">
-                                    <p class="has-text-weight-bold mb-2">Token Gerado com Sucesso!</p>
+                                    <p class="has-text-weight-bold mb-2">{{ t('settings.token_generated_success') }}</p>
                                     <p class="is-size-7 mb-2">{{ t('settings.copy_token_now') }}
                                     </p>
                                     <div class="field has-addons">
