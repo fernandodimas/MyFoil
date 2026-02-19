@@ -376,6 +376,10 @@ function renderCardView(items) {
         const safeId = escapeHtml(game.id);
 
         const metacriticScore = game.metacritic_score;
+        // Debug score availability
+        if (metacriticScore) console.log(`Game: ${safeName}, Score: ${metacriticScore}`);
+
+
         let ratingBadge = '';
         if (metacriticScore) {
             const scoreClass = metacriticScore >= 75 ? 'high' : (metacriticScore >= 50 ? 'mid' : 'low');
@@ -391,13 +395,13 @@ function renderCardView(items) {
                 <div class="card game-card is-paddingless">
                     <div class="card-image">
                         <figure class="image is-16by9 bg-light-soft" style="position: relative;">
-                            ${ratingBadge}
                             <img src="/static/img/no-icon.png" 
                                  data-src="${game.bannerUrl || game.iconUrl || '/static/img/no-icon.png'}" 
                                  alt="${safeName}" 
                                  loading="lazy"
                                  class="lazy-image"
-                                 style="object-fit: cover; opacity: 0; transition: opacity 0.3s;">
+                                 style="object-fit: cover; opacity: 0; transition: opacity 0.3s; position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+                            ${ratingBadge}
                         </figure>
                     </div>
                     <div class="card-content">
