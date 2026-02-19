@@ -11,30 +11,44 @@
             <div class="column is-3">
                 <aside class="menu is-sticky">
                     <p class="menu-label has-text-weight-black is-size-5 mb-5 tracking-tighter">
-                        <i class="bi bi-sliders2-vertical has-text-primary mr-2"></i> Configurações
+                        <i class="bi bi-sliders2-vertical has-text-primary mr-2"></i> {{ t('settings.menu_title') }}
                     </p>
                     <ul class="menu-list" id="settingsNav">
-                        <li><a data-target="General" class="is-active"><i class="bi bi-gear-fill mr-2"></i> Geral</a>
+                        <li><a data-target="General" class="is-active"><i class="bi bi-gear-fill mr-2"></i> {{
+                                t('settings.menu_general') }}</a>
                         </li>
-                        <li><a data-target="Authentication"><i class="bi bi-people-fill mr-2"></i> Autenticação</a></li>
-                        <li><a data-target="Library"><i class="bi bi-folder2-open mr-2"></i> Biblioteca</a></li>
-                        <li><a data-target="FileExplorer"><i class="bi bi-files mr-2"></i> Explorador de Arquivos</a>
+                        <li><a data-target="Authentication"><i class="bi bi-people-fill mr-2"></i> {{
+                                t('settings.menu_auth') }}</a></li>
+                        <li><a data-target="Library"><i class="bi bi-folder2-open mr-2"></i> {{
+                                t('settings.menu_library') }}</a></li>
+                        <li><a data-target="FileExplorer"><i class="bi bi-files mr-2"></i> {{
+                                t('settings.menu_explorer') }}</a>
                         </li>
-                        <li><a data-target="Renaming"><i class="bi bi-pencil-square mr-2"></i> Renomeação</a></li>
-                        <li><a data-target="TitleDB"><i class="bi bi-database-fill mr-2"></i> TitleDB</a>
+                        <li><a data-target="Renaming"><i class="bi bi-pencil-square mr-2"></i> {{
+                                t('settings.menu_renaming') }}</a></li>
+                        <li><a data-target="TitleDB"><i class="bi bi-database-fill mr-2"></i> {{
+                                t('settings.menu_titledb') }}</a>
                         </li>
-                        <li><a data-target="Shop"><i class="bi bi-cart-fill mr-2"></i> Loja</a></li>
+                        <li><a data-target="Shop"><i class="bi bi-cart-fill mr-2"></i> {{ t('settings.menu_shop') }}</a>
+                        </li>
                         <li><a data-target="Errors"><i class="bi bi-exclamation-octagon-fill mr-2"></i>
-                                Erros/Identificação</a></li>
-                        <li><a data-target="Tags"><i class="bi bi-tags-fill mr-2"></i> Tags</a></li>
-                        <li><a data-target="Activity"><i class="bi bi-clock-history mr-2"></i> Atividade</a></li>
-                        <li><a data-target="Backups"><i class="bi bi-shield-check mr-2"></i> Backups</a></li>
-                        <!-- Webhooks, Cloud and Plugins removed -->
-                        <li><a data-target="APIs"><i class="bi bi-cloud-arrow-down-fill mr-2"></i> APIs Externas</a>
+                                {{ t('settings.menu_errors') }}</a></li>
+                        <li><a data-target="Tags"><i class="bi bi-tags-fill mr-2"></i> {{ t('settings.menu_tags') }}</a>
                         </li>
-                        <li><a data-target="ApiTokens"><i class="bi bi-key-fill mr-2"></i> Tokens de API</a></li>
-                        <li><a data-target="System"><i class="bi bi-cpu-fill mr-2"></i> Sistema</a></li>
-                        <li><a data-target="Help"><i class="bi bi-question-circle mr-2"></i> Ajuda</a></li>
+                        <li><a data-target="Activity"><i class="bi bi-clock-history mr-2"></i> {{
+                                t('settings.menu_activity') }}</a></li>
+                        <li><a data-target="Backups"><i class="bi bi-shield-check mr-2"></i> {{
+                                t('settings.menu_backups') }}</a></li>
+                        <!-- Webhooks, Cloud and Plugins removed -->
+                        <li><a data-target="APIs"><i class="bi bi-cloud-arrow-down-fill mr-2"></i> {{
+                                t('settings.menu_apis') }}</a>
+                        </li>
+                        <li><a data-target="ApiTokens"><i class="bi bi-key-fill mr-2"></i> {{ t('settings.menu_tokens')
+                                }}</a></li>
+                        <li><a data-target="System"><i class="bi bi-cpu-fill mr-2"></i> {{ t('settings.menu_system')
+                                }}</a></li>
+                        <li><a data-target="Help"><i class="bi bi-question-circle mr-2"></i> {{ t('settings.menu_help')
+                                }}</a></li>
                     </ul>
                 </aside>
             </div>
@@ -44,7 +58,7 @@
                 <!-- Loading Overlay -->
                 <div id="settingsLoading" class="has-text-centered py-6">
                     <button class="button is-loading is-ghost is-large"></button>
-                    <p class="mt-4 has-text-weight-bold">Carregando configurações...</p>
+                    <p class="mt-4 has-text-weight-bold">{{ t('common.loading_config') }}</p>
                 </div>
 
                 <div id="settingsContent" class="is-hidden animate-fade-in settings-container p-5">
@@ -56,11 +70,9 @@
                             <div class="is-flex is-align-items-center gap-3">
                                 <i class="bi bi-exclamation-triangle-fill is-size-4 has-text-danger"></i>
                                 <div>
-                                    <strong class="is-block uppercase is-size-7 tracking-widest has-text-danger">Conta
-                                        Admin
-                                        Ausente!</strong>
-                                    <span class="is-size-7">Autenticação desativada. Qualquer um pode acessar e alterar
-                                        configurações.</span>
+                                    <strong class="is-block uppercase is-size-7 tracking-widest has-text-danger">{{
+                                        t('settings.alert_admin_missing') }}</strong>
+                                    <span class="is-size-7">{{ t('settings.alert_admin_missing_desc') }}</span>
                                 </div>
                             </div>
                         </div>
@@ -72,14 +84,14 @@
                             <div class="is-flex is-align-items-center gap-3">
                                 <i class="bi bi-key-fill is-size-4 has-text-warning"></i>
                                 <div>
-                                    <strong class="is-block uppercase is-size-7 tracking-widest has-text-warning">Chaves
-                                        do console
-                                        ausentes!</strong>
+                                    <strong class="is-block uppercase is-size-7 tracking-widest has-text-warning">{{
+                                        t('settings.alert_keys_missing') }}</strong>
                                     <span class="is-size-7">
-                                        Necessário para decriptar conteúdo Nintendo.
+                                        {{ t('settings.alert_keys_missing_desc') }}
                                         <a target="_blank"
                                             href="https://gitlab.com/easyhacking/switch/-/wikis/home/getting-started/dump-keys"
-                                            class="has-text-weight-bold is-underlined ml-1">Guia</a>
+                                            class="has-text-weight-bold is-underlined ml-1">{{ t('settings.guide')
+                                            }}</a>
                                     </span>
                                 </div>
                             </div>
@@ -94,7 +106,7 @@
                         <div class="card box shadow-sm">
                             <header class="card-header border-none shadow-none">
                                 <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-gear-fill mr-2"></i> Configuração Geral
+                                    <i class="bi bi-gear-fill mr-2"></i> {{ t('settings.general_config') }}
                                 </p>
                             </header>
                             <div class="card-content pt-0">
@@ -138,7 +150,7 @@
 
                                 <div class="block">
                                     <h3 class="title is-6 mb-4"><i class="bi bi-key-fill has-text-primary mr-2"></i>
-                                        Chaves do Console</h3>
+                                        {{ t('settings.console_keys') }}</h3>
                                     <div class="notification is-ghost border p-5"
                                         style="border-left: 5px solid var(--color-primary) !important;">
                                         <div class="columns is-vcentered">
@@ -149,16 +161,17 @@
                                                             name="file" accept=".keys,.txt" required>
                                                         <span class="file-cta">
                                                             <span class="file-icon"><i class="bi bi-upload"></i></span>
-                                                            <span class="file-label">Escolher arquivo...</span>
+                                                            <span class="file-label">{{ t('settings.choose_file')
+                                                                }}</span>
                                                         </span>
-                                                        <span class="file-name" id="fileNameDisplay">Nenhum arquivo
-                                                            escolhido</span>
+                                                        <span class="file-name" id="fileNameDisplay">{{
+                                                            t('settings.no_file_chosen') }}</span>
                                                     </label>
                                                 </div>
                                             </div>
                                             <div class="column is-narrow">
                                                 <button class="button is-primary" onclick="submitTitlesSettings()">
-                                                    <i class="bi bi-check-lg mr-2"></i> Salvar & Atualizar
+                                                    <i class="bi bi-check-lg mr-2"></i> {{ t('settings.save_update') }}
                                                 </button>
                                             </div>
                                         </div>
@@ -274,7 +287,7 @@
                                     <i class="bi bi-folder2-open mr-2"></i> {{ t('Library Locations') }}
                                     <span class="ml-2 tag" id="watchdogStatus">
                                         <span class="icon"><i class="bi bi-check-circle text-success"></i></span>
-                                        <span>Watchdog: {{ t('Checking...') }}</span>
+                                        <span>Watchdog: {{ t('settings.checking') }}</span>
                                     </span>
                                 </p>
                             </header>
@@ -282,7 +295,7 @@
                                 <!-- Watchdog status indicator -->
                                 <div class="notification is-light is-info is-small py-2 px-3 mb-4"
                                     id="watchdogStatusBanner">
-                                    <span id="watchdogStatusText">{{ t('Checking watchdog status...') }}</span>
+                                    <span id="watchdogStatusText">{{ t('settings.watchdog_checking') }}</span>
                                 </div>
 
                                 <!-- Estatísticas removidas conforme solicitação -->
@@ -291,10 +304,10 @@
                                         <thead>
                                             <tr>
                                                 <th>{{ t('Storage Path') }}</th>
-                                                <th class="has-text-centered">Jogos</th>
-                                                <th class="has-text-centered">Arquivos</th>
-                                                <th class="has-text-centered">Tamanho</th>
-                                                <th class="has-text-centered">Último Scan</th>
+                                                <th class="has-text-centered">{{ t('common.games') }}</th>
+                                                <th class="has-text-centered">{{ t('common.files') }}</th>
+                                                <th class="has-text-centered">{{ t('common.size') }}</th>
+                                                <th class="has-text-centered">{{ t('settings.last_scan') }}</th>
                                                 <th class="has-text-right">{{ t('Actions') }}</th>
                                             </tr>
                                         </thead>
@@ -327,13 +340,14 @@
                                         <div class="modal-background" onclick="closeFileBrowser()"></div>
                                         <div class="modal-card">
                                             <header class="modal-card-head">
-                                                <p class="modal-card-title">Selecionar Pasta</p>
+                                                <p class="modal-card-title">{{ t('settings.select_folder_modal') }}</p>
                                                 <button class="delete" aria-label="close"
                                                     onclick="closeFileBrowser()"></button>
                                             </header>
                                             <section class="modal-card-body p-0">
                                                 <div class="p-3 border-bottom has-background-white-bis">
-                                                    <p class="is-size-7 has-text-grey mb-1">Caminho Atual:</p>
+                                                    <p class="is-size-7 has-text-grey mb-1">{{
+                                                        t('settings.current_path') }}</p>
                                                     <div class="field has-addons mb-0">
                                                         <div class="control is-expanded">
                                                             <input class="input is-small font-mono" type="text"
@@ -347,9 +361,10 @@
                                                 </div>
                                             </section>
                                             <footer class="modal-card-foot is-justify-content-flex-end">
-                                                <button class="button" onclick="closeFileBrowser()">Cancelar</button>
-                                                <button class="button is-primary"
-                                                    onclick="selectBrowserPath()">Selecionar Pasta Atual</button>
+                                                <button class="button" onclick="closeFileBrowser()">{{
+                                                    t('common.cancel') }}</button>
+                                                <button class="button is-primary" onclick="selectBrowserPath()">{{
+                                                    t('settings.select_current_folder') }}</button>
                                             </footer>
                                         </div>
                                     </div>
@@ -368,7 +383,7 @@
 
                                         function loadBrowserPath(path) {
                                             const list = document.getElementById('fileBrowserList');
-                                            list.innerHTML = '<div class="p-5 has-text-centered"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>';
+                                            list.innerHTML = '<div class="p-5 has-text-centered"><i class="fas fa-spinner fa-spin"></i> ' + t('common.loading') + '</div>';
 
                                             window.safeFetch('/api/system/fs/list', {
                                                 method: 'POST',
@@ -419,14 +434,14 @@
                                         <button class="button is-warning is-outlined" id="btnCleanupOrphaned"
                                             onclick="cleanupOrphaned()">
                                             <span class="icon"><i class="bi bi-trash"></i></span>
-                                            <span>Limpar Órfãos</span>
+                                            <span>{{ t('settings.btn_cleanup') }}</span>
                                         </button>
                                     </div>
                                 </div>
                                 <div id="cleanupStats" class="is-hidden mt-3">
                                     <div class="notification is-info is-light py-2 is-size-7">
-                                        <span id="cleanupMissingFiles">0</span> arquivos deletados do disco |
-                                        <span id="cleanupMissingApps">0</span> registros órfãos
+                                        <span id="cleanupMissingFiles">0</span> {{ t('settings.stats_deleted') }} |
+                                        <span id="cleanupMissingApps">0</span> {{ t('settings.stats_orphans') }}
                                     </div>
                                 </div>
                             </div>
@@ -438,18 +453,16 @@
                         <div class="card box shadow-sm">
                             <header class="card-header border-none shadow-none">
                                 <p class="card-header-title has-text-info">
-                                    <i class="bi bi-files mr-2"></i> Explorador de Arquivos da Biblioteca
+                                    <i class="bi bi-files mr-2"></i> {{ t('settings.library_explorer') }}
                                 </p>
                                 <div class="card-header-icon pt-4 pr-5">
                                     <button class="button is-small is-dark is-outlined" onclick="fillFilesExplorer()">
-                                        <i class="bi bi-arrow-clockwise mr-1"></i> Atualizar
+                                        <i class="bi bi-arrow-clockwise mr-1"></i> {{ t('common.refresh') }}
                                     </button>
                                 </div>
                             </header>
                             <div class="card-content pt-0">
-                                <p class="is-size-7 mb-4 opacity-70">Visualize todos os arquivos físicos indexados na
-                                    biblioteca, com
-                                    informações detalhadas sobre cada arquivo.</p>
+                                <p class="is-size-7 mb-4 opacity-70">{{ t('settings.explorer_desc') }}</p>
 
                                 <!-- Filters -->
                                 <div class="box is-shadowless border p-3 mb-4"
@@ -457,10 +470,10 @@
                                     <div class="columns is-mobile">
                                         <div class="column">
                                             <div class="field">
-                                                <label class="label is-small">Buscar</label>
+                                                <label class="label is-small">{{ t('common.search') }}</label>
                                                 <div class="control has-icons-left">
                                                     <input class="input is-small" type="text" id="fileSearchInput"
-                                                        placeholder="Buscar em todas as pastas...">
+                                                        placeholder="{{ t('settings.search_placeholder') }}">
                                                     <span class="icon is-small is-left">
                                                         <i class="bi bi-search"></i>
                                                     </span>
@@ -469,11 +482,11 @@
                                         </div>
                                         <div class="column is-narrow">
                                             <div class="field">
-                                                <label class="label is-small">Tipo</label>
+                                                <label class="label is-small">{{ t('common.type') }}</label>
                                                 <div class="control">
                                                     <div class="select is-small is-fullwidth">
                                                         <select id="fileTypeFilter">
-                                                            <option value="">Todos</option>
+                                                            <option value="">{{ t('common.all') }}</option>
                                                             <option value=".nsp">NSP</option>
                                                             <option value=".nsz">NSZ</option>
                                                             <option value=".xci">XCI</option>
@@ -485,13 +498,14 @@
                                         </div>
                                         <div class="column is-narrow">
                                             <div class="field">
-                                                <label class="label is-small">Status</label>
+                                                <label class="label is-small">{{ t('common.status') }}</label>
                                                 <div class="control">
                                                     <div class="select is-small is-fullwidth">
                                                         <select id="fileStatusFilter">
-                                                            <option value="">Todos</option>
-                                                            <option value="identified">Identificado</option>
-                                                            <option value="error">Erro</option>
+                                                            <option value="">{{ t('common.all') }}</option>
+                                                            <option value="identified">{{ t('common.identified') }}
+                                                            </option>
+                                                            <option value="error">{{ t('common.error') }}</option>
                                                         </select>
                                                     </div>
                                                 </div>
@@ -515,12 +529,13 @@
                                         id="filesExplorerTable" style="table-layout: fixed;">
                                         <thead>
                                             <tr>
-                                                <th style="width: 35%;">{{ t('Arquivo / Caminho') }}</th>
-                                                <th style="width: 25%;">{{ t('Título Identificado') }}</th>
-                                                <th style="width: 15%;">{{ t('Tamanho') }}</th>
-                                                <th style="width: 10%;">{{ t('Tipo') }}</th>
-                                                <th style="width: 10%; text-align: center;">{{ t('Status') }}</th>
-                                                <th style="width: 5%; text-align: right;">{{ t('Ações') }}</th>
+                                                <th style="width: 35%;">{{ t('common.file_path') }}</th>
+                                                <th style="width: 25%;">{{ t('common.identified_title') }}</th>
+                                                <th style="width: 15%;">{{ t('common.size') }}</th>
+                                                <th style="width: 10%;">{{ t('common.type') }}</th>
+                                                <th style="width: 10%; text-align: center;">{{ t('common.status') }}
+                                                </th>
+                                                <th style="width: 5%; text-align: right;">{{ t('common.actions') }}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -531,8 +546,8 @@
 
                                 <!-- Pagination Info -->
                                 <div class="is-flex is-justify-content-space-between is-align-items-center mt-3">
-                                    <span class="is-size-7 opacity-50" id="filesExplorerCount">0 arquivos
-                                        encontrados</span>
+                                    <span class="is-size-7 opacity-50" id="filesExplorerCount">0 {{
+                                        t('common.files_found') }}</span>
                                 </div>
                             </div>
                         </div>
@@ -542,14 +557,14 @@
                         <div class="card box shadow-sm">
                             <header class="card-header border-none shadow-none">
                                 <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-pencil-square mr-2"></i> Renomeação Automática
+                                    <i class="bi bi-pencil-square mr-2"></i> {{ t('settings.renaming_auto') }}
                                 </p>
                             </header>
                             <div class="card-content pt-0">
                                 <div class="notification is-ghost border p-4 mb-5"
                                     style="border-left: 5px solid var(--color-info) !important;">
                                     <p class="is-size-7 opacity-70 mb-2">
-                                        Use os seguintes placeholders para definir seus padrões:
+                                        {{ t('settings.renaming_desc') }}
                                     </p>
                                     <div class="tags">
                                         <span class="tag is-white font-mono pointer"
@@ -564,7 +579,7 @@
                                 </div>
 
                                 <div class="field mb-5">
-                                    <label class="label is-small">Padrão para Jogo Base (NSP/XCI)</label>
+                                    <label class="label is-small">{{ t('settings.renaming_base') }}</label>
                                     <div class="control">
                                         <input class="input font-mono is-small" type="text" id="patternBase"
                                             placeholder="{Name} [{TitleID}] [v{Version}]">
@@ -572,7 +587,7 @@
                                 </div>
 
                                 <div class="field mb-5">
-                                    <label class="label is-small">Padrão para Update</label>
+                                    <label class="label is-small">{{ t('settings.renaming_update') }}</label>
                                     <div class="control">
                                         <input class="input font-mono is-small" type="text" id="patternUpd"
                                             placeholder="{Name} [UPD] [{TitleID}] [v{Version}]">
@@ -580,7 +595,7 @@
                                 </div>
 
                                 <div class="field mb-6">
-                                    <label class="label is-small">Padrão para DLC</label>
+                                    <label class="label is-small">{{ t('settings.renaming_dlc') }}</label>
                                     <div class="control">
                                         <input class="input font-mono is-small" type="text" id="patternDlc"
                                             placeholder="{Name} [DLC] [{TitleID}] [v{Version}]">
@@ -589,19 +604,19 @@
 
                                 <div class="buttons">
                                     <button class="button is-primary" onclick="saveRenamingSettings()">
-                                        <i class="bi bi-save2-fill mr-2"></i> Salvar Padrões
+                                        <i class="bi bi-save2-fill mr-2"></i> {{ t('settings.save_patterns') }}
                                     </button>
                                     <button class="button is-ghost" onclick="previewRenaming()">
-                                        <i class="bi bi-eye mr-2"></i> Prever
+                                        <i class="bi bi-eye mr-2"></i> {{ t('settings.preview') }}
                                     </button>
                                     <button class="button is-danger is-light ml-auto" onclick="runRenamingJob()">
-                                        <i class="bi bi-play-circle-fill mr-2"></i> Renomear Tudo Agora
+                                        <i class="bi bi-play-circle-fill mr-2"></i> {{ t('settings.rename_now') }}
                                     </button>
                                 </div>
 
                                 <!-- Preview Result -->
                                 <div id="renamingPreview" class="is-hidden mt-5">
-                                    <p class="heading has-text-weight-bold mb-3">Pré-visualização</p>
+                                    <p class="heading has-text-weight-bold mb-3">{{ t('settings.preview_title') }}</p>
                                     <div class="box is-shadowless border is-size-7 font-mono" id="previewContent"
                                         style="border-left: 4px solid var(--color-primary) !important;">
                                         <!-- content -->
@@ -780,7 +795,8 @@
                                     </div>
                                     <div class="control">
                                         <label class="checkbox has-text-weight-bold">
-                                            <input type="checkbox" id="publicProfileCheck"> Perfil Público (Web)
+                                            <input type="checkbox" id="publicProfileCheck"> {{
+                                            t('settings.shop_public_web') }}
                                         </label>
                                     </div>
                                 </div>
@@ -1614,8 +1630,11 @@
                             </header>
                             <div class="card-content pt-0">
                                 <div class="notification is-warning mb-4">
-                                    <p class="has-text-weight-bold mb-2"><i class="bi bi-exclamation-triangle mr-2"></i>Cloud Sync Descontinuado</p>
-                                    <p class="is-size-7">O recurso de sincronização com Google Drive e Dropbox foi removido na versão 2.2.0 devido a obsolescência e manutenção. Use o sistema de backups local e transferência de arquivos direta como alternativa.</p>
+                                    <p class="has-text-weight-bold mb-2"><i
+                                            class="bi bi-exclamation-triangle mr-2"></i>Cloud Sync Descontinuado</p>
+                                    <p class="is-size-7">O recurso de sincronização com Google Drive e Dropbox foi
+                                        removido na versão 2.2.0 devido a obsolescência e manutenção. Use o sistema de
+                                        backups local e transferência de arquivos direta como alternativa.</p>
                                 </div>
                                 <div class="columns">
                                     <div class="column is-6">

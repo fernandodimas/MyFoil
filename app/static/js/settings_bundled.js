@@ -48,12 +48,12 @@ window.saveAPISettings = function () {
         }),
         success: (res) => {
             if (res.success) {
-                showToast(t('Configurações de API salvas'));
+                showToast(t('settings.api_saved'));
                 if (typeof fillMetadataStats === 'function') fillMetadataStats();
             }
-            else showToast(t('Erro ao salvar configurações'), 'error');
+            else showToast(t('settings.api_save_error'), 'error');
         },
-        error: () => showToast(t('Erro de comunicação'), 'error')
+        error: () => showToast(t('common.error.communication'), 'error')
     });
 };
 
@@ -63,15 +63,15 @@ window.fillMetadataStats = function () {
         $('#statMetadataGames').text(payload.metadata_games || 0);
         // RAWG status
         if ($('#rawgApiKey').val()) {
-            $('#statusRAWG').removeClass('is-danger').addClass('is-success').text(t('Ativa'));
+            $('#statusRAWG').removeClass('is-danger').addClass('is-success').text(t('status.active'));
         } else {
-            $('#statusRAWG').removeClass('is-success').addClass('is-danger').text(t('Inativa'));
+            $('#statusRAWG').removeClass('is-success').addClass('is-danger').text(t('status.inactive'));
         }
         // IGDB status
         if ($('#igdbClientId').val() && $('#igdbClientSecret').val()) {
-            $('#statusIGDB').removeClass('is-danger').addClass('is-success').text(t('Ativa'));
+            $('#statusIGDB').removeClass('is-danger').addClass('is-success').text(t('status.active'));
         } else {
-            $('#statusIGDB').removeClass('is-success').addClass('is-danger').text(t('Inativa'));
+            $('#statusIGDB').removeClass('is-success').addClass('is-danger').text(t('status.inactive'));
         }
     });
 };
@@ -82,13 +82,13 @@ window.testRAWGConnection = function () {
     $.getJSON('/api/library/search-rawg?q=zelda', (res) => {
         btn.removeClass('is-loading');
         if (res && res.name) {
-            showToast(t('Conexão OK! Encontrado: ') + res.name);
+            showToast(t('settings.connection_ok') + res.name);
         } else {
-            showToast(t('Nenhum resultado encontrado. Verifique sua chave.'), 'warning');
+            showToast(t('settings.connection_fail_key'), 'warning');
         }
     }).fail((err) => {
         btn.removeClass('is-loading');
-        showToast(t('Erro ao testar conexão: ') + (err.responseJSON?.error || t('Erro desconhecido')), 'error');
+        showToast(t('settings.connection_error') + (err.responseJSON?.error || t('common.error.unknown')), 'error');
     });
 };
 
@@ -98,33 +98,33 @@ window.testIGDBConnection = function () {
     $.getJSON('/api/library/search-igdb?q=zelda', (res) => {
         btn.removeClass('is-loading');
         if (Array.isArray(res) && res.length > 0) {
-            showToast(t('Conexão OK! Encontrado: ') + res[0].name);
+            showToast(t('settings.connection_ok') + res[0].name);
         } else if (res && res.name) {
-            showToast(t('Conexão OK! Encontrado: ') + res.name);
+            showToast(t('settings.connection_ok') + res.name);
         } else {
-            showToast(t('Nenhum resultado encontrado. Verifique seu ID/Secret.'), 'warning');
+            showToast(t('settings.connection_fail_key'), 'warning');
         }
     }).fail((err) => {
         btn.removeClass('is-loading');
-        showToast(t('Erro ao testar conexão: ') + (err.responseJSON?.error || t('Erro desconhecido')), 'error');
+        showToast(t('settings.connection_error') + (err.responseJSON?.error || t('common.error.unknown')), 'error');
     });
 };
 
 window.refreshAllMetadata = function () {
     confirmAction({
-        title: t('Atualizar Metadados'),
-        message: t('Isso buscará notas, tempo de jogo e screenshots para TODOS os itens identificados. Pode levar vários minutos. Deseja continuar?'),
-        confirmText: t('Atualizar Todos'),
+        title: t('settings.refresh_metadata'),
+        message: t('settings.refresh_metadata_confirm'),
+        confirmText: t('settings.refresh_all'),
         confirmClass: 'is-info',
         onConfirm: () => {
             const btn = $('#btnRefreshAllMetadata');
             btn.addClass('is-loading');
             $.post('/api/library/metadata/refresh-all', (res) => {
-                showToast(t('Atualização em massa iniciada em segundo plano.'));
+                showToast(t('settings.refresh_started'));
                 setTimeout(() => btn.removeClass('is-loading'), 3000);
             }).fail(() => {
                 btn.removeClass('is-loading');
-                showToast(t('Erro ao iniciar atualização'), 'error');
+                showToast(t('settings.refresh_error'), 'error');
             });
         }
     });
@@ -134,7 +134,7 @@ function createTag() {
     const name = $('#tagNameInput').val();
     const color = $('#tagColorInput').val();
     const icon = $('#tagIconInput').val();
-    if (!name) return showToast(t('Nome da tag é obrigatório'), 'error');
+    if (!name) return showToast(t('settings.tag_name_required'), 'error');
 
     $.ajax({
         url: '/api/tags',
@@ -142,11 +142,11 @@ function createTag() {
         contentType: 'application/json',
         data: JSON.stringify({ name, color, icon }),
         success: (res) => {
-            showToast(t('Tag criada com sucesso'));
+            showToast(t('settings.tag_created'));
             $('#tagNameInput').val('');
             fillTagsTable();
         },
-        error: (err) => showToast(t('Erro ao criar tag: ') + (err.responseJSON?.error || t('Erro desconhecido')), 'error')
+        error: (err) => showToast(t('settings.tag_create_error') + (err.responseJSON?.error || t('common.error.unknown')), 'error')
     });
 }
 
@@ -179,19 +179,19 @@ function fillTagsTable() {
 
 function deleteTag(id) {
     confirmAction({
-        title: t('Excluir Tag'),
-        message: t('Deseja realmente excluir esta tag? Esta ação removerá a tag de todos os jogos associados.'),
-        confirmText: t('Excluir'),
+        title: t('settings.delete_tag'),
+        message: t('settings.delete_tag_confirm'),
+        confirmText: t('common.delete'),
         confirmClass: 'is-danger',
         onConfirm: () => {
             $.ajax({
                 url: `/api/tags/${id}`,
                 type: 'DELETE',
                 success: () => {
-                    showToast(t('Tag excluída'));
+                    showToast(t('settings.tag_deleted'));
                     fillTagsTable();
                 },
-                error: (err) => showToast(t('Erro ao excluir tag'), 'error')
+                error: (err) => showToast(t('settings.tag_delete_error'), 'error')
             });
         }
     });
@@ -203,7 +203,7 @@ function fillActivityLogs() {
         let list = logsRes;
         if (typeof coerceArray === 'function') list = coerceArray(logsRes);
         if (!Array.isArray(list) || list.length === 0) {
-            listEl.append(`<p class="has-text-centered py-6 opacity-40 italic">${t('Nenhuma atividade registrada.')}</p>`);
+            listEl.append(`<p class="has-text-centered py-6 opacity-40 italic">${t('settings.no_activity')}</p>`);
             return;
         }
         list.forEach(log => {
@@ -261,7 +261,7 @@ $('#settingsNav a').on('click', function () {
 // File Input Helper
 $('#consoleKeysInput').on('change', function () {
     const file = this.files[0];
-    $('#fileNameDisplay').text(file ? file.name : t("No file chosen"));
+    $('#fileNameDisplay').text(file ? file.name : t("settings.no_file_chosen"));
 });
 
 // Toggle Add Source Form
@@ -275,7 +275,7 @@ function fillLibraryTable() {
         const payload = unwrap(result);
         const tbody = $('#pathsTable tbody').empty();
         if (!payload.paths?.length) {
-            tbody.append(`<tr><td colspan="6" class="has-text-centered py-6 opacity-40 italic">${t("No paths configured")}</td></tr>`);
+            tbody.append(`<tr><td colspan="6" class="has-text-centered py-6 opacity-40 italic">${t("settings.no_paths")}</td></tr>`);
         } else {
             payload.paths.forEach(p => {
                 tbody.append(`
@@ -289,8 +289,8 @@ function fillLibraryTable() {
                         <td class="has-text-centered"><span class="is-size-7 opacity-50">${p.last_scan || '--'}</span></td>
                         <td class="has-text-right">
                             <div class="buttons is-right">
-                                <button class="button is-small is-ghost has-text-info" onclick="scanLibrary('${p.path}')" title="${t('Escanear esta pasta')}"><i class="bi bi-arrow-clockwise"></i></button>
-                                <button class="button is-small is-ghost has-text-danger" onclick="showDeletePathModal('${p.path}')" title="${t('Remover caminho')}"><i class="bi bi-trash3"></i></button>
+                                <button class="button is-small is-ghost has-text-info" onclick="scanLibrary('${p.path}')" title="${t('settings.scan_folder')}"><i class="bi bi-arrow-clockwise"></i></button>
+                                <button class="button is-small is-ghost has-text-danger" onclick="showDeletePathModal('${p.path}')" title="${t('settings.remove_path')}"><i class="bi bi-trash3"></i></button>
                             </div>
                         </td>
                     </tr>
@@ -311,25 +311,25 @@ function checkWatchdogStatus() {
         if (payload && payload.watching !== undefined) {
             banner.removeClass('is-info is-warning is-danger').addClass(payload.watching ? 'is-success' : 'is-warning');
             headerStatus.find('.icon i').removeClass('bi-check-circle bi-pause-circle').addClass(payload.watching ? 'bi-check-circle' : 'bi-pause-circle');
-            headerStatus.find('span:last-child').text(`Watchdog: ${payload.watching ? t("Monitoring") : t("Not monitoring")}`);
+            headerStatus.find('span:last-child').text(`Watchdog: ${payload.watching ? t("settings.watchdog_monitoring") : t("settings.watchdog_not_monitoring")}`);
 
             const icon = payload.watching ? 'bi-broadcast' : 'bi-pause-circle';
             const count = payload.libraries || 0;
-            const libText = count === 1 ? t("library") : t("libraries");
+            const libText = count === 1 ? t("common.library") : t("common.libraries");
 
             text.html(`<span class="icon mr-2"><i class="bi ${icon}"></i></span>
-                Watchdog: ${payload.watching ? t("Monitoring") : t("Not monitoring")} | 
+                Watchdog: ${payload.watching ? t("settings.watchdog_monitoring") : t("settings.watchdog_not_monitoring")} | 
                 ${count} ${libText}`);
         } else {
             $.getJSON("/api/settings/library/paths", (paths) => {
                 const pp = unwrap(paths);
                 const hasPaths = pp.paths && pp.paths.length > 0;
                 banner.removeClass('is-info is-warning is-danger').addClass(hasPaths ? 'is-success' : 'is-warning');
-                headerStatus.find('span:last-child').text(`Watchdog: ${hasPaths ? t("Monitoring") : t("No libraries configured")}`);
+                headerStatus.find('span:last-child').text(`Watchdog: ${hasPaths ? t("settings.watchdog_monitoring") : t("settings.watchdog_no_libs")}`);
 
                 const icon = hasPaths ? 'bi-broadcast' : 'bi-pause-circle';
                 text.html(`<span class="icon mr-2"><i class="bi ${icon}"></i></span>
-                    Watchdog: ${hasPaths ? t("Monitoring") : t("No libraries configured")}`);
+                    Watchdog: ${hasPaths ? t("settings.watchdog_monitoring") : t("settings.watchdog_no_libs")}`);
             });
         }
     }).fail(() => {
@@ -341,11 +341,11 @@ function checkWatchdogStatus() {
             const headerStatus = $('#watchdogStatus');
 
             banner.removeClass('is-info is-warning is-danger').addClass(hasPaths ? 'is-success' : 'is-warning');
-            headerStatus.find('span:last-child').text(`Watchdog: ${hasPaths ? t("Monitoring") : t("No libraries configured")}`);
+            headerStatus.find('span:last-child').text(`Watchdog: ${hasPaths ? t("settings.watchdog_monitoring") : t("settings.watchdog_no_libs")}`);
 
             const icon = hasPaths ? 'bi-broadcast' : 'bi-pause-circle';
             text.html(`<span class="icon mr-2"><i class="bi ${icon}"></i></span>
-                Watchdog: ${hasPaths ? t("Monitoring") : t("No libraries configured")}`);
+                Watchdog: ${hasPaths ? t("settings.watchdog_monitoring") : t("settings.watchdog_no_libs")}`);
         });
     });
 }
@@ -356,20 +356,20 @@ function fillUserTable() {
         const list = coerceArray(result);
         allUsernames = list.map(u => u.user);
         if (!list.length) {
-            tbody.append(`<tr><td colspan="3" class="has-text-centered py-6 opacity-40 italic">${t("No users found")}</td></tr>`);
+            tbody.append(`<tr><td colspan="3" class="has-text-centered py-6 opacity-40 italic">${t("settings.no_users")}</td></tr>`);
         } else {
             list.forEach(user => {
                 const self = user.user === window.currentUser;
                 tbody.append(`
                     <tr>
                         <td class="has-text-weight-bold">
-                            <i class="bi bi-person-circle mr-2 opacity-50"></i> ${escapeHtml(user.user)} ${self ? `<span class="tag is-info is-light is-small ml-2">${t('You')}</span>` : ''}
+                            <i class="bi bi-person-circle mr-2 opacity-50"></i> ${escapeHtml(user.user)} ${self ? `<span class="tag is-info is-light is-small ml-2">${t('settings.you')}</span>` : ''}
                         </td>
                         <td>
                             <div class="tags">
-                                <span class="tag ${user.shop_access ? 'is-success' : 'is-light'} is-small">${t('Shop')}</span>
-                                <span class="tag ${user.backup_access ? 'is-success' : 'is-light'} is-small">${t('Backup')}</span>
-                                <span class="tag ${user.admin_access ? 'is-primary' : 'is-light'} is-small">${t('Admin')}</span>
+                                <span class="tag ${user.shop_access ? 'is-success' : 'is-light'} is-small">${t('settings.access_shop')}</span>
+                                <span class="tag ${user.backup_access ? 'is-success' : 'is-light'} is-small">${t('settings.access_backup')}</span>
+                                <span class="tag ${user.admin_access ? 'is-primary' : 'is-light'} is-small">${t('settings.access_admin')}</span>
                             </div>
                         </td>
                         <td class="has-text-right">
@@ -411,8 +411,8 @@ function fillTitleDBSourcesTable() {
                             contentType: 'application/json',
                             data: JSON.stringify(priorities),
                             success: function (res) {
-                                if (res.success) showToast(t('Priorities updated'));
-                                else showToast(t('Failed to update priorities'), 'error');
+                                if (res.success) showToast(t('settings.priorities_updated'));
+                                else showToast(t('settings.priorities_fail'), 'error');
                             }
                         });
                     }
@@ -424,15 +424,15 @@ function fillTitleDBSourcesTable() {
         payload.sources.forEach(source => {
             let remoteDateHtml = '';
             if (source.is_fetching) {
-                remoteDateHtml = `<span class="is-size-7 italic opacity-50"><i class="bi bi-arrow-repeat spin mr-1"></i> ${t('Carregando...')}</span>`;
+                remoteDateHtml = `<span class="is-size-7 italic opacity-50"><i class="bi bi-arrow-repeat spin mr-1"></i> ${t('common.loading')}</span>`;
             } else if (source.remote_date) {
                 remoteDateHtml = `<span class="is-size-7">${new Date(source.remote_date).toLocaleString()}</span>`;
             } else {
-                const errorMsg = source.last_error ? `${t('Erro')}: ${source.last_error}` : t('Nenhuma data encontrada para os arquivos esperados.');
-                remoteDateHtml = `<span class="is-size-7 has-text-danger italic opacity-50" title="${errorMsg}" style="cursor: help;">${t('Não encontrado')} <i class="bi bi-question-circle"></i></span>`;
+                const errorMsg = source.last_error ? `${t('common.error')}: ${source.last_error}` : t('settings.tdb_no_date');
+                remoteDateHtml = `<span class="is-size-7 has-text-danger italic opacity-50" title="${errorMsg}" style="cursor: help;">${t('common.not_found')} <i class="bi bi-question-circle"></i></span>`;
             }
 
-            const localDate = source.last_success ? new Date(source.last_success).toLocaleString() : t('Never');
+            const localDate = source.last_success ? new Date(source.last_success).toLocaleString() : t('common.never');
 
             tbody.append(`
                 <tr>
@@ -460,7 +460,7 @@ function fillTitleDBSourcesTable() {
                     <td><input type="number" class="input is-small" value="${source.priority}" style="width: 70px" onchange="updateSourcePriority('${source.name}', this.value)" /></td>
                     <td>
                         <span class="tag ${source.enabled ? 'is-success' : 'is-light'} is-small">
-                            ${source.enabled ? t('Enabled') : t('Disabled')}
+                            ${source.enabled ? t('common.enabled') : t('common.disabled')}
                         </span>
                     </td>
                     <td class="has-text-right">
@@ -490,7 +490,7 @@ function fillErrorsTable() {
         const tbody = $('#errorsTable tbody').empty();
         const list = coerceArray(result);
         if (!list.length) {
-            tbody.append(`<tr><td colspan="4" class="has-text-centered py-6 opacity-40 italic">${t('Nenhum erro de identificação encontrado.')}</td></tr>`);
+            tbody.append(`<tr><td colspan="4" class="has-text-centered py-6 opacity-40 italic">${t('settings.no_errors')}</td></tr>`);
         } else {
             list.forEach(file => {
                 const isRecognitionError = file.error && file.error.includes('Banco de Dados');
@@ -507,17 +507,17 @@ function fillErrorsTable() {
                         <td>
                             <span class="is-size-7 ${isRecognitionError ? 'has-text-warning' : 'has-text-danger'}">
                                 <i class="bi ${isRecognitionError ? 'bi-question-circle' : 'bi-exclamation-triangle'} mr-1"></i>
-                                ${escapeHtml(file.error || t('Erro desconhecido'))}
+                                ${escapeHtml(file.error || t('common.error.unknown'))}
                             </span>
                         </td>
                         <td class="has-text-right">
                             <div class="buttons is-right">
                                 ${tid ? `
-                                    <button class="button is-small is-info is-light" onclick="openEditModalFromError('${tid}')" title="${t('Identificar Manualmente')}">
-                                        <i class="bi bi-pencil-square mr-1"></i> ${t('Reconhecer')}
+                                    <button class="button is-small is-info is-light" onclick="openEditModalFromError('${tid}')" title="${t('settings.manual_id')}">
+                                        <i class="bi bi-pencil-square mr-1"></i> ${t('settings.recognize')}
                                     </button>
                                 ` : ''}
-                                <button class="button is-small is-ghost has-text-danger" onclick="deleteErrorFile(${file.id})" title="${t('Excluir Arquivo')}">
+                                <button class="button is-small is-ghost has-text-danger" onclick="deleteErrorFile(${file.id})" title="${t('settings.delete_file')}">
                                     <i class="bi bi-trash3"></i>
                                 </button>
                             </div>
@@ -532,7 +532,7 @@ function fillErrorsTable() {
 function openEditModalFromError(titleId) {
     if (!titleId) return;
     $('#editMetaId').val(titleId);
-    $('#editMetaName').val(t('Unknown') + ' (' + titleId + ')');
+    $('#editMetaName').val(t('common.unknown') + ' (' + titleId + ')');
     $('#editMetaPublisher, #editMetaDescription, #editMetaIcon, #editMetaBanner, #editMetaGenre, #editMetaRelease').val('');
     $('#titleDBSearchResults').empty();
     $('#searchTitleDBInput').val('');
@@ -554,18 +554,18 @@ function openEditModalFromError(titleId) {
 
 function deleteErrorFile(id) {
     confirmAction({
-        title: t('Excluir Arquivo'),
-        message: t('Deseja realmente excluir este arquivo do DISCO? Esta ação não pode ser desfeita.'),
-        confirmText: t('Excluir'),
+        title: t('settings.delete_file'),
+        message: t('settings.delete_file_confirm'),
+        confirmText: t('common.delete'),
         confirmClass: 'is-danger',
         onConfirm: () => {
             $.post(`/api/files/delete/${id}`, (res) => {
                 if (res.success) {
-                    showToast(t('Arquivo excluído'));
+                    showToast(t('settings.file_deleted'));
                     fillErrorsTable();
                     if (currentExplorerPath !== undefined) fillFilesExplorer();
                 } else {
-                    showToast(t('Erro ao excluir: ') + res.error, 'error');
+                    showToast(t('settings.file_delete_error') + res.error, 'error');
                 }
             });
         }
@@ -579,7 +579,7 @@ function toggleAllErrors(checkbox) {
 
 function updateBulkBar() {
     const selected = $('.error-checkbox:checked').length;
-    $('#selectedCountText').text(`${selected} ${selected === 1 ? t('item selecionado') : t('itens selecionados')}`);
+    $('#selectedCountText').text(`${selected} ${t('common.items_selected')}`);
     if (selected > 0) $('#bulkActionsBar').removeClass('is-hidden');
     else $('#bulkActionsBar').addClass('is-hidden');
 }
@@ -590,14 +590,14 @@ function bulkDeleteFiles() {
     }).get();
 
     if (selectedIds.length === 0) {
-        showToast(t('Nenhum arquivo selecionado'), 'error');
+        showToast(t('settings.no_file_selected'), 'error');
         return;
     }
 
     confirmAction({
-        title: t('Excluir Arquivos'),
-        message: t('Deseja realmente excluir ') + selectedIds.length + t(' arquivo(s) do DISCO? Esta ação não pode ser desfeita.'),
-        confirmText: t('Excluir'),
+        title: t('settings.delete_files'),
+        message: t('settings.delete_files') + ' ' + selectedIds.length + t('settings.delete_files_disk_confirm'),
+        confirmText: t('common.delete'),
         confirmClass: 'is-danger',
         onConfirm: () => {
             let deleted = 0;
@@ -610,8 +610,8 @@ function bulkDeleteFiles() {
 
                     if (index === selectedIds.length - 1) {
                         setTimeout(() => {
-                            if (deleted > 0) showToast(deleted + t(' arquivo(s) excluído(s) com sucesso'));
-                            if (errors > 0) showToast(errors + t(' erro(s) ao excluir'), 'error');
+                            if (deleted > 0) showToast(deleted + t('settings.files_deleted_success'));
+                            if (errors > 0) showToast(errors + t('settings.files_delete_error'), 'error');
                             fillErrorsTable();
                         }, 500);
                     }
@@ -619,7 +619,7 @@ function bulkDeleteFiles() {
                     errors++;
                     if (index === selectedIds.length - 1) {
                         setTimeout(() => {
-                            showToast(errors + t(' erro(s) ao excluir'), 'error');
+                            showToast(errors + t('settings.files_delete_error'), 'error');
                             fillErrorsTable();
                         }, 500);
                     }
@@ -630,29 +630,29 @@ function bulkDeleteFiles() {
 }
 
 function showDeleteUserModal(id, user) {
-    $('#deleteUserModal .modal-text').text(t('Are you sure you want to delete user') + ` "${user}"? ` + t('This action cannot be undone.'));
+    $('#deleteUserModal .modal-text').text(t('settings.delete_user_confirm') + ` "${user}"? ` + t('common.cannot_undo'));
     $('#deleteUserModal .btn-confirm').off('click').on('click', () => deleteUser(id));
     openModal('deleteUserModal');
 }
 
 function showDeletePathModal(path) {
-    $('#deletePathModal .modal-text').text(t('Remove path') + ` "${path}"? ` + t('This will not delete your files.'));
+    $('#deletePathModal .modal-text').text(t('settings.remove_path_modal') + ` "${path}"? ` + t('settings.path_remove_warn'));
     $('#deletePathModal .btn-confirm').off('click').on('click', () => deleteLibraryPath(path));
     openModal('deletePathModal');
 }
 
 function deleteUser(id) {
-    $.ajax({ url: "/api/user", type: 'DELETE', data: JSON.stringify({ user_id: id }), contentType: "application/json", success: () => { fillUserTable(); closeModal('deleteUserModal'); showToast(t('User deleted')); } });
+    $.ajax({ url: "/api/user", type: 'DELETE', data: JSON.stringify({ user_id: id }), contentType: "application/json", success: () => { fillUserTable(); closeModal('deleteUserModal'); showToast(t('settings.user_deleted')); } });
 }
 
 function deleteLibraryPath(path) {
-    $.ajax({ url: "/api/settings/library/paths", type: 'DELETE', data: JSON.stringify({ path }), contentType: "application/json", success: () => { fillLibraryTable(); closeModal('deletePathModal'); showToast(t('Path removed')); } });
+    $.ajax({ url: "/api/settings/library/paths", type: 'DELETE', data: JSON.stringify({ path }), contentType: "application/json", success: () => { fillLibraryTable(); closeModal('deletePathModal'); showToast(t('settings.path_removed')); } });
 }
 
 function submitNewUser() {
     const user = getInputVal("inputNewUser");
     const password = getInputVal("inputNewUserPassword");
-    if (!user || !password) return showToast(t('Fill all fields'), 'error');
+    if (!user || !password) return showToast(t('settings.fill_fields'), 'error');
 
     $.ajax({
         url: "/api/user", type: 'POST',
@@ -667,9 +667,9 @@ function submitNewUser() {
             if (r.success) {
                 fillUserTable();
                 $('#inputNewUser, #inputNewUserPassword').val('');
-                showToast(t('User created successfully'));
+                showToast(t('settings.user_created'));
             } else {
-                showToast(r.errors?.[0]?.error || t('Failed to create user'), 'error');
+                showToast(r.errors?.[0]?.error || t('settings.user_create_fail'), 'error');
             }
         }
     });
@@ -677,7 +677,7 @@ function submitNewUser() {
 
 function submitNewLibraryPath() {
     const path = getInputVal("libraryPathInput");
-    if (!path) return showToast(t('Path is required'), 'warning');
+    if (!path) return showToast(t('settings.path_required'), 'warning');
     $.ajax({
         url: "/api/settings/library/paths",
         type: 'POST',
@@ -687,9 +687,9 @@ function submitNewLibraryPath() {
             if (r.success) {
                 fillLibraryTable();
                 $('#libraryPathInput').val('');
-                showToast(t('Path added'));
+                showToast(t('settings.path_added'));
             } else {
-                showToast(r.errors?.[0]?.error || t('Failed to add path'), 'error');
+                showToast(r.errors?.[0]?.error || t('settings.path_add_fail'), 'error');
             }
         }
     });
@@ -697,7 +697,7 @@ function submitNewLibraryPath() {
 
 function scanLibrary(path = null) {
     $('.scanBtn').addClass('is-loading');
-    showToast(t('Scan started...'));
+    showToast(t('settings.scan_started'));
     $.ajax({
         url: '/api/library/scan',
         type: 'POST',
@@ -705,7 +705,7 @@ function scanLibrary(path = null) {
         contentType: "application/json",
         success: (result) => {
             $('.scanBtn').removeClass('is-loading');
-            if (result.success) showToast(t('Scan triggered!'));
+            if (result.success) showToast(t('settings.scan_triggered'));
         }
     });
 }
@@ -724,29 +724,29 @@ function loadCleanupStats() {
 
 function cleanupOrphaned() {
     confirmAction({
-        title: t('Limpar Registros Órfãos'),
-        message: t('Isso removerá do banco de dados todos os registros de arquivos que não existem mais no disco e todos os apps marcados como owned sem arquivos associados. Esta ação não pode ser desfeita.'),
-        confirmText: t('Limpar'),
+        title: t('settings.cleanup_orphaned'),
+        message: t('settings.cleanup_confirm'),
+        confirmText: t('common.clean'),
         confirmClass: 'is-warning',
         onConfirm: () => {
             const btn = $('#btnCleanupOrphaned');
             btn.addClass('is-loading');
-            btn.find('span:last').text(t('Limpando...'));
+            btn.find('span:last').text(t('common.cleaning'));
 
             $.post('/api/cleanup/orphaned', (res) => {
                 btn.removeClass('is-loading');
-                btn.find('span:last').text(t('Limpar Órfãos'));
+                btn.find('span:last').text(t('settings.btn_cleanup'));
 
                 if (res.success) {
                     showToast(res.message, 'success');
                     loadCleanupStats();
                 } else {
-                    showToast(t('Erro: ') + (res.error || t('Desconhecido')), 'error');
+                    showToast(t('common.error') + ': ' + (res.error || t('common.unknown')), 'error');
                 }
             }).fail((xhr) => {
                 btn.removeClass('is-loading');
-                btn.find('span:last').text(t('Limpar Órfãos'));
-                showToast(t('Erro de comunicação: ') + (xhr.responseJSON?.error || t('Desconhecido')), 'error');
+                btn.find('span:last').text(t('settings.btn_cleanup'));
+                showToast(t('common.error.communication') + (xhr.responseJSON?.error || t('common.unknown')), 'error');
             });
         }
     });
@@ -754,7 +754,7 @@ function cleanupOrphaned() {
 
 function refreshTitleDBDates() {
     $.post('/api/settings/titledb/sources/refresh-dates', () => {
-        showToast(t('Buscando datas remotas em segundo plano...'));
+        showToast(t('settings.fetching_dates'));
         let checks = 0;
         const interval = setInterval(() => {
             fillTitleDBSourcesTable();
@@ -774,12 +774,12 @@ function updateSourcePriority(name, priority) {
 
 function deleteSource(name) {
     confirmAction({
-        title: t('Excluir Fonte'),
-        message: t('Deseja realmente excluir a fonte ') + `"${name}"?`,
-        confirmText: t('Excluir'),
+        title: t('settings.delete_source'),
+        message: t('settings.delete_source_confirm') + `"${name}"?`,
+        confirmText: t('common.delete'),
         confirmClass: 'is-danger',
         onConfirm: () => {
-            $.ajax({ url: "/api/settings/titledb/sources", type: 'DELETE', data: JSON.stringify({ name }), contentType: "application/json", success: () => { showToast(t('Fonte excluída')); fillTitleDBSourcesTable(); } });
+            $.ajax({ url: "/api/settings/titledb/sources", type: 'DELETE', data: JSON.stringify({ name }), contentType: "application/json", success: () => { showToast(t('settings.source_deleted')); fillTitleDBSourcesTable(); } });
         }
     });
 }
@@ -787,7 +787,7 @@ function deleteSource(name) {
 function submitNewSource() {
     const name = getInputVal('inputSourceName');
     const url = getInputVal('inputSourceUrl');
-    if (!name || !url) return showToast(t('Name and URL required'), 'error');
+    if (!name || !url) return showToast(t('settings.source_name_url_req'), 'error');
 
     const data = {
         name, base_url: url,
