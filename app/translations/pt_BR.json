@@ -217,5 +217,15 @@
     "modal.update_history": "Histórico de Atualizações",
     "modal.dlcs_found": "Conteúdo Adicional (DLCs)",
     "modal.view_dlc_details": "Ver detalhes desta DLC",
-    "modal.ignore_dlc": "Ignorar esta DLC"
+    "modal.ignore_dlc": "Ignorar esta DLC",
+    "common.publisher": "Publicadora",
+    "common.total_size": "Total em Disco",
+    "common.added_at": "Adicionado em",
+    "common.genre": "Gênero",
+    "common.custom_tags": "Tags Personalizadas",
+    "common.wishlist": "Lista de Desejos",
+    "modal.add_tag_placeholder": "Adicionar Tag...",
+    "modal.refresh_ratings": "Atualizar Classificações",
+    "modal.game_not_in_library": "Jogo não está na biblioteca",
+    "modal.edit_metadata": "Editar Metadados"
 }

@@ -208,5 +208,15 @@
     "modal.update_history": "Update History",
     "modal.dlcs_found": "Additional Content (DLCs)",
     "modal.view_dlc_details": "View DLC details",
-    "modal.ignore_dlc": "Ignore this DLC"
+    "modal.ignore_dlc": "Ignore this DLC",
+    "common.publisher": "Publisher",
+    "common.total_size": "Total Size",
+    "common.added_at": "Added",
+    "common.genre": "Genre",
+    "common.custom_tags": "Custom Tags",
+    "common.wishlist": "Wishlist",
+    "modal.add_tag_placeholder": "Add Tag...",
+    "modal.refresh_ratings": "Refresh Ratings",
+    "modal.game_not_in_library": "Game not in library",
+    "modal.edit_metadata": "Edit Metadata"
 }

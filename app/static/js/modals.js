@@ -205,7 +205,7 @@ function showGameDetails(id) {
         ` : '';
 
         let content = `
-            < div class="modal-banner-container" style = "position: relative; height: 240px; overflow: hidden; background: #000;" >
+            <div class="modal-banner-container" style="position: relative; height: 240px; overflow: hidden; background: #000;">
                 <img src="${escapeHtml(game.bannerUrl || game.iconUrl || '/static/img/no-icon.png')}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
                 <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 80%; background: linear-gradient(transparent, var(--bulma-modal-card-body-background-color));"></div>
                 <button class="delete is-large" aria-label="close" onclick="closeModal('gameDetailsModal')" style="position: absolute; top: 1.5rem; right: 1.5rem; background-color: rgba(255,255,255,0.2); backdrop-filter: blur(8px); z-index: 20; border: 1px solid rgba(255,255,255,0.1);"></button>
@@ -218,29 +218,30 @@ function showGameDetails(id) {
                         </figure>
                         <div class="box p-4 is-shadowless border bg-light-soft" style="border-radius: 12px;">
                             <div class="mb-3">
-                                <p class="is-size-7 heading mb-1 opacity-50">${t('Publisher')}</p>
+                                <p class="is-size-7 heading mb-1 opacity-50">${t('common.publisher')}</p>
                                 <p class="is-size-6 has-text-weight-bold">${escapeHtml(game.publisher || '--')}</p>
                             </div>
                             <div class="mb-3">
-                                <p class="is-size-7 heading mb-1 opacity-50">${t('Lançamento')}</p>
+                            <div class="mb-3">
+                                <p class="is-size-7 heading mb-1 opacity-50">${t('common.release_date')}</p>
                                 <p class="is-size-6">${escapeHtml(game.release_date || '--')}</p>
                             </div>
                             <div class="mb-3">
-                                <p class="is-size-7 heading mb-1 opacity-50">${t('Versão')}</p>
+                                <p class="is-size-7 heading mb-1 opacity-50">${t('common.version')}</p>
                                 <p class="is-size-6"><span class="tag is-info is-light has-text-weight-bold">v${escapeHtml(game.display_version)}</span></p>
                             </div>
                             <div class="mb-3">
-                                <p class="is-size-7 heading mb-1 opacity-50">${t('Total em Disco')}</p>
+                                <p class="is-size-7 heading mb-1 opacity-50">${t('common.total_size')}</p>
                                 <p class="is-size-6 has-text-weight-bold font-mono">${escapeHtml(game.size_formatted || '--')}</p>
                             </div>
                             ${game.added_at ? `
                             <div class="mb-3">
-                                <p class="is-size-7 heading mb-1 opacity-30">${t('Adicionado')}</p>
+                                <p class="is-size-7 heading mb-1 opacity-30">${t('common.added_at')}</p>
                                 <p class="is-size-7 opacity-40 font-mono">${new Date(game.added_at).toLocaleDateString()}</p>
                             </div>
                             ` : ''}
                             <div>
-                                <p class="is-size-7 heading mb-1 opacity-50">${t('Genre')}</p>
+                                <p class="is-size-7 heading mb-1 opacity-50">${t('common.genre')}</p>
                                 <div class="tags">
                                     ${Array.isArray(game.category) ? game.category.map(c => `<span class="tag is-small is-light">${escapeHtml(c)}</span>`).join('') : `<span class="tag is-small is-light">${escapeHtml(game.category || '--')}</span>`}
                                 </div>
@@ -253,7 +254,7 @@ function showGameDetails(id) {
                             </div>
                             <hr class="my-4 opacity-5">
                             <div class="mb-3">
-                                <p class="is-size-7 heading mb-1 opacity-50">${t('Custom Tags')}</p>
+                                <p class="is-size-7 heading mb-1 opacity-50">${t('common.custom_tags')}</p>
                                 <div id="gameModalTags" class="tags mb-2">
                                     <!-- Tags will be loaded here -->
                                 </div>
@@ -261,7 +262,7 @@ function showGameDetails(id) {
                                     <div class="control is-expanded">
                                         <div class="select is-small is-fullwidth">
                                             <select id="modalAddTagSelect">
-                                                <option value="">${t('Add Tag...')}</option>
+                                                <option value="">${t('modal.add_tag_placeholder')}</option>
                                             </select>
                                         </div>
                                     </div>
@@ -277,7 +278,7 @@ function showGameDetails(id) {
                             <div class="wishlist-section mb-2">
                                 <button id="btnWishlist" class="button is-fullwidth is-small is-light" onclick="toggleWishlist('${escapeHtml(game.id)}')">
                                     <span class="icon"><i class="bi bi-heart"></i></span>
-                                    <span>${t('Wishlist')}</span>
+                                    <span>${t('common.wishlist')}</span>
                                 </button>
                             </div>
                             ` : ''}
@@ -285,7 +286,7 @@ function showGameDetails(id) {
                             ${game.owned ? `
                             <div class="mt-2">
                                 <button class="button is-fullwidth is-small is-ghost opacity-70" onclick="refreshSingleGameMetadata('${escapeHtml(game.id)}')">
-                                    <i class="bi bi-arrow-repeat mr-1"></i> ${t('Atualizar Ratings')}
+                                    <i class="bi bi-arrow-repeat mr-1"></i> ${t('modal.refresh_ratings')}
                                 </button>
                             </div>
                             ` : ''}
@@ -293,9 +294,9 @@ function showGameDetails(id) {
                             <div class="edit-section">
                                 <button class="button is-fullwidth is-small is-ghost has-text-grey" 
                                         onclick="editGameMetadata('${escapeHtml(game.id)}')"
-                                        ${!game.owned ? `disabled title="${t('Jogo não está na biblioteca')}"` : ''}>
+                                        ${!game.owned ? `disabled title="${t('modal.game_not_in_library')}"` : ''}>
                                     <span class="icon"><i class="bi bi-pencil"></i></span>
-                                    <span>${t('Editar Dados')}</span>
+                                    <span>${t('modal.edit_metadata')}</span>
                                 </button>
                             </div>
                         </div>
