@@ -113,7 +113,7 @@
                                 <div class="columns is-multiline">
                                     <div class="column is-6">
                                         <div class="field">
-                                            <label class="label is-small">Região da Biblioteca</label>
+                                            <label class="label is-small">{{ t('settings.general_region') }}</label>
                                             <div class="control is-expanded">
                                                 <div class="select is-fullwidth">
                                                     <select id="selectRegion"></select>
@@ -123,7 +123,7 @@
                                     </div>
                                     <div class="column is-6">
                                         <div class="field">
-                                            <label class="label is-small">Idioma da Biblioteca</label>
+                                            <label class="label is-small">{{ t('settings.general_lib_lang') }}</label>
                                             <div class="control is-expanded">
                                                 <div class="select is-fullwidth">
                                                     <select id="selectLanguage"></select>
@@ -133,7 +133,7 @@
                                     </div>
                                     <div class="column is-6">
                                         <div class="field">
-                                            <label class="label is-small">Idioma da Aplicação</label>
+                                            <label class="label is-small">{{ t('settings.general_app_lang') }}</label>
                                             <div class="control is-expanded">
                                                 <div class="select is-fullwidth">
                                                     <select id="languageSelect" onchange="changeLanguage(this.value)">
@@ -185,11 +185,11 @@
                                         <div class="mt-2 is-flex is-align-items-center gap-2">
                                             {% if valid_keys %}
                                             <span class="tag is-success is-light"><i
-                                                    class="bi bi-check-circle mr-1"></i> {{ t('Keys are valid')
+                                                    class="bi bi-check-circle mr-1"></i> {{ t('settings.keys_valid')
                                                 }}</span>
                                             {% else %}
                                             <span class="tag is-danger is-light"><i class="bi bi-x-circle mr-1"></i> {{
-                                                t('Keys missing') }}</span>
+                                                t('settings.keys_missing') }}</span>
                                             {% endif %}
                                             <span class="is-size-7 opacity-50 uppercase tracking-widest">{{ t('Required
                                                 for identification') }}</span>
@@ -205,7 +205,7 @@
                         <div class="card box shadow-sm">
                             <header class="card-header border-none shadow-none">
                                 <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-people-fill mr-2"></i> {{ t('User Management') }}
+                                    <i class="bi bi-people-fill mr-2"></i> {{ t('settings.user_management') }}
                                 </p>
                             </header>
                             <div class="card-content pt-0">
@@ -213,9 +213,9 @@
                                     <table class="table is-fullwidth is-hoverable" id="userTable">
                                         <thead>
                                             <tr>
-                                                <th>{{ t('User') }}</th>
-                                                <th>{{ t('Permissions') }}</th>
-                                                <th class="has-text-right">{{ t('Actions') }}</th>
+                                                <th>{{ t('common.user') }}</th>
+                                                <th>{{ t('settings.permissions') }}</th>
+                                                <th class="has-text-right">{{ t('common.actions') }}</th>
                                             </tr>
                                         </thead>
                                         <tbody></tbody>
@@ -232,18 +232,18 @@
                                             <div class="columns">
                                                 <div class="column">
                                                     <div class="field">
-                                                        <label class="label is-small">{{ t('Username') }}</label>
+                                                        <label class="label is-small">{{ t('settings.username') }}</label>
                                                         <div class="control">
                                                             <input class="input" type="text" id="inputNewUser"
-                                                                placeholder="Ex: admin" pattern="^[a-zA-Z0-9_-]{3,20}$"
-                                                                title="3-20 caracteres (letras, números, _ ou -)"
+                                                                placeholder="{{ t('settings.username_placeholder') }}" pattern="^[a-zA-Z0-9_-]{3,20}$"
+                                                                title="{{ t('settings.username_title') }}"
                                                                 required autocomplete="username">
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div class="column">
                                                     <div class="field">
-                                                        <label class="label is-small">{{ t('Password') }}</label>
+                                                        <label class="label is-small">{{ t('common.password') }}</label>
                                                         <div class="control">
                                                             <input class="input" type="password"
                                                                 id="inputNewUserPassword" minlength="6" required
@@ -258,13 +258,13 @@
                                                     <label class="checkbox mr-4">
                                                         <input type="checkbox" id="checkboxNewUserShopAccess" checked>
                                                         {{
-                                                        t('Shop Access') }}
+                                                        t('settings.shop_access') }}
                                                     </label>
                                                 </div>
                                                 <div class="control">
                                                     <label class="checkbox mr-4">
                                                         <input type="checkbox" id="checkboxNewUserBackupAccess"> {{
-                                                        t('Backup Access') }}
+                                                        t('settings.backup_access') }}
                                                     </label>
                                                 </div>
                                                 <div class="control">
@@ -277,7 +277,7 @@
                                             </div>
 
                                             <button class="button is-primary is-fullwidth-mobile" type="submit">
-                                                {{ t('Create Account') }}
+                                                {{ t('settings.create_account') }}
                                             </button>
                                         </form>
                                     </div>
@@ -291,7 +291,7 @@
                         <div class="card box shadow-sm">
                             <header class="card-header border-none shadow-none">
                                 <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-folder2-open mr-2"></i> {{ t('Library Locations') }}
+                                    <i class="bi bi-folder2-open mr-2"></i> {{ t('settings.library_locations') }}
                                     <span class="ml-2 tag" id="watchdogStatus">
                                         <span class="icon"><i class="bi bi-check-circle text-success"></i></span>
                                         <span>Watchdog: {{ t('settings.checking') }}</span>
@@ -310,12 +310,12 @@
                                     <table class="table is-fullwidth" id="pathsTable">
                                         <thead>
                                             <tr>
-                                                <th>{{ t('Storage Path') }}</th>
+                                                <th>{{ t('settings.storage_path') }}</th>
                                                 <th class="has-text-centered">{{ t('common.games') }}</th>
                                                 <th class="has-text-centered">{{ t('common.files') }}</th>
                                                 <th class="has-text-centered">{{ t('common.size') }}</th>
                                                 <th class="has-text-centered">{{ t('settings.last_scan') }}</th>
-                                                <th class="has-text-right">{{ t('Actions') }}</th>
+                                                <th class="has-text-right">{{ t('common.actions') }}</th>
                                             </tr>
                                         </thead>
                                         <tbody></tbody>
@@ -336,7 +336,7 @@
                                             </div>
                                             <div class="control">
                                                 <button class="button is-primary" onclick="submitNewLibraryPath()">
-                                                    {{ t('Add Path') }}
+                                                    {{ t('settings.add_path') }}
                                                 </button>
                                             </div>
                                         </div>
@@ -436,7 +436,7 @@
                                         <button class="button is-warning is-outlined scanBtn mr-2"
                                             onclick="scanLibrary()">
                                             <span class="icon"><i class="bi bi-arrow-clockwise"></i></span>
-                                            <span>{{ t('Full Scan') }}</span>
+                                            <span>{{ t('settings.full_scan') }}</span>
                                         </button>
                                         <button class="button is-warning is-outlined" id="btnCleanupOrphaned"
                                             onclick="cleanupOrphaned()">
@@ -694,7 +694,7 @@
                                                 <th>{{ t('Last Download (Local)') }}</th>
                                                 <th>{{ t('Priority') }}</th>
                                                 <th>{{ t('Status') }}</th>
-                                                <th class="has-text-right">{{ t('Actions') }}</th>
+                                                <th class="has-text-right">{{ t('common.actions') }}</th>
                                             </tr>
                                         </thead>
                                         <tbody></tbody>
@@ -861,9 +861,9 @@
                                                 <th width="40"><input type="checkbox" id="selectAllErrors"
                                                         onclick="toggleAllErrors(this)">
                                                 </th>
-                                                <th>Arquivo</th>
+                                                <th>{{ t('settings.file') }}</th>
                                                 <th>Erro</th>
-                                                <th class="has-text-right">Ações</th>
+                                                <th class="has-text-right">{{ t('common.actions') }}</th>
                                             </tr>
                                         </thead>
                                         <tbody></tbody>
@@ -918,7 +918,7 @@
                                             <tr>
                                                 <th>Tag</th>
                                                 <th>Visualização</th>
-                                                <th class="has-text-right">Ações</th>
+                                                <th class="has-text-right">{{ t('common.actions') }}</th>
                                             </tr>
                                         </thead>
                                         <tbody></tbody>
@@ -1133,11 +1133,11 @@
                                         </div>
                                         <div class="column">
                                             <p class="heading is-size-7 opacity-50">API RAWG</p>
-                                            <span class="tag is-success is-light" id="statusRAWG">Ativa</span>
+                                            <span class="tag is-success is-light" id="statusRAWG">{{ t('settings.status_active') }}</span>
                                         </div>
                                         <div class="column">
                                             <p class="heading is-size-7 opacity-50">API IGDB</p>
-                                            <span class="tag is-success is-light" id="statusIGDB">Ativa</span>
+                                            <span class="tag is-success is-light" id="statusIGDB">{{ t('settings.status_active') }}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1145,28 +1145,27 @@
                                 <!-- Automated Metadata Fetch -->
                                 <div class="box is-shadowless border p-4 mb-4 bg-light-soft"
                                     id="metadata-fetch-status-container">
-                                    <h4 class="title is-6 mb-3">Busca Automática de Metadados</h4>
+                                    <h4 class="title is-6 mb-3">{{ t('settings.auto_metadata_fetch') }}</h4>
                                     <div id="metadata-fetch-status-content">
                                         <div class="is-flex is-align-items-center mb-3">
                                             <div class="mr-4">
-                                                <p class="heading is-size-7 opacity-50">Status de Agendamento</p>
-                                                <span class="tag is-info is-light">2x por dia (12h)</span>
+                                                <p class="heading is-size-7 opacity-50">{{ t('settings.schedule_status') }}</p>
+                                                <span class="tag is-info is-light">{{ t('settings.schedule_12h') }}</span>
                                             </div>
                                             <div id="last-metadata-fetch-info">
-                                                <p class="heading is-size-7 opacity-50">Última Execução</p>
-                                                <span class="is-size-7" id="last-metadata-fetch-time">Nunca
-                                                    executado</span>
+                                                <p class="heading is-size-7 opacity-50">{{ t('settings.last_execution') }}</p>
+                                                <span class="is-size-7" id="last-metadata-fetch-time">{{ t('settings.never_executed') }}</span>
                                             </div>
                                         </div>
 
                                         <div class="buttons">
                                             <button class="button is-small is-primary is-outlined"
                                                 onclick="triggerMetadataFetch()">
-                                                <i class="bi bi-stars mr-1"></i> Buscar Agora
+                                                <i class="bi bi-stars mr-1"></i> {{ t('settings.fetch_now') }}
                                             </button>
                                             <button class="button is-small is-warning is-outlined"
                                                 onclick="triggerMetadataFetch(true)">
-                                                <i class="bi bi-lightning-fill mr-1"></i> Forçar (Ignorar Agendamento)
+                                                <i class="bi bi-lightning-fill mr-1"></i> {{ t('settings.force_ignore_schedule') }}
                                             </button>
                                         </div>
                                     </div>
@@ -1175,22 +1174,21 @@
                                 <!-- Bulk Actions -->
                                 <div class="notification is-ghost border p-4"
                                     style="border-left: 5px solid var(--color-info) !important;">
-                                    <h4 class="title is-6 mb-3">Ações em Massa</h4>
+                                    <h4 class="title is-6 mb-3">{{ t('settings.bulk_actions') }}</h4>
                                     <div class="buttons">
                                         <button class="button is-info is-light" id="btnRefreshAllMetadata"
                                             onclick="refreshAllMetadata()">
                                             <i class="bi bi-arrow-repeat mr-2"></i>
-                                            Atualizar Metadados de Todos os Jogos
+                                            {{ t('settings.refresh_all_metadata') }}
                                         </button>
                                     </div>
                                     <p class="help is-size-7 opacity-70">
-                                        ⚠️ Isso buscará notas e tempo de jogo para todos os itens identificados. Pode
-                                        levar tempo.
+                                        {{ t('settings.refresh_all_metadata_desc') }}
                                     </p>
                                 </div>
 
                                 <button class="button is-primary mt-4" onclick="saveAPISettings()">
-                                    <i class="bi bi-check-lg mr-1"></i> Salvar Configurações
+                                    <i class="bi bi-check-lg mr-1"></i> {{ t('settings.save_config') }}
                                 </button>
                             </div>
                         </div>
@@ -1201,7 +1199,7 @@
                         <div class="card box shadow-sm mb-5">
                             <header class="card-header border-none shadow-none">
                                 <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-cpu-fill mr-2"></i> Diagnóstico e Manutenção do Sistema
+                                    <i class="bi bi-cpu-fill mr-2"></i> {{ t('settings.system_maintenance') }}
                                 </p>
                             </header>
                             <div class="card-content pt-0">
@@ -1209,38 +1207,31 @@
                                     <div class="column is-6">
                                         <div class="box is-shadowless border p-4">
                                             <h4 class="title is-6 mb-3"><i
-                                                    class="bi bi-lightning-charge-fill has-text-warning mr-2"></i> Ações
-                                                Rápidas</h4>
+                                                    class="bi bi-lightning-charge-fill has-text-warning mr-2"></i> {{ t('settings.quick_actions') }}</h4>
                                             <div class="buttons">
                                                 <button class="button is-danger is-light is-small"
                                                     onclick="resetJobs()">
-                                                    <i class="bi bi-arrow-counterclockwise mr-2"></i> Resetar Jobs &
-                                                    Flags
+                                                    <i class="bi bi-arrow-counterclockwise mr-2"></i> {{ t('settings.reset_jobs') }}
                                                 </button>
                                                 <button class="button is-danger is-dark is-small"
                                                     onclick="resetRedis()">
-                                                    <i class="bi bi-trash mr-2"></i> Resetar Redis (Fila/Cache)
+                                                    <i class="bi bi-trash mr-2"></i> {{ t('settings.reset_redis') }}
                                                 </button>
                                             </div>
-                                            <p class="is-size-7 opacity-70 mt-2">Use o reset de jobs se o scan parecer
-                                                travado. O reset do Redis limpa todas as tarefas pendentes na fila
-                                                Celery.</p>
+                                            <p class="is-size-7 opacity-70 mt-2">{{ t('settings.reset_jobs_desc') }}</p>
                                         </div>
                                     </div>
                                     <div class="column is-6">
                                         <div class="box is-shadowless border p-4">
                                             <h4 class="title is-6 mb-3"><i
-                                                    class="bi bi-database-check has-text-success mr-2"></i> Testes de
-                                                Sincronismo</h4>
+                                                    class="bi bi-database-check has-text-success mr-2"></i> {{ t('settings.sync_tests') }}</h4>
                                             <div class="buttons">
                                                 <button class="button is-info is-small" id="btnTestTitleDB"
                                                     onclick="testTitleDBSync()">
-                                                    <i class="bi bi-play-fill mr-2"></i> Testar Sync TitleDB (Sync)
+                                                    <i class="bi bi-play-fill mr-2"></i> {{ t('settings.test_titledb_sync') }}
                                                 </button>
                                             </div>
-                                            <p class="is-size-7 opacity-70 mt-2">Executa o algoritmo de download e
-                                                sincronização do TitleDB de forma síncrona, retornando o resultado
-                                                imediato.</p>
+                                            <p class="is-size-7 opacity-70 mt-2">{{ t('settings.test_titledb_sync_desc') }}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1255,7 +1246,7 @@
                                         </button>
                                     </h4>
                                     <div id="watchdogStatusDisplay" class="mb-3">
-                                        <p class="is-size-7">Carregando status...</p>
+                                        <p class="is-size-7">{{ t('settings.loading_status') }}</p>
                                     </div>
                                     <div class="buttons">
                                         <button class="button is-warning is-small" id="btnRestartWatchdog"
@@ -1268,7 +1259,7 @@
 
                                 <div class="box is-shadowless border p-4 mt-4">
                                     <h4 class="title is-6 mb-3">
-                                        <i class="bi bi-list-task has-text-info mr-2"></i> Status da Fila (Celery)
+                                        <i class="bi bi-list-task has-text-info mr-2"></i> {{ t('settings.celery_queue_status') }}
                                         <button class="button is-ghost is-small float-right"
                                             onclick="refreshQueueStatus()">
                                             <i class="bi bi-arrow-clockwise"></i>
@@ -1276,7 +1267,7 @@
                                     </h4>
                                     <div id="queueStatusDisplay" class="is-size-7 font-mono overflow-auto"
                                         style="max-height: 300px; background: #f8f9fa; padding: 10px;">
-                                        Clique em atualizar para ver as tarefas...
+                                        {{ t('settings.click_refresh_tasks') }}
                                     </div>
                                 </div>
                             </div>
@@ -1334,7 +1325,7 @@
 
                                             let html = `
                                                 <p class="is-size-7 mb-2">
-                                                    <strong>Status:</strong> 
+                                                    <strong>{{ t('settings.status') }}:</strong> 
                                                     <i class="bi bi-${statusIcon} ${statusColor}"></i> 
                                                     <span class="${statusColor}">${statusText}</span>
                                                 </p>
@@ -1577,28 +1568,27 @@
                         <div class="card box shadow-sm">
                             <header class="card-header border-none shadow-none">
                                 <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-shield-check mr-2"></i> Gerenciamento de Backups
+                                    <i class="bi bi-shield-check mr-2"></i> {{ t('settings.backup_management') }}
                                 </p>
                                 <div class="card-header-icon pt-4 pr-5">
                                     <button class="button is-small is-primary" onclick="createManualBackup()"
                                         id="btnCreateBackup">
-                                        <i class="bi bi-plus-lg mr-1"></i> Criar Backup
+                                        <i class="bi bi-plus-lg mr-1"></i> {{ t('settings.create_backup') }}
                                     </button>
                                 </div>
                             </header>
                             <div class="card-content pt-0">
-                                <p class="is-size-7 mb-4 opacity-70">Gerencie os backups do banco de dados e
-                                    configurações. Os backups são armazenados localmente na pasta de configuração.</p>
+                                <p class="is-size-7 mb-4 opacity-70">{{ t('settings.backup_desc') }}</p>
 
                                 <div class="table-container">
                                     <table class="table is-fullwidth is-hoverable" id="backupsTable">
                                         <thead>
                                             <tr>
-                                                <th>Arquivo</th>
-                                                <th>Tipo</th>
-                                                <th>Tamanho</th>
-                                                <th>Data de Criação</th>
-                                                <th class="has-text-right">Ações</th>
+                                                <th>{{ t('settings.file') }}</th>
+                                                <th>{{ t('settings.type') }}</th>
+                                                <th>{{ t('common.size') }}</th>
+                                                <th>{{ t('settings.creation_date') }}</th>
+                                                <th class="has-text-right">{{ t('common.actions') }}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1615,16 +1605,14 @@
                         <div class="card box shadow-sm">
                             <header class="card-header border-none shadow-none">
                                 <p class="card-header-title has-text-primary">
-                                    <i class="bi bi-cloud-fill mr-2"></i> Integração Cloud
+                                    <i class="bi bi-cloud-fill mr-2"></i> {{ t('settings.cloud_integration') }}
                                 </p>
                             </header>
                             <div class="card-content pt-0">
                                 <div class="notification is-warning mb-4">
                                     <p class="has-text-weight-bold mb-2"><i
                                             class="bi bi-exclamation-triangle mr-2"></i>Cloud Sync Descontinuado</p>
-                                    <p class="is-size-7">O recurso de sincronização com Google Drive e Dropbox foi
-                                        removido na versão 2.2.0 devido a obsolescência e manutenção. Use o sistema de
-                                        backups local e transferência de arquivos direta como alternativa.</p>
+                                    <p class="is-size-7">{{ t('settings.cloud_deprecated') }}</p>
                                 </div>
                                 <div class="columns">
                                     <div class="column is-6">
@@ -1642,7 +1630,7 @@
                                             <button class="button is-small is-primary is-fullwidth btn-connect"
                                                 onclick="connectCloud('gdrive')" disabled>Descontinuado</button>
                                             <p class="is-size-7 has-text-danger mt-2 is-hidden btn-config-needed">
-                                                Configuração necessária (secret.json não encontrado)</p>
+                                                {{ t('settings.config_required_secret') }}</p>
                                         </div>
                                     </div>
                                     <div class="column is-6">
@@ -1650,7 +1638,7 @@
                                             style="border-left: 4px solid var(--color-info) !important; opacity: 0.6;">
                                             <p class="has-text-weight-bold mb-3"><i class="bi bi-dropbox mr-2"></i>
                                                 Dropbox</p>
-                                            <p class="is-size-7 opacity-60 mb-4">Mantenha seu acervo seguro e acessível
+                                            <p class="is-size-7 opacity-60 mb-4">{{ t('settings.keep_collection_safe') }}
                                                 via Dropbox.</p>
                                             <div class="cloud-status mb-3 is-hidden">
                                                 <span class="tag is-success is-light"><i
@@ -1660,7 +1648,7 @@
                                             <button class="button is-small is-primary is-fullwidth btn-connect"
                                                 onclick="connectCloud('dropbox')" disabled>Descontinuado</button>
                                             <p class="is-size-7 has-text-danger mt-2 is-hidden btn-config-needed">
-                                                Configuração necessária (app_key.txt não encontrado)</p>
+                                                {{ t('settings.config_required_appkey') }}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1672,7 +1660,7 @@
                     <section id="section-ApiTokens" class="settings-section is-hidden">
                         <div class="mb-5">
                             <h2 class="title is-4">Tokens de API</h2>
-                            <p class="subtitle is-6 has-text-grey">Gerencie tokens de acesso para integrações e scripts
+                            <p class="subtitle is-6 has-text-grey">{{ t('settings.manage_access_tokens') }}
                                 automatizados.</p>
                         </div>
 
@@ -1700,8 +1688,8 @@
                                             <th>Nome</th>
                                             <th>Prefixo</th>
                                             <th>Criado em</th>
-                                            <th>Último Uso</th>
-                                            <th class="has-text-right">Ações</th>
+                                            <th>{{ t('settings.last_use') }}</th>
+                                            <th class="has-text-right">{{ t('common.actions') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody id="tokensTableBody">
@@ -1767,7 +1755,7 @@
                             </header>
                             <section class="modal-card-body">
                                 <div class="field">
-                                    <label class="label">Nome do Token/Aplicação</label>
+                                    <label class="label">{{ t('settings.token_name') }}</label>
                                     <div class="control">
                                         <input class="input" type="text" id="newTokenName"
                                             placeholder="Ex: Meu Script Python">
@@ -1776,7 +1764,7 @@
                                 <div id="generatedTokenContainer"
                                     class="is-hidden notification is-success is-light mt-4">
                                     <p class="has-text-weight-bold mb-2">Token Gerado com Sucesso!</p>
-                                    <p class="is-size-7 mb-2">Copie este token agora. Você não poderá vê-lo novamente.
+                                    <p class="is-size-7 mb-2">{{ t('settings.copy_token_now') }}
                                     </p>
                                     <div class="field has-addons">
                                         <div class="control is-expanded">

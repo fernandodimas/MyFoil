@@ -1318,7 +1318,7 @@ async function updateMetadataStatus() {
                 if (last.status === 'running') {
                     statusHtml += '<span class="has-text-info">Em execução...</span>';
                 } else if (last.status === 'completed') {
-                    statusHtml += `<span class="has-text-success">Sucesso: ${last.updated} atualizados / ${last.processed} total</span>`;
+                    statusHtml += `<span class="has-text-success">t('common.success'): ${last.updated} atualizados / ${last.processed} total</span>`;
                 } else {
                     statusHtml += '<span class="has-text-danger">Falha na última execução</span>';
                 }
