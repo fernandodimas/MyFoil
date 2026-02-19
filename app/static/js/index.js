@@ -378,10 +378,9 @@ function renderCardView(items) {
         const metacriticScore = game.metacritic_score;
         let ratingBadge = '';
         if (metacriticScore) {
-            const scoreClass = metacriticScore >= 75 ? 'high-score' : (metacriticScore >= 50 ? 'mid-score' : 'low-score');
-            ratingBadge = `<div class="rating-badge ${scoreClass}" title="Metacritic: ${metacriticScore}">
-                <i class="bi bi-star-fill"></i>
-                <span>${metacriticScore}</span>
+            const scoreClass = metacriticScore >= 75 ? 'high' : (metacriticScore >= 50 ? 'mid' : 'low');
+            ratingBadge = `<div class="metacritic-badge" data-score="${scoreClass}" title="Metacritic: ${metacriticScore}">
+                ${metacriticScore}
             </div>`;
         }
 
@@ -413,7 +412,6 @@ function renderCardView(items) {
                                 <span class="is-size-7 opacity-70 font-mono">&nbsp; ${game.size_formatted || '--'}</span>
                             </div>
                             <div class="is-flex gap-1 is-justify-content-end ml-auto">
-                                ${game.metacritic_score ? `<div class="metacritic-badge" title="Metacritic: ${game.metacritic_score}">${game.metacritic_score}</div>` : ''}
                                 ${game.has_non_ignored_redundant ? `<span class="tag tag-redundant has-text-weight-bold is-small">${t('REDUNDANT')}</span>` : ''}
                                 ${game.has_non_ignored_updates ? `<span class="tag tag-update has-text-weight-bold is-small">${t('UPDATE')}</span>` : ''}
                                 ${game.has_non_ignored_dlcs ? `<span class="tag tag-dlc has-text-weight-bold is-small">${t('DLC')}</span>` : ''}

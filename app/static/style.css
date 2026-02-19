@@ -1699,7 +1699,7 @@ input[type=range].slider.is-small {
 .metacritic-badge {
     position: absolute;
     top: 8px;
-    right: 8px;
+    left: 8px;
     background: #6c3; /* Verde Metacritic */
     color: #000;
     padding: 4px 8px;
