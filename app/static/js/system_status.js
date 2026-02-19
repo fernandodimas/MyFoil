@@ -10,9 +10,9 @@ class SystemStatusManager {
         if (typeof io === 'undefined') {
             console.warn('Socket.IO client not loaded; realtime status disabled');
             this.socket = {
-                on: function () {},
-                off: function () {},
-                emit: function () {},
+                on: function () { },
+                off: function () { },
+                emit: function () { },
             };
         } else if (typeof socket === 'undefined') {
             this.socket = io({
@@ -147,7 +147,7 @@ class SystemStatusManager {
         } else {
             // Idle state
             icon.innerHTML = '<i class="bi bi-check-circle has-text-success"></i>';
-            text.textContent = 'System Idle';
+            text.textContent = t('status.system_idle');
             progressContainer.classList.add('is-hidden');
             indicator.classList.remove('is-active');
         }
@@ -161,14 +161,14 @@ class SystemStatusManager {
 
         // Update active jobs list
         if (status.active.length === 0) {
-            activeList.innerHTML = '<p class="has-text-grey-light has-text-centered py-4">No active operations</p>';
+            activeList.innerHTML = `<p class="has-text-grey-light has-text-centered py-4">${t('status.no_active_ops')}</p>`;
         } else {
             activeList.innerHTML = status.active.map(job => this.renderActiveJob(job)).join('');
         }
 
         // Update history
         if (status.history.length === 0) {
-            historyList.innerHTML = '<p class="has-text-grey-light has-text-centered py-4">No recent activity</p>';
+            historyList.innerHTML = `<p class="has-text-grey-light has-text-centered py-4">${t('status.no_recent_activity')}</p>`;
         } else {
             historyList.innerHTML = status.history.slice(0, 10).map(job => this.renderHistoryJob(job)).join('');
         }
@@ -310,13 +310,13 @@ class SystemStatusManager {
 
     getJobLabel(job) {
         const labels = {
-            'library_scan': 'Library Scan',
-            'titledb_update': 'TitleDB Update',
-            'metadata_fetch': 'Metadata Fetch',
-            'metadata_fetch_all': 'Full Metadata Fetch',
-            'file_identification': 'File Identification',
-            'backup': 'Backup',
-            'cleanup': 'Cleanup',
+            'library_scan': t('job.library_scan'),
+            'titledb_update': t('job.titledb_update'),
+            'metadata_fetch': t('job.metadata_fetch'),
+            'metadata_fetch_all': t('job.metadata_fetch'),
+            'file_identification': t('job.file_identification'),
+            'backup': t('job.backup'),
+            'cleanup': t('job.cleanup'),
         };
         return labels[job.type] || job.type;
     }
@@ -388,14 +388,14 @@ async function clearAllJobs() {
 
             if (response.ok) {
                 if (statusManager) statusManager.fetchStatus();
-                showToast('Active operations cleared. Stuck jobs cancelled.', 'success');
+                showToast(t('toast.cleared_success'), 'success');
             } else {
                 console.error('Failed to clear jobs');
-                showToast('Failed to clear operations.', 'danger');
+                showToast(t('toast.cleared_error'), 'danger');
             }
         } catch (error) {
             console.error('Error clearing jobs:', error);
-            showToast('Error communicating with server.', 'danger');
+            showToast(t('toast.comm_error'), 'danger');
         } finally {
             clearAllJobsRunning = false;
             // Reset button
@@ -442,17 +442,17 @@ async function cancelJob(jobId, btnElement) {
             if (statusManager) statusManager.fetchStatus();
             if (!data.success) {
                 console.error(`Failed to cancel job: ${data.error}`);
-                showToast(`Failed to cancel job: ${data.error}`, 'danger');
+                showToast(`${t('toast.cancel_error')}: ${data.error}`, 'danger');
             } else {
-                showToast('Job cancelled successfully', 'success');
+                showToast(t('toast.cancel_success'), 'success');
             }
         } else {
             console.error('Failed to cancel job - HTTP error');
-            showToast('Failed to cancel job - HTTP error', 'danger');
+            showToast(t('toast.cancel_error'), 'danger');
         }
     } catch (error) {
         console.error('Error cancelling job:', error);
-        showToast('Error communicating with server', 'danger');
+        showToast(t('toast.comm_error'), 'danger');
     } finally {
         if (btnElement) {
             btnElement.classList.remove('is-loading');

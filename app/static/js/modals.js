@@ -9,9 +9,9 @@ const closeModal = (id) => $(`#${id}`).removeClass('is-active');
 // Generic Confirmation Helper
 window.confirmAction = function (options) {
     const { title, message, onConfirm, confirmText, confirmClass } = options;
-    $('#confirmTitle').text(title || t('Confirmar Ação'));
-    $('#confirmMessage').text(message || t('Deseja realmente prosseguir?'));
-    $('#btnConfirmAction').text(confirmText || t('Confirmar'));
+    $('#confirmTitle').text(title || t('modal.confirm_title'));
+    $('#confirmMessage').text(message || t('modal.confirm_msg'));
+    $('#btnConfirmAction').text(confirmText || t('modal.confirm_btn'));
     $('#btnConfirmAction').attr('class', `button is-small ${confirmClass || 'is-primary'}`);
 
     $('#btnConfirmAction').off('click').on('click', function () {
@@ -45,7 +45,7 @@ function showGameDetails(id) {
         // Base Files Section
         let filesHtml = game.files && game.files.length > 0 ? `
             <div class="mb-5">
-                <p class="heading has-text-weight-bold mb-3 has-text-primary">${t('Arquivos Base Encontrados')} (${game.files.length})</p>
+                <p class="heading has-text-weight-bold mb-3 has-text-primary">${t('modal.base_files_found')} (${game.files.length})</p>
                 ${game.files.map(f => `
                     <div class="box is-shadowless border p-3 mb-2 bg-light-soft" style="display: flex; flex-direction: row; flex-wrap: nowrap; gap: 0.5rem; align-items: center;">
                         <div class="file-name" style="flex: 1 1 auto; min-width: 0; overflow: hidden;">
@@ -59,17 +59,17 @@ function showGameDetails(id) {
                             <span class="tag is-light font-mono">${escapeHtml(f.size_formatted || '--')}</span>
                         </div>
                         <div class="file-actions buttons is-gap-1" style="flex: 0 0 auto; display: flex; flex-direction: row;">
-                            <a href="/api/get_game/${f.id}" class="button is-primary is-small" title="${t('Download')}">
+                            <a href="/api/get_game/${f.id}" class="button is-primary is-small" title="${t('common.download')}">
                                 <span class="icon is-small"><i class="bi bi-download"></i></span>
                             </a>
-                            <button class="button is-danger is-small is-light" onclick="deleteGameFile(${f.id}, '${escapeHtml(game.id)}')" title="${t('Excluir Arquivo')}">
+                            <button class="button is-danger is-small is-light" onclick="deleteGameFile(${f.id}, '${escapeHtml(game.id)}')" title="${t('common.delete_file')}">
                                 <span class="icon is-small"><i class="bi bi-trash-fill"></i></span>
                             </button>
                         </div>
                     </div>
                 `).join('')}
             </div>
-        ` : (!game.has_base ? `<p class="notification is-warning is-light p-2 is-size-7" style="border: 1px solid rgba(0,0,0,0.1)">${t('Missing Base File')}</p>` : '');
+        ` : (!game.has_base ? `<p class="notification is-warning is-light p-2 is-size-7" style="border: 1px solid rgba(0,0,0,0.1)">${t('modal.missing_base')}</p>` : '');
 
         // Updates Section
         const sortedUpdates = [...(game.updates || [])].sort((a, b) => b.version - a.version);
@@ -78,8 +78,8 @@ function showGameDetails(id) {
         if (sortedUpdates.length === 0) {
             updatesHtml = `
                 <div class="mb-5">
-                    <p class="heading has-text-weight-bold mb-3 has-text-link">${t('Updates')}</p>
-                    <p class="is-size-7 opacity-50 italic">${t('No DLCs or Updates available')}</p>
+                    <p class="heading has-text-weight-bold mb-3 has-text-link">${t('modal.updates')}</p>
+                    <p class="is-size-7 opacity-50 italic">${t('modal.no_updates_dlcs')}</p>
                 </div>
             `;
         } else {
@@ -97,7 +97,7 @@ function showGameDetails(id) {
                             ${u.owned && file ? `
                                 <div class="field is-grouped is-grouped-centered is-align-items-center">
                                     <span class="tag is-light font-mono mr-2 is-hidden-mobile">${escapeHtml(file.size_formatted || '--')}</span>
-                                    ${isRedundant ? `<span class="tag tag-redundant mr-1 has-text-weight-bold">${t('REDUNDANTE')}</span>` : ''}
+                                    ${isRedundant ? `<span class="tag tag-redundant mr-1 has-text-weight-bold">${t('common.redundant')}</span>` : ''}
                                     <p class="control">
                                         <a href="/api/get_game/${file.id}" class="button is-primary is-small" title="${t('Download')}">
                                             <i class="bi bi-download"></i>
@@ -122,9 +122,9 @@ function showGameDetails(id) {
             updatesHtml = `
                 <div class="mb-5">
                     <div class="is-flex is-justify-content-between is-align-items-center mb-3">
-                        <p class="heading has-text-weight-bold has-text-link mb-0">${t('Histórico de Atualizações')}</p>
+                        <p class="heading has-text-weight-bold has-text-link mb-0">${t('modal.update_history')}</p>
                         ${others.length > 0 ? `<button class="button is-ghost is-small p-0" onclick="$('#otherUpdates').toggleClass('is-hidden'); $(this).find('i').toggleClass('bi-chevron-down bi-chevron-up')">
-                            <span class="is-size-7 mr-1 text-primary">${others.length} ${t('mais')}</span>
+                            <span class="is-size-7 mr-1 text-primary">${others.length} ${t('common.more')}</span>
                             <i class="bi bi-chevron-down text-primary"></i>
                         </button>` : ''}
                     </div>
@@ -132,9 +132,9 @@ function showGameDetails(id) {
                         <table class="table is-narrow is-fullwidth is-size-7">
                             <thead>
                                 <tr>
-                                    <th>${t('Versão')}</th>
-                                    <th>${t('Lançamento')}</th>
-                                    <th class="has-text-centered">${t('Status')}</th>
+                                    <th>${t('common.version')}</th>
+                                    <th>${t('common.release_date')}</th>
+                                    <th class="has-text-centered">${t('common.status')}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -150,62 +150,61 @@ function showGameDetails(id) {
         }
 
         // DLCs Section
-        let dlcsHtml = game.dlcs && game.dlcs.length > 0 ? `
-            <div class="mb-5">
-                <p class="heading has-text-weight-bold mb-3 has-text-success">${t('Conteúdo Adicional (DLCs)')}</p>
-                <div class="table-container">
-                    <table class="table is-narrow is-fullwidth is-size-7">
-                        <thead>
-                            <tr>
-                                <th>${t('Nome')}</th>
-                                <th class="has-text-centered">${t('Lançamento')}</th>
-                                <th class="has-text-centered">${t('Status')}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${game.dlcs.map(d => {
-            const file = d.files && d.files.length > 0 ? d.files[0] : null;
-            const ignoreId = `ignore-dlc-${d.app_id}`;
-            return `
+        <div class="mb-5">
+            <p class="heading has-text-weight-bold mb-3 has-text-success">${t('modal.dlcs_found')}</p>
+            <div class="table-container">
+                <table class="table is-narrow is-fullwidth is-size-7">
+                    <thead>
+                        <tr>
+                            <th>${t('common.name')}</th>
+                            <th class="has-text-centered">${t('common.release_date')}</th>
+                            <th class="has-text-centered">${t('common.status')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${game.dlcs.map(d => {
+                            const file = d.files && d.files.length > 0 ? d.files[0] : null;
+                            const ignoreId = `ignore-dlc-${d.app_id}`;
+                            return `
                                     <tr>
-                                        <td class="has-text-weight-bold" onclick="showDlcDetails('${escapeHtml(d.app_id)}')" style="cursor: pointer; color: inherit;" title="${t('Ver detalhes desta DLC')}">${escapeHtml(d.name)}</td>
+                                        <td class="has-text-weight-bold" onclick="showDlcDetails('${escapeHtml(d.app_id)}')" style="cursor: pointer; color: inherit;" title="${t('modal.view_dlc_details')}">${escapeHtml(d.name)}</td>
                                         <td class="opacity-50 font-mono has-text-centered">${escapeHtml(d.release_date || d.releaseDate || '--')}</td>
                                         <td class="has-text-centered">
                                             ${d.owned && file ? `
                                                 <div class="field is-grouped is-grouped-centered is-align-items-center">
                                                     <span class="tag is-light font-mono mr-2 is-hidden-mobile">${escapeHtml(file.size_formatted || '--')}</span>
                                                     <p class="control">
-                                                        <a href="/api/get_game/${file.id}" class="button is-primary is-light is-small" title="${t('Download')}">
+                                                        <a href="/api/get_game/${file.id}" class="button is-primary is-light is-small" title="${t('common.download')}">
                                                             <i class="bi bi-download"></i>
                                                         </a>
                                                     </p>
                                                     <p class="control">
-                                                        <button class="button is-danger is-small is-light" onclick="deleteGameFile(${file.id}, '${escapeHtml(game.id)}')" title="${t('Excluir')}">
+                                                        <button class="button is-danger is-small is-light" onclick="deleteGameFile(${file.id}, '${escapeHtml(game.id)}')" title="${t('common.delete_file')}">
                                                             <i class="bi bi-trash"></i>
                                                         </button>
                                                     </p>
                                                 </div>
-                                            ` : (d.owned ? `<span class="tag is-warning is-light is-small">${t('Erro')}</span>` : `
+                                            ` : (d.owned ? `<span class="tag is-warning is-light is-small">${t('common.error')}</span>` : `
                                                 <div class="field is-grouped is-grouped-centered is-align-items-center">
-                                                    <span class="tag is-danger is-light is-small mr-2">${t('Falta')}</span>
+                                                    <span class="tag is-danger is-light is-small mr-2">${t('common.missing')}</span>
                                                     <input type="checkbox" class="is-small"
                                                         id="${ignoreId}"
-                                                        title="${t('Ignorar esta DLC')}"
+                                                        title="${t('modal.ignore_dlc')}"
                                                         onchange="toggleItemIgnore('${escapeHtml(game.id)}', 'dlc', '${escapeHtml(d.app_id)}', this.checked)">
                                                 </div>
                                             `)}
                                         </td>
                                     </tr>
                                     `;
-        }).join('')}
-                        </tbody>
-                    </table>
-                </div>
+                        }).join('')}
+                    </tbody>
+                </table>
             </div>
+        </div>
         ` : '';
 
         let content = `
-            <div class="modal-banner-container" style="position: relative; height: 240px; overflow: hidden; background: #000;">
+            < div class="modal-banner-container" style = "position: relative; height: 240px; overflow: hidden; background: #000;" >
                 <img src="${escapeHtml(game.bannerUrl || game.iconUrl || '/static/img/no-icon.png')}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
                 <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 80%; background: linear-gradient(transparent, var(--bulma-modal-card-body-background-color));"></div>
                 <button class="delete is-large" aria-label="close" onclick="closeModal('gameDetailsModal')" style="position: absolute; top: 1.5rem; right: 1.5rem; background-color: rgba(255,255,255,0.2); backdrop-filter: blur(8px); z-index: 20; border: 1px solid rgba(255,255,255,0.1);"></button>
@@ -409,10 +408,10 @@ function showGameDetails(id) {
 }
 
 function showDlcDetails(id) {
-    $.getJSON(`/api/app_info/${id}`, (dlc) => {
+    $.getJSON(`/ api / app_info / ${ id } `, (dlc) => {
         $('#dlcModalTitle').text(dlc.name);
         let content = `
-            <div class="p-6">
+            < div class="p-6" >
                 <div class="columns">
                     <div class="column is-4">
                         <figure class="image is-square box p-0 shadow-sm overflow-hidden mb-4">
@@ -471,31 +470,31 @@ function deleteGameFile(fileId, titleId) {
             const btn = $(event.target).closest('.button');
             btn.addClass('is-loading');
 
-            $.post(`/api/files/delete/${fileId}`, (res) => {
-                btn.removeClass('is-loading');
-                if (res.success) {
-                    showGameDetails(titleId);
-                    if (typeof applyFilters === 'function') {
-                        $.getJSON(`/api/app_info/${titleId}`, (updatedGame) => {
-                            if (!updatedGame || !updatedGame.id) return;
-                            const idx = games.findIndex(g => g && g.id === titleId);
-                            if (idx !== -1) {
-                                games[idx] = updatedGame;
-                                localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
-                                applyFilters();
-                            }
-                        });
+            $.post(`/ api / files / delete/${fileId}`, (res) => {
+        btn.removeClass('is-loading');
+        if (res.success) {
+            showGameDetails(titleId);
+            if (typeof applyFilters === 'function') {
+                $.getJSON(`/api/app_info/${titleId}`, (updatedGame) => {
+                    if (!updatedGame || !updatedGame.id) return;
+                    const idx = games.findIndex(g => g && g.id === titleId);
+                    if (idx !== -1) {
+                        games[idx] = updatedGame;
+                        localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
+                        applyFilters();
                     }
-                    if (typeof loadWishlist === 'function') loadWishlist();
-                    showToast(t('Arquivo excluído com sucesso'), 'success');
-                } else {
-                    showToast(res.error || t('Erro ao excluir'), 'error');
-                }
-            }).fail((xhr) => {
-                btn.removeClass('is-loading');
-                showToast(t('Erro de comunicação'), 'error');
-            });
+                });
+            }
+            if (typeof loadWishlist === 'function') loadWishlist();
+            showToast(t('Arquivo excluído com sucesso'), 'success');
+        } else {
+            showToast(res.error || t('Erro ao excluir'), 'error');
         }
+    }).fail((xhr) => {
+        btn.removeClass('is-loading');
+        showToast(t('Erro de comunicação'), 'error');
+    });
+}
     });
 }
 

@@ -50,7 +50,7 @@ function checkProcessStatus() {
             }
         } else {
             indicator.removeClass('is-active');
-            text.text('System Idle');
+            text.text(t('status.system_idle'));
             icon.html('<i class="bi bi-check-circle has-text-success"></i>');
         }
     });
