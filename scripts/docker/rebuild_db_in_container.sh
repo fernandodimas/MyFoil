@@ -60,16 +60,16 @@ except Exception as e:
     raise
 PY
 
-echo "3/6 - Applying migrations under app context"
-if [[ -f "/app/scripts/docker/run_migrations_under_app.py" ]]; then
-  python3 /app/scripts/docker/run_migrations_under_app.py
-else
-  if command -v alembic >/dev/null 2>&1 && [[ -f "/app/migrations/alembic.ini" ]]; then
-    python3 -m alembic -c /app/migrations/alembic.ini upgrade head
-  else
-    echo "WARNING: migrations helper and alembic CLI not available; ensure migrations are applied manually" >&2
-  fi
-fi
+# echo "3/6 - Applying migrations under app context"
+# if [[ -f "/app/scripts/docker/run_migrations_under_app.py" ]]; then
+#   python3 /app/scripts/docker/run_migrations_under_app.py
+# else
+#   if command -v alembic >/dev/null 2>&1 && [[ -f "/app/migrations/alembic.ini" ]]; then
+#     python3 -m alembic -c /app/migrations/alembic.ini upgrade head
+#   else
+#     echo "WARNING: migrations helper and alembic CLI not available; ensure migrations are applied manually" >&2
+#   fi
+# fi
 
 echo "4/6 - Rebuilding Titles/Apps (update_titles)"
 if [[ -f "/app/scripts/run_update_titles.py" ]]; then
