@@ -1271,11 +1271,16 @@ def compute_apps_hash():
         hash_md5.update(tid.encode())
         hash_md5.update(tname.encode())
 
-    # CRITICAL: Include custom.json modification time in hash
-    custom_path = os.path.join(TITLEDB_DIR, "custom.json")
-    if os.path.exists(custom_path):
-        mtime = os.path.getmtime(custom_path)
-        hash_md5.update(str(mtime).encode())
+    # Include metadata hash (ratings, descriptions)
+    from db import TitleMetadata
+    # We can just sum IDs or modification timestamps if available, or hash content
+    # For now, simplest is count + last modified if we had it.
+    # Since we don't have updated_at on TitleMetadata, we will hash all IDs and ratings
+    metadata_items = db.session.query(TitleMetadata.id, TitleMetadata.title_id, TitleMetadata.rating).order_by(TitleMetadata.id).all()
+    for mid, mtid, mrating in metadata_items:
+        hash_md5.update(str(mid).encode())
+        hash_md5.update((mtid or "").encode())
+        hash_md5.update(str(mrating or 0).encode())
 
     return hash_md5.hexdigest()
 
