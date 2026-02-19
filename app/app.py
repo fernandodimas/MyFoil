@@ -168,7 +168,7 @@ socketio = SafeSocketIO(
     ping_interval=20,
     message_queue=os.environ.get("REDIS_URL"),  # Essential: Allows Celery workers to emit to Web clients
     channel="flask-socketio",
-    manage_session=True,
+    manage_session=False,
     cookie=None,  # Disable cookies for socketio to avoid some session issues behind proxies
 )
 
