@@ -42,7 +42,7 @@ from constants import (
     DATA_DIR,
 )
 from settings import load_settings, reload_conf
-from db import db, migrate
+from db import db
 import db as db_module
 from i18n import I18n
 import titles
@@ -796,7 +796,7 @@ def create_app(minimal=False):
 
     # Initialize components
     db.init_app(app)
-    migrate.init_app(app, db)
+    # migrate.init_app(app, db) # Migrations disabled by user request
 
     # Initialize login manager
     login_manager.init_app(app)

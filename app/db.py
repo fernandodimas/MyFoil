@@ -5,7 +5,7 @@ from sqlalchemy import event
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.dialects.postgresql import insert
-from flask_migrate import Migrate, upgrade
+# from flask_migrate import Migrate, upgrade # Migrations disabled
 from alembic.runtime.migration import MigrationContext
 from alembic.config import Config
 from alembic.script import ScriptDirectory
@@ -21,7 +21,7 @@ from utils import now_utc
 logger = logging.getLogger("main")
 
 db = SQLAlchemy()
-migrate = Migrate()
+migrate = None # Migrations disabled
 
 # Ensure Webhook symbol exists for compatibility imports even if model isn't available
 Webhook = None
@@ -90,62 +90,13 @@ def init_db(app):
             inspector = inspect(db.engine)
             if not inspector.has_table("files"):
                 logger.info("Initializing database tables...")
+                # Migrations disabled by user request.
+                # Only using db.create_all() for initial schema creation.
                 db.create_all()
-                from alembic import command
-                from alembic.script import ScriptDirectory
-
-                # Stamp the database to the latest migration. In some dev/test trees
-                # there may be multiple migration heads (branches). Alembic will
-                # raise if 'head' is ambiguous. Handle that gracefully for tests by
-                # selects a head deterministically (first one) and stamping to it.
-                try:
-                    command.stamp(get_alembic_cfg(), "head")
-                except Exception as e:
-                    # Detect missing revision error OR multiple heads error
-                    msg = str(e)
-                    if "Multiple heads" in msg or "Multiple heads are present" in msg or "Can't locate revision" in msg:
-                        cfg = get_alembic_cfg()
-                        try:
-                            # Try to identify heads
-                            script = ScriptDirectory.from_config(cfg)
-                            heads = script.get_heads()
-                            chosen = heads[0] if heads else "head"
-                            
-                            logger.warning(
-                                f"Alembic consistency issue detected ({msg}). Re-stamping DB to {chosen}."
-                            )
-                            command.stamp(cfg, chosen)
-                        except Exception as nest_e:
-                             # If we can't even get heads, just try stamping to 'head' literal
-                             logger.warning(f"Extreme alembic issue: {nest_e}. Forcing stamp to head.")
-                             command.stamp(cfg, "head")
-                    else:
-                        raise
-
-                logger.info("Database created and stamped to the latest migration version.")
+                logger.info("Database schema initialized via create_all.")
             else:
                 # DB exists. Ensure state is consistent.
-                from alembic import command
-                from alembic.script import ScriptDirectory
-
                 db.create_all()
-
-                # Check if current revision in DB exists in scripts. 
-                # This fixes "Can't locate revision" errors after deleting migrations.
-                try:
-                    cfg = get_alembic_cfg()
-                    script = ScriptDirectory.from_config(cfg)
-                    current_rev = get_current_db_version()
-                    
-                    if current_rev and current_rev != "0":
-                         try:
-                             script.get_revision(current_rev)
-                         except Exception:
-                             # Revision in DB but not in scripts!
-                             logger.warning(f"Database revision {current_rev} not found in project. Re-stamping to current head.")
-                             command.stamp(cfg, "head")
-                except Exception as e:
-                    logger.warning(f"Silent Alembic check failed: {e}. Skipping auto-repair.")
 
             # Cleanup: Remove titles with null title_id
             try:
@@ -363,11 +314,12 @@ def init_db(app):
             except Exception as e:
                 logger.warning(f"Auto-migration check failed: {e}")
 
-                logger.info("Checking database migration...")
-                if is_migration_needed():
-                    # PostgreSQL backups handled externally
-                    upgrade()
-                    logger.info("Database migration applied successfully.")
+                # logger.info("Checking database migration...")
+                # if is_migration_needed():
+                #     # PostgreSQL backups handled externally
+                #     upgrade()
+                #     logger.info("Database migration applied successfully.")
+                pass
 
                 # Backfill added_at for existing titles
                 try:
