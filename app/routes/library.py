@@ -199,6 +199,10 @@ def _serialize_title_with_apps(title: Titles, ignore_map=None) -> dict:
         "have_base": title.have_base,
         "up_to_date": title.up_to_date,
         "complete": title.complete,
+        "metacritic_score": title.metacritic_score,
+        "rawg_rating": title.rawg_rating,
+        "rating_count": title.rating_count,
+        "playtime_main": title.playtime_main,
         "apps": all_title_apps_dict,
     }
 
@@ -329,6 +333,10 @@ def library_paged_api():
                         "have_base": title.have_base,
                         "up_to_date": title.up_to_date,
                         "complete": title.complete,
+                        "metacritic_score": title.metacritic_score,
+                        "rawg_rating": title.rawg_rating,
+                        "rating_count": title.rating_count,
+                        "playtime_main": title.playtime_main,
                         "apps": get_all_title_apps(title.title_id),
                     },
                     ignore_preferences=ignores_by_user,
