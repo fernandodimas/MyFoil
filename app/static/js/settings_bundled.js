@@ -1,5 +1,5 @@
-console.log('MyFoil: settings.js loaded (Version: BUNDLED_FIX)');
-window.DEBUG_MODE && console.log('Checking window.debounce:', typeof window.debounce);
+
+
 let allUsernames = [];
 
 // Helper functions
@@ -1100,7 +1100,7 @@ function previewRenaming() {
     const data = { pattern_base: $('#patternBase').val(), pattern_upd: $('#patternUpd').val(), pattern_dlc: $('#patternDlc').val() };
     $.ajax({
         url: '/api/renaming/preview', type: 'POST', contentType: 'application/json', data: JSON.stringify(data), success: (r) => {
-                if (r.success) {
+            if (r.success) {
                 let h = '';
                 let previewList = [];
                 if (typeof coerceArray === 'function') previewList = coerceArray(r.preview);

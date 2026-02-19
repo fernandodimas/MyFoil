@@ -150,9 +150,10 @@ function showGameDetails(id) {
         }
 
         // DLCs Section
-        <div class="mb-5">
-            <p class="heading has-text-weight-bold mb-3 has-text-success">${t('modal.dlcs_found')}</p>
-            <div class="table-container">
+        let dlcsHtml = game.dlcs && game.dlcs.length > 0 ? `
+            <div class="mb-5">
+                <p class="heading has-text-weight-bold mb-3 has-text-success">${t('modal.dlcs_found')}</p>
+                <div class="table-container">
                 <table class="table is-narrow is-fullwidth is-size-7">
                     <thead>
                         <tr>
@@ -163,9 +164,9 @@ function showGameDetails(id) {
                     </thead>
                     <tbody>
                         ${game.dlcs.map(d => {
-                            const file = d.files && d.files.length > 0 ? d.files[0] : null;
-                            const ignoreId = `ignore-dlc-${d.app_id}`;
-                            return `
+            const file = d.files && d.files.length > 0 ? d.files[0] : null;
+            const ignoreId = `ignore-dlc-${d.app_id}`;
+            return `
                                     <tr>
                                         <td class="has-text-weight-bold" onclick="showDlcDetails('${escapeHtml(d.app_id)}')" style="cursor: pointer; color: inherit;" title="${t('modal.view_dlc_details')}">${escapeHtml(d.name)}</td>
                                         <td class="opacity-50 font-mono has-text-centered">${escapeHtml(d.release_date || d.releaseDate || '--')}</td>
@@ -196,7 +197,7 @@ function showGameDetails(id) {
                                         </td>
                                     </tr>
                                     `;
-                        }).join('')}
+        }).join('')}
                     </tbody>
                 </table>
             </div>
@@ -408,7 +409,7 @@ function showGameDetails(id) {
 }
 
 function showDlcDetails(id) {
-    $.getJSON(`/ api / app_info / ${ id } `, (dlc) => {
+    $.getJSON(`/ api / app_info / ${id} `, (dlc) => {
         $('#dlcModalTitle').text(dlc.name);
         let content = `
             < div class="p-6" >
@@ -471,30 +472,30 @@ function deleteGameFile(fileId, titleId) {
             btn.addClass('is-loading');
 
             $.post(`/ api / files / delete/${fileId}`, (res) => {
-        btn.removeClass('is-loading');
-        if (res.success) {
-            showGameDetails(titleId);
-            if (typeof applyFilters === 'function') {
-                $.getJSON(`/api/app_info/${titleId}`, (updatedGame) => {
-                    if (!updatedGame || !updatedGame.id) return;
-                    const idx = games.findIndex(g => g && g.id === titleId);
-                    if (idx !== -1) {
-                        games[idx] = updatedGame;
-                        localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
-                        applyFilters();
+                btn.removeClass('is-loading');
+                if (res.success) {
+                    showGameDetails(titleId);
+                    if (typeof applyFilters === 'function') {
+                        $.getJSON(`/api/app_info/${titleId}`, (updatedGame) => {
+                            if (!updatedGame || !updatedGame.id) return;
+                            const idx = games.findIndex(g => g && g.id === titleId);
+                            if (idx !== -1) {
+                                games[idx] = updatedGame;
+                                localStorage.setItem('myfoil_library_cache', JSON.stringify(games));
+                                applyFilters();
+                            }
+                        });
                     }
-                });
-            }
-            if (typeof loadWishlist === 'function') loadWishlist();
-            showToast(t('Arquivo excluído com sucesso'), 'success');
-        } else {
-            showToast(res.error || t('Erro ao excluir'), 'error');
+                    if (typeof loadWishlist === 'function') loadWishlist();
+                    showToast(t('Arquivo excluído com sucesso'), 'success');
+                } else {
+                    showToast(res.error || t('Erro ao excluir'), 'error');
+                }
+            }).fail((xhr) => {
+                btn.removeClass('is-loading');
+                showToast(t('Erro de comunicação'), 'error');
+            });
         }
-    }).fail((xhr) => {
-        btn.removeClass('is-loading');
-        showToast(t('Erro de comunicação'), 'error');
-    });
-}
     });
 }
 

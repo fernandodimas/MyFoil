@@ -27,7 +27,7 @@ class SystemStatusManager {
 
             // Log connection status for debugging
             this.socket.on('connect', () => {
-                console.log('✅ Socket.IO connected successfully');
+                // console.log('✅ Socket.IO connected successfully');
             });
 
             this.socket.on('connect_error', (error) => {
@@ -35,7 +35,7 @@ class SystemStatusManager {
             });
 
             this.socket.on('disconnect', (reason) => {
-                console.log('🔌 Socket.IO disconnected:', reason);
+                // console.log('🔌 Socket.IO disconnected:', reason);
             });
         } else {
             this.socket = socket;

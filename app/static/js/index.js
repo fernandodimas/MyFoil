@@ -194,7 +194,7 @@ function loadLibraryPaginated(page = 1, append = false) {
 
         // If this was the first attempt with paged endpoint, try legacy fallback
         if (!useLegacyFallback && page === 1 && !append) {
-            console.log('Paged endpoint failed, falling back to legacy endpoint...');
+
             localStorage.setItem('myfoil_use_legacy_endpoint', 'true');
             $('#loadingText').text(t('Mudando para endpoint legado...'));
             $('#loadingIndicator').removeClass('is-hidden');
@@ -354,13 +354,13 @@ function renderLibrary() {
 }
 
 function refreshLibrary() {
-    console.log("Refreshing library data...");
+
 
     // Check for build version change to clear cache
     const currentBuild = window.BUILD_VERSION || '';
     const lastBuild = localStorage.getItem('myfoil_last_version');
     if (lastBuild && lastBuild !== currentBuild) {
-        console.log("Build version changed, clearing local cache...");
+
         localStorage.removeItem('myfoil_library_cache');
     }
     localStorage.setItem('myfoil_last_version', currentBuild);
@@ -377,7 +377,7 @@ function renderCardView(items) {
 
         const metacriticScore = game.metacritic_score;
         // Debug score availability
-        if (metacriticScore) console.log(`Game: ${safeName}, Score: ${metacriticScore}`);
+
 
 
         let ratingBadge = '';
@@ -439,7 +439,7 @@ if (typeof window.socket !== 'undefined' || (typeof socket !== 'undefined') || (
     const s = window.socket || socket || window.statusManager.socket;
     if (s) {
         s.on('library_updated', () => {
-            console.log('🔄 Library update event received from socket');
+
             refreshLibrary();
         });
     }
