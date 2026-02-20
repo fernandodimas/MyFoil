@@ -227,7 +227,7 @@ function showUpcomingDetails(index) {
     const game = filteredGames[index];
     if (!game) return;
 
-    $('#upModalTitle').text(game.name);
+    // $('#upModalTitle').text(game.name);
     const bgUrl = game.screenshots && game.screenshots.length > 0 ? `https:${game.screenshots[0].url.replace('t_thumb', 't_1080p')}` : game.cover_url;
 
     // Prepare screenshots for the gallery (standardizing format for modals.js)
@@ -240,7 +240,7 @@ function showUpcomingDetails(index) {
     }
 
     let content = `
-        <div class="modal-banner-container" style="position: relative; height: 200px; overflow: hidden; background: #000;">
+        <div class="modal-banner-container" style="position: relative; height: 200px; overflow: hidden; background: #000;"><button class="delete is-large" aria-label="close" onclick="closeModal(\'upcomingDetailsModal\')" style="position: absolute; top: 1rem; right: 1rem; background-color: rgba(255,255,255,0.2); backdrop-filter: blur(8px); z-index: 50; border: 1px solid rgba(255,255,255,0.1);"></button>
             <img src="${bgUrl}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
             <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 50%; background: linear-gradient(transparent, var(--bulma-modal-card-body-background-color));"></div>
         </div>

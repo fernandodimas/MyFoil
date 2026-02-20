@@ -88,15 +88,14 @@
     </div>
 
     
+
+
+    
 <!-- Game Details Modal -->
-<div class="modal" id="upcomingDetailsModal">
+<div class="modal modal-game-details" id="upcomingDetailsModal">
     <div class="modal-background" onclick="closeModal('upcomingDetailsModal')"></div>
-    <div class="modal-card" style="max-width: 800px; width: 90%; border-radius: 12px; overflow: hidden;">
-        <header class="modal-card-head is-radiusless border-none" style="background: var(--bulma-modal-card-head-background-color);">
-            <p class="modal-card-title line-clamp-1" id="upModalTitle">Game Info</p>
-            <button class="delete" aria-label="close" onclick="closeModal('upcomingDetailsModal')"></button>
-        </header>
-        <section class="modal-card-body p-0" id="upModalContent">
+    <div class="modal-card modal-card-large" id="upcomingDetailsCard">
+        <section class="modal-card-body p-0 overflow-y-auto" id="upModalContent">
             <!-- Dynamic Content -->
         </section>
     </div>

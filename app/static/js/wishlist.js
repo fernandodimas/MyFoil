@@ -396,14 +396,14 @@ function searchTitleDBForWishlist() {
         };
 
         trySearch(query).done(data => {
-            const results = data.data || data || [];
+            const results = (data && data.data !== undefined) ? data.data : (Array.isArray(data) ? data : []);
             if (!renderResults(results)) {
                 // Fallback: try shorter query if it contains delimiters
                 const parts = query.split(/[:\-|]/);
                 if (parts.length > 1 && parts[0].trim().length >= 3) {
                     const shorter = parts[0].trim();
                     trySearch(shorter).done(data => {
-                        const fallbackResults = data.data || data || [];
+                        const fallbackResults = (data && data.data !== undefined) ? data.data : (Array.isArray(data) ? data : []);
                         if (!renderResults(fallbackResults)) {
                             $('#wishlistSearchResults').html(`<p class="has-text-centered py-4 opacity-50">${t('wishlist.no_results')}</p>`);
                         }
