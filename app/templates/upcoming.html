@@ -87,6 +87,21 @@
         <p class="is-size-6 mt-4 opacity-60">{{ t('upcoming.loading') }}</p>
     </div>
 
+    
+<!-- Game Details Modal -->
+<div class="modal" id="upcomingDetailsModal">
+    <div class="modal-background" onclick="closeModal('upcomingDetailsModal')"></div>
+    <div class="modal-card" style="max-width: 800px; width: 90%; border-radius: 12px; overflow: hidden;">
+        <header class="modal-card-head is-radiusless border-none" style="background: var(--bulma-modal-card-head-background-color);">
+            <p class="modal-card-title line-clamp-1" id="upModalTitle">Game Info</p>
+            <button class="delete" aria-label="close" onclick="closeModal('upcomingDetailsModal')"></button>
+        </header>
+        <section class="modal-card-body p-0" id="upModalContent">
+            <!-- Dynamic Content -->
+        </section>
+    </div>
+</div>
+
     <!-- Games Container -->
     <div id="upcomingContainer" class="mt-2">
         <!-- Dynamic content injected via JS -->

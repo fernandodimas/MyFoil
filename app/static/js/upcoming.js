@@ -380,14 +380,16 @@ function addToWishlistByName(name, fallbackData = null) {
         }, `"${match.name}" ${t('upcoming.added_success')}`);
     };
 
-    trySearch(name).done(results => {
+    trySearch(name).done(data => {
+        const results = (data && data.data !== undefined) ? data.data : (data || []);
         if (results && results.length > 0) {
             proceedToAdd(results);
         } else {
             const parts = name.split(/[:\-|]/);
             if (parts.length > 1 && parts[0].trim().length >= 3) {
                 const shorterName = parts[0].trim();
-                trySearch(shorterName).done(fallbackResults => {
+                trySearch(shorterName).done(data => {
+                    const fallbackResults = (data && data.data !== undefined) ? data.data : (data || []);
                     if (fallbackResults && fallbackResults.length > 0) {
                         proceedToAdd(fallbackResults);
                     } else {

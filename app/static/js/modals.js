@@ -471,7 +471,7 @@ function deleteGameFile(fileId, titleId) {
             const btn = $(event.target).closest('.button');
             btn.addClass('is-loading');
 
-            $.post(`/ api / files / delete/${fileId}`, (res) => {
+            $.post(`/api/files/delete/${fileId}`, (res) => {
                 btn.removeClass('is-loading');
                 if (res.success) {
                     showGameDetails(titleId);

@@ -1378,7 +1378,7 @@ def detect_changed_titles(since_seconds=None):
     if since_seconds is None:
         since_seconds = 300
 
-    cutoff_time = now_utc()() - timedelta(seconds=since_seconds)
+    cutoff_time = now_utc() - timedelta(seconds=since_seconds)
 
     query = db.session.query(Titles.id, Titles.title_id).join(Files).filter(Files.modified_at >= cutoff_time).distinct()
 
