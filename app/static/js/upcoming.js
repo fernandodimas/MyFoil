@@ -223,6 +223,7 @@ function renderListView(games, container) {
 }
 
 function showUpcomingDetails(index) {
+    console.log('Open upcoming details for index:', index);
     const game = filteredGames[index];
     if (!game) return;
 
