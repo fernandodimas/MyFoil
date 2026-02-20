@@ -452,7 +452,7 @@ function showDlcDetails(id) {
                 </div>
                 <hr class="my-4 opacity-10">
                 <div class="buttons is-right">
-                    <button class="button is-small" onclick="closeModal('dlcDetailsModal')">${t('Fechar')}</button>
+                    <button class="button is-small" onclick="closeModal('dlcDetailsModal')">${t('common.close')}</button>
                 </div>
             </div>
         `;

@@ -1290,7 +1290,7 @@ p.game-description {
     align-items: stretch;
 }
 
-#libraryContainer.is-list-view, #upcomingContainer.is-list-view {
+#libraryContainer.is-list-view, #upcomingContainer.is-list-view, #wishlistContainer.is-list-view {
     display: block !important;
 }
 

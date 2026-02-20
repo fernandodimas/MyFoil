@@ -658,5 +658,18 @@
     "wishlist.search_min_chars": "Escribe al menos 3 caracteres...",
     "wishlist.no_results": "No se encontraron juegos",
     "wishlist.search_error": "Error de búsqueda. Revisa la consola.",
-    "wishlist.add_error": "Error al añadir a la lista de deseos"
+    "wishlist.add_error": "Error al añadir a la lista de deseos",
+    "wishlist.table_added_at": "Añadido el",
+    "wishlist.table_release": "Lanzamiento",
+    "wishlist.remove_title": "Eliminar de la Wishlist",
+    "wishlist.remove_confirm": "¿Realmente quieres eliminar este juego de tu lista de deseos?",
+    "wishlist.removed_success": "¡Juego eliminado de la wishlist!",
+    "wishlist.error_removing": "Error al eliminar de la wishlist",
+    "wishlist.priority_error": "Error al actualizar la prioridad",
+    "wishlist.loading_error": "Error al cargar la wishlist",
+    "common.remove": "Eliminar",
+    "Fechar": "Cerrar",
+    "dashboard.actions": "Acciones",
+    "dashboard.table_added_at": "Añadido el",
+    "wishlist.status_pending": "Pendiente"
 }

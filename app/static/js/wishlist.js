@@ -263,7 +263,7 @@ function renderListView(items, container) {
                     ${date.icon}${date.text}
                 </td>
                 <td class="is-vcentered has-text-right p-3">
-                    <button class="button is-small is-ghost has-text-danger" onclick="event.stopPropagation(); removeFromWishlist(${item.id})" title="${t('Remover')}">
+                    <button class="button is-small is-ghost has-text-danger" onclick="event.stopPropagation(); removeFromWishlist(${item.id})" title="${t('common.remove')}">
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>

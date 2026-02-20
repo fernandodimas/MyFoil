@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 
 # Add app directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'app')))
+
 
 from titledb_sources import TitleDBSourceManager
 from constants import CONFIG_DIR, TITLEDB_DIR
