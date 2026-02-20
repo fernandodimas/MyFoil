@@ -6,7 +6,7 @@ import sys
 import os
 
 # Add app directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'app'))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'app')))
 
 from titledb_sources import TitleDBSourceManager, TitleDBSource
 import tempfile
