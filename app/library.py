@@ -1380,7 +1380,7 @@ def detect_changed_titles(since_seconds=None):
 
     cutoff_time = now_utc() - timedelta(seconds=since_seconds)
 
-    query = db.session.query(Titles.id, Titles.title_id).join(Files).filter(Files.modified_at >= cutoff_time).distinct()
+    query = db.session.query(Titles.id, Titles.title_id).join(Titles.apps).join(Apps.files).filter(Files.last_attempt >= cutoff_time).distinct()
 
     changed_titles = [(tid, title_id) for tid, title_id in query.all()]
 
