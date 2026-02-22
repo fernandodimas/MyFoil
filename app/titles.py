@@ -72,7 +72,7 @@ def format_release_date(date_input):
 
         return date_str
     except Exception as e:
-        print(f"DEBUG: format_release_date error for {date_input}: {e}", flush=True)
+        logger.debug(f"format_release_date error for {date_input}: {e}")
         return str(date_input) if date_input else ""
 
 
@@ -122,15 +122,12 @@ def load_titledb_from_db():
 
         # Check if cache tables exist
         try:
-            print("DEBUG: Checking TitleDBCache count...", flush=True)
             cache_count = TitleDBCache.query.count()
-            print(f"DEBUG: TitleDBCache count: {cache_count}", flush=True)
             if cache_count == 0:
                 logger.info("TitleDB cache is empty, will load from files")
                 return False
         except Exception as e:
-            print(f"DEBUG: TitleDBCache count failed: {e}", flush=True)
-            logger.warning("TitleDB cache tables don't exist yet")
+            logger.warning(f"TitleDB cache tables don't exist yet: {e}")
             return False
 
         # Load titles from cache
@@ -953,11 +950,6 @@ def identify_file_from_cnmt(filepath):
                         titleId = Cnmt.titleId.upper()
                         version = Cnmt.version
                         contents.append((titleType, titleId, version))
-                        # print(f'\n:: CNMT: {Cnmt._path}\n')
-                        # print(f'Title ID: {titleId}')
-                        # print(f'Version: {version}')
-                        # print(f'Title Type: {titleType}')
-                        # print(f'Title ID: {titleId} Title Type: {titleType} Version: {version} ')
 
     finally:
         container.close()
@@ -1273,7 +1265,6 @@ def get_all_app_existing_versions(app_id):
             logger.warning(f"No keys in cnmts.json for app ID: {app_id.upper()}")
             return None
     else:
-        # print(f'DLC app ID not in cnmts.json: {app_id.upper()}')
         return None
 
 
@@ -1364,7 +1355,7 @@ def get_custom_title_info(title_id):
         custom_db = robust_json_load(custom_path) or {}
         return custom_db.get(str(title_id).upper())
     except Exception as e:
-        print(f"DEBUG ERROR in get_custom_title_info: {e}", flush=True)
+        logger.debug(f"Error in get_custom_title_info: {e}")
         return None
 
 

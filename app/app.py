@@ -55,28 +55,7 @@ from backup import BackupManager
 from plugin_system import get_plugin_manager
 
 # Routes and services
-from pathlib import Path
-import hashlib
 import sys
-
-# Debug helper: print SHA1 and head of routes/system.py at startup to detect
-# version skew between repository and runtime container.
-try:
-    system_path = Path(__file__).resolve().parent / "routes" / "system.py"
-    if system_path.exists():
-        content = system_path.read_text(encoding="utf-8")
-        sha1 = hashlib.sha1(content.encode("utf-8")).hexdigest()
-        print(f"DEBUG: routes/system.py sha1={sha1}")
-        # print first 12 lines to help triage indentation issues
-        for i, line in enumerate(content.splitlines()[:12], start=1):
-            print(f"DEBUG: system.py L{i}: {line}")
-        sys.stdout.flush()
-    else:
-        print(f"DEBUG: routes/system.py not found at expected path: {system_path}")
-        sys.stdout.flush()
-except Exception as e:
-    print(f"DEBUG: error reading routes/system.py: {e}")
-    sys.stdout.flush()
 
 from routes.library import library_bp
 from routes.settings import settings_bp
@@ -587,7 +566,6 @@ def init_internal(app):
 
     # Stage 1: Start TitleDB loading ASYNCHRONOUSLY (don't block)
     # This prevents the 30-60s delay on startup
-    print("DEBUG: init_internal starting titledb async load...", flush=True)
 
     def _load_titledb_async():
         """Load TitleDB in background thread"""
@@ -607,7 +585,6 @@ def init_internal(app):
     logger.info("✓ TitleDB loading started in background (non-blocking)")
 
     # Stage 2: Start file watcher
-    print("DEBUG: init_internal starting watcher...", flush=True)
 
     # Staged initialization to prevent CPU spike killing Gunicorn worker
     def stage1_cache():
@@ -896,11 +873,7 @@ def create_app(minimal=False):
             job_tracker.init_app(app)
 
             # Initialize file watcher and libraries
-            print("DEBUG: Calling init_internal...", flush=True)
             init_internal(app)
-            print("DEBUG: init_internal done.", flush=True)
-        else:
-            print("DEBUG: minimal app created, skipping internal init.", flush=True)
 
         # Initialize plugins
         plugin_manager = get_plugin_manager(PLUGINS_DIR, app)
@@ -921,6 +894,5 @@ app = create_app()
 if __name__ == "__main__":
     logger.info(f"Build Version: {BUILD_VERSION}")
     logger.info("Starting server on port 8465...")
-    print("DEBUG: calling socketio.run...", flush=True)
     socketio.run(app, debug=True, use_reloader=False, host="0.0.0.0", port=8465, allow_unsafe_werkzeug=True)
     logger.info("Shutting down server...")

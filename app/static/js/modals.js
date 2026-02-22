@@ -604,7 +604,7 @@ function loadGameTagsAndWishlist(titleId) {
                 });
             }
         }).fail((xhr, status, error) => {
-            console.error('DEBUG: Failed to load ignore preferences:', status, error);
+            console.error('Failed to load ignore preferences:', status, error);
             // Clear all checkboxes on error
             $('input[id^="ignore-dlc-"]').prop('checked', false);
         });
@@ -856,7 +856,7 @@ function searchTitleDB() {
 function useMetadataFromDataAttr(elementId) {
     const item = window.__titleDBResults && window.__titleDBResults[elementId];
     if (!item) {
-        console.error('Item not found:', elementId);
+        console.error('useMetadataFromDataAttr: item not found for id:', elementId);
         return;
     }
     useMetadata(item);
