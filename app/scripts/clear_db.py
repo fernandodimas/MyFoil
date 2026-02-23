@@ -7,6 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import Flask
 from constants import MYFOIL_DB
+from db import db
 
 def clear_db():
     app = Flask(__name__)
@@ -16,7 +17,6 @@ def clear_db():
     
     with app.app_context():
         # Register models
-        import db as db_module
         print("Dropping all tables...")
         db.drop_all()
         print("Recreating all tables...")

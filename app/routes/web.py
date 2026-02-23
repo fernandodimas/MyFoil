@@ -6,11 +6,8 @@ from flask import Blueprint, render_template, request, redirect, jsonify, send_f
 from flask_login import login_required
 from auth import access_required, admin_account_created
 from middleware.auth import tinfoil_access
-from db import db, Files, Apps, Webhook, logger
+from db import db, Files, Apps, logger
 import os
-import hmac
-import hashlib
-import requests
 from shop import gen_shop_files
 from shop import encrypt_shop
 from flask import Response
@@ -84,7 +81,6 @@ def wishlist_page():
 @tinfoil_access
 def serve_game(id):
     """Servir arquivo de jogo para Tinfoil"""
-    # TODO add download count increment
     file = Files.query.get(id)
     if not file:
         return "File not found", 404

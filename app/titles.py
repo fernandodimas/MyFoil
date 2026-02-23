@@ -3,15 +3,12 @@ import re
 import json
 import time
 import fcntl
-import datetime
-from datetime import datetime
 
 try:
     import gevent
 except ImportError:
     gevent = None
 
-import titledb
 
 # import titledb_cache_file  # REMOVED: File cache deprecated
 
@@ -20,12 +17,11 @@ from constants import (
     APP_TYPE_UPD,
     APP_TYPE_DLC,
     TITLEDB_DIR,
-    TITLEDB_DEFAULT_FILES,
     ALLOWED_EXTENSIONS,
     CONFIG_DIR,
 )
-from utils import now_utc, ensure_utc, format_size_py, format_datetime, debounce
-from settings import load_settings, load_keys
+from utils import now_utc
+from settings import load_settings
 from pathlib import Path
 from binascii import hexlify as hx
 import logging
@@ -473,13 +469,6 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
         _titledb_cache_timestamp = time.time()  # Use time.time() for cache TTL comparison
         logger.info(f"TitleDB saved to DB cache: {title_count} titles, {version_count} versions, {dlc_count} DLCs")
 
-        # ALSO save to file cache for fast loading
-        try:
-            logger.info("Saving TitleDB to file cache...")
-            titledb_cache_file.save_titledb_to_file(_titles_db, _versions_db, _cnmts_db)
-        except Exception as file_err:
-            logger.warning(f"Could not save to file cache (non-fatal): {file_err}")
-
         return True
 
     except Exception as e:
@@ -837,7 +826,7 @@ def load_titledb(force=False, progress_callback=None):
         elapsed = current_time - _titledb_cache_timestamp
         if elapsed > _titledb_cache_ttl:
             cache_expired = True
-            logger.info(f"TitleDB cache expired. Reloading...")
+            logger.info("TitleDB cache expired. Reloading...")
 
     if force or cache_expired:
         _titles_db_loaded = False
@@ -852,7 +841,7 @@ def load_titledb(force=False, progress_callback=None):
 
     if load_titledb_from_db():
         _titles_db_loaded = True
-        logger.info(f"TitleDB loaded successfully from DB.")
+        logger.info("TitleDB loaded successfully from DB.")
         # Trigger sync to Database Titles table (metadata tracker)
         try:
             sync_titles_to_db()
@@ -1399,7 +1388,6 @@ def save_custom_title_info(title_id, data):
     """
     from db import db, Titles
     import os
-    import json
 
     global _titles_db
 
@@ -1478,6 +1466,7 @@ def save_custom_title_info(title_id, data):
         else:
             custom_db[title_id] = save_data
 
+        from utils import safe_write_json
         safe_write_json(custom_path, custom_db, indent=4)
 
         # 3. Update in-memory DB immediately

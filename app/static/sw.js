@@ -18,7 +18,6 @@ self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
-                console.log('Service Worker: Caching assets');
                 return Promise.allSettled(
                     STATIC_ASSETS.map(url =>
                         cache.add(url).catch(err => console.warn(`Failed to cache ${url}:`, err))
@@ -36,7 +35,6 @@ self.addEventListener('activate', (event) => {
             return Promise.all(
                 cacheNames.map((cacheName) => {
                     if (cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE) {
-                        console.log('Service Worker: Clearing old cache', cacheName);
                         return caches.delete(cacheName);
                     }
                 })

@@ -17,13 +17,12 @@ import structlog
 from celery_app import celery
 from celery.signals import worker_process_init, worker_ready
 from flask import Flask
-from db import db, remove_missing_files_from_db
-from library import scan_library_path, identify_library_files, update_titles, generate_library, post_library_change
+from db import db
+from library import scan_library_path, identify_library_files, update_titles, generate_library
 from job_tracker import job_tracker, JobType
 from socket_helper import get_socketio_emitter
 from app_services.rating_service import update_game_metadata
 
-import logging
 
 # Configure structlog for Celery workers to ensure we see output
 structlog.configure(
@@ -223,7 +222,7 @@ def scan_library_async(library_path):
 def identify_file_async(filepath):
     """Identify file asynchronously in background"""
     import titles as titles_lib
-    from db import Files, add_title_id_in_db, get_title_id_db_id, Titles
+    from db import Files, add_title_id_in_db, get_title_id_db_id
     from db import get_app_by_id_and_version
 
     with get_flask_app().app_context():
@@ -241,7 +240,6 @@ def identify_file_async(filepath):
             # Update database
             if success and file_contents:
                 # Clear old associations before adding new ones
-                from job_tracker import job_tracker
 
                 if file_obj.apps:
                     file_obj.apps.clear()
@@ -341,59 +339,10 @@ def identify_file_async(filepath):
             log_activity("identify_error", details={"file": filepath, "error": str(e)})
             return False
 
-            # Identification
-            identification, success, file_contents, error, suggested_name = titles_identify(filepath)
-
-            # Update database
-            if success and file_contents:
-                # Limpar associações antigas
-                from db import remove_file_from_apps
-
-                remove_file_from_apps(file_id)
-
-                # Adicionar novo IDs de título
-                title_ids = list(dict.fromkeys([c["title_id"] for c in file_contents]))
-                for title_id in title_ids:
-                    add_title_id_in_db(title_id, name=suggested_name)
-                    logger.debug("title_added", title_id=title_id, name=suggested_name)
-
-                # Adicionar apps
-                nb_content = 0
-                for file_content in file_contents:
-                    add_app_to_file(
-                        file_content["app_id"], file_content["version"], file_content["type"], title_id, file_id
-                    )
-                    nb_content += 1
-                    logger.debug("app_added", app_id=file_content["app_id"])
-
-                # Atualizar status do arquivo
-                update_file_identification(
-                    file_id,
-                    identified=True,
-                    identification_type=identification,
-                    error=None,
-                    suggested_name=suggested_name,
-                    nb_content=nb_content,
-                )
-                logger.info("identify_file_completed", filepath=filepath, nb_content=nb_content)
-            else:
-                update_file_identification(file_id, identified=False, identification_type=None, error=error)
-                logger.warning("identify_file_failed", filepath=filepath, error=error)
-
-            return True
-
-        except Exception as e:
-            logger.exception("identify_file_error", filepath=filepath, error=str(e))
-            from db import log_activity
-
-            log_activity("identify_error", details={"file": filepath, "error": str(e)})
-            return False
-
 
 @celery.task(name="tasks.scan_all_libraries_async")
 def scan_all_libraries_async():
     """Full library scan for all configured paths in background"""
-    import os
     import traceback
 
     logger.info("=" * 80)
@@ -479,7 +428,7 @@ def scan_all_libraries_async():
             finally:
                 db.session.remove()
                 logger.info("Session removed")
-    except Exception as outer_e:
+    except Exception:
         logger.error("=" * 80)
         logger.error("CRITICAL ERROR in scan_all_libraries_async")
         logger.error("=" * 80)
