@@ -104,6 +104,22 @@ async function loadWishlist() {
             return;
         }
 
+        const getTimestamp = (rawDate) => {
+            if (!rawDate || rawDate === 'Unknown' || rawDate === '--') return Infinity;
+            const cleanDateStr = String(rawDate).trim().replace(/-/g, '/');
+            if (cleanDateStr.includes('/') && cleanDateStr.split('/').length === 3) {
+                const parts = cleanDateStr.split('/');
+                if (parts[0].length <= 2) return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
+                return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+            }
+            const clean = String(rawDate).replace(/[^0-9]/g, '');
+            if (clean.length === 8) return new Date(clean.slice(0, 4), clean.slice(4, 6) - 1, clean.slice(6, 8)).getTime();
+            const d = new Date(rawDate).getTime();
+            return isNaN(d) ? Infinity : d;
+        };
+
+        allWishlistItems.sort((a, b) => getTimestamp(a.release_date) - getTimestamp(b.release_date));
+
         // Update count
         const countEl = document.getElementById('totalItemsCount');
         if (countEl) countEl.innerText = `${allWishlistItems.length} ${t('dashboard.items_count')}`;
