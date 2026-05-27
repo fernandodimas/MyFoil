@@ -22,6 +22,30 @@ services:
     ports:
       - "8465:8465"
     volumes:
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: myfoil-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  myfoil:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: myfoil-dev
+    restart: unless-stopped
+    ports:
+      - "8465:8465"
+    volumes:
       # DEVELOPMENT MODE: Mount source code for live reload
       - ./app:/app
       # Data volumes (UPDATE THIS PATH to your actual games directory)
@@ -34,6 +58,8 @@ services:
       - FLASK_DEBUG=1
       - CONFIG_FILE=/app/config/config.json
       - DATABASE_URL=postgresql://myfoil:myfoilpassword@192.168.16.250:5432/myfoil
+      - USER_ADMIN_NAME=${USER_ADMIN_NAME:-admin}
+      - USER_ADMIN_PASSWORD=${USER_ADMIN_PASSWORD:-admin}
     depends_on:
       redis:
         condition: service_healthy
@@ -62,6 +88,8 @@ services:
       - CONFIG_FILE=/app/config/config.json
       - DATABASE_URL=postgresql://myfoil:myfoilpassword@192.168.16.250:5432/myfoil
       - CELERY_REQUIRED=true
+      - USER_ADMIN_NAME=${USER_ADMIN_NAME:-admin}
+      - USER_ADMIN_PASSWORD=${USER_ADMIN_PASSWORD:-admin}
     depends_on:
       redis:
         condition: service_healthy
