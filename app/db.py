@@ -1,7 +1,6 @@
 import os
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
-from sqlalchemy import event
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.dialects.postgresql import insert
@@ -11,10 +10,8 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 
 import sys
-import shutil
 import logging
-import datetime
-from constants import MYFOIL_DB, CONFIG_DIR, ALEMBIC_DIR, ALEMBIC_CONF
+from constants import MYFOIL_DB, ALEMBIC_DIR, ALEMBIC_CONF
 from utils import now_utc
 
 # Retrieve main logger
@@ -480,11 +477,18 @@ def get_shop_files():
             logger.debug(f"File {file.id} ({file.filename}) has no extension, skipping")
             continue
 
+        game_name = app.title.name if (app.title and app.title.name) else ""
+        if game_name:
+            import re
+            game_name = re.sub(r'[\\/*?:"<>|]', "", game_name).strip()
+            if game_name:
+                game_name = game_name + " "
+
         if file.multicontent or file.extension.startswith("x"):
             title_id = app.title.title_id
-            final_filename = f"[{title_id}].{file.extension}"
+            final_filename = f"{game_name}[{title_id}].{file.extension}"
         else:
-            final_filename = f"[{app.app_id}][v{app.app_version}].{file.extension}"
+            final_filename = f"{game_name}[{app.app_id}][v{app.app_version}].{file.extension}"
 
         shop_files.append(
             {

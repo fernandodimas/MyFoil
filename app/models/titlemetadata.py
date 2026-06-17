@@ -4,7 +4,6 @@ Extracted from db.py during Phase 3.1 refactoring
 """
 
 from db import db, now_utc
-from flask_login import UserMixin
 
 class TitleMetadata(db.Model):
     """Remote metadata for titles from external sources (RAWG, IGDB, etc)"""

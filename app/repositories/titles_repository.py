@@ -11,7 +11,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from db import db
 from models.titles import Titles
 from models.apps import Apps
-from repositories.wishlistignore_repository import get_flattened_ignores_for_user
 from services.user_title_flags_service import upsert_user_title_flags, compute_flags_for_user_title
 
 

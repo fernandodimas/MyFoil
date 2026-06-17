@@ -1,5 +1,5 @@
 from constants import ALLOWED_EXTENSIONS
-from utils import now_utc, debounce
+from utils import debounce
 import time
 import os
 from watchdog.observers.polling import PollingObserver

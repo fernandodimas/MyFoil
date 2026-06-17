@@ -4,24 +4,11 @@ Library Routes - Endpoints relacionados à biblioteca de jogos
 
 from flask import Blueprint, request, jsonify
 import hashlib
-from sqlalchemy import func, and_, case, or_
-from sqlalchemy.orm import joinedload
+from sqlalchemy import func
 from db import (
-    db,
-    Apps,
     Titles,
-    Libraries,
-    Files,
-    get_libraries,
     get_all_title_apps,
     logger,
-    app_files,
-    TitleMetadata,
-    TitleTag,
-    Tag,
-    WishlistIgnore,
-    TitleDBCache,
-    Wishlist,
 )
 from flask_login import current_user
 from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC
@@ -30,7 +17,7 @@ from auth import access_required
 import titles
 import titledb
 import library
-from utils import format_size_py, now_utc
+from utils import format_size_py
 import json
 
 from api_responses import (
@@ -39,7 +26,6 @@ from api_responses import (
     handle_api_errors,
     ErrorCode,
     not_found_response,
-    paginated_response,
 )
 from repositories.titles_repository import TitlesRepository
 from repositories.apps_repository import AppsRepository
@@ -796,7 +782,6 @@ def debug_library_dlc_report():
     Retorna contagens e exemplos usando (1) colunas materializadas em Titles,
     (2) flags 'complete' e (3) a versão construída em memória via generate_library().
     """
-    from db import Files
 
     # 1) From Titles materialized counters
     try:
@@ -810,7 +795,7 @@ def debug_library_dlc_report():
         counter_total = Titles.query.filter(
             Titles.have_base == True, func.coalesce(Titles.missing_dlcs_count, 0) > 0
         ).count()
-    except Exception as e:
+    except Exception:
         counter_list = []
         counter_total = 0
 
@@ -824,7 +809,7 @@ def debug_library_dlc_report():
         )
         complete_list = [{"title_id": r[0], "name": r[1]} for r in rows_complete]
         complete_total = Titles.query.filter(Titles.have_base == True, Titles.complete == False).count()
-    except Exception as e:
+    except Exception:
         complete_list = []
         complete_total = 0
 
@@ -836,7 +821,7 @@ def debug_library_dlc_report():
         lib_missing_examples = [{"title_id": g.get("title_id"), "name": g.get("name")} for g in lib_missing[:200]]
         lib_total_missing = len(lib_missing)
         lib_total_redundant = len(lib_redundant)
-    except Exception as e:
+    except Exception:
         lib_missing_examples = []
         lib_total_missing = 0
         lib_total_redundant = 0

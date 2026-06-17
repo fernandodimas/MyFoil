@@ -1,14 +1,12 @@
-from flask import Blueprint, render_template, redirect, url_for, request, jsonify
+from flask import Blueprint, render_template, redirect, url_for, request
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from db import db, User, ApiToken, logger
 from api_responses import error_response, ErrorCode
 from flask_login import LoginManager
-from utils import sanitize_sensitive_data
 from constants import BUILD_VERSION
-from api_responses import success_response, error_response, handle_api_errors, ErrorCode
-from repositories.user_repository import UserRepository
+from api_responses import success_response, handle_api_errors
 import os
 import logging
 

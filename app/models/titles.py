@@ -3,8 +3,7 @@ Model: Titles
 Extracted from db.py during Phase 3.1 refactoring
 """
 
-from db import db, now_utc
-from flask_login import UserMixin
+from db import db
 
 
 class Titles(db.Model):

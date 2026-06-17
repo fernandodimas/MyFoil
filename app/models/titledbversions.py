@@ -3,8 +3,7 @@ Model: TitleDBVersions
 Extracted from db.py during Phase 3.1 refactoring
 """
 
-from db import db, now_utc
-from flask_login import UserMixin
+from db import db
 
 class TitleDBVersions(db.Model):
     __tablename__ = "titledb_versions"

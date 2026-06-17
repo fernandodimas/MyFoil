@@ -10,7 +10,7 @@ import logging
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime, timezone
 from pathlib import Path
-from utils import format_datetime, ensure_utc, now_utc
+from utils import format_datetime, ensure_utc
 
 logger = logging.getLogger("main")
 

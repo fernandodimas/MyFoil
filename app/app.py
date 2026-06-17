@@ -8,7 +8,6 @@ from gevent import monkey
 
 monkey.patch_all()
 
-import warnings
 import os
 import sys
 import logging
@@ -25,16 +24,13 @@ logging.getLogger("geventwebsocket.handler").setLevel(logging.WARNING)
 logging.getLogger("geventwebsocket.server").setLevel(logging.WARNING)
 
 # Core Flask imports
-from flask import Flask, render_template, Blueprint, jsonify
+from flask import Flask, render_template, Blueprint
 from flask_socketio import SocketIO
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 # Local imports
 from constants import (
-    APP_TYPE_BASE,
-    APP_TYPE_UPD,
-    APP_TYPE_DLC,
     MYFOIL_DB,
     BUILD_VERSION,
     CONFIG_DIR,
@@ -55,7 +51,6 @@ from backup import BackupManager
 from plugin_system import get_plugin_manager
 
 # Routes and services
-import sys
 
 from routes.library import library_bp
 from routes.settings import settings_bp
@@ -93,10 +88,9 @@ except ImportError:
     CELERY_ENABLED = False
 
 # Import additional modules for functions
-from auth import admin_account_created, access_required, auth_blueprint, login_manager, init_users
+from auth import access_required, auth_blueprint, login_manager, init_users
 from db import User, log_activity, init_db, delete_file_by_filepath, file_exists_in_db, update_file_path
 from library import (
-    generate_library,
     scan_library_path,
     identify_library_files,
     add_missing_apps_to_db,
@@ -109,7 +103,6 @@ from library import (
 from utils import now_utc, ColoredFormatter, FilterRemoveDateFromWerkzeugLogs, get_or_create_secret_key
 from file_watcher import Watcher
 import threading
-import datetime
 from datetime import timedelta
 
 # Global variables
@@ -153,7 +146,7 @@ socketio = SafeSocketIO(
 
 # Import state to allow job tracking
 import state
-from job_tracker import job_tracker, JobStatus
+from job_tracker import job_tracker
 from socket_helper import get_socketio_emitter
 
 job_tracker.set_emitter(get_socketio_emitter())

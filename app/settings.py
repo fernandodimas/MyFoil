@@ -1,4 +1,4 @@
-from constants import CONFIG_DIR, CONFIG_FILE, DEFAULT_SETTINGS, KEYS_FILE
+from constants import CONFIG_FILE, DEFAULT_SETTINGS, KEYS_FILE
 import yaml
 import os
 

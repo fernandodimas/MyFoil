@@ -5,8 +5,6 @@ import os
 import logging
 import sys
 from celery import Celery
-import logging
-import sys
 
 # DEBUG: Force file logging immediately
 data_dir = os.path.join(os.getcwd(), "data")

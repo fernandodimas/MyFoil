@@ -6,16 +6,8 @@ from sqlalchemy import text
 
 from db import (
     db,
-    Apps,
-    Titles,
-    Libraries,
-    Files,
-    ActivityLog,
     TitleDBCache,
-    get_libraries,
-    get_all_unidentified_files,
     logger,
-    joinedload,
 )
 from api_responses import (
     success_response,
@@ -31,7 +23,6 @@ from repositories.systemjob_repository import SystemJobRepository
 from repositories.activitylog_repository import ActivityLogRepository
 
 # Webhooks removed
-from repositories.wishlistignore_repository import WishlistIgnoreRepository
 
 from settings import load_settings
 from auth import access_required, admin_account_created
@@ -39,8 +30,7 @@ import titles
 import titledb
 import json
 import os
-from utils import format_size_py, now_utc, ensure_utc
-from metrics import generate_latest, CONTENT_TYPE_LATEST
+from utils import format_size_py, now_utc
 from constants import BUILD_VERSION, TITLEDB_DIR
 import redis
 import state
@@ -666,7 +656,7 @@ def scan_library_api():
             try:
                 logger.info(f"Background thread started - creating app context (job_id={job_id})")
                 with app_instance.app_context():
-                    job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, f"Starting manual scan...")
+                    job_tracker.start_job(job_id, JobType.LIBRARY_SCAN, "Starting manual scan...")
 
                     if path is None:
                         # Scan all libraries
@@ -702,7 +692,7 @@ def scan_library_api():
 
         scan_thread = threading.Thread(target=run_scan_background, daemon=True, name="LibraryScan")
         scan_thread.start()
-        logger.info(f"Background scan thread launched successfully (daemonized)")
+        logger.info("Background scan thread launched successfully (daemonized)")
 
         return success_response(
             message=f"Scan started in background thread {'(all)' if path is None else '(path=' + path + ')'}",
@@ -715,7 +705,6 @@ def scan_library_api():
 @handle_api_errors
 def get_unidentified_files_api():
     """Obter arquivos não identificados ou com erro"""
-    import titles
 
     results = []
     seen_ids = set()
@@ -1669,7 +1658,6 @@ def test_scan_task():
     Returns job ID for tracking task progress.
     """
     from tasks import scan_all_libraries_async
-    from job_tracker import job_tracker
 
     try:
         if os.environ.get("CELERY_ENABLED", "").lower() != "true":
@@ -1804,7 +1792,6 @@ def health_check():
 
     # Check metrics
     try:
-        from metrics import get_metrics_export
 
         health_status["metrics"] = "enabled"
     except:

@@ -3,7 +3,7 @@ Model: User
 Extracted from db.py during Phase 3.1 refactoring
 """
 
-from db import db, now_utc
+from db import db
 from flask_login import UserMixin
 
 class User(UserMixin, db.Model):

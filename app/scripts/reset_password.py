@@ -10,7 +10,6 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 
 import app
-from db import db
 from auth import create_or_update_user, User
 
 # Configure logging

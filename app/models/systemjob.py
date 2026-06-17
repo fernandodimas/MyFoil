@@ -4,7 +4,6 @@ Extracted from db.py during Phase 3.1 refactoring
 """
 
 from db import db, now_utc
-from flask_login import UserMixin
 
 class SystemJob(db.Model):
     """Persistent tracking for system background jobs (Shared between Flask/Celery)"""

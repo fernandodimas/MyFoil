@@ -4,7 +4,6 @@ Extracted from db.py during Phase 3.1 refactoring
 """
 
 from db import db, now_utc
-from flask_login import UserMixin
 
 class ApiToken(db.Model):
     id = db.Column(db.Integer, primary_key=True)

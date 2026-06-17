@@ -2,9 +2,9 @@
 Settings Routes - Endpoints relacionados às configurações do sistema
 """
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, current_app
 from flask_login import current_user
-from db import db, logger
+from db import logger
 from settings import reload_conf, load_settings, set_titles_settings, set_shop_settings, DEFAULT_SETTINGS, CONFIG_FILE
 from auth import access_required
 from constants import CONFIG_DIR, TITLEDB_DIR
@@ -12,12 +12,10 @@ from utils import format_size_py, format_datetime
 from api_responses import success_response, error_response, not_found_response, handle_api_errors, ErrorCode
 from repositories.libraries_repository import LibrariesRepository
 from repositories.user_repository import UserRepository
-from repositories.webhook_repository import WebhookRepository
 from repositories.apitoken_repository import ApiTokenRepository
 import os
 import json
 import yaml
-import copy
 
 settings_bp = Blueprint("settings", __name__, url_prefix="/api")
 

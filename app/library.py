@@ -1,7 +1,7 @@
 import hashlib
 import json
 import os
-from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC, LIBRARY_CACHE_FILE, ALLOWED_EXTENSIONS, TITLEDB_DIR
+from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC, LIBRARY_CACHE_FILE, ALLOWED_EXTENSIONS
 from db import (
     db,
     Files,
@@ -11,13 +11,11 @@ from db import (
     logger,
     joinedload,
     Tag,
-    app_files,
     get_libraries,
     get_all_titles_with_apps,
     get_all_apps,
     get_all_titles,
     get_library_id,
-    get_library_file_paths,
     remove_file_from_apps,
     log_activity,
     get_file_from_db,
@@ -79,7 +77,7 @@ def _clear_titledb_caches():
 
 import datetime
 from pathlib import Path
-from utils import format_size_py, now_utc, ensure_utc, safe_write_json
+from utils import format_size_py, now_utc, safe_write_json
 import threading
 from job_tracker import job_tracker
 import gevent
@@ -1053,7 +1051,6 @@ def trigger_library_update_notification():
     """Helper function to trigger library update notifications (used by Celery tasks)"""
     try:
         from app import socketio
-        import datetime
 
         socketio.emit("library_updated", {"timestamp": now_utc().isoformat()}, namespace="/")
     except Exception as e:
@@ -1372,7 +1369,7 @@ def update_single_game_in_cache(title_id):
 def detect_changed_titles(since_seconds=None):
     """Detect titles that have changed recently"""
     from db import db, Titles, Files
-    from datetime import datetime, timedelta
+    from datetime import timedelta
     from utils import now_utc
 
     if since_seconds is None:
@@ -2152,7 +2149,6 @@ def reidentify_all_files_job():
     """Re-identify all files from scratch"""
     from job_tracker import job_tracker
     import gevent
-    import datetime
     import app
     from db import db, Files, Apps
 

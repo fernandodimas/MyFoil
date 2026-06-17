@@ -63,7 +63,6 @@ class MetadataFetcher:
             # Selective fetching: 
             # 1. Games without metadata
             # 2. Games with metadata older than 30 days
-            from sqlalchemy import or_
             from datetime import timedelta
             
             cutoff_date = now_utc() - timedelta(days=30)
