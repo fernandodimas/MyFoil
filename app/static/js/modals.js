@@ -245,11 +245,14 @@ function showGameDetails(id) {
                                     ${Array.isArray(game.category) ? game.category.map(c => `<span class="tag is-small is-light">${escapeHtml(c)}</span>`).join('') : `<span class="tag is-small is-light">${escapeHtml(game.category || '--')}</span>`}
                                 </div>
                             </div>
-                            <div class="mt-3">
-                                <a href="${game.nsuid ? 'https://ec.nintendo.com/apps/' + game.nsuid + '/US' : (window.currentLocale === 'pt_BR' ? 'https://www.nintendo.com/pt-br/search/#q=' + encodeURIComponent(game.name) : 'https://www.nintendo.com/us/search/#q=' + encodeURIComponent(game.name))}" target="_blank" class="button is-small is-light is-fullwidth" style="border-color: #e60012; color: #e60012; --bulma-text: #e60012;">
+                            <div class="mt-3 is-flex" style="gap: 0.5rem;">
+                                <a href="${game.nsuid ? 'https://ec.nintendo.com/apps/' + game.nsuid + '/US' : (window.currentLocale === 'pt_BR' ? 'https://www.nintendo.com/pt-br/search/#q=' + encodeURIComponent(game.name) : 'https://www.nintendo.com/us/search/#q=' + encodeURIComponent(game.name))}" target="_blank" class="button is-small is-light is-fullwidth" style="border-color: #e60012; color: #e60012; --bulma-text: #e60012; margin-bottom: 0;">
                                     <span class="icon"><i class="bi bi-shop"></i></span>
                                     <span>eShop</span>
                                 </a>
+                                <button onclick="showTitledbJson('${escapeHtml(game.id)}')" class="button is-small is-light" style="border-color: #4a4a4a; color: #4a4a4a; margin-bottom: 0;" title="TitleDB JSON">
+                                    <span>&lt;&gt;</span>
+                                </button>
                             </div>
                             <hr class="my-4 opacity-5">
                             <div class="mb-3">
@@ -458,6 +461,34 @@ function showDlcDetails(id) {
         `;
         $('#dlcModalContent').html(content);
         openModal('dlcDetailsModal');
+    });
+}
+
+function showTitledbJson(titleId) {
+    if (!titleId) return;
+    const codeContainer = $('#titledbJsonContent');
+    const loadingText = typeof t === 'function' ? t('Carregando...') : 'Carregando...';
+    codeContainer.text(loadingText);
+    openModal('titledbJsonModal');
+
+    $.getJSON(`/api/titledb_data/${titleId}`, (res) => {
+        let data = res;
+        if (typeof unwrap === 'function') {
+            data = unwrap(res) || res;
+        } else if (res && res.data !== undefined) {
+            data = res.data || {};
+        }
+        
+        codeContainer.text(JSON.stringify(data, null, 2));
+    }).fail((xhr) => {
+        let errorMsg = typeof t === 'function' ? t('Dados do TitleDB não encontrados no banco de dados.') : 'Dados do TitleDB não encontrados no banco de dados.';
+        try {
+            const errJson = JSON.parse(xhr.responseText);
+            if (errJson && errJson.message) {
+                errorMsg = errJson.message;
+            }
+        } catch(e) {}
+        codeContainer.text(errorMsg);
     });
 }
 

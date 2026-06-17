@@ -1468,6 +1468,19 @@ def app_info_api(id):
     return success_response(data=result)
 
 
+@library_bp.route("/titledb_data/<title_id>")
+@access_required("shop")
+@handle_api_errors
+def titledb_data_api(title_id):
+    """Obter os dados JSON brutos do TitleDB para um jogo"""
+    from models.titledbcache import TitleDBCache
+    tid = str(title_id).upper()
+    cache_record = TitleDBCache.query.filter_by(title_id=tid).first()
+    if not cache_record:
+        return not_found_response("Dados do TitleDB não encontrados para este Title ID.")
+    return success_response(data=cache_record.data)
+
+
 @library_bp.route("/tags")
 @access_required("shop")
 @handle_api_errors

@@ -142,4 +142,25 @@
     </div>
 </div>
 
+<!-- TitleDB JSON Modal -->
+<div class="modal" id="titledbJsonModal">
+    <div class="modal-background" onclick="closeModal('titledbJsonModal')"></div>
+    <div class="modal-card" style="width: 800px; max-width: 95vw;">
+        <header class="modal-card-head">
+            <p class="modal-card-title">TitleDB JSON Data</p>
+            <button class="delete" aria-label="close" onclick="closeModal('titledbJsonModal')"></button>
+        </header>
+        <section class="modal-card-body p-4">
+            <div class="field">
+                <div class="control">
+                    <pre style="max-height: 60vh; overflow-y: auto; background-color: #1e1e1e; color: #d4d4d4; padding: 1rem; border-radius: 6px; font-family: monospace; font-size: 0.85rem;"><code id="titledbJsonContent"></code></pre>
+                </div>
+            </div>
+        </section>
+        <footer class="modal-card-foot is-justify-content-flex-end py-2">
+            <button class="button is-small" onclick="closeModal('titledbJsonModal')">Fechar</button>
+        </footer>
+    </div>
+</div>
+
 <script src="/static/js/modals.js?v={{ build_version }}"></script>
