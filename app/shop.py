@@ -29,8 +29,10 @@ def gen_shop_files(db):
 
     logger.info(f"gen_shop_files: Processing {len(files)} files from database")
 
+    from urllib.parse import quote
     for file in files:
-        shop_files.append({"url": f"/api/get_game/{file['id']}#{file['filename']}", "size": file["size"]})
+        safe_filename = quote(file['filename'], safe='[]')
+        shop_files.append({"url": f"/api/get_game/{file['id']}#{safe_filename}", "size": file["size"]})
 
     logger.info(f"gen_shop_files: Returning {len(shop_files)} files for Tinfoil shop")
     return shop_files
