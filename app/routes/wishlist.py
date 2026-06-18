@@ -301,7 +301,7 @@ def set_wishlist_ignore(title_id):
                     "app_id": a.app_id,
                     "app_type": a.app_type.lower(),
                     "app_version": a.app_version,
-                    "owned": a.owned,
+                    "owned": a.owned and len(a.files) > 0,
                 }
                 for a in t.apps
             ]

@@ -1205,6 +1205,17 @@ def update_titles():
 
         db.session.commit()
 
+        # Recalculate precomputed per-user flags so they are always in sync with TitleDB
+        try:
+            from auth import User
+            from repositories.titles_repository import TitlesRepository
+            users = User.query.all()
+            for user in users:
+                logger.info(f"Precomputing user_title_flags for user {user.id}...")
+                TitlesRepository.precompute_flags_for_user(user.id)
+        except Exception as e:
+            logger.warning(f"Failed to precompute flags for users: {e}")
+
         # FIX for Issue #4: Remove orphaned titles at the END of update_titles
         # and invalidate cache if any were removed.
         titles_removed = remove_titles_without_owned_apps()
