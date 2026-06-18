@@ -1071,148 +1071,154 @@ def process_library_identification(app):
 
 
 def update_titles():
-    # Remove titles that no longer have any owned apps
-    titles_removed = remove_titles_without_owned_apps()
-    if titles_removed > 0:
-        logger.info(f"Removed {titles_removed} titles with no owned apps.")
-
-    # Auto-heal: Ensure apps with files are marked as owned
-    # This fixes cases where files were linked but 'owned' flag wasn't updated due to bugs
+    # Ensure TitleDB is loaded to avoid clearing up_to_date and complete status flags
+    titles_lib.load_titledb()
     try:
-        # FIX: PostgreSQL requires boolean comparison (owned = true), not integer (owned = 1)
-        db.session.execute(
-            db.text("UPDATE apps SET owned = true WHERE id IN (SELECT app_id FROM app_files) AND owned = false")
-        )
-        db.session.commit()
-    except Exception as e:
-        logger.warning(f"Auto-heal owned status failed: {e}")
-        db.session.rollback()
+        # Remove titles that no longer have any owned apps
+        titles_removed = remove_titles_without_owned_apps()
+        if titles_removed > 0:
+            logger.info(f"Removed {titles_removed} titles with no owned apps.")
 
-    # Optimized query to fetch titles and their apps in fixed number of queries
-    titles = Titles.query.options(joinedload(Titles.apps).joinedload(Apps.files)).all()
-    for n, title in enumerate(titles):
-        # Yield to other gevent co-routines
-        import gevent
+        # Auto-heal: Ensure apps with files are marked as owned
+        # This fixes cases where files were linked but 'owned' flag wasn't updated due to bugs
+        try:
+            # FIX: PostgreSQL requires boolean comparison (owned = true), not integer (owned = 1)
+            db.session.execute(
+                db.text("UPDATE apps SET owned = true WHERE id IN (SELECT app_id FROM app_files) AND owned = false")
+            )
+            db.session.commit()
+        except Exception as e:
+            logger.warning(f"Auto-heal owned status failed: {e}")
+            db.session.rollback()
 
-        gevent.sleep(0)
+        # Optimized query to fetch titles and their apps in fixed number of queries
+        titles = Titles.query.options(joinedload(Titles.apps).joinedload(Apps.files)).all()
+        for n, title in enumerate(titles):
+            # Yield to other gevent co-routines
+            import gevent
 
-        have_base = False
-        up_to_date = False
-        complete = False
+            gevent.sleep(0)
 
-        title_id = title.title_id
+            have_base = False
+            up_to_date = False
+            complete = False
 
-        if not title_id:
-            logger.warning(f"Found Title record with null title_id (ID: {title.id}). Skipping.")
-            continue
+            title_id = title.title_id
 
-        # Filter owned apps that actually have files associated
-        owned_apps_with_files = [a for a in title.apps if a.owned and len(a.files) > 0]
-
-        # check have_base - look for owned base apps with actual files
-        owned_base_apps = [app for app in owned_apps_with_files if app.app_type == APP_TYPE_BASE]
-        have_base = len(owned_base_apps) > 0
-
-        owned_versions = []
-        for a in owned_apps_with_files:
-            try:
-                owned_versions.append(int(a.app_version))
-            except (ValueError, TypeError):
+            if not title_id:
+                logger.warning(f"Found Title record with null title_id (ID: {title.id}). Skipping.")
                 continue
 
-        max_owned_version = max(owned_versions) if owned_versions else -1
+            # Filter owned apps that actually have files associated
+            owned_apps_with_files = [a for a in title.apps if a.owned and len(a.files) > 0]
 
-        # Available updates from titledb via versions.json
-        available_versions = titles_lib.get_all_existing_versions(title_id)
-        max_available_version = max((v["version"] for v in available_versions), default=0)
-        
-        # check up_to_date - consider current max owned vs max available
-        up_to_date = max_owned_version >= max_available_version
+            # check have_base - look for owned base apps with actual files
+            owned_base_apps = [app for app in owned_apps_with_files if app.app_type == APP_TYPE_BASE]
+            have_base = len(owned_base_apps) > 0
 
-        # check complete - check against TitleDB known DLCs
-        all_possible_dlc_ids = [d.upper() for d in titles_lib.get_all_existing_dlc(title_id)]
-        all_possible_dlc_ids = [d for d in all_possible_dlc_ids if d != title_id.upper()]
+            owned_versions = []
+            for a in owned_apps_with_files:
+                try:
+                    owned_versions.append(int(a.app_version))
+                except (ValueError, TypeError):
+                    continue
 
-        if not all_possible_dlc_ids:
-            complete = True
-        else:
-            owned_dlc_ids = set(
-                [a.app_id.upper() for a in title.apps if a.app_type == APP_TYPE_DLC and a.owned and len(a.files) > 0]
-            )
-            complete = all(d in owned_dlc_ids for d in all_possible_dlc_ids)
+            max_owned_version = max(owned_versions) if owned_versions else -1
 
-        # Materialized counters (to speed up common filters)
-        try:
-            # Count owned update apps with files (redundant updates counter)
-            # Ignore XCI/XCZ files (cartridge dumps often include updates)
-            # CORRECT LOGIC: Redundant means we own an update OLDER than the active one (max_owned_version)
-            # CORRECT LOGIC: Redundant = more than 1 owned update FILE (excluding XCI/XCZ bundled updates)
-            # Match logic from get_game_info_item
-            owned_update_files = []
-            for a in title.apps:
-                if (a.app_type == APP_TYPE_UPD or a.app_type == "UPD") and a.owned:
-                    for f in a.files:
-                        if not f.filepath:
-                            continue
-                        fpath = f.filepath.lower()
-                        # Skip XCI/XCZ as they serve as base+update usually
-                        if fpath.endswith((".xci", ".xcz")):
-                            continue
-                        owned_update_files.append(f.id)
+            # Available updates from titledb via versions.json
+            available_versions = titles_lib.get_all_existing_versions(title_id)
+            max_available_version = max((v["version"] for v in available_versions), default=0)
             
-            # If we have more than 1 owned update file (NSP/NSZ), we have redundancy
-            # The "latest" installed update is one, anything else is redundant.
-            title.redundant_updates_count = max(0, len(owned_update_files) - 1)
+            # check up_to_date - consider current max owned vs max available
+            up_to_date = max_owned_version >= max_available_version
 
-            # Missing DLCs counter: number of DLCs known in TitleDB that are not owned
-            missing_dlcs = 0
-            if all_possible_dlc_ids:
-                owned_dlc_ids_upper = owned_dlc_ids
-                missing_dlcs = max(0, len(all_possible_dlc_ids) - len(owned_dlc_ids_upper))
-            title.missing_dlcs_count = missing_dlcs
-        except Exception:
-            # In case the DB model doesn't have these columns yet (pre-migration), skip silently
-            pass
+            # check complete - check against TitleDB known DLCs
+            all_possible_dlc_ids = [d.upper() for d in titles_lib.get_all_existing_dlc(title_id)]
+            all_possible_dlc_ids = [d for d in all_possible_dlc_ids if d != title_id.upper()]
 
-        if title.up_to_date != up_to_date:
-            logger.info(f"Title {title_id} update status changed: {title.up_to_date} -> {up_to_date}")
+            if not all_possible_dlc_ids:
+                complete = True
+            else:
+                owned_dlc_ids = set(
+                    [a.app_id.upper() for a in title.apps if a.app_type == APP_TYPE_DLC and a.owned and len(a.files) > 0]
+                )
+                complete = all(d in owned_dlc_ids for d in all_possible_dlc_ids)
 
-        if title.complete != complete:
-            logger.info(f"Title {title_id} complete status changed: {title.complete} -> {complete}")
+            # Materialized counters (to speed up common filters)
+            try:
+                # Count owned update apps with files (redundant updates counter)
+                # Ignore XCI/XCZ files (cartridge dumps often include updates)
+                # CORRECT LOGIC: Redundant means we own an update OLDER than the active one (max_owned_version)
+                # CORRECT LOGIC: Redundant = more than 1 owned update FILE (excluding XCI/XCZ bundled updates)
+                # Match logic from get_game_info_item
+                owned_update_files = []
+                for a in title.apps:
+                    if (a.app_type == APP_TYPE_UPD or a.app_type == "UPD") and a.owned:
+                        for f in a.files:
+                            if not f.filepath:
+                                continue
+                            fpath = f.filepath.lower()
+                            # Skip XCI/XCZ as they serve as base+update usually
+                            if fpath.endswith((".xci", ".xcz")):
+                                continue
+                            owned_update_files.append(f.id)
+                
+                # If we have more than 1 owned update file (NSP/NSZ), we have redundancy
+                # The "latest" installed update is one, anything else is redundant.
+                title.redundant_updates_count = max(0, len(owned_update_files) - 1)
 
-        title.have_base = have_base
-        title.up_to_date = up_to_date
-        title.complete = complete
+                # Missing DLCs counter: number of DLCs known in TitleDB that are not owned
+                missing_dlcs = 0
+                if all_possible_dlc_ids:
+                    owned_dlc_ids_upper = owned_dlc_ids
+                    missing_dlcs = max(0, len(all_possible_dlc_ids) - len(owned_dlc_ids_upper))
+                title.missing_dlcs_count = missing_dlcs
+            except Exception:
+                # In case the DB model doesn't have these columns yet (pre-migration), skip silently
+                pass
 
-        # Set added_at when game is first added to library (first base file found)
-        if have_base and not title.added_at:
-            # Use the earliest file's last_attempt date as the added_at
-            earliest_date = None
-            for app in title.apps:
-                for file in app.files:
-                    if file.last_attempt:
-                        if earliest_date is None or file.last_attempt < earliest_date:
-                            earliest_date = file.last_attempt
-            title.added_at = earliest_date or now_utc()
-            logger.info(f"Setting added_at for title {title_id} to {title.added_at}")
+            if title.up_to_date != up_to_date:
+                logger.info(f"Title {title_id} update status changed: {title.up_to_date} -> {up_to_date}")
 
-        # Commit every 100 titles to avoid excessive memory use
-        if (n + 1) % 100 == 0:
-            db.session.commit()
+            if title.complete != complete:
+                logger.info(f"Title {title_id} complete status changed: {title.complete} -> {complete}")
 
-    db.session.commit()
+            title.have_base = have_base
+            title.up_to_date = up_to_date
+            title.complete = complete
 
-    # FIX for Issue #4: Remove orphaned titles at the END of update_titles
-    # and invalidate cache if any were removed.
-    titles_removed = remove_titles_without_owned_apps()
-    if titles_removed > 0:
-        logger.info(f"Cleaned up {titles_removed} orphaned titles with no remaining files.")
-        # We don't call post_library_change here to avoid infinite recursion if
-        # post_library_change calls update_titles, but we do need to invalidate cache.
-        global _LIBRARY_CACHE
-        with _CACHE_LOCK:
-            _LIBRARY_CACHE = None
-        invalidate_library_cache()
+            # Set added_at when game is first added to library (first base file found)
+            if have_base and not title.added_at:
+                # Use the earliest file's last_attempt date as the added_at
+                earliest_date = None
+                for app in title.apps:
+                    for file in app.files:
+                        if file.last_attempt:
+                            if earliest_date is None or file.last_attempt < earliest_date:
+                                earliest_date = file.last_attempt
+                title.added_at = earliest_date or now_utc()
+                logger.info(f"Setting added_at for title {title_id} to {title.added_at}")
+
+            # Commit every 100 titles to avoid excessive memory use
+            if (n + 1) % 100 == 0:
+                db.session.commit()
+
+        db.session.commit()
+
+        # FIX for Issue #4: Remove orphaned titles at the END of update_titles
+        # and invalidate cache if any were removed.
+        titles_removed = remove_titles_without_owned_apps()
+        if titles_removed > 0:
+            logger.info(f"Cleaned up {titles_removed} orphaned titles with no remaining files.")
+            # We don't call post_library_change here to avoid infinite recursion if
+            # post_library_change calls update_titles, but we do need to invalidate cache.
+            global _LIBRARY_CACHE
+            with _CACHE_LOCK:
+                _LIBRARY_CACHE = None
+            invalidate_library_cache()
+    finally:
+        # Always unload to free memory resources
+        titles_lib.unload_titledb()
 
 
 def get_library_status(title_id):
