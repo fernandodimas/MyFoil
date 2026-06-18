@@ -83,22 +83,33 @@ class TitlesRepository:
 
             if filters.get("dlc"):
                 # DLC filter: Owned games that have missing DLCs.
-                # Use the 'complete' flag which is reliably updated by update_titles().
-                # The materialized counter 'missing_dlcs_count' may be stale.
+                # Strategy: Use a broad filter to get candidate titles, then the
+                # route-level has_non_ignored_dlcs post-filter does the precise filtering
+                # per user with ignore preferences applied.
+                #
+                # We use user_title_flags ONLY when available AND populated.
+                # If not populated, fall back to: have_base=True AND complete=False.
+                filtered_via_flags = False
                 if user_id:
-                    # Join to user_title_flags table if available
                     utf = db.metadata.tables.get("user_title_flags")
                     if utf is not None:
-                        # Use outerjoin to avoid filtering out titles with no entry in utf table
-                        query = query.outerjoin(utf, (utf.c.title_id == Titles.title_id) & (utf.c.user_id == user_id))
-                        # Filter for has_non_ignored_dlcs == True OR (if row is missing) fallback to standard logic
-                        # But wait, if row is missing, the games SHOULD be checked.
-                        # To keep it simple and performant:
-                        query = query.filter(func.coalesce(utf.c.has_non_ignored_dlcs, (Titles.have_base == True) & (Titles.complete == False)) == True)
-                    else:
-                        query = query.filter(Titles.have_base == True, Titles.complete == False)
-                else:
+                        try:
+                            # Count entries for this user to see if flags are populated
+                            flag_count = db.session.execute(
+                                select(func.count()).select_from(utf).where(utf.c.user_id == user_id)
+                            ).scalar() or 0
+                            if flag_count > 0:
+                                # Use the precomputed flags — ONLY filter rows that exist in the table
+                                query = query.join(utf, (utf.c.title_id == Titles.title_id) & (utf.c.user_id == user_id))
+                                query = query.filter(utf.c.has_non_ignored_dlcs == True)
+                                filtered_via_flags = True
+                        except Exception:
+                            pass
+
+                if not filtered_via_flags:
+                    # Fallback: broad pre-filter by complete flag (post-filter will refine)
                     query = query.filter(Titles.have_base == True, Titles.complete == False)
+
 
             if filters.get("redundant"):
                 # Redundant updates filter: prefer has_non_ignored_redundant flag when available.
