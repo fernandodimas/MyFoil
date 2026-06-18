@@ -1346,7 +1346,18 @@ def get_all_existing_dlc(title_id):
     except Exception as e:
         logger.warning(f"Failed to load local DLCs for {title_id} from database: {e}")
 
-    return dlcs
+    # Filter out demos from the final list
+    filtered_dlcs = []
+    for dlc_id in dlcs:
+        try:
+            info = get_game_info(dlc_id, silent=True)
+            if info.get("isDemo") or "demo" in info.get("name", "").lower():
+                continue
+        except Exception:
+            pass
+        filtered_dlcs.append(dlc_id)
+
+    return filtered_dlcs
 
 
 def get_loaded_titles_file():
