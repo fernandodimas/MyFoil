@@ -30,8 +30,9 @@ def index():
         if request.verified_host is not None:
             shop["referrer"] = f"https://{request.verified_host}"
 
-        files_list = gen_shop_files(db)
+        files_list, titles_map = gen_shop_files(db)
         shop["files"] = files_list
+        shop["titles"] = titles_map
 
         if load_settings()["shop"]["encrypt"]:
             return Response(encrypt_shop(shop), mimetype="application/octet-stream")

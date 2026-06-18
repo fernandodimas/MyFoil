@@ -511,12 +511,28 @@ def get_shop_files():
         else:
             final_filename = f"{game_name}[{app.app_id}][v{app.app_version}].{file.extension}"
 
+        # Determine the individual app name (e.g. for DLCs)
+        app_name = ""
+        try:
+            from models.apps import APP_TYPE_DLC
+            if app.app_type == APP_TYPE_DLC:
+                dlc_info = get_game_info(app.app_id, silent=True)
+                if dlc_info and dlc_info.get("name") and not dlc_info["name"].startswith("Unknown"):
+                    app_name = dlc_info["name"]
+        except Exception:
+            pass
+
+        if not app_name:
+            app_name = app.title.name or game_name or ""
+
         shop_files.append(
             {
                 "id": file.id,
                 "filename": final_filename,
                 "size": file.size,
                 "title_id": app.title.title_id,
+                "app_id": app.app_id,
+                "app_name": app_name,
             }
         )
 
