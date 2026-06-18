@@ -23,36 +23,40 @@ import logging
 logger = logging.getLogger("main")
 
 
-def gen_shop_files(db):
+def gen_shop_files(db, base_url=""):
     shop_files = []
     titles_map = {}
     files = get_shop_files()
 
-    logger.info(f"gen_shop_files: Processing {len(files)} files from database")
+    logger.info(f"gen_shop_files: Processing {len(files)} files from database (base_url={base_url})")
+
+    # Collect all unique Base TitleIDs for the titles map
+    seen_base_tids = set()
 
     for file in files:
+        # Build absolute URL: Tinfoil requires full URLs (http/https)
         # The fragment after # is used by Tinfoil as the display filename
         # It must NOT be URL-encoded - Tinfoil reads it as raw text
-        shop_files.append({"url": f"/api/get_game/{file['id']}#{file['filename']}", "size": file["size"]})
-        
-        # Populate titles mapping (TitleID -> Name) for Tinfoil
-        app_id = file.get("app_id")
-        app_name = file.get("app_name")
-        if app_id and app_name:
-            clean_name = app_name.strip()
-            if clean_name:
-                titles_map[app_id.upper()] = clean_name
+        file_url = f"{base_url}/api/get_game/{file['id']}#{file['filename']}"
+        shop_files.append({"url": file_url, "size": file["size"]})
 
-        # Also map the Base Title ID just in case
+        # Collect Base TitleIDs (ending in 000) for the titles map
         title_id = file.get("title_id")
         if title_id:
-            from titles import get_game_info
-            try:
-                base_info = get_game_info(title_id, silent=True)
-                if base_info and base_info.get("name") and not base_info["name"].startswith("Unknown"):
-                    titles_map[title_id.upper()] = base_info["name"].strip()
-            except Exception:
-                pass
+            tid_upper = title_id.upper()
+            if tid_upper not in seen_base_tids:
+                seen_base_tids.add(tid_upper)
+
+    # Build titles map: only Base TitleIDs (ending in 000)
+    # This is what Tinfoil uses to display game names
+    from titles import get_game_info
+    for tid in seen_base_tids:
+        try:
+            info = get_game_info(tid, silent=True)
+            if info and info.get("name") and not info["name"].startswith("Unknown"):
+                titles_map[tid] = info["name"].strip()
+        except Exception:
+            pass
 
     logger.info(f"gen_shop_files: Returning {len(shop_files)} files and {len(titles_map)} titles mapping for Tinfoil shop")
     return shop_files, titles_map

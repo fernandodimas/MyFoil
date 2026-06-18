@@ -29,8 +29,12 @@ def index():
 
         if request.verified_host is not None:
             shop["referrer"] = f"https://{request.verified_host}"
+            scheme = "https" if (request.is_secure or request.headers.get("X-Forwarded-Proto") == "https") else "http"
+            base_url = f"{scheme}://{request.verified_host}"
+        else:
+            base_url = request.host_url.rstrip("/")
 
-        files_list, titles_map = gen_shop_files(db)
+        files_list, titles_map = gen_shop_files(db, base_url=base_url)
         shop["files"] = files_list
         shop["titles"] = titles_map
 

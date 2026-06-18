@@ -509,7 +509,8 @@ def get_shop_files():
             title_id = app.title.title_id
             final_filename = f"{game_name}[{title_id}].{file.extension}"
         else:
-            final_filename = f"{game_name}[{app.app_id}][v{app.app_version}].{file.extension}"
+            version_val = app.app_version if app.app_version is not None else 0
+            final_filename = f"{game_name}[{app.app_id}][v{version_val}].{file.extension}"
 
         # Determine the individual app name (e.g. for DLCs)
         app_name = ""
