@@ -6,6 +6,56 @@
 const openModal = (id) => $(`#${id}`).addClass('is-active');
 const closeModal = (id) => $(`#${id}`).removeClass('is-active');
 
+function getLanguageFlag(lang) {
+    if (!lang) return '';
+    const l = lang.toLowerCase().trim();
+    const flags = {
+        'pt': '🇧🇷',
+        'pt-br': '🇧🇷',
+        'pt_br': '🇧🇷',
+        'en': '🇺🇸',
+        'en-us': '🇺🇸',
+        'en-gb': '🇬🇧',
+        'es': '🇪🇸',
+        'es-es': '🇪🇸',
+        'es-mx': '🇲🇽',
+        'ja': '🇯🇵',
+        'jp': '🇯🇵',
+        'fr': '🇫🇷',
+        'de': '🇩🇪',
+        'it': '🇮🇹',
+        'zh': '🇨🇳',
+        'zh-cn': '🇨🇳',
+        'zh-tw': '🇹🇼',
+        'ko': '🇰🇷',
+        'ru': '🇷🇺',
+        'nl': '🇳🇱',
+        'pl': '🇵🇱',
+        'tr': '🇹🇷',
+        'sv': '🇸🇪',
+        'no': '🇳🇴',
+        'da': '🇩🇰',
+        'fi': '🇫🇮',
+        'el': '🇬🇷',
+        'bg': '🇧🇬',
+        'hr': '🇭🇷',
+        'cs': '🇨🇿',
+        'hu': '🇭🇺',
+        'ro': '🇷🇴',
+        'sk': '🇸🇰',
+        'sl': '🇸🇮',
+        'uk': '🇺🇦',
+        'ar': '🇸🇦',
+        'he': '🇮🇱',
+        'th': '🇹🇭',
+        'vi': '🇻🇳',
+        'id': '🇮🇩',
+        'ms': '🇲🇾',
+        'hi': '🇮🇳'
+    };
+    return flags[l] || '';
+}
+
 // Generic Confirmation Helper
 window.confirmAction = function (options) {
     const { title, message, onConfirm, confirmText, confirmClass } = options;
@@ -254,7 +304,11 @@ function showGameDetails(id) {
                             <div class="mb-3">
                                 <p class="is-size-7 heading mb-1 opacity-50">Idiomas</p>
                                 <div class="tags mt-1">
-                                    ${game.languages.map(l => `<span class="tag is-small is-light" style="margin-bottom: 0.25rem;">${escapeHtml(l)}</span>`).join('')}
+                                    ${game.languages.map(l => {
+                                        const flag = getLanguageFlag(l);
+                                        const text = flag ? `${flag} ${escapeHtml(l.toUpperCase())}` : escapeHtml(l.toUpperCase());
+                                        return `<span class="tag is-small is-light" style="margin-bottom: 0.25rem; font-weight: 500;">${text}</span>`;
+                                    }).join('')}
                                 </div>
                             </div>
                             ` : ''}
