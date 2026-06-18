@@ -173,6 +173,28 @@ def load_titledb_from_db():
             if dlc_app_id not in _dlcs_by_base_id[base_tid]:
                 _dlcs_by_base_id[base_tid].append(dlc_app_id)
 
+        # Fallback: Extract DLCs from _titles_db using "parentId" if not in TitleDBDLCs
+        for tid, data in _titles_db.items():
+            if isinstance(data, dict) and data.get("parentId"):
+                base_tid = str(data["parentId"]).lower()
+                dlc_app_id = tid.upper()
+                
+                dlc_id_lower = dlc_app_id.lower()
+                if dlc_id_lower not in _cnmts_db:
+                    _cnmts_db[dlc_id_lower] = {}
+                    _cnmts_db[dlc_id_lower]["0"] = {
+                        "titleType": 130,
+                        "otherApplicationId": base_tid,
+                    }
+                
+                if dlc_app_id not in _dlc_map:
+                    _dlc_map[dlc_app_id] = base_tid
+                
+                if base_tid not in _dlcs_by_base_id:
+                    _dlcs_by_base_id[base_tid] = []
+                if dlc_app_id not in _dlcs_by_base_id[base_tid]:
+                    _dlcs_by_base_id[base_tid].append(dlc_app_id)
+
         _titles_db_loaded = True
         _titledb_cache_timestamp = time.time()
         logger.info(
