@@ -1282,23 +1282,38 @@ def get_all_existing_dlc(title_id):
 
     title_id = title_id.lower()
 
+    dlcs = []
     # Priority 1: Use optimization index if available
     if _dlcs_by_base_id and title_id in _dlcs_by_base_id:
-        return _dlcs_by_base_id[title_id]
+        dlcs = list(_dlcs_by_base_id[title_id])
+    else:
+        # Fallback: Sequential scan
+        for app_id, versions in _cnmts_db.items():
+            if isinstance(versions, dict):
+                for version_key, version_description in versions.items():
+                    if (
+                        version_description.get("titleType") == 130
+                        and version_description.get("otherApplicationId") == title_id
+                    ):
+                        app_id_upper = app_id.upper()
+                        if app_id_upper not in dlcs:
+                            dlcs.append(app_id_upper)
+                        break
 
-    # Fallback: Sequential scan
-    dlcs = []
-    for app_id, versions in _cnmts_db.items():
-        if isinstance(versions, dict):
-            for version_key, version_description in versions.items():
-                if (
-                    version_description.get("titleType") == 130
-                    and version_description.get("otherApplicationId") == title_id
-                ):
-                    app_id_upper = app_id.upper()
-                    if app_id_upper not in dlcs:
-                        dlcs.append(app_id_upper)
-                    break
+    # Add any locally owned/scanned DLCs for this title from the database
+    try:
+        from db import Apps, Titles, APP_TYPE_DLC
+        local_dlcs = Apps.query.join(Titles).filter(
+            Titles.title_id == title_id.upper(),
+            Apps.app_type == APP_TYPE_DLC
+        ).all()
+        for app in local_dlcs:
+            app_id_upper = app.app_id.upper()
+            if app_id_upper not in dlcs:
+                dlcs.append(app_id_upper)
+    except Exception as e:
+        logger.warning(f"Failed to load local DLCs for {title_id} from database: {e}")
+
     return dlcs
 
 
