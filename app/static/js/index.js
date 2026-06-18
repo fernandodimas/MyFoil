@@ -18,6 +18,7 @@ let isNewRender = true;  // Track if we need a full re-render
 let scrollOffset = 0;  // Track which filtered items have been rendered
 let hasMoreItems = true;  // Track if there are more items to render
 let isServerSideFiltered = false; // Track if current games list is a filtered subset
+let lastServerSort = currentSort; // Track the sort used for the last server request
 const PER_PAGE = 75;  // Items per page (optimized for performance - 75 is sweet spot)
 const SCROLL_BATCH_SIZE = 30;  // Render 30 items at a time for smoothness
 
@@ -165,6 +166,9 @@ function loadLibraryPaginated(page = 1, append = false) {
             allGamesLoaded = true;
             $('#loadingProgress').val(100);
         }
+
+        // Sync lastServerSort BEFORE applying filters to avoid infinite reload loop
+        lastServerSort = currentSort;
 
         // Apply filters after data is loaded
         applyFilters();
@@ -559,6 +563,15 @@ function applyFilters() {
 
     // If we were previously in a filtered state (server-side search), we need to reload the full library
     if (isServerSideFiltered) {
+        lastServerSort = currentSort;
+        loadLibraryPaginated(1, false);
+        return;
+    }
+
+    // If the sort order changed, we must reload from the server because
+    // client-side sorting on partially-loaded paginated data is incorrect
+    if (currentSort !== lastServerSort) {
+        lastServerSort = currentSort;
         loadLibraryPaginated(1, false);
         return;
     }

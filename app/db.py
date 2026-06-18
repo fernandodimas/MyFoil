@@ -460,6 +460,10 @@ def get_shop_files():
 
     logger.debug(f"get_shop_files: Found {len(results)} total files")
 
+    # Import get_game_info for TitleDB fallback (resolves names from JSON DB)
+    from titles import get_game_info
+    import re
+
     for file in results:
         if not file.identified:
             logger.debug(f"File {file.id} ({file.filename}) is not identified, skipping")
@@ -477,9 +481,26 @@ def get_shop_files():
             logger.debug(f"File {file.id} ({file.filename}) has no extension, skipping")
             continue
 
+        # Try to get name from database first
         game_name = app.title.name if (app.title and app.title.name) else ""
+
+        # Fallback: if DB has no name, try TitleDB (JSON loaded in memory)
+        if not game_name:
+            try:
+                info = get_game_info(app.title.title_id, silent=True)
+                if info and info.get("name") and not info["name"].startswith("Unknown"):
+                    game_name = info["name"]
+                    # Also update the DB for future lookups
+                    if app.title and not app.title.name:
+                        app.title.name = game_name
+                        try:
+                            db.session.commit()
+                        except Exception:
+                            db.session.rollback()
+            except Exception as e:
+                logger.debug(f"get_shop_files: TitleDB fallback failed for {app.title.title_id}: {e}")
+
         if game_name:
-            import re
             game_name = re.sub(r'[\\/*?:"<>|]', "", game_name).strip()
             if game_name:
                 game_name = game_name + " "
