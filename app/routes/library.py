@@ -189,6 +189,7 @@ def _serialize_title_with_apps(title: Titles, ignore_map=None) -> dict:
         "rawg_rating": title.rawg_rating,
         "rating_count": title.rating_count,
         "playtime_main": title.playtime_main,
+        "added_at": title.added_at,
         "apps": all_title_apps_dict,
     }
 
@@ -527,6 +528,7 @@ def library_search_paged_api():
                     "have_base": title.have_base,
                     "up_to_date": title.up_to_date,
                     "complete": title.complete,
+                    "added_at": title.added_at,
                     "apps": None,
                 }
 
