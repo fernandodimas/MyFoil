@@ -230,6 +230,11 @@ function showGameDetails(id) {
                                                         </a>
                                                     </p>
                                                     <p class="control">
+                                                        <button onclick="showTitledbJson('${escapeHtml(d.app_id)}')" class="button is-light is-small" title="Ver JSON" style="border-color: #4a4a4a;">
+                                                            <span>&lt;&gt;</span>
+                                                        </button>
+                                                    </p>
+                                                    <p class="control">
                                                         <button class="button is-danger is-small is-light" onclick="deleteGameFile(${file.id}, '${escapeHtml(game.id)}')" title="${t('common.delete_file')}">
                                                             <i class="bi bi-trash"></i>
                                                         </button>
@@ -238,6 +243,11 @@ function showGameDetails(id) {
                                             ` : (d.owned ? `<span class="tag is-warning is-light is-small">${t('common.error')}</span>` : `
                                                 <div class="field is-grouped is-grouped-centered is-align-items-center">
                                                     <span class="tag is-danger is-light is-small mr-2">${t('common.missing')}</span>
+                                                    <p class="control mr-2">
+                                                        <button onclick="showTitledbJson('${escapeHtml(d.app_id)}')" class="button is-light is-small" title="Ver JSON" style="border-color: #4a4a4a; padding: 0 6px; height: 1.5rem;">
+                                                            <span>&lt;&gt;</span>
+                                                        </button>
+                                                    </p>
                                                     <input type="checkbox" class="is-small"
                                                         id="${ignoreId}"
                                                         title="${t('modal.ignore_dlc')}"
