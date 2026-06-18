@@ -40,6 +40,72 @@ from repositories.title_metadata_repository import TitleMetadataRepository
 
 library_bp = Blueprint("library", __name__, url_prefix="/api")
 
+
+@library_bp.route("/library/debug_bluey")
+@handle_api_errors
+def debug_bluey_api():
+    from app.models.titles import Titles
+    from app.models.apps import Apps
+    from app.models.files import Files
+    
+    title = Titles.query.filter_by(title_id='0100EF802631A000').first()
+    res = {}
+    if not title:
+        res["error"] = "Título não encontrado"
+    else:
+        res["title"] = {
+            "name": title.name,
+            "have_base": title.have_base,
+            "up_to_date": title.up_to_date,
+            "complete": title.complete,
+            "redundant_updates_count": title.redundant_updates_count,
+            "missing_dlcs_count": title.missing_dlcs_count,
+        }
+        
+        apps_info = []
+        apps = Apps.query.filter_by(title_id=title.id).all()
+        for a in apps:
+            app_files = []
+            for f in a.files:
+                app_files.append({
+                    "filepath": f.filepath,
+                    "identified": f.identified,
+                    "size": f.size,
+                    "filename": f.filename
+                })
+            apps_info.append({
+                "app_id": a.app_id,
+                "app_version": a.app_version,
+                "app_type": a.app_type,
+                "owned": a.owned,
+                "files": app_files
+            })
+        res["apps"] = apps_info
+
+    # buscar arquivos com "bluey" no nome
+    files_bluey = []
+    files = Files.query.filter(Files.filename.ilike('%bluey%')).all()
+    for f in files:
+        assoc_apps = []
+        for app_assoc in f.apps:
+            assoc_apps.append({
+                "app_id": app_assoc.app_id,
+                "app_type": app_assoc.app_type,
+                "app_version": app_assoc.app_version
+            })
+        files_bluey.append({
+            "id": f.id,
+            "filename": f.filename,
+            "filepath": f.filepath,
+            "identified": f.identified,
+            "identification_type": f.identification_type,
+            "identification_error": f.identification_error,
+            "apps": assoc_apps
+        })
+    res["files_bluey"] = files_bluey
+    return jsonify(res), 200
+
+
 # Import cache module (Phase 4.1)
 try:
     import redis_cache
