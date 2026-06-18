@@ -598,8 +598,8 @@ function applyFilters() {
         }
         g.has_non_ignored_updates = hasNonIgnoredUpdates;
 
+        let hasNonIgnoredDlcs = false;
         if (g.has_base) {
-            let hasNonIgnoredDlcs = false;
             if (g.dlcs && Array.isArray(g.dlcs)) {
                 hasNonIgnoredDlcs = g.dlcs.some(dlc => {
                     const appIdKey = typeof dlc.app_id === 'string' ? dlc.app_id : (dlc.appId || '');
