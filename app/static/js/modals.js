@@ -229,6 +229,42 @@ function showGameDetails(id) {
                                 <p class="is-size-7 heading mb-1 opacity-50">${t('common.version')}</p>
                                 <p class="is-size-6"><span class="tag is-info is-light has-text-weight-bold">v${escapeHtml(game.display_version)}</span></p>
                             </div>
+                            
+                            ${game.rating !== undefined && game.rating !== null ? `
+                            <div class="mb-3">
+                                <p class="is-size-7 heading mb-1 opacity-50">Classificação</p>
+                                <p class="is-size-6">
+                                    <span class="tag ${
+                                        game.rating <= 7 ? 'is-success' : 
+                                        game.rating <= 12 ? 'is-info' : 
+                                        game.rating <= 16 ? 'is-warning' : 'is-danger'
+                                    } is-light has-text-weight-bold">${escapeHtml(String(game.rating))}+</span>
+                                </p>
+                            </div>
+                            ` : ''}
+                            
+                            ${game.ratingContent && game.ratingContent.length > 0 ? `
+                            <div class="mb-3">
+                                <p class="is-size-7 heading mb-1 opacity-50">Avisos</p>
+                                <p class="is-size-7 opacity-80" style="line-height: 1.3;">${game.ratingContent.map(escapeHtml).join(', ')}</p>
+                            </div>
+                            ` : ''}
+                            
+                            ${game.languages && game.languages.length > 0 ? `
+                            <div class="mb-3">
+                                <p class="is-size-7 heading mb-1 opacity-50">Idiomas</p>
+                                <div class="tags mt-1">
+                                    ${game.languages.map(l => `<span class="tag is-small is-light" style="margin-bottom: 0.25rem;">${escapeHtml(l)}</span>`).join('')}
+                                </div>
+                            </div>
+                            ` : ''}
+                            
+                            ${game.region ? `
+                            <div class="mb-3">
+                                <p class="is-size-7 heading mb-1 opacity-50">Região</p>
+                                <p class="is-size-7 opacity-80"><span class="tag is-small is-light border bg-white">${escapeHtml(game.region)}</span></p>
+                            </div>
+                            ` : ''}
                             <div class="mb-3">
                                 <p class="is-size-7 heading mb-1 opacity-50">${t('common.total_size')}</p>
                                 <p class="is-size-6 has-text-weight-bold font-mono">${escapeHtml(game.size_formatted || '--')}</p>
