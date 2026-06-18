@@ -1830,7 +1830,11 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
                 game["screenshots"].append(s)
 
     update_apps = [a for a in all_title_apps if a["app_type"] == APP_TYPE_UPD]
-    update_apps_by_version = {int(a["app_version"] or 0): a for a in update_apps}
+    update_apps_by_version = {}
+    for a in update_apps:
+        v = int(a.get("app_version") or 0)
+        if v not in update_apps_by_version or a.get("owned"):
+            update_apps_by_version[v] = a
 
     version_list = []
     # Include all versions found in versions.json

@@ -1432,7 +1432,12 @@ def app_info_api(id):
         version_release_dates[0] = "Unknown"
 
     update_apps = [a for a in all_title_apps if a["app_type"] in (APP_TYPE_UPD, "UPD")]
-    update_apps_by_version = {int(a.get("app_version") or 0): a for a in update_apps}
+    update_apps_by_version = {}
+    for a in update_apps:
+        v = int(a.get("app_version") or 0)
+        # Prioritize owned updates
+        if v not in update_apps_by_version or a.get("owned"):
+            update_apps_by_version[v] = a
 
     updates_list = []
     # 1. Add all versions from TitleDB
