@@ -210,6 +210,14 @@ def process_and_store_json(filename: str, source_name: str) -> bool:
             # Use batches for performance and to prevent long locks/freezes
             batch_size = 500
             items = list(data.items())
+            
+            # Sort by NSUID descending so that older versions (smaller NSUID) are processed LAST
+            # and thus take precedence in database upserts.
+            try:
+                items.sort(key=lambda x: int(x[0]) if x[0].isdigit() else 0, reverse=True)
+            except Exception as e:
+                logger.warning(f"Could not sort TitleDB items: {e}")
+                
             total = len(items)
             
             for i in range(0, total, batch_size):
