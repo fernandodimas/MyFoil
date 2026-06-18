@@ -1062,7 +1062,7 @@ def get_stats_overview():
                     if g.get("apps"):
                         for a in g["apps"]:
                             if (
-                                a.get("app_type") == APP_TYPE_DLC
+                                a.get("app_type") in (APP_TYPE_DLC, "DLC")
                                 and a.get("owned")
                                 and len(a.get("files_info", [])) > 0
                             ):
@@ -1185,7 +1185,7 @@ def app_info_api(id):
         titles.load_titledb()  # Ensure loaded
         base_tid, app_type = titles.identify_appId(tid)
         if base_tid and tid != base_tid:
-            if app_type != APP_TYPE_DLC:
+            if app_type not in (APP_TYPE_DLC, "DLC"):
                 tid = base_tid
                 title_obj = TitlesRepository.get_by_title_id(tid)
 
@@ -1253,7 +1253,7 @@ def app_info_api(id):
 
     # Base Files (from owned BASE apps)
     base_files = []
-    base_apps = [a for a in all_title_apps if a["app_type"] == APP_TYPE_BASE and a["owned"]]
+    base_apps = [a for a in all_title_apps if a["app_type"] in (APP_TYPE_BASE, "BASE") and a["owned"]]
     for b in base_apps:
         app_model = AppsRepository.get_by_id(b["id"])
         if not app_model:
@@ -1297,7 +1297,7 @@ def app_info_api(id):
     else:
         version_release_dates[0] = "Unknown"
 
-    update_apps = [a for a in all_title_apps if a["app_type"] == APP_TYPE_UPD]
+    update_apps = [a for a in all_title_apps if a["app_type"] in (APP_TYPE_UPD, "UPD")]
     update_apps_by_version = {int(a.get("app_version") or 0): a for a in update_apps}
 
     updates_list = []
@@ -1342,7 +1342,7 @@ def app_info_api(id):
     dlc_ids = titles.get_all_existing_dlc(tid)
     dlcs_list = []
     dlc_apps_grouped = {}
-    for a in [a for a in all_title_apps if a["app_type"] == APP_TYPE_DLC]:
+    for a in [a for a in all_title_apps if a["app_type"] in (APP_TYPE_DLC, "DLC")]:
         aid = a["app_id"]
         if aid not in dlc_apps_grouped:
             dlc_apps_grouped[aid] = []
