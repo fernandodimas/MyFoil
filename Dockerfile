@@ -38,6 +38,10 @@ COPY ./app /app
 # Copy scripts directory
 COPY ./scripts /app/scripts
 
+# Update BUILD_VERSION with the current build timestamp
+# This ensures every new Docker image has a fresh version identifier
+RUN python3 scripts/update_build_version.py
+
 # Place docker-ready migrate+backfill helper into /usr/local/bin
 COPY ./scripts/docker/migrate_and_backfill.sh /usr/local/bin/migrate_and_backfill.sh
 RUN chmod +x /usr/local/bin/migrate_and_backfill.sh
