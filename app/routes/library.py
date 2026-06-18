@@ -95,12 +95,14 @@ def library_api():
                 if not tid_key:
                     continue
                 ignores_map[tid_key] = {
-                    "dlcs": json.loads(rec.ignore_dlcs or "{}")
+                    "dlcs": json.loads(rec.ignore_dlcs or "{}"),
+                    "updates": json.loads(rec.ignore_updates or "{}"),
                 }
             except Exception:
                 pass
     except Exception:
         ignores_map = {}
+
 
     # Create a user-specific list with computed flags without mutating shared cache
     user_lib = []

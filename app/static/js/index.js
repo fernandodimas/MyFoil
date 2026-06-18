@@ -599,6 +599,7 @@ function applyFilters() {
         g.has_non_ignored_updates = hasNonIgnoredUpdates;
 
         if (g.has_base) {
+            let hasNonIgnoredDlcs = false;
             if (g.dlcs && Array.isArray(g.dlcs)) {
                 hasNonIgnoredDlcs = g.dlcs.some(dlc => {
                     const appIdKey = typeof dlc.app_id === 'string' ? dlc.app_id : (dlc.appId || '');
@@ -700,12 +701,7 @@ function clearFilters() {
     $('#btnFilterPendingBase, #btnFilterPendingUpd, #btnFilterPendingDlc, #btnFilterRedundant').removeClass('is-primary').addClass('is-light');
     $('#searchClearBtn').hide();
     $('#searchIcon').show();
-
-    currentSort = 'name-asc';
-    localStorage.setItem('myfoil_library_sort', currentSort);
-    $('.sort-option').removeClass('is-active has-text-weight-bold');
-    $(`.sort-option[data-sort="${currentSort}"]`).addClass('is-active has-text-weight-bold');
-
+    // NÃO reseta a ordenação — mantém o sort atual ao limpar filtros
     applyFilters();
 }
 

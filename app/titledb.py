@@ -555,10 +555,22 @@ def update_titledb(app_settings: Dict, force: bool = False) -> bool:
             import titles
 
             titles.load_titledb(force=True)
-            
+
             # CRITICAL: Sync metadata to the Titles table so games don't remain "Unknown"
             logger.info("Syncing TitleDB metadata to database...")
             titles.sync_titles_to_db()
+
+            # CRITICAL: Recalculate up_to_date / complete flags for all titles
+            # (so update/DLC badges and filters reflect new TitleDB versions immediately)
+            logger.info("Recalculating title status flags after TitleDB update...")
+            try:
+                from library import update_titles as lib_update_titles, invalidate_library_cache, generate_library
+                lib_update_titles()
+                invalidate_library_cache()
+                generate_library(force=True)
+                logger.info("Library cache regenerated after TitleDB update.")
+            except Exception as _lib_err:
+                logger.warning(f"Library cache regeneration after TitleDB update failed (non-fatal): {_lib_err}")
 
         if success_count == total_count:
             job_tracker.complete_job(job_id, f"Updated {success_count}/{total_count} files")
