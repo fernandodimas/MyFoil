@@ -1506,10 +1506,14 @@ def app_info_api(id):
                             )
 
         dlc_info = titles.get_game_info(dlc_id)
+        name = dlc_info.get("name", f"DLC {dlc_id}")
+        if "demo" in name.lower():
+            continue
+
         dlcs_list.append(
             {
                 "app_id": dlc_id,
-                "name": dlc_info.get("name", f"DLC {dlc_id}"),
+                "name": name,
                 "owned": owned,
                 "release_date": dlc_info.get("release_date", ""),
                 "files": files,

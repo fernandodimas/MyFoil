@@ -1901,7 +1901,10 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
             dlcs_by_id[aid]["owned_version"] = max(dlcs_by_id[aid]["owned_version"], v)
         dlcs_by_id[aid]["latest_version"] = max(dlcs_by_id[aid]["latest_version"], v)
 
-    game["dlcs"] = sorted(dlcs_by_id.values(), key=lambda x: x["name"])
+    game["dlcs"] = sorted(
+        [d for d in dlcs_by_id.values() if "demo" not in d["name"].lower()],
+        key=lambda x: x["name"]
+    )
     return game
 
 
