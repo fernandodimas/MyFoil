@@ -980,6 +980,7 @@ p.game-description {
 /* Modal Utilities */
 .modal-game-details { z-index: 1040; }
 .modal-dlc-details { z-index: 1050; }
+.modal-titledb-json { z-index: 1060; }
 .modal-edit-metadata { z-index: 1100; }
 .modal-screenshot { z-index: 9999; }
 .modal-confirm { z-index: 9999; }
