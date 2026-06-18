@@ -41,16 +41,26 @@ from repositories.title_metadata_repository import TitleMetadataRepository
 library_bp = Blueprint("library", __name__, url_prefix="/api")
 
 
-@library_bp.route("/library/debug_bluey")
+@library_bp.route("/library/debug_title")
+@library_bp.route("/library/debug_title/<title_id_param>")
 @handle_api_errors
-def debug_bluey_api():
+def debug_title_api(title_id_param=None):
+    """Debug endpoint to inspect a title's data and flag computation."""
     from db import Titles, Apps, Files
-    
-    title = Titles.query.filter_by(title_id='0100EF802631A000').first()
-    res = {}
-    if not title:
-        res["error"] = "Título não encontrado"
-    else:
+    import titles as titles_lib
+    from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC
+
+    title_id = title_id_param or request.args.get("title_id", "0100EF802631A000")
+    title_id = title_id.upper().strip()
+
+    res = {"requested_title_id": title_id}
+
+    try:
+        title = Titles.query.filter(Titles.title_id.ilike(title_id)).first()
+        if not title:
+            res["error"] = f"Título {title_id} não encontrado no banco"
+            return jsonify(res), 200
+
         res["title"] = {
             "name": title.name,
             "have_base": title.have_base,
@@ -59,7 +69,8 @@ def debug_bluey_api():
             "redundant_updates_count": title.redundant_updates_count,
             "missing_dlcs_count": title.missing_dlcs_count,
         }
-        
+
+        # Apps and files info
         apps_info = []
         apps = Apps.query.filter_by(title_id=title.id).all()
         for a in apps:
@@ -67,7 +78,6 @@ def debug_bluey_api():
             for f in a.files:
                 app_files.append({
                     "filepath": f.filepath,
-                    "identified": f.identified,
                     "size": f.size,
                     "filename": f.filename
                 })
@@ -76,31 +86,89 @@ def debug_bluey_api():
                 "app_version": a.app_version,
                 "app_type": a.app_type,
                 "owned": a.owned,
+                "has_files": len(app_files) > 0,
+                "files_count": len(app_files),
                 "files": app_files
             })
         res["apps"] = apps_info
 
-    # buscar arquivos com "bluey" no nome
-    files_bluey = []
-    files = Files.query.filter(Files.filename.ilike('%bluey%')).all()
-    for f in files:
-        assoc_apps = []
-        for app_assoc in f.apps:
-            assoc_apps.append({
-                "app_id": app_assoc.app_id,
-                "app_type": app_assoc.app_type,
-                "app_version": app_assoc.app_version
-            })
-        files_bluey.append({
-            "id": f.id,
-            "filename": f.filename,
-            "filepath": f.filepath,
-            "identified": f.identified,
-            "identification_type": f.identification_type,
-            "identification_error": f.identification_error,
-            "apps": assoc_apps
-        })
-    res["files_bluey"] = files_bluey
+        # TitleDB versions info
+        try:
+            titles_lib.load_titledb()
+            available_versions = titles_lib.get_all_existing_versions(title_id) or []
+            res["titledb_available_versions"] = available_versions
+            if available_versions:
+                latest_v = max(available_versions, key=lambda x: x["version"])
+                res["titledb_latest_version"] = latest_v["version"]
+            else:
+                res["titledb_latest_version"] = 0
+        except Exception as e:
+            res["titledb_error"] = str(e)
+            res["titledb_available_versions"] = []
+            res["titledb_latest_version"] = 0
+
+        # Owned version calculation (same logic as get_game_info_item)
+        owned_apps_with_files = [a for a in apps if a.owned and len(a.files) > 0]
+        owned_versions = []
+        for a in owned_apps_with_files:
+            try:
+                owned_versions.append(int(a.app_version or 0))
+            except (ValueError, TypeError):
+                owned_versions.append(0)
+        owned_version = max(owned_versions) if owned_versions else 0
+        res["computed_owned_version"] = owned_version
+        res["has_latest_version"] = owned_version >= res.get("titledb_latest_version", 0)
+
+        # Owned update versions (for has_non_ignored_updates check)
+        owned_update_versions = []
+        for a in apps:
+            if a.app_type in (APP_TYPE_UPD, "UPD") and a.owned:
+                try:
+                    owned_update_versions.append(int(a.app_version or 0))
+                except (ValueError, TypeError):
+                    pass
+        res["owned_update_versions"] = sorted(owned_update_versions)
+
+        # has_non_ignored_updates simulation
+        has_non_ignored_updates = False
+        missing_versions = []
+        has_base = any(a.app_type == APP_TYPE_BASE and a.owned and len(a.files) > 0 for a in apps)
+        if has_base and not res["has_latest_version"]:
+            for vinfo in (res.get("titledb_available_versions") or []):
+                v = int(vinfo.get("version") or 0)
+                if v <= owned_version:
+                    continue
+                if v in owned_update_versions:
+                    continue
+                missing_versions.append(v)
+                has_non_ignored_updates = True
+        res["has_base"] = has_base
+        res["computed_has_non_ignored_updates"] = has_non_ignored_updates
+        res["missing_update_versions"] = missing_versions
+
+        # DLC info
+        try:
+            titledb_dlcs = [d.upper() for d in titles_lib.get_all_existing_dlc(title_id) or []]
+        except Exception:
+            titledb_dlcs = []
+        dlc_apps_seen = set(a.app_id.upper() for a in apps if a.app_type == APP_TYPE_DLC)
+        all_possible_dlc_ids = sorted(set(titledb_dlcs) | dlc_apps_seen)
+        owned_dlc_ids = set(
+            a.app_id.upper() for a in apps
+            if a.app_type == APP_TYPE_DLC and a.owned and len(a.files) > 0
+        )
+        missing_dlcs = [d for d in all_possible_dlc_ids if d not in owned_dlc_ids and d != title_id.upper()]
+        res["dlc_summary"] = {
+            "total_possible": len(all_possible_dlc_ids),
+            "owned": len(owned_dlc_ids),
+            "missing": missing_dlcs
+        }
+
+    except Exception as e:
+        import traceback
+        res["error"] = str(e)
+        res["traceback"] = traceback.format_exc()
+
     return jsonify(res), 200
 
 
