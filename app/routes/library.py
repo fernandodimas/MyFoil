@@ -44,9 +44,7 @@ library_bp = Blueprint("library", __name__, url_prefix="/api")
 @library_bp.route("/library/debug_bluey")
 @handle_api_errors
 def debug_bluey_api():
-    from app.models.titles import Titles
-    from app.models.apps import Apps
-    from app.models.files import Files
+    from db import Titles, Apps, Files
     
     title = Titles.query.filter_by(title_id='0100EF802631A000').first()
     res = {}
