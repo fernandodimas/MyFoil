@@ -646,8 +646,10 @@ function applyFilters() {
             const dateB = String(b.release_date || b.latest_release_date || '0000-00-00');
             comparison = dateA.localeCompare(dateB);
         } else if (field === 'added') {
-            const dateA = a.added_at ? new Date(a.added_at).getTime() : 0;
-            const dateB = b.added_at ? new Date(b.added_at).getTime() : 0;
+            const timeA = a.added_at ? new Date(a.added_at).getTime() : 0;
+            const timeB = b.added_at ? new Date(b.added_at).getTime() : 0;
+            const dateA = isNaN(timeA) ? 0 : timeA;
+            const dateB = isNaN(timeB) ? 0 : timeB;
             comparison = dateA - dateB;
         } else if (field === 'id') {
             comparison = (a.id || '').localeCompare(b.id || '');
@@ -713,6 +715,17 @@ function searchLibraryServer(page = 1, append = false) {
 
     // Build params for server-side paged search. Use /api/library/search/paged which supports q, genre, owned, up_to_date
     let url = `/api/library/search/paged?page=${page}&per_page=${PER_PAGE}`;
+
+    // Parse sort preference
+    let sort_by = 'name';
+    let order = 'asc';
+    if (currentSort && currentSort.includes('-')) {
+        const parts = currentSort.split('-');
+        sort_by = parts[0];
+        order = parts[1];
+    }
+    url += `&sort_by=${sort_by}&order=${order}`;
+
     if (query) url += `&q=${encodeURIComponent(query)}`;
     if (genre) url += `&genre=${encodeURIComponent(genre)}`;
     if (tag) url += `&tag=${encodeURIComponent(tag)}`;

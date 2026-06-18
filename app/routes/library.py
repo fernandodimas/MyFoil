@@ -220,6 +220,9 @@ def library_paged_api():
     MAX_PER_PAGE = 100
     per_page = min(max(1, per_page), MAX_PER_PAGE)
 
+    if sort_by == "added":
+        sort_by = "added_at"
+
     valid_sort_fields = ["name", "added_at", "release_date", "size"]
     if sort_by not in valid_sort_fields:
         sort_by = "name"
@@ -455,9 +458,24 @@ def library_search_paged_api():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 50, type=int)
 
+    sort_by = request.args.get("sort_by")
+    if not sort_by:
+        sort_by = request.args.get("sort", "name")
+    order = request.args.get("order", "asc", type=str)
+
     page = max(1, page)
     MAX_PER_PAGE = 100
     per_page = min(max(1, per_page), MAX_PER_PAGE)
+
+    if sort_by == "added":
+        sort_by = "added_at"
+
+    valid_sort_fields = ["name", "added_at", "release_date", "size"]
+    if sort_by not in valid_sort_fields:
+        sort_by = "name"
+
+    if order not in ["asc", "desc"]:
+        order = "asc"
 
     # Use repository for pagination with filters
     filters = {
@@ -476,7 +494,7 @@ def library_search_paged_api():
     if dlc or redundant:
         FETCH_LIMIT = 5000
         paginated_all = TitlesRepository.get_paged(
-            page=1, per_page=FETCH_LIMIT, query_text=query_text, filters=filters, sort_by="name", order="asc"
+            page=1, per_page=FETCH_LIMIT, query_text=query_text, filters=filters, sort_by=sort_by, order=order
         )
         all_titles = paginated_all.items
 
@@ -555,7 +573,7 @@ def library_search_paged_api():
 
     # Default path: no dlc/redundant post-filtering required
     paginated = TitlesRepository.get_paged(
-        page=page, per_page=per_page, query_text=query_text, filters=filters, sort_by="name", order="asc"
+        page=page, per_page=per_page, query_text=query_text, filters=filters, sort_by=sort_by, order=order
     )
 
     # Serialize items directly without secondary filtering
