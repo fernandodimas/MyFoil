@@ -178,7 +178,7 @@ def load_titledb_from_db():
             if isinstance(data, dict) and data.get("parentId"):
                 base_tid = str(data["parentId"]).lower()
                 dlc_app_id = tid.upper()
-                
+
                 dlc_id_lower = dlc_app_id.lower()
                 if dlc_id_lower not in _cnmts_db:
                     _cnmts_db[dlc_id_lower] = {}
@@ -186,10 +186,10 @@ def load_titledb_from_db():
                         "titleType": 130,
                         "otherApplicationId": base_tid,
                     }
-                
+
                 if dlc_app_id not in _dlc_map:
                     _dlc_map[dlc_app_id] = base_tid
-                
+
                 if base_tid not in _dlcs_by_base_id:
                     _dlcs_by_base_id[base_tid] = []
                 if dlc_app_id not in _dlcs_by_base_id[base_tid]:
@@ -825,6 +825,96 @@ def identify_appId(app_id):
     return title_id.upper() if title_id else app_id.upper(), app_type
 
 
+def load_titledb_from_disk_fallback():
+    """Fallback: load TitleDB directly from JSON files on disk when database cache is empty."""
+    global _titles_db, _versions_db, _cnmts_db, _dlc_map, _dlcs_by_base_id, _titledb_cache_timestamp
+
+    logger.info("TitleDB cache empty. Attempting fallback load from JSON files on disk...")
+
+    # Determine region/language from settings
+    try:
+        app_settings = load_settings()
+        region = app_settings.get("titles", {}).get("region", "US")
+        language = app_settings.get("titles", {}).get("language", "en")
+    except Exception:
+        region, language = "US", "en"
+
+    region_file = f"{region}.{language}.json"
+
+    # Priority: titles.json (global) first, then US.en.json, then region-specific (last wins)
+    title_files_to_try = ["titles.json", "US.en.json", region_file]
+    visited = set()
+    for filename in title_files_to_try:
+        filepath = os.path.join(TITLEDB_DIR, filename)
+        if not os.path.exists(filepath) or filename in visited:
+            continue
+        visited.add(filename)
+        try:
+            data = robust_json_load(filepath)
+            if not data or not isinstance(data, dict):
+                continue
+            loaded = 0
+            for raw_tid, tdata in data.items():
+                actual_tid = raw_tid
+                if len(raw_tid) < 16 and isinstance(tdata, dict) and tdata.get("id"):
+                    actual_tid = tdata["id"]
+                if actual_tid:
+                    _titles_db[actual_tid.upper()] = tdata
+                    loaded += 1
+            logger.info(f"  Loaded {loaded} titles from {filename}")
+        except Exception as e:
+            logger.warning(f"  Failed to load {filename} as fallback: {e}")
+
+    # Also try to load versions.json for update tracking
+    versions_path = os.path.join(TITLEDB_DIR, "versions.json")
+    if os.path.exists(versions_path):
+        try:
+            data = robust_json_load(versions_path)
+            if data and isinstance(data, dict):
+                for tid, v_dict in data.items():
+                    tid_lower = tid.lower()
+                    if tid_lower not in _versions_db:
+                        _versions_db[tid_lower] = {}
+                    for v_str, rdate in v_dict.items():
+                        _versions_db[tid_lower][str(v_str)] = str(rdate) if rdate else ""
+                logger.info(f"  Loaded {len(data)} version entries from versions.json")
+        except Exception as e:
+            logger.warning(f"  Failed to load versions.json: {e}")
+
+    # Also try to load cnmts.json for DLC mapping
+    cnmts_path = os.path.join(TITLEDB_DIR, "cnmts.json")
+    if os.path.exists(cnmts_path):
+        try:
+            data = robust_json_load(cnmts_path)
+            if data and isinstance(data, dict):
+                dlc_count = 0
+                for tid, versions in data.items():
+                    for v_str, info in versions.items():
+                        if info.get("titleType") == 130 and info.get("otherApplicationId"):
+                            base_tid = info["otherApplicationId"]
+                            dlc_id = tid.upper()
+                            _dlc_map[dlc_id] = base_tid
+                            base_lower = base_tid.lower()
+                            if base_lower not in _dlcs_by_base_id:
+                                _dlcs_by_base_id[base_lower] = []
+                            if dlc_id not in _dlcs_by_base_id[base_lower]:
+                                _dlcs_by_base_id[base_lower].append(dlc_id)
+                            dlc_count += 1
+                logger.info(f"  Loaded {dlc_count} DLC mappings from cnmts.json")
+        except Exception as e:
+            logger.warning(f"  Failed to load cnmts.json: {e}")
+
+    if _titles_db:
+        _titledb_cache_timestamp = time.time()
+        logger.info(
+            f"TitleDB fallback loaded: {len(_titles_db)} titles, {len(_versions_db or {})} versions, {len(_dlc_map)} DLCs from disk"
+        )
+        return True
+
+    logger.warning("TitleDB fallback: no titles could be loaded from disk")
+    return False
+
+
 def load_titledb(force=False, progress_callback=None):
     global _titles_db_loaded
     global _titledb_cache_timestamp
@@ -871,9 +961,12 @@ def load_titledb(force=False, progress_callback=None):
             logger.warning(f"Metadata sync after load failed: {sync_err}")
     else:
         logger.warning("Failed to load TitleDB from database (or empty).")
-        # Ensure we have empty dicts at least
-        if _titles_db is None:
-            _titles_db = {}
+        # FALLBACK: Try to load directly from JSON files on disk
+        # This ensures names work even if the DB cache was never populated
+        if not load_titledb_from_disk_fallback():
+            logger.warning("TitleDB disk fallback also failed. Titles will remain unnamed.")
+            if _titles_db is None:
+                _titles_db = {}
         if _versions_db is None:
             _versions_db = {}
         if _cnmts_db is None:
@@ -1335,10 +1428,10 @@ def get_all_existing_dlc(title_id):
     # Add any locally owned/scanned DLCs for this title from the database
     try:
         from db import Apps, Titles, APP_TYPE_DLC
-        local_dlcs = Apps.query.join(Titles).filter(
-            Titles.title_id == title_id.upper(),
-            Apps.app_type == APP_TYPE_DLC
-        ).all()
+
+        local_dlcs = (
+            Apps.query.join(Titles).filter(Titles.title_id == title_id.upper(), Apps.app_type == APP_TYPE_DLC).all()
+        )
         for app in local_dlcs:
             app_id_upper = app.app_id.upper()
             if app_id_upper not in dlcs:
@@ -1525,6 +1618,7 @@ def save_custom_title_info(title_id, data):
             custom_db[title_id] = save_data
 
         from utils import safe_write_json
+
         safe_write_json(custom_path, custom_db, indent=4)
 
         # 3. Update in-memory DB immediately

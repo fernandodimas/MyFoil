@@ -118,10 +118,10 @@ def download_titledb_file(filename: str, force: bool = False, silent_404: bool =
 
     # Use source_manager which has proper fallback logic
     source_manager = get_source_manager()
-    
+
     # Increase timeout to 120 seconds for large files (e.g., 76MB US.en.json)
     success, source_name, error = source_manager.download_file(filename, dest_path, timeout=120, silent_404=silent_404)
-    
+
     if success:
         logger.info(f"Successfully downloaded {filename} from {source_name}")
         return True
@@ -132,7 +132,8 @@ def download_titledb_file(filename: str, force: bool = False, silent_404: bool =
         else:
             logger.warning(f"Failed to download {filename}: {error}")
         return False
-        
+
+
 def process_and_store_json(filename: str, source_name: str) -> bool:
     """Read downloaded JSON file and store in Database"""
     filepath = os.path.join(TITLEDB_DIR, filename)
@@ -142,9 +143,9 @@ def process_and_store_json(filename: str, source_name: str) -> bool:
 
     try:
         logger.info(f"Processing {filename} for database storage...")
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             data = json.load(f)
-            
+
         # 1. VERSIONS
         if "versions" in filename:
             logger.info(f"Storing {len(data)} version entries...")
@@ -154,16 +155,12 @@ def process_and_store_json(filename: str, source_name: str) -> bool:
             # But let's stick to upsert to be safe with partial data?
             # Actually versions.json is usually global. Let's truncate for now to avoid stale data.
             db.session.query(TitleDBVersions).delete()
-            
+
             bulk_data = []
             for tid, v_dict in data.items():
                 for version, date in v_dict.items():
-                    bulk_data.append({
-                        "title_id": tid,
-                        "version": int(version),
-                        "release_date": str(date)
-                    })
-            
+                    bulk_data.append({"title_id": tid, "version": int(version), "release_date": str(date)})
+
             if bulk_data:
                 db.session.bulk_insert_mappings(TitleDBVersions, bulk_data)
                 db.session.commit()
@@ -173,30 +170,27 @@ def process_and_store_json(filename: str, source_name: str) -> bool:
         elif "cnmts" in filename:
             logger.info(f"Storing {len(data)} DLC (CNMT) entries...")
             db.session.query(TitleDBDLCs).delete()
-            
+
             bulk_data = []
             for tid, versions in data.items():
                 for v_str, info in versions.items():
                     base_tid = info.get("otherApplicationId")
                     title_type = info.get("titleType")
-                    if base_tid and title_type == 130: # ONLY DLC
-                        bulk_data.append({
-                            "base_title_id": base_tid,
-                            "dlc_app_id": tid
-                        })
+                    if base_tid and title_type == 130:  # ONLY DLC
+                        bulk_data.append({"base_title_id": base_tid, "dlc_app_id": tid})
                     # Also include the title itself in the reverse map if it's a DLC
                     elif title_type == 130:
                         # Some DLCs don't have otherApplicationId? Rare but possible
                         pass
-            
+
             # Deduplicate entries (same base and DLC can appear multiple times for different versions)
             unique_bulk = {}
             for item in bulk_data:
                 key = (item["base_title_id"], item["dlc_app_id"])
                 unique_bulk[key] = item
-            
+
             bulk_data = list(unique_bulk.values())
-            
+
             if bulk_data:
                 db.session.bulk_insert_mappings(TitleDBDLCs, bulk_data)
                 db.session.commit()
@@ -206,25 +200,25 @@ def process_and_store_json(filename: str, source_name: str) -> bool:
         else:
             logger.info(f"Storing {len(data)} title entries from {filename}...")
             import gevent
-            
+
             # Use batches for performance and to prevent long locks/freezes
             batch_size = 500
             items = list(data.items())
-            
+
             # Sort by NSUID descending so that older versions (smaller NSUID) are processed LAST
             # and thus take precedence in database upserts.
             try:
                 items.sort(key=lambda x: int(x[0]) if x[0].isdigit() else 0, reverse=True)
             except Exception as e:
                 logger.warning(f"Could not sort TitleDB items: {e}")
-                
+
             total = len(items)
-            
+
             for i in range(0, total, batch_size):
                 # Yield to keep server responsive
                 gevent.sleep(0.01)
-                
-                batch = items[i:i+batch_size]
+
+                batch = items[i : i + batch_size]
                 values = []
                 for tid, tdata in batch:
                     # Logic to handle NSUID keys in regional files (BR.pt.json, US.en.json)
@@ -232,21 +226,15 @@ def process_and_store_json(filename: str, source_name: str) -> bool:
                     actual_tid = tid
                     if len(tid) < 16 and isinstance(tdata, dict) and tdata.get("id"):
                         actual_tid = tdata["id"]
-                    
-                    values.append({
-                        "title_id": actual_tid,
-                        "data": tdata,
-                        "source": filename,
-                        "updated_at": now_utc()
-                    })
-                
-                
+
+                    values.append({"title_id": actual_tid, "data": tdata, "source": filename, "updated_at": now_utc()})
+
                 # Deduplicate entries in values list by title_id
                 # Keep the LAST entry seen (usually safest assumption if source order implies recency/precedence)
                 unique_values = {}
                 for v in values:
                     unique_values[v["title_id"]] = v
-                
+
                 # Convert back to list
                 deduplicated_values = list(unique_values.values())
 
@@ -256,15 +244,17 @@ def process_and_store_json(filename: str, source_name: str) -> bool:
                 # Bulk UPSERT using PostgreSQL syntax
                 stmt = insert(TitleDBCache).values(deduplicated_values)
                 upsert_stmt = stmt.on_conflict_do_update(
-                    index_elements=['title_id'],
-                    set_=dict(data=stmt.excluded.data, source=stmt.excluded.source, updated_at=stmt.excluded.updated_at)
+                    index_elements=["title_id"],
+                    set_=dict(
+                        data=stmt.excluded.data, source=stmt.excluded.source, updated_at=stmt.excluded.updated_at
+                    ),
                 )
                 db.session.execute(upsert_stmt)
-                
+
                 # Commit every few batches to keep transactions small
                 if i % (batch_size * 4) == 0:
                     db.session.commit()
-            
+
             db.session.commit()
             return True
 
@@ -279,19 +269,21 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
     Update all required TitleDB files using either Legacy ZIP or JSON sources
     """
     from job_tracker import job_tracker
+
     def log_tdb(msg, p=None):
         logger.info(msg)
         if job_id:
             job_tracker.update_progress(job_id, p, 10, msg)
 
     results = {}
-    
+
     # Ensure TitleDB directory exists
     os.makedirs(TITLEDB_DIR, exist_ok=True)
-    
+
     # Migration: Rename legacy titledb files (titles.XX.yy.json -> XX.yy.json)
     try:
         import glob
+
         legacy_pattern = os.path.join(TITLEDB_DIR, "titles.*.json")
         legacy_files = glob.glob(legacy_pattern)
         for old_path in legacy_files:
@@ -308,7 +300,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                     os.remove(old_path)
     except Exception as e:
         logger.warning(f"Failed to migrate legacy titledb files: {e}")
-    
+
     source_manager = get_source_manager()
     active_sources = source_manager.get_active_sources()
 
@@ -358,7 +350,6 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                 ]
                 missing_critical = any(not os.path.exists(os.path.join(TITLEDB_DIR, f)) for f in critical_files)
 
-
                 if missing_critical:
                     logger.info("Critical TitleDB files missing from disk, forcing extraction...")
                     update_available = True
@@ -399,15 +390,18 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                                             if not chunk:
                                                 break
                                             fpout.write(chunk)
-                                
+
                                 # Verify JSON validity immediately
                                 try:
                                     import json
+
                                     with open(os.path.join(TITLEDB_DIR, filename), "r", encoding="utf-8") as fchk:
                                         json.load(fchk)
                                     results[filename] = True
                                 except Exception as json_err:
-                                    logger.warning(f"Downloaded file {filename} is corrupted/invalid JSON, deleting: {json_err}")
+                                    logger.warning(
+                                        f"Downloaded file {filename} is corrupted/invalid JSON, deleting: {json_err}"
+                                    )
                                     try:
                                         os.remove(os.path.join(TITLEDB_DIR, filename))
                                     except:
@@ -431,12 +425,12 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
 
                 source_manager.save_sources()
                 source_manager.save_sources()
-                
+
                 # PROCESS LEGACY FILES (If we ever support legacy zip again)
                 # For now just return results, but we probably should process them if we downloaded them.
                 # Assuming download_titledb_legacy extracts them to disk:
                 for fname, success in results.items():
-                    if success and fname.endswith('.json'):
+                    if success and fname.endswith(".json"):
                         process_and_store_json(fname, source.name)
 
                 return results  # Success!
@@ -453,8 +447,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                 core_files = ["cnmts.json", "versions.json", "languages.json"]
                 for filename in core_files:
                     if download_titledb_file(filename, force=force):
-                        results[filename] = True
-                        process_and_store_json(filename, source.name)
+                        results[filename] = process_and_store_json(filename, source.name)
                     else:
                         results[filename] = False
 
@@ -462,8 +455,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                 # We do this first so its basic metadata can be overwritten by richer regional data
                 log_tdb("Downloading global titles.json for full coverage...", 5)
                 if download_titledb_file("titles.json", force=force, silent_404=True):
-                    process_and_store_json("titles.json", source.name)
-                    results["titles.json"] = True
+                    results["titles.json"] = process_and_store_json("titles.json", source.name)
                 else:
                     results["titles.json"] = False
 
@@ -477,18 +469,17 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                 for region_filename in region_filenames:
                     logger.info(f"Attempting to download region-specific file: {region_filename}")
                     if download_titledb_file(region_filename, force=force, silent_404=True):
-                        region_success = True
-                        results[region_filename] = True
-                        process_and_store_json(region_filename, source.name)
-                        break
+                        region_success = process_and_store_json(region_filename, source.name)
+                        results[region_filename] = region_success
+                        if region_success:
+                            break
 
                 # 3. FALLBACK REGION: If the primary region failed and isn't US.en, try US.en as it's the most complete
                 if not region_success and (region != "US" or language != "en"):
                     logger.info("Primary regional title download failed, trying US.en.json as fallback...")
                     if download_titledb_file("US.en.json", force=force, silent_404=True):
-                        region_success = True
-                        results["US.en.json"] = True
-                        process_and_store_json("US.en.json", source.name)
+                        region_success = process_and_store_json("US.en.json", source.name)
+                        results["US.en.json"] = region_success
 
                 results["region_titles"] = region_success
 
@@ -496,13 +487,13 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                     source.last_success = now_utc()
                     source.last_error = None
                     source_manager.save_sources()
-                    
+
                     # Log which regional results we got
                     if region_success:
-                         log_tdb(f"✓ Downloaded TitleDB from {source.name}", 8)
+                        log_tdb(f"✓ Downloaded TitleDB from {source.name}", 8)
                     else:
-                         logger.warning(f"Source {source.name} NO region-specific titles.")
-                    
+                        logger.warning(f"Source {source.name} NO region-specific titles.")
+
                     return results
                 else:
                     logger.warning(f"JSON source {source.name} failed to provide core files.")
@@ -565,6 +556,7 @@ def update_titledb(app_settings: Dict, force: bool = False) -> bool:
             logger.info("Recalculating title status flags after TitleDB update...")
             try:
                 from library import update_titles as lib_update_titles, invalidate_library_cache, generate_library
+
                 lib_update_titles()
                 invalidate_library_cache()
                 generate_library(force=True)
@@ -620,7 +612,7 @@ def get_active_source_info(force=False) -> Dict:
             if not getattr(active, "is_fetching", False):
                 # Use the source manager from global scope to refresh
                 source_manager.refresh_remote_dates(force=force)
-            
+
             # Return current None state for now (UI shows Unknown/Spinning)
             remote_date = None
 
@@ -638,37 +630,40 @@ def get_active_source_info(force=False) -> Dict:
         if remote_date and active.last_success:
             comp_remote = ensure_utc(remote_date)
             comp_success = ensure_utc(active.last_success)
-            
+
             # If remote date is newer than last download (with 1h margin)
             if comp_remote > (comp_success + timedelta(hours=1)):
                 update_available = True
-                
+
                 # Auto-update: Check if we should trigger an update
                 # We do this here as it's the polling entry point
                 try:
                     from job_tracker import job_tracker, JobType, JobStatus
-                    
+
                     # 1. Check if any update is already running/scheduled
                     active_jobs = job_tracker.get_active_jobs()
-                    is_running = any(j['type'] == JobType.TITLEDB_UPDATE for j in active_jobs)
-                    
+                    is_running = any(j["type"] == JobType.TITLEDB_UPDATE for j in active_jobs)
+
                     # 2. Check for recent failures to prevent infinite loops (backoff 1 hour)
                     all_jobs = job_tracker.get_all_jobs()
                     recent_fail = any(
-                        j['type'] == JobType.TITLEDB_UPDATE and 
-                        j['status'] == JobStatus.FAILED and 
-                        j.get('completed_at') and 
-                        (now_utc() - ensure_utc(j['completed_at'])).total_seconds() < 3600
+                        j["type"] == JobType.TITLEDB_UPDATE
+                        and j["status"] == JobStatus.FAILED
+                        and j.get("completed_at")
+                        and (now_utc() - ensure_utc(j["completed_at"])).total_seconds() < 3600
                         for j in all_jobs
                     )
 
                     if not is_running and not recent_fail:
                         delay_seconds = 10
-                        logger.info(f"New TitleDB version detected ({active.name}). Scheduling auto-update in {delay_seconds}s...")
-                        
+                        logger.info(
+                            f"New TitleDB version detected ({active.name}). Scheduling auto-update in {delay_seconds}s..."
+                        )
+
                         def _trigger_update():
                             try:
                                 from tasks import update_titledb_async
+
                                 update_titledb_async.apply_async()
                                 logger.info("Auto-update TitleDB triggered successfully.")
                             except Exception as trigger_err:
@@ -676,40 +671,45 @@ def get_active_source_info(force=False) -> Dict:
 
                         # Use scheduler if available (Flask app object often has it)
                         from flask import current_app
+
                         try:
-                            if hasattr(current_app, 'scheduler'):
+                            if hasattr(current_app, "scheduler"):
                                 current_app.scheduler.add_job(
                                     job_id=f"auto_update_{int(time.time())}",
                                     func=_trigger_update,
                                     run_once=True,
-                                    start_date=now_utc() + timedelta(seconds=delay_seconds)
+                                    start_date=now_utc() + timedelta(seconds=delay_seconds),
                                 )
                             else:
                                 import gevent
+
                                 def _delayed():
                                     gevent.sleep(delay_seconds)
                                     _trigger_update()
+
                                 gevent.spawn(_delayed)
                         except Exception as sched_err:
                             logger.error(f"Error scheduling auto-update: {sched_err}")
                             # Fallback to gevent if scheduler fails
                             import gevent
+
                             gevent.spawn(lambda: (gevent.sleep(delay_seconds), _trigger_update()))
 
                 except Exception as e:
                     import traceback
+
                     logger.error(f"Failed to trigger auto-update logic: {e}\n{traceback.format_exc()}")
-        
+
         # Format dates for UI
         last_download_date = format_datetime(active.last_success)
-        
+
         # Get cache timestamp from titles module (real reading/sanitization)
         cache_ts = titles.get_titledb_cache_timestamp()
         last_process_date = "Never"
         if cache_ts:
             dt_processed = datetime.fromtimestamp(cache_ts, tz=timezone.utc)
             last_process_date = format_datetime(dt_processed)
-        
+
         return {
             "name": active.name,
             "last_success": active.last_success,
