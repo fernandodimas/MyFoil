@@ -534,6 +534,8 @@ def get_shop_files():
                 "title_id": app.title.title_id,
                 "app_id": app.app_id,
                 "app_name": app_name,
+                "app_type": app.app_type,
+                "app_version": app.app_version if app.app_version is not None else 0,
             }
         )
 

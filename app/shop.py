@@ -38,7 +38,20 @@ def gen_shop_files(db, base_url=""):
         # The fragment after # is used by Tinfoil as the display filename
         # It must NOT be URL-encoded - Tinfoil reads it as raw text
         file_url = f"{base_url}/api/get_game/{file['id']}#{file['filename']}"
-        shop_files.append({"url": file_url, "size": file["size"]})
+        
+        # Compatibilidade aprimorada com CyberFoil e outros instaladores do ecossistema.
+        # Esses instaladores leem metadados adicionais diretamente de cada entrada para mapear
+        # corretamente jogos, updates e DLCs.
+        app_type_lower = file.get("app_type", "").lower() if file.get("app_type") else ""
+        
+        shop_files.append({
+            "url": file_url,
+            "size": file["size"],
+            "name": file["filename"],
+            "title_id": file["app_id"],  # O ID do próprio arquivo (ex: ID da DLC ou do UPDATE)
+            "app_version": file.get("app_version", 0),
+            "app_type": app_type_lower
+        })
 
         # Collect Base TitleIDs (ending in 000) for the titles map
         title_id = file.get("title_id")
