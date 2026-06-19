@@ -825,6 +825,31 @@ def identify_appId(app_id):
     return title_id.upper() if title_id else app_id.upper(), app_type
 
 
+def _enrich_dlc_map_from_titles():
+    """Infer DLC-to-base-game mappings from title ID patterns.
+    Handles DLCs that exist in titles JSON (BR.pt.json, etc.) but are
+    missing from cnmts.json (common for recently released DLCs).
+    """
+    global _titles_db, _dlc_map, _dlcs_by_base_id
+    if not _titles_db:
+        return
+    inferred = 0
+    for tid_upper, tdata in list(_titles_db.items()):
+        if len(tid_upper) == 16 and not tid_upper.endswith("000") and not tid_upper.endswith("800"):
+            base_candidate = tid_upper[:12] + "8000"
+            if base_candidate in _titles_db and base_candidate != tid_upper:
+                if tid_upper not in _dlc_map:
+                    _dlc_map[tid_upper] = base_candidate
+                base_lower = base_candidate.lower()
+                if base_lower not in _dlcs_by_base_id:
+                    _dlcs_by_base_id[base_lower] = []
+                if tid_upper not in _dlcs_by_base_id[base_lower]:
+                    _dlcs_by_base_id[base_lower].append(tid_upper)
+                    inferred += 1
+    if inferred:
+        logger.info(f"  Inferred {inferred} additional DLC mappings from title ID patterns")
+
+
 def load_titledb_from_disk_fallback():
     """Fallback: load TitleDB directly from JSON files on disk when database cache is empty."""
     global _titles_db, _versions_db, _cnmts_db, _dlc_map, _dlcs_by_base_id, _titledb_cache_timestamp
@@ -905,6 +930,7 @@ def load_titledb_from_disk_fallback():
             logger.warning(f"  Failed to load cnmts.json: {e}")
 
     if _titles_db:
+        _enrich_dlc_map_from_titles()
         _titledb_cache_timestamp = time.time()
         logger.info(
             f"TitleDB fallback loaded: {len(_titles_db)} titles, {len(_versions_db or {})} versions, {len(_dlc_map)} DLCs from disk"
@@ -954,6 +980,10 @@ def load_titledb(force=False, progress_callback=None):
     if load_titledb_from_db():
         _titles_db_loaded = True
         logger.info("TitleDB loaded successfully from DB.")
+
+        # Enrich DLC mappings from title ID patterns (catches DLCs missing from cnmts.json)
+        _enrich_dlc_map_from_titles()
+
         # Trigger sync to Database Titles table (metadata tracker)
         try:
             sync_titles_to_db()
