@@ -701,6 +701,37 @@
                                     </table>
                                 </div>
 
+                                <!-- TitleDB Files Info -->
+                                <div class="box is-shadowless mt-5" style="background: rgba(87,13,248,0.03);">
+                                    <h6 class="title is-6 mb-3 is-flex is-align-items-center">
+                                        <i class="bi bi-file-earmark-zip mr-2 has-text-info"></i>
+                                        {{ t('Downloaded Files') }}
+                                        <button class="button is-ghost is-small ml-auto" onclick="refreshTitleDBFiles()"
+                                            title="{{ t('Refresh') }}">
+                                            <i class="bi bi-arrow-repeat"></i>
+                                        </button>
+                                    </h6>
+                                    <div class="table-container">
+                                        <table class="table is-fullwidth is-hoverable is-size-7" id="titledbFilesTable">
+                                            <thead>
+                                                <tr>
+                                                    <th>{{ t('File') }}</th>
+                                                    <th>{{ t('Size') }}</th>
+                                                    <th>{{ t('Last Modified') }}</th>
+                                                    <th>{{ t('Status') }}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td colspan="4" class="has-text-centered is-italic opacity-50">
+                                                        {{ t('common.loading') }}...
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
                                 <div class="block mt-6">
                                     <button class="button is-small is-primary is-outlined" id="toggleAddSource">
                                         <i class="bi bi-plus-lg mr-2"></i> {{ t('Add Custom Source') }}

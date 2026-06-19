@@ -386,6 +386,49 @@ function fillUserTable() {
     }).fail(() => debugWarn('Failed to load users'));
 }
 
+function refreshTitleDBFiles() {
+    const tbody = $('#titledbFilesTable tbody');
+    tbody.html(`<tr><td colspan="4" class="has-text-centered is-italic opacity-50">${t('common.loading')}...</td></tr>`);
+    $.getJSON("/api/settings/titledb/files", (result) => {
+        const payload = unwrap(result);
+        if (!payload || !payload.files) return;
+        tbody.empty();
+        if (payload.files.length === 0) {
+            tbody.html(`<tr><td colspan="4" class="has-text-centered is-italic opacity-50">${t('settings.tdb_no_date')}</td></tr>`);
+            return;
+        }
+        payload.files.forEach(file => {
+            let statusHtml, statusClass;
+            if (!file.exists) {
+                statusHtml = `<span class="tag is-danger is-light is-small">${t('Missing')}</span>`;
+            } else {
+                const modified = file.modified || 'Unknown';
+                const now = new Date();
+                const fileDate = new Date(modified);
+                const daysOld = Math.floor((now - fileDate) / (1000 * 60 * 60 * 24));
+                if (daysOld > 7) {
+                    statusHtml = `<span class="tag is-warning is-light is-small" title="${daysOld} ${t('days old')}">${daysOld}d ${t('old')}</span>`;
+                } else {
+                    statusHtml = `<span class="tag is-success is-light is-small">${t('Recent')}</span>`;
+                }
+            }
+            const fmt = (s) => { const u = ['B','KB','MB','GB']; let i=0; while(s>=1024 && i<3){s/=1024;i++} return s.toFixed(i>0?1:0)+' '+u[i]; };
+            const sizeStr = file.exists ? fmt(file.size) : '-';
+            const dateStr = file.exists ? (file.modified || '-') : '-';
+            tbody.append(`
+                <tr>
+                    <td><code>${escapeHtml(file.filename)}</code></td>
+                    <td>${sizeStr}</td>
+                    <td>${dateStr}</td>
+                    <td>${statusHtml}</td>
+                </tr>
+            `);
+        });
+    }).fail(() => {
+        tbody.html(`<tr><td colspan="4" class="has-text-centered has-text-danger is-italic opacity-50">${t('common.error')}</td></tr>`);
+    });
+}
+
 function fillTitleDBSourcesTable() {
     $.getJSON("/api/settings/titledb/sources", (result) => {
         const payload = unwrap(result);
@@ -1227,6 +1270,7 @@ $(document).ready(async () => {
     checkWatchdogStatus();
     loadCleanupStats();
     fillTitleDBSourcesTable();
+    refreshTitleDBFiles();
     fillErrorsTable();
     fillFilesExplorer();
     fillWebhooksList();

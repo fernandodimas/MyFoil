@@ -588,6 +588,44 @@ def get_titledb_sources_status() -> List[Dict]:
     return source_manager.get_sources_status()
 
 
+def get_titledb_files_info() -> List[Dict]:
+    """Get metadata of all downloaded TitleDB files on disk (mtime, size).
+    This is the same info shown in the settings pane so users can see which
+    files are fresh and which are stale.
+    """
+    import os
+    from constants import TITLEDB_DIR
+    from datetime import datetime, timezone
+
+    known_files = ["titles.json", "cnmts.json", "versions.json", "languages.json"]
+
+    # Add the region-specific file (e.g. BR.pt.json, US.en.json)
+    try:
+        from settings import load_settings
+
+        app_settings = load_settings()
+        region = app_settings.get("titles", {}).get("region", "US")
+        language = app_settings.get("titles", {}).get("language", "en")
+        known_files.append(f"{region}.{language}.json")
+    except Exception:
+        known_files.append("US.en.json")
+
+    result = []
+    for filename in known_files:
+        filepath = os.path.join(TITLEDB_DIR, filename)
+        info: Dict = {
+            "filename": filename,
+            "exists": os.path.exists(filepath),
+        }
+        if info["exists"]:
+            info["size"] = os.path.getsize(filepath)
+            mtime = datetime.fromtimestamp(os.path.getmtime(filepath), tz=timezone.utc)
+            info["modified"] = format_datetime(mtime)
+        result.append(info)
+
+    return result
+
+
 def get_active_source_info(force=False) -> Dict:
     """Get information about the currently active/latest successful source"""
     source_manager = get_source_manager()

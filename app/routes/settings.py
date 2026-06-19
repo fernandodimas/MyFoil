@@ -260,6 +260,17 @@ def set_keys_api():
     return error_response(message="No file or invalid file format")
 
 
+@settings_bp.route("/settings/titledb/files", methods=["GET"])
+@access_required("admin")
+@handle_api_errors
+def titledb_files_api():
+    """Listar arquivos do TitleDB no disco com data/hora e tamanho"""
+    import titledb
+
+    files_info = titledb.get_titledb_files_info()
+    return success_response(data={"files": files_info})
+
+
 @settings_bp.route("/settings/titledb/sources", methods=["GET", "POST", "PUT", "DELETE"])
 @access_required("admin")
 @handle_api_errors
