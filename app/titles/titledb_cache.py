@@ -9,7 +9,7 @@ except ImportError:
     gevent = None
 
 from titles._state import (
-    logger, _cnmts_db, _titles_db, _versions_db,
+    logger, _cnmts_db, _titles_db, _versions_db, _titles_db_loaded,  # noqa: F401 - usado via global em funcoes
     _dlc_map, _dlcs_by_base_id, _titledb_cache_timestamp, _titledb_cache_ttl, identification_in_progress_count,
 )
 from titles.utils import robust_json_load
