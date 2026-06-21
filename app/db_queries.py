@@ -216,7 +216,8 @@ def get_libraries_path():
 
 
 def add_library(library_path):
-    from db import db, Libraries, insert
+    from sqlalchemy import insert
+    from db import db, Libraries
     stmt = insert(Libraries).values(path=library_path).on_conflict_do_nothing()
     db.session.execute(stmt)
     db.session.commit()
