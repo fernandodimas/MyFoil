@@ -2,6 +2,8 @@ import hashlib
 import json
 import os
 from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC, LIBRARY_CACHE_FILE, ALLOWED_EXTENSIONS
+from sqlalchemy.orm import joinedload
+
 from db import (
     db,
     Files,
@@ -9,7 +11,6 @@ from db import (
     Titles,
     Libraries,
     logger,
-    joinedload,
     Tag,
     get_libraries,
     get_all_titles_with_apps,
