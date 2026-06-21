@@ -88,7 +88,7 @@ def init_db(app):
 
             # Cleanup: Remove titles with null title_id
             try:
-                Titles.query.filter((Titles.title_id == None) | (Titles.title_id == "")).delete()
+                Titles.query.filter((Titles.title_id.is_(None)) | (Titles.title_id == "")).delete()
                 db.session.commit()
             except Exception as e:
                 logger.warning(f"Failed to cleanup null titles: {e}")

@@ -296,7 +296,7 @@ def init_rest_api(app):
         @access_required("shop")
         def get(self):
             """Get general repository statistics"""
-            from db import Files, Apps
+            from db import Files, Apps, Titles
             from constants import APP_TYPE_BASE, APP_TYPE_DLC, APP_TYPE_UPD
 
             return {

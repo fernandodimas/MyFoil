@@ -21,8 +21,7 @@ from repositories.files_repository import FilesRepository
 from repositories.apps_repository import AppsRepository
 from repositories.systemjob_repository import SystemJobRepository
 from repositories.activitylog_repository import ActivityLogRepository
-
-# Webhooks removed
+from repositories.webhook_repository import WebhookRepository
 
 from settings import load_settings
 from auth import access_required, admin_account_created
@@ -1207,10 +1206,6 @@ def plugins_api():
 @handle_api_errors
 def toggle_plugin_api():
     """Alternar status do plugin"""
-    data = request.json
-    plugin_id = data.get("id")
-    enabled = data.get("enabled", True)
-
     return error_response(ErrorCode.VALIDATION_ERROR, message="Plugins feature removed", status_code=410)
 
 

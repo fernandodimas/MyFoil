@@ -64,8 +64,8 @@ from scheduler import init_scheduler
 
 # Optional Celery for async tasks
 try:
-    from celery_app import celery
-    from tasks import scan_library_async, identify_file_async, fetch_metadata_for_all_games_async
+    from celery_app import celery  # noqa: F401
+    from tasks import fetch_metadata_for_all_games_async
 
     # Test Redis connection before enabling Celery
     import redis
@@ -239,10 +239,7 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
-def reload_conf():
-    """Reload application settings"""
-    global app_settings
-    app_settings = load_settings()
+
 
 
 def on_library_change(events):

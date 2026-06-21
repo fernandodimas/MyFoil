@@ -32,9 +32,6 @@ def tinfoil_access(f):
         hauth_success = None
         auth_success = None
         request.verified_host = None
-        
-        # Determine if shop is in public mode
-        is_public = app_settings['shop'].get('public', False) or app_settings['shop'].get('public_profile', False)
 
         # Host verification to prevent hotlinking
         # Tinfoil doesn't send Hauth for file grabs, only directories, so ignore get_game endpoints.

@@ -15,7 +15,7 @@ class TestTitleDBDownload:
     def test_download_titledb_file_success(self, sample_titledb_sources, mock_logger):
         """Test successful download of TitleDB file"""
         with patch('titledb.requests.get') as mock_get, \
-             patch('builtins.open', mock_open()) as mock_file, \
+             patch('builtins.open', mock_open()), \
              patch('titledb.logger', mock_logger):
             
             # Mock successful response

@@ -82,8 +82,8 @@ class TestLibraryCache:
             mock_sha256.return_value = mock_hash
             
             from library import compute_apps_hash
-            result = compute_apps_hash()
-            
+            compute_apps_hash()
+
             assert mock_sha256.called
 
     def test_save_and_load_library_to_disk(self, sample_titles, mock_logger):

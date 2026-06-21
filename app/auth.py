@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, request
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
-from db import db, User, ApiToken, logger
+from db import db, User, ApiToken
 from api_responses import error_response, ErrorCode
 from flask_login import LoginManager
 from constants import BUILD_VERSION

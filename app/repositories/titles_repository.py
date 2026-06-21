@@ -70,7 +70,7 @@ class TitlesRepository:
                 query = query.filter(Titles.have_base == True, Titles.up_to_date == False)
 
             if filters.get("missing"):
-                query = query.filter(or_(Titles.have_base == False, Titles.have_base == None))
+                query = query.filter(or_(Titles.have_base == False, Titles.have_base.is_(None)))
 
             if filters.get("genre") and filters.get("genre") != "Todos os Gêneros":
                 # Assuming JSON list stored as text, simple contains check

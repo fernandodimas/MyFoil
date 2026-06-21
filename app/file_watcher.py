@@ -179,7 +179,6 @@ class Watcher:
             self.observer = PollingObserver()
 
             # Re-schedule all directories
-            old_scheduler_map = self.scheduler_map.copy()
             self.scheduler_map = {}
 
             for directory in list(self.directories):
@@ -393,7 +392,6 @@ class Handler(FileSystemEventHandler):
 
     def on_any_event(self, event):
         # logger.debug(f"RAW event: {event.event_type} - {event.src_path}")
-        found = False
         for directory in self.directories:
             is_src_in = event.src_path.startswith(directory)
             is_dest_in = hasattr(event, "dest_path") and event.dest_path and event.dest_path.startswith(directory)
@@ -401,5 +399,4 @@ class Handler(FileSystemEventHandler):
             if is_src_in or is_dest_in:
                 # logger.debug(f"Event matched directory {directory}, processing...")
                 self.collect_event(event, directory)
-                found = True
                 break

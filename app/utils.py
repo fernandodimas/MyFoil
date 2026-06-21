@@ -177,7 +177,8 @@ def safe_write_json(path, data, **dump_kwargs):
         os.replace(tmp_path, path)
 
 def format_size_py(size):
-    if size is None: return "0 B"
+    if size is None:
+        return "0 B"
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
         if size < 1024:
             return f"{size:.2f} {unit}"

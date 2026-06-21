@@ -4,6 +4,7 @@ Phase 3.1: Database refactoring - Separate queries from models
 """
 
 from sqlalchemy import func
+from sqlalchemy.exc import SQLAlchemyError
 from db import db, Files, Apps, app_files
 from models.libraries import Libraries
 
