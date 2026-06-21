@@ -540,7 +540,7 @@ def init_internal(app):
 
         saved = load_library_from_disk()
         if saved and "library" in saved:
-            library._LIBRARY_CACHE = saved["library"]
+            library.LIBRARY_CACHE.data = saved["library"]
             logger.info(f"✓ Pre-loaded {len(saved['library'])} items from disk cache (READY)")
         else:
             logger.info("⚠ No cache found, library will be generated on first request")
@@ -576,8 +576,8 @@ def init_internal(app):
         try:
             import library
 
-            if library._LIBRARY_CACHE:
-                logger.info(f"✓ Library cache verified: {len(library._LIBRARY_CACHE)} items")
+            if library.LIBRARY_CACHE.data:
+                logger.info(f"✓ Library cache verified: {len(library.LIBRARY_CACHE.data)} items")
             else:
                 logger.info("⚠ No cache in memory, will load on first request")
         except Exception as e:

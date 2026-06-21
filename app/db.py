@@ -400,4 +400,5 @@ __all__ = [
     "has_owned_apps", "remove_titles_without_owned_apps",
     "delete_files_by_library", "delete_file_by_filepath",
     "remove_missing_files_from_db",
+    "now_utc",
 ]

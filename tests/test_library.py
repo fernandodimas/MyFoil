@@ -69,8 +69,8 @@ class TestLibraryCache:
     @pytest.mark.skip(reason="Requires Flask app context for DB access")
     def test_compute_apps_hash(self, sample_files, mock_logger):
         """Test apps hash computation"""
-        with patch('library.os.walk') as mock_walk, \
-             patch('library.hashlib.sha256') as mock_sha256, \
+        with patch('library.cache.os.walk') as mock_walk, \
+             patch('library.cache.hashlib.sha256') as mock_sha256, \
              patch('library.logger', mock_logger):
             
             mock_walk.return_value = [
@@ -94,7 +94,7 @@ class TestLibraryCache:
             cache_file = os.path.join(tmpdir, 'library.json')
             
             # Mock the cache file path
-            with patch('library.LIBRARY_CACHE_FILE', cache_file), \
+            with patch('library.cache.LIBRARY_CACHE_FILE', cache_file), \
                  patch('library.logger', mock_logger):
                 
                 from library import save_library_to_disk, load_library_from_disk
