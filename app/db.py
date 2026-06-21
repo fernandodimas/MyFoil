@@ -7,6 +7,7 @@ from alembic.script import ScriptDirectory
 import sys
 import logging
 from constants import MYFOIL_DB, ALEMBIC_DIR, ALEMBIC_CONF
+from utils import now_utc
 
 # Retrieve main logger
 logger = logging.getLogger("main")
