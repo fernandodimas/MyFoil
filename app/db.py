@@ -1,8 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
-from sqlalchemy.orm import joinedload
-from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.dialects.postgresql import insert
 from alembic.runtime.migration import MigrationContext
 from alembic.config import Config
 from alembic.script import ScriptDirectory
@@ -10,7 +7,6 @@ from alembic.script import ScriptDirectory
 import sys
 import logging
 from constants import MYFOIL_DB, ALEMBIC_DIR, ALEMBIC_CONF
-from utils import now_utc
 
 # Retrieve main logger
 logger = logging.getLogger("main")

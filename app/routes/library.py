@@ -46,7 +46,7 @@ library_bp = Blueprint("library", __name__, url_prefix="/api")
 @handle_api_errors
 def debug_title_api(title_id_param=None):
     """Debug endpoint to inspect a title's data and flag computation."""
-    from db import Titles, Apps, Files
+    from db import Titles, Apps
     import titles as titles_lib
     from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC
 

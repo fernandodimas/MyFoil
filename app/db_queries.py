@@ -5,12 +5,12 @@ logger = logging.getLogger("main")
 
 
 def file_exists_in_db(filepath):
-    from db import db, Files
+    from db import Files
     return Files.query.filter_by(filepath=filepath).first() is not None
 
 
 def get_file_from_db(file_id):
-    from db import db, Files
+    from db import Files
     return Files.query.filter_by(id=file_id).first()
 
 
@@ -38,13 +38,13 @@ def update_file_path(library, old_path, new_path):
 
 
 def get_all_titles_from_db():
-    from db import db, Files, to_dict
+    from db import Files, to_dict
     results = Files.query.all()
     return [to_dict(r) for r in results]
 
 
 def get_all_title_files(title_id):
-    from db import db, Files, to_dict
+    from db import Files, to_dict
     if not title_id:
         return []
     title_id = title_id.upper()
@@ -53,13 +53,13 @@ def get_all_title_files(title_id):
 
 
 def get_all_files_with_identification(identification):
-    from db import db, Files, to_dict
+    from db import Files, to_dict
     results = Files.query.filter_by(identification_type=identification).all()
     return [to_dict(r)["filepath"] for r in results]
 
 
 def get_all_files_without_identification(identification):
-    from db import db, Files, to_dict
+    from db import Files, to_dict
     results = Files.query.filter(Files.identification_type != identification).all()
     return [to_dict(r)["filepath"] for r in results]
 
@@ -82,12 +82,12 @@ def get_all_apps():
 
 
 def get_all_non_identified_files_from_library(library_id):
-    from db import db, Files
+    from db import Files
     return Files.query.filter_by(identified=False, library_id=library_id).all()
 
 
 def get_all_unidentified_files():
-    from db import db, Files
+    from db import Files
     return Files.query.filter_by(identified=False).all()
 
 
@@ -110,7 +110,7 @@ def delete_file_from_db_and_disk(file_id):
 
 
 def get_files_with_identification_from_library(library_id, identification_type):
-    from db import db, Files
+    from db import Files
     return Files.query.filter_by(library_id=library_id, identification_type=identification_type).all()
 
 
@@ -205,12 +205,12 @@ def get_shop_files():
 
 
 def get_libraries():
-    from db import db, Libraries
+    from db import Libraries
     return Libraries.query.all()
 
 
 def get_libraries_path():
-    from db import db, Libraries
+    from db import Libraries
     libraries = Libraries.query.all()
     return [l.path for l in libraries]
 
@@ -223,7 +223,7 @@ def add_library(library_path):
 
 
 def delete_library(library):
-    from db import db, Libraries
+    from db import db
     if not (isinstance(library, int) or (isinstance(library, str) and library.isdigit())):
         library = get_library_id(library)
     db.session.delete(get_library(library))
@@ -231,24 +231,24 @@ def delete_library(library):
 
 
 def get_library(library_id):
-    from db import db, Libraries
+    from db import Libraries
     return Libraries.query.filter_by(id=library_id).first()
 
 
 def get_library_path(library_id):
-    from db import db, Libraries
+    from db import Libraries
     library = Libraries.query.filter_by(id=library_id).first()
     return library.path if library else None
 
 
 def get_library_id(library_path):
-    from db import db, Libraries
+    from db import Libraries
     library = Libraries.query.filter_by(path=library_path).first()
     return library.id if library else None
 
 
 def get_library_file_paths(library_id):
-    from db import db, Files
+    from db import Files
     files = Files.query.filter_by(library_id=library_id).all()
     logger.debug(f"get_library_file_paths: Found {len(files)} files for library_id {library_id}")
     return [file.filepath for file in files]
@@ -262,12 +262,12 @@ def set_library_scan_time(library_id, scan_time=None):
 
 
 def get_all_titles():
-    from db import db, Titles
+    from db import Titles
     return Titles.query.all()
 
 
 def get_all_titles_with_apps():
-    from db import db, Titles, Apps, joinedload, to_dict, logger as db_logger
+    from db import Titles, Apps, joinedload, to_dict, logger as db_logger
     titles = (
         Titles.query.filter(Titles.title_id.isnot(None))
         .options(joinedload(Titles.apps).joinedload(Apps.files), joinedload(Titles.tags))
@@ -311,7 +311,7 @@ def get_all_titles_with_apps():
 
 
 def get_title(title_id):
-    from db import db, Titles
+    from db import Titles
     return Titles.query.filter_by(title_id=title_id).first()
 
 
@@ -365,7 +365,7 @@ def backfill_added_at_for_existing_titles():
 
 
 def get_all_title_apps(title_id):
-    from db import db, Titles, Apps, joinedload, to_dict
+    from db import Titles, Apps, joinedload, to_dict
     title = (
         Titles.query.options(joinedload(Titles.apps).joinedload(Apps.files), joinedload(Titles.tags))
         .filter_by(title_id=title_id).first()
@@ -383,7 +383,7 @@ def get_all_title_apps(title_id):
 
 
 def get_app_by_id_and_version(app_id, app_version):
-    from db import db, Apps
+    from db import Apps
     return Apps.query.filter_by(app_id=app_id, app_version=app_version).first()
 
 
@@ -427,7 +427,7 @@ def remove_file_from_apps(file_id):
 
 
 def has_owned_apps(title_id):
-    from db import db, Apps
+    from db import Apps
     title = get_title(title_id)
     if not title:
         return False

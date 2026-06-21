@@ -10,9 +10,8 @@ if not os.environ.get("DATABASE_URL"):
     os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
 import sys
-import sys
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 # Add project root to path so `import app.app` resolves to the package in repository root
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))

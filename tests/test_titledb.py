@@ -2,13 +2,10 @@
 Tests for TitleDB functionality
 """
 
-import sys
-import os
 
 import pytest
 from unittest.mock import MagicMock, patch, mock_open
 import json
-import os
 
 
 @pytest.mark.skip(reason="Requires full Flask app context and config files")

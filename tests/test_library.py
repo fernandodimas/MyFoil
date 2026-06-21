@@ -2,13 +2,10 @@
 Tests for library functionality
 """
 
-import sys
 import os
 
 import pytest
-from unittest.mock import MagicMock, patch, mock_open
-import json
-import os
+from unittest.mock import MagicMock, patch
 
 
 class TestLibraryValidation:
@@ -16,7 +13,6 @@ class TestLibraryValidation:
 
     def test_validate_file_valid_nsp(self, mock_logger):
         """Test validation of valid NSP file"""
-        from pathlib import Path
         import tempfile
         
         with tempfile.NamedTemporaryFile(suffix='.nsp', delete=False) as f:
@@ -32,7 +28,6 @@ class TestLibraryValidation:
 
     def test_validate_file_invalid_extension(self, mock_logger):
         """Test validation fails for invalid extension"""
-        from pathlib import Path
         import tempfile
         
         with tempfile.NamedTemporaryFile(suffix='.txt', delete=False) as f:
@@ -54,7 +49,6 @@ class TestLibraryValidation:
 
     def test_validate_file_empty(self, mock_logger):
         """Test validation fails for empty file"""
-        from pathlib import Path
         import tempfile
         
         with tempfile.NamedTemporaryFile(suffix='.nsp', delete=False) as f:
@@ -95,7 +89,6 @@ class TestLibraryCache:
     def test_save_and_load_library_to_disk(self, sample_titles, mock_logger):
         """Test library save and load from disk"""
         import tempfile
-        import json
         
         with tempfile.TemporaryDirectory() as tmpdir:
             cache_file = os.path.join(tmpdir, 'library.json')

@@ -2,10 +2,8 @@
 Integration Test for Myfoil TitleDB Download
 Attempts to download real files from official sources
 """
-import sys
 import os
 import unittest
-from pathlib import Path
 
 # Add app directory to path
 
@@ -49,7 +47,7 @@ class TestTitleDBIntegration(unittest.TestCase):
         filename = "versions.txt"
         dest_path = os.path.join(TITLEDB_DIR, "test_fallback_versions.txt")
         
-        print(f"\n🚀 Testing fallback mechanism...")
+        print("\n🚀 Testing fallback mechanism...")
         
         success, source_name, error = self.manager.download_file(filename, dest_path, timeout=5)
         

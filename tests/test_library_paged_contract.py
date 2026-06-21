@@ -1,4 +1,3 @@
-import json
 
 
 def test_library_paged_contract(client):

@@ -1,8 +1,6 @@
 """
 Tests for API endpoints
 """
-import pytest
-from unittest.mock import MagicMock, patch
 import json
 
 

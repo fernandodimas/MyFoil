@@ -3,7 +3,6 @@ Test script for Myfoil TitleDB Source Manager
 Run this to verify the multi-source system is working correctly
 """
 import sys
-import os
 
 # Add app directory to path
 

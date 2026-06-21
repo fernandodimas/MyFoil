@@ -9,12 +9,10 @@ except ImportError:
     gevent = None
 
 from titles._state import (
-    logger, _titles_db_loaded, _cnmts_db, _titles_db, _versions_db,
-    _dlc_map, _dlcs_by_base_id, _loaded_titles_file,
-    _titledb_cache_timestamp, _titledb_cache_ttl, _game_info_cache,
-    identification_in_progress_count,
+    logger, _cnmts_db, _titles_db, _versions_db,
+    _dlc_map, _dlcs_by_base_id, _titledb_cache_timestamp, _titledb_cache_ttl, identification_in_progress_count,
 )
-from titles.utils import robust_json_load, yield_to_event_loop
+from titles.utils import robust_json_load
 from constants import TITLEDB_DIR, CONFIG_DIR
 from utils import now_utc
 from settings import load_settings

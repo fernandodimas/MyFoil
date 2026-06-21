@@ -1,10 +1,9 @@
 import os
-import re
 from pathlib import Path
 from binascii import hexlify as hx
 
 from titles._state import (
-    logger, _cnmts_db, _dlc_map, _titles_db, _titles_db_loaded,
+    logger, _cnmts_db, _dlc_map, _titles_db,
 )
 from titles.utils import get_app_id_from_filename, get_version_from_filename
 from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC

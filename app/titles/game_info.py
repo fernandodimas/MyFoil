@@ -1,5 +1,4 @@
 import os
-import json
 
 try:
     import gevent
@@ -8,7 +7,7 @@ except ImportError:
 
 from titles._state import (
     logger, _titles_db_loaded, _cnmts_db, _titles_db, _versions_db,
-    _dlc_map, _dlcs_by_base_id, _titledb_cache_timestamp, _game_info_cache,
+    _dlcs_by_base_id, _game_info_cache,
 )
 from titles.utils import format_release_date, robust_json_load, yield_to_event_loop
 from constants import APP_TYPE_DLC, TITLEDB_DIR
