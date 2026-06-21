@@ -495,6 +495,14 @@ def sync_titles_to_db(force=False):
                         title.category = ",".join(cat) if isinstance(cat, list) else str(cat)
 
                     release = tdb_info.get("releaseDate") or tdb_info.get("release_date")
+                    if not release:
+                        latest_ver = max(
+                            (_state._versions_db.get(tid.lower(), {}) or {}).items(),
+                            key=lambda kv: int(kv[0]) if kv[0].isdigit() else 0,
+                            default=None,
+                        )
+                        if latest_ver:
+                            release = latest_ver[1] if isinstance(latest_ver[1], str) else ""
                     set_if_not_empty(title, "release_date", format_release_date(release))
 
                     if tdb_info.get("size"):

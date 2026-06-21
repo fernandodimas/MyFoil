@@ -146,11 +146,14 @@ class TitlesRepository:
                         )
                         query = query.filter(count_subq > 1)
 
-        # Apply sorting
+        # Apply sorting with tiebreaker for consistent pagination
         sort_field = getattr(Titles, sort_by, Titles.name)
+        # Tiebreaker prevents items from shifting pages when they share the same sort value
+        tiebreaker = Titles.name if sort_by != "name" else Titles.title_id
         if order == "desc":
-            sort_field = sort_field.desc()
-        query = query.order_by(sort_field)
+            query = query.order_by(sort_field.desc(), tiebreaker.desc())
+        else:
+            query = query.order_by(sort_field, tiebreaker)
         # Log query SQL and execution time for diagnostics
         logger = logging.getLogger("main")
         try:
