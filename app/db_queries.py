@@ -267,7 +267,8 @@ def get_all_titles():
 
 
 def get_all_titles_with_apps():
-    from db import Titles, Apps, joinedload, to_dict, logger as db_logger
+    from sqlalchemy.orm import joinedload
+    from db import Titles, Apps, to_dict, logger as db_logger
     titles = (
         Titles.query.filter(Titles.title_id.isnot(None))
         .options(joinedload(Titles.apps).joinedload(Apps.files), joinedload(Titles.tags))
@@ -365,7 +366,8 @@ def backfill_added_at_for_existing_titles():
 
 
 def get_all_title_apps(title_id):
-    from db import Titles, Apps, joinedload, to_dict
+    from sqlalchemy.orm import joinedload
+    from db import Titles, Apps, to_dict
     title = (
         Titles.query.options(joinedload(Titles.apps).joinedload(Apps.files), joinedload(Titles.tags))
         .filter_by(title_id=title_id).first()
