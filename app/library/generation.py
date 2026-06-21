@@ -220,10 +220,11 @@ def update_single_game_in_cache(title_id):
     with LIBRARY_CACHE.lock:
         LIBRARY_CACHE.data = [g for g in LIBRARY_CACHE.data if g.get("title_id") != title_id]
         LIBRARY_CACHE.data.append(game)
+        LIBRARY_CACHE.data.sort(key=lambda x: x.get("name", "Unrecognized") or "Unrecognized")
         LIBRARY_CACHE.hash = None
 
     from library.cache import save_library_to_disk
-    save_library_to_disk(LIBRARY_CACHE.data)
+    save_library_to_disk({"hash": None, "library": LIBRARY_CACHE.data})
 
     try:
         import redis_cache

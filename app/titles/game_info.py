@@ -495,7 +495,7 @@ def sync_titles_to_db(force=False):
                         title.category = ",".join(cat) if isinstance(cat, list) else str(cat)
 
                     release = tdb_info.get("releaseDate") or tdb_info.get("release_date")
-                    set_if_not_empty(title, "release_date", release)
+                    set_if_not_empty(title, "release_date", format_release_date(release))
 
                     if tdb_info.get("size"):
                         title.size = tdb_info.get("size")
