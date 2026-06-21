@@ -129,8 +129,11 @@ class SafeSocketIO(SocketIO):
 
 # Initialize SocketIO with production-ready configuration
 # cors_allowed_origins defaults to localhost; override via SOCKETIO_CORS_ORIGINS env var
+# Supports: "*" (all), single origin, or comma-separated list
+_cors_raw = os.environ.get("SOCKETIO_CORS_ORIGINS", "http://localhost:8465")
+_cors_origins = [o.strip() for o in _cors_raw.split(",")] if "," in _cors_raw else _cors_raw
 socketio = SafeSocketIO(
-    cors_allowed_origins=os.environ.get("SOCKETIO_CORS_ORIGINS", "http://localhost:8465"),
+    cors_allowed_origins=_cors_origins,
     async_mode="gevent",
     logger=False,
     engineio_logger=False,
