@@ -140,7 +140,7 @@ class JobTracker:
 
             if current_app:
                 return current_app
-        except:
+        except Exception:
             pass
 
         # 3. Last resort fallback (rare)
@@ -148,7 +148,7 @@ class JobTracker:
             import app as main_app
 
             return main_app.app
-        except:
+        except Exception:
             return None
 
     def _emit_update(self, job_id: str):
@@ -346,7 +346,7 @@ class JobTracker:
                 import gevent
 
                 gevent.sleep(0)
-            except:
+            except Exception:
                 pass
 
         except Exception as outer_e:

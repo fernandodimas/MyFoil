@@ -19,7 +19,7 @@ def load_keys(key_file=KEYS_FILE):
         else:
             logger.debug(f"Keys file {key_file} does not exist.")
 
-    except:
+    except Exception:
         logger.error(f"Provided keys file {key_file} is invalid.")
     return valid
 

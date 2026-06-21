@@ -72,7 +72,7 @@ def sanitize_large_json_file(filepath):
                     if obj_data and isinstance(obj_data, dict):
                         recovered[title_id] = obj_data
                         total_found += 1
-                except:
+                except (json.JSONDecodeError, ValueError, TypeError):
                     pass
 
             # Log progress every 5000 entries

@@ -728,7 +728,7 @@ def get_title_id_from_app_id(app_id, app_type):
 
             # Default fallback for odd DLC: the even parent is much more common than a phantom odd parent
             return even_id
-    except:
+    except (ValueError, TypeError):
         pass
 
     return std_id
@@ -1310,7 +1310,7 @@ def get_game_info(title_id, silent=False):
             prefix = search_id[:-3]
             base_prefix = hex(int(prefix, 16) - 1)[2:].upper().rjust(13, "0")
             possible_base_ids.append(base_prefix + "000")
-        except:
+        except (ValueError, TypeError):
             pass
 
         for bid in possible_base_ids:

@@ -22,30 +22,6 @@ services:
     ports:
       - "8465:8465"
     volumes:
-version: '3.8'
-
-services:
-  redis:
-    image: redis:7-alpine
-    container_name: myfoil-redis-dev
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
-  myfoil:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: myfoil-dev
-    restart: unless-stopped
-    ports:
-      - "8465:8465"
-    volumes:
       # DEVELOPMENT MODE: Mount source code for live reload
       - ./app:/app
       # Data volumes (UPDATE THIS PATH to your actual games directory)

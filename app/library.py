@@ -385,7 +385,7 @@ def scan_library_path(library_path, job_id=None):
             log_activity(
                 "library_scan_error", details={"path": library_path, "error": "Permission denied (no read access)"}
             )
-    except:
+    except Exception:
         pass
 
     lib_name = os.path.basename(library_path) or library_path
@@ -417,7 +417,7 @@ def scan_library_path(library_path, job_id=None):
                 import gevent
 
                 gevent.sleep(0)
-            except:
+            except Exception:
                 pass
 
         if filepath not in filepaths_in_library:
@@ -800,7 +800,7 @@ def identify_library_files(library):
                             app_type="multiple" if len(file_contents) > 1 else file_contents[0]["type"],
                             status="success",
                         ).inc()
-                    except:
+                    except Exception:
                         pass
 
                     # Add title IDs to DB
@@ -865,7 +865,7 @@ def identify_library_files(library):
                         {"title": "Error", "message": f"Falha ao salvar {filename}: {str(e)}", "type": "error"},
                         namespace="/",
                     )
-                except:
+                except Exception:
                     pass
 
             # More frequent yields to keep system responsive
@@ -908,7 +908,7 @@ def identify_library_files(library):
         # Final commit (just in case)
         try:
             db.session.commit()
-        except:
+        except Exception:
             db.session.rollback()
         pool.join()
 
@@ -1331,7 +1331,7 @@ def update_single_game_in_cache(title_id):
 
     try:
         titles_lib.load_titledb()
-    except:
+    except Exception:
         pass
 
     from db import get_all_titles_with_apps
@@ -2013,7 +2013,7 @@ def generate_library(force=False):
             },
             namespace="/",
         )
-    except:
+    except Exception:
         pass
 
     if len(games_info) == 0:

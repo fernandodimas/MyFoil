@@ -404,7 +404,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                                     )
                                     try:
                                         os.remove(os.path.join(TITLEDB_DIR, filename))
-                                    except:
+                                    except OSError:
                                         pass
                                     results[filename] = False
 

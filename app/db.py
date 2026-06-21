@@ -74,7 +74,7 @@ def log_activity(action_type, title_id=None, user_id=None, **details):
         logger.error(f"Failed to log activity: {e}")
         try:
             db.session.rollback()
-        except:
+        except Exception:
             pass
 
 
@@ -899,7 +899,7 @@ def remove_missing_files_from_db():
                     import gevent
 
                     gevent.sleep(0)
-                except:
+                except Exception:
                     pass
 
             # Check if the file exists on disk

@@ -231,7 +231,7 @@ def format_datetime(dt, format="%Y-%m-%d %H:%M:%S"):
     if isinstance(dt, str):
         try:
             dt = datetime.fromisoformat(dt.replace('Z', '+00:00'))
-        except:
+        except (ValueError, TypeError):
             return dt
             
     # Ensure dt is aware. If naive, assume UTC.

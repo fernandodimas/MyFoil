@@ -157,7 +157,7 @@ def check_api_token(request):
 
             token.last_used = now_utc()
             db.session.commit()
-        except:
+        except Exception:
             pass  # Don't fail auth just because of timestamp update error
 
         return True, None, token.user

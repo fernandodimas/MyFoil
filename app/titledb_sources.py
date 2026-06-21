@@ -158,7 +158,7 @@ class TitleDBSource:
                     if response.status_code == 200:
                         if "Last-Modified" in response.headers:
                             return datetime.strptime(response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S %Z")
-                except:
+                except requests.RequestException:
                     pass
 
             # Final attempt: try generic titles.json
@@ -168,7 +168,7 @@ class TitleDBSource:
                     response = requests.head(url_generic, timeout=5)
                     if response.status_code == 200 and "Last-Modified" in response.headers:
                         return datetime.strptime(response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S %Z")
-                except:
+                except requests.RequestException:
                     pass
 
         except Exception as e:
@@ -285,15 +285,14 @@ class TitleDBSourceManager:
             from settings import load_settings
             app_settings = load_settings()
             auto_use_latest = app_settings.get("titles", {}).get("auto_use_latest", False)
-        except:
+        except Exception:
             auto_use_latest = False
-            
+
         def sort_key(s):
-            # Freshness: Newer is better (larger timestamp)
             if s.remote_date:
                 try:
                     remote_ts = ensure_utc(s.remote_date).timestamp()
-                except:
+                except Exception:
                     remote_ts = 0
             else:
                 remote_ts = 0
@@ -436,14 +435,14 @@ class TitleDBSourceManager:
             from settings import load_settings
             app_settings = load_settings()
             auto_use_latest = app_settings.get("titles", {}).get("auto_use_latest", False)
-        except:
+        except Exception:
             auto_use_latest = False
 
         def sort_key(s):
             if s.remote_date:
                 try:
                     remote_ts = ensure_utc(s.remote_date).timestamp()
-                except:
+                except Exception:
                     remote_ts = 0
             else:
                 remote_ts = 0

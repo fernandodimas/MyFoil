@@ -11,12 +11,13 @@ data_dir = os.path.join(os.getcwd(), "data")
 if not os.path.exists(data_dir):
     try:
         os.makedirs(data_dir)
-    except:
+    except OSError:
         pass
 
 log_file = os.path.join(data_dir, "celery_debug.log")
+log_level = getattr(logging, os.environ.get("LOG_LEVEL", "INFO").upper())
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=log_level,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[logging.FileHandler(log_file), logging.StreamHandler(sys.stdout)],
 )

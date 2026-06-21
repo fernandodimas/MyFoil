@@ -188,7 +188,7 @@ class MetadataFetcher:
             if game.get('released'):
                 try:
                     rel_date = datetime.strptime(game['released'], '%Y-%m-%d').date()
-                except:
+                except (ValueError, TypeError):
                     pass
 
             return {

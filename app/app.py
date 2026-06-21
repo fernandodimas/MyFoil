@@ -174,7 +174,7 @@ def get_system_status():
     if state.watcher is not None:
         try:
             watching = len(getattr(state.watcher, "directories", set()))
-        except:
+        except Exception:
             pass
     return {
         "scanning": state.scan_in_progress
@@ -199,14 +199,15 @@ ensure_data_dir = os.path.join(os.getcwd(), "data")
 if not os.path.exists(ensure_data_dir):
     try:
         os.makedirs(ensure_data_dir)
-    except:
+    except OSError:
         pass
 
+log_level = getattr(logging, os.environ.get("LOG_LEVEL", "INFO").upper())
 file_handler = logging.FileHandler(os.path.join(ensure_data_dir, "debug.log"))
 file_handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s (%(module)s) %(message)s"))
-file_handler.setLevel(logging.DEBUG)
+file_handler.setLevel(log_level)
 
-logging.basicConfig(level=logging.DEBUG, handlers=[handler, file_handler])
+logging.basicConfig(level=log_level, handlers=[handler, file_handler])
 
 structlog.configure(
     processors=[
@@ -364,7 +365,7 @@ def update_titledb_job(force=False):
                     import gevent
 
                     gevent.sleep(0)
-                except:
+                except Exception:
                     pass
 
             # Step 2: Reload memory cache
@@ -395,7 +396,7 @@ def update_titledb_job(force=False):
             logger.error(f"Error during TitleDB update job: {e}")
             try:
                 log_activity("titledb_update_failed", details={"error": str(e)})
-            except:
+            except Exception:
                 pass
             job_tracker.fail_job(job_id, str(e))
             return False
@@ -683,18 +684,35 @@ def check_initial_scan(app):
         critical_files = ["cnmts.json", "versions.json"]
         import os
         from constants import TITLEDB_DIR
+        from datetime import datetime, timezone
 
         titledb_missing = any(not os.path.exists(os.path.join(TITLEDB_DIR, f)) for f in critical_files)
 
-        if not libs or any(l.last_scan is None for l in libs) or titledb_missing:
+        # Check if critical files are outdated (> 24h old), even if they exist
+        titledb_outdated = False
+        if not titledb_missing:
+            try:
+                cutoff = datetime.now(timezone.utc).timestamp() - (24 * 3600)
+                for f in critical_files:
+                    fp = os.path.join(TITLEDB_DIR, f)
+                    if os.path.getmtime(fp) < cutoff:
+                        titledb_outdated = True
+                        logger.info(f"TitleDB file {f} is outdated, will trigger update.")
+                        break
+            except Exception as e:
+                logger.warning(f"Error checking TitleDB age: {e}")
+
+        if titledb_missing or titledb_outdated:
             if titledb_missing:
                 logger.info("Initial scan required: TitleDB critical files are missing.")
-                threading.Thread(
-                    target=lambda: update_titledb_job(force=True) if "app" in globals() else None, daemon=True
-                ).start()
             else:
-                logger.info("Initial scan required: New or un-scanned libraries detected.")
-                threading.Thread(target=scan_library_job, daemon=True).start()
+                logger.info("Initial scan required: TitleDB critical files are outdated.")
+            threading.Thread(
+                target=lambda: update_titledb_job(force=True) if "app" in globals() else None, daemon=True
+            ).start()
+        elif not libs or any(l.last_scan is None for l in libs):
+            logger.info("Initial scan required: New or un-scanned libraries detected.")
+            threading.Thread(target=scan_library_job, daemon=True).start()
 
     if hasattr(app, "scheduler"):
         app.scheduler.add_job(

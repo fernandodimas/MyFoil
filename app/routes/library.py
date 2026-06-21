@@ -1288,7 +1288,7 @@ def app_info_api(id):
             if wish_item.screenshots:
                 try:
                     screenshots = json.loads(wish_item.screenshots)
-                except:
+                except (json.JSONDecodeError, ValueError, TypeError):
                     # Fallback to comma separated if not JSON
                     screenshots = [s.strip() for s in wish_item.screenshots.split(",") if s.strip()]
 

@@ -931,7 +931,7 @@ def process_status_api():
     if state.watcher is not None:
         try:
             watching = len(getattr(state.watcher, "directories", set()))
-        except:
+        except Exception:
             pass
 
     # Also check DB for active jobs to support Celery workers report
@@ -1787,14 +1787,14 @@ def health_check():
             health_status["celery"] = "enabled"
         else:
             health_status["celery"] = "disabled"
-    except:
+    except Exception:
         health_status["celery"] = "disabled"
 
     # Check metrics
     try:
 
         health_status["metrics"] = "enabled"
-    except:
+    except Exception:
         health_status["metrics"] = "disabled"
 
     status_code = 200 if health_status["status"] == "healthy" else 503

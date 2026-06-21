@@ -172,7 +172,7 @@ class Watcher:
             try:
                 self.observer.stop()
                 self.observer.join(timeout=5)
-            except:
+            except Exception:
                 pass
 
             # Create new observer

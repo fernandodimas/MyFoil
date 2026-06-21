@@ -29,7 +29,7 @@ def timed_scan(func):
                 scan_duration = time.time() - scan_start
                 lib_label = os.path.basename(library_path) or str(library_path)
                 scan_duration_seconds.labels(library=lib_label, status=status).observe(scan_duration)
-            except:
+            except Exception:
                 pass
 
     return wrapper
@@ -64,7 +64,7 @@ def timed_identification(func):
             try:
                 identify_duration = time.time() - identify_start
                 identification_duration_seconds.labels(library=label, type=ident_type).observe(identify_duration)
-            except:
+            except Exception:
                 pass
 
     return wrapper
