@@ -2,8 +2,11 @@
 Library Service - Lógica de negócio relacionada à biblioteca
 """
 
-from db import *
-from library import *
+from db import db, Libraries, Files, Apps, Titles, app_files
+from db import get_all_title_apps, get_all_unidentified_files, delete_file_from_db_and_disk
+from library import generate_library, load_library_from_disk, update_single_game_in_cache
+from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC
+from utils import format_size_py
 from settings import load_settings
 import titles
 import structlog
@@ -191,8 +194,8 @@ class LibraryService:
                 title_obj = app_obj.title
 
         if not title_obj:
-            titles_lib.load_titledb()
-            base_tid, app_type = titles_lib.identify_appId(tid)
+            titles.load_titledb()
+            base_tid, app_type = titles.identify_appId(tid)
             if base_tid and tid != base_tid:
                 if app_type == APP_TYPE_DLC:
                     pass
@@ -200,7 +203,7 @@ class LibraryService:
                     tid = base_tid
                     title_obj = Titles.query.filter_by(title_id=tid).first()
 
-        info = titles_lib.get_game_info(tid)
+        info = titles.get_game_info(tid)
         if not info:
             info = {
                 "name": f"Unknown ({tid})",
@@ -269,7 +272,7 @@ class LibraryService:
                 seen_ids.add(f["id"])
                 seen_file_ids_in_modal.add(f["id"])
 
-        available_versions = titles_lib.get_all_existing_versions(tid)
+        available_versions = titles.get_all_existing_versions(tid)
         version_release_dates = {v["version"]: v["release_date"] for v in available_versions}
 
         if base_release_date := info.get("release_date", ""):
@@ -306,7 +309,7 @@ class LibraryService:
                 }
             )
 
-        dlc_ids = titles_lib.get_all_existing_dlc(tid)
+        dlc_ids = titles.get_all_existing_dlc(tid)
         dlcs_list = []
         dlc_apps_grouped = {}
         for a in [a for a in all_title_apps if a["app_type"] == APP_TYPE_DLC]:
@@ -333,7 +336,7 @@ class LibraryService:
                                 }
                             )
 
-            dlc_info = titles_lib.get_game_info(dlc_id)
+            dlc_info = titles.get_game_info(dlc_id)
             dlcs_list.append(
                 {
                     "app_id": dlc_id,
@@ -472,7 +475,7 @@ class LibraryService:
             logger.info(f"File {file_id} deleted. Updating cache for titles: {title_ids}")
             for tid in title_ids:
                 try:
-                    update_game_in_cache(tid)
+                    update_single_game_in_cache(tid)
                 except Exception as ex:
                     logger.error(f"Error updating cache for title {tid}: {ex}")
         else:

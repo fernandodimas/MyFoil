@@ -236,10 +236,6 @@ logging.getLogger("werkzeug").addFilter(FilterRemoveDateFromWerkzeugLogs())
 logging.getLogger("alembic.runtime.migration").setLevel(logging.WARNING)
 
 
-# ===== LEGACY FUNCTIONS - TO BE REFACTORED =====
-# These functions are kept for backward compatibility
-# They should be moved to appropriate service modules in the future
-
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -669,16 +665,6 @@ def init_internal(app):
 
 def check_initial_scan(app):
     """Logic to determine if initial scan is needed"""
-    try:
-        # Load TitleDB info locally without updating yet
-        # ...
-        pass
-    except Exception as e:
-        logger.error(f"Error in check_initial_scan: {e}")
-
-    # Simplified check logic moved from original init_internal
-    # ...
-    # We call the jobs in background threads as before
     with app.app_context():
         libs = db_module.get_libraries()
         critical_files = ["cnmts.json", "versions.json"]
@@ -784,7 +770,6 @@ def create_app(minimal=False):
 
     # Initialize components
     db.init_app(app)
-    # migrate.init_app(app, db) # Migrations disabled by user request
 
     # Initialize login manager
     login_manager.init_app(app)

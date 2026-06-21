@@ -4,7 +4,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.dialects.postgresql import insert
-# from flask_migrate import Migrate, upgrade # Migrations disabled
 from alembic.runtime.migration import MigrationContext
 from alembic.config import Config
 from alembic.script import ScriptDirectory
@@ -18,7 +17,6 @@ from utils import now_utc
 logger = logging.getLogger("main")
 
 db = SQLAlchemy()
-migrate = None # Migrations disabled
 
 # Ensure Webhook symbol exists for compatibility imports even if model isn't available
 Webhook = None
@@ -87,8 +85,6 @@ def init_db(app):
             inspector = inspect(db.engine)
             if not inspector.has_table("files"):
                 logger.info("Initializing database tables...")
-                # Migrations disabled by user request.
-                # Only using db.create_all() for initial schema creation.
                 db.create_all()
                 logger.info("Database schema initialized via create_all.")
             else:
@@ -310,13 +306,6 @@ def init_db(app):
 
             except Exception as e:
                 logger.warning(f"Auto-migration check failed: {e}")
-
-                # logger.info("Checking database migration...")
-                # if is_migration_needed():
-                #     # PostgreSQL backups handled externally
-                #     upgrade()
-                #     logger.info("Database migration applied successfully.")
-                pass
 
                 # Backfill added_at for existing titles
                 try:
@@ -981,5 +970,4 @@ __all__ = [
     "SystemJob",
     "ActivityLog",
     "db",
-    "migrate",
 ]
