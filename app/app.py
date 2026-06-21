@@ -101,8 +101,10 @@ from library import (
     post_library_change,
 )
 from utils import now_utc, ColoredFormatter, FilterRemoveDateFromWerkzeugLogs, get_or_create_secret_key
+import library as library_mod
 from file_watcher import Watcher
 import threading
+import time
 from datetime import timedelta
 
 # Global variables
@@ -159,27 +161,6 @@ else:
 
 backup_manager = None
 plugin_manager = None
-cloud_manager = None
-watcher_thread = None
-
-
-# Helper function to get status (avoids circular import issues)
-def get_system_status():
-    """Get system status values safely"""
-    watching = 0
-    if state.watcher is not None:
-        try:
-            watching = len(getattr(state.watcher, "directories", set()))
-        except Exception:
-            pass
-    return {
-        "scanning": state.scan_in_progress
-        or any(j.get("type") == "library_scan" for j in job_tracker.get_active_jobs()),
-        "updating_titledb": state.is_titledb_update_running
-        or any(j.get("type") == "titledb_update" for j in job_tracker.get_active_jobs()),
-        "watching": watching > 0,
-        "libraries": watching,
-    }
 
 
 # Logging configuration
@@ -311,10 +292,6 @@ def on_library_change(events):
 def update_titledb_job(force=False):
     """Update TitleDB in background"""
     with app.app_context():
-        from job_tracker import job_tracker
-        from socket_helper import get_socketio_emitter
-
-        # Configure emitter antes de registrar job
         job_tracker.set_emitter(get_socketio_emitter())
 
         # Track job
@@ -331,13 +308,10 @@ def update_titledb_job(force=False):
         logger.info("Starting TitleDB update job...")
         try:
             job_tracker.update_progress(job_id, 0, 10, "Initializing...")
-            import time
-
             time.sleep(0.1)
 
             job_tracker.update_progress(job_id, 1, 10, "Downloading TitleDB files...")
             current_settings = load_settings()
-            import titledb
 
             # Step 1: Download
             # Pass job_id so update_titledb_files can report granular progress
@@ -452,8 +426,6 @@ def scan_library_job():
 
                     scan_all_libraries_async.delay()
                     logger.info("Scheduled library scan queued to Celery.")
-                    from db import log_activity
-
                     log_activity("library_scan_queued", details={"source": "scheduler"})
                     job_tracker.update_progress(job_id, 100, message="Scan task queued to Celery.")
                 else:
@@ -520,11 +492,8 @@ def incremental_library_update_job():
 
 def init_internal(app):
     """Initialize internal components - OPTIMIZED for fast startup"""
-    global watcher_thread
 
     # Cleanup stale jobs first (Reset stuck 'RUNNING'/'SCHEDULED' jobs from previous session)
-    from job_tracker import job_tracker
-
     logger.info("=" * 80)
     logger.info("STARTUP: Cleaning up stale jobs from previous session...")
     logger.info("=" * 80)
@@ -536,11 +505,10 @@ def init_internal(app):
     logger.info("Startup: Stage 0 - Loading library cache from disk...")
     try:
         from library import load_library_from_disk
-        import library
 
         saved = load_library_from_disk()
         if saved and "library" in saved:
-            library.LIBRARY_CACHE.data = saved["library"]
+            library_mod.LIBRARY_CACHE.data = saved["library"]
             logger.info(f"✓ Pre-loaded {len(saved['library'])} items from disk cache (READY)")
         else:
             logger.info("⚠ No cache found, library will be generated on first request")
@@ -555,8 +523,6 @@ def init_internal(app):
         try:
             with app.app_context():
                 logger.info("Background: Loading TitleDB cache...")
-                import titles
-
                 titles.load_titledb()
                 logger.info("✓ TitleDB loaded successfully in background")
         except Exception as e:
@@ -574,10 +540,8 @@ def init_internal(app):
         logger.info("Init Stage 1: Verifying library cache...")
         # Cache already loaded in Stage 0, just verify it's valid
         try:
-            import library
-
-            if library.LIBRARY_CACHE.data:
-                logger.info(f"✓ Library cache verified: {len(library.LIBRARY_CACHE.data)} items")
+            if library_mod.LIBRARY_CACHE.data:
+                logger.info(f"✓ Library cache verified: {len(library_mod.LIBRARY_CACHE.data)} items")
             else:
                 logger.info("⚠ No cache in memory, will load on first request")
         except Exception as e:
@@ -596,8 +560,6 @@ def init_internal(app):
             state.watcher.run()
 
             # Give observer 200ms to fully start (reduced from 500ms)
-            import time
-
             time.sleep(0.2)
 
             # Setup paths from Database (Source of Truth)
@@ -645,7 +607,6 @@ def init_internal(app):
 
     # Schedule metadata fetch (1x per day = every 24h) - as requested by user
     from metadata_service import metadata_fetcher
-    from datetime import timedelta
 
     app.scheduler.add_job(
         job_id="scheduled_metadata_fetch",
@@ -661,7 +622,6 @@ def check_initial_scan(app):
     with app.app_context():
         libs = db_module.get_libraries()
         critical_files = ["cnmts.json", "versions.json"]
-        import os
         from constants import TITLEDB_DIR
         from datetime import datetime, timezone
 
@@ -832,18 +792,9 @@ def create_app(minimal=False):
 
         return response
 
-    # SocketIO event handlers
-    @socketio.on("connect")
-    def handle_connect():
-        pass
-
-    @socketio.on("disconnect")
-    def handle_disconnect():
-        pass
-
     # Global initialization
     with app.app_context():
-        global backup_manager, plugin_manager, cloud_manager
+        global backup_manager, plugin_manager
 
         # Initialize managers
         backup_manager = BackupManager(CONFIG_DIR, DATA_DIR)
@@ -856,9 +807,6 @@ def create_app(minimal=False):
         init_users(app)
 
         if not minimal:
-            # Initialize job tracker with app context
-            from job_tracker import job_tracker
-
             job_tracker.init_app(app)
 
             # Initialize file watcher and libraries

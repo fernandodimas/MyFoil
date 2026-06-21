@@ -19,6 +19,7 @@ from db import (
     get_files_with_identification_from_library,
     get_filename_identified_files_needing_reidentification,
     add_title_id_in_db,
+    get_title_id_db_id,
     remove_titles_without_owned_apps,
 )
 from metrics import files_identified_total
@@ -340,60 +341,99 @@ def get_files_to_identify(library_id):
 
 
 def identify_single_file(filepath):
-    filename = os.path.basename(filepath)
+    file_obj = Files.query.filter_by(filepath=filepath).first()
+    if not file_obj:
+        logger.warning(f"File not found in DB: {filepath}")
+        return False
 
-    identification, success, all_contents, error, suggested_name = titles_lib.identify_file(filepath)
+    if file_obj.identified and file_obj.apps and len(file_obj.apps) > 0:
+        logger.debug(f"File already identified with Apps: {filepath}")
+        return True
 
-    if not success or not all_contents:
-        logger.warning(f"Failed to identify {filename}: {error}")
-        file_obj = get_file_from_db(filepath)
-        if file_obj:
+    if not os.path.exists(filepath):
+        logger.warning(f"File no longer exists on disk: {filepath}")
+        try:
+            if file_obj.apps:
+                file_obj.apps.clear()
+            db.session.delete(file_obj)
+            db.session.commit()
+        except Exception as e:
+            logger.error(f"Error removing non-existent file: {e}")
+            db.session.rollback()
+        return False
+
+    try:
+        titles_lib.load_titledb()
+        identification, success, contents, error, suggested_name = titles_lib.identify_file(filepath)
+
+        if not success:
+            logger.warning(f"Failed to identify file: {filepath} - Error: {error}")
             file_obj.identified = False
-            file_obj.identification_type = identification
-            file_obj.identification_error = error
+            file_obj.identification_error = error or "Falha técnica na identificação"
+            file_obj.identification_attempts += 1
             file_obj.last_attempt = now_utc()
             db.session.commit()
-            files_identified_total.inc()
-        return
+            return False
 
-    for content in all_contents:
-        title_id = content.get("title_id") or content.get("id")
-        app_id = content.get("app_id")
-        app_type = content.get("type")
-        version = content.get("version")
+        if success and contents and not error:
+            if file_obj.apps:
+                file_obj.apps.clear()
 
-        title_id_db = None
-        if title_id:
-            title_id_db = add_title_id_in_db(title_id, create=False)
-        if not title_id_db and suggested_name:
-            title_id_db = add_title_id_in_db(title_id, name=suggested_name)
+            title_ids = list(dict.fromkeys([c["title_id"] for c in contents]))
+            for title_id in title_ids:
+                add_title_id_in_db(title_id, name=suggested_name)
 
-        app = get_app_by_id_and_version(app_id, version)
-        if not app:
-            app = Apps(
-                app_id=app_id,
-                title_id=title_id_db,
-                app_type=app_type,
-                version=version,
-            )
-            db.session.add(app)
-            db.session.flush()
-        else:
-            app.title_id = title_id_db or app.title_id
+            nb_content = 0
+            for file_content in contents:
+                title_id_in_db = get_title_id_db_id(file_content["title_id"])
+                if not title_id_in_db:
+                    add_title_id_in_db(file_content["title_id"])
+                    title_id_in_db = get_title_id_db_id(file_content["title_id"])
+                if not title_id_in_db:
+                    raise Exception(f"Failed to find or create DB record for Title ID {file_content['title_id']}")
 
-        file_obj = get_file_from_db(filepath)
-        if file_obj:
-            file_obj.app_id = app.id
+                existing_app = get_app_by_id_and_version(file_content["app_id"], file_content["version"])
+                if existing_app:
+                    if not existing_app.owned:
+                        existing_app.owned = True
+                    if file_obj not in existing_app.files:
+                        existing_app.files.append(file_obj)
+                else:
+                    new_app = Apps(
+                        app_id=file_content["app_id"],
+                        app_version=file_content["version"],
+                        app_type=file_content["type"],
+                        owned=True,
+                        title_id=title_id_in_db,
+                    )
+                    db.session.add(new_app)
+                    db.session.flush()
+                    new_app.files.append(file_obj)
+
+                nb_content += 1
+
             file_obj.identified = True
             file_obj.identification_type = identification
-            file_obj.identification_error = ""
+            file_obj.identification_error = None
+            file_obj.nb_content = nb_content
+            file_obj.multicontent = nb_content > 1
+            file_obj.identification_attempts += 1
             file_obj.last_attempt = now_utc()
             file_obj.titledb_version = str(titles_lib.get_titledb_cache_timestamp() or "")
-        else:
-            logger.warning(f"File not found in DB: {filepath}")
 
+            db.session.commit()
+            files_identified_total.inc()
+
+        logger.info(f"File identified successfully: {file_obj.filename}")
+        return True
+    except Exception as e:
+        logger.error(f"Error identifying file {filepath}: {e}")
+        file_obj.identified = False
+        file_obj.identification_error = str(e)
+        file_obj.last_attempt = now_utc()
+        db.session.rollback()
         db.session.commit()
-        files_identified_total.inc()
+        return False
 
 
 def identify_library_files(library):
