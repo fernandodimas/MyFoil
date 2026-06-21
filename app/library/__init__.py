@@ -1,4 +1,4 @@
-from db import logger
+from db import logger, get_all_title_apps
 
 from constants import ALLOWED_EXTENSIONS, LIBRARY_CACHE_FILE
 from library._state import LIBRARY_CACHE
