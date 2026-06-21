@@ -29,21 +29,13 @@ from nstools.nut import Keys
 
 Pfs0.Print.silent = True
 
-from titles._state import (
-    logger,
-    identification_in_progress_count,
-    _titles_db_loaded,
-    _cnmts_db,
-    _titles_db,
-    _versions_db,
-    _versions_txt_db,
-    _dlc_map,
-    _dlcs_by_base_id,
-    _loaded_titles_file,
-    _titledb_cache_timestamp,
-    _titledb_cache_ttl,
-    _game_info_cache,
-)
+import titles._state as _state
+
+logger = _state.logger
+
+
+def __getattr__(name):
+    return getattr(_state, name)
 
 from titles.utils import (
     format_release_date,

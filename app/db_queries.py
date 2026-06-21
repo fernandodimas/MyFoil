@@ -216,11 +216,14 @@ def get_libraries_path():
 
 
 def add_library(library_path):
-    from sqlalchemy import insert
     from db import db, Libraries
-    stmt = insert(Libraries).values(path=library_path).on_conflict_do_nothing()
-    db.session.execute(stmt)
+    existing = Libraries.query.filter_by(path=library_path).first()
+    if existing:
+        return existing.id
+    lib = Libraries(path=library_path)
+    db.session.add(lib)
     db.session.commit()
+    return lib.id
 
 
 def delete_library(library):

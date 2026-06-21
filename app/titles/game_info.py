@@ -5,10 +5,7 @@ try:
 except ImportError:
     gevent = None
 
-from titles._state import (
-    logger, _titles_db_loaded, _cnmts_db, _titles_db, _versions_db,
-    _dlcs_by_base_id, _game_info_cache,
-)
+import titles._state as _state
 from titles.utils import format_release_date, robust_json_load, yield_to_event_loop
 from constants import APP_TYPE_DLC, TITLEDB_DIR
 
@@ -16,17 +13,15 @@ from constants import APP_TYPE_DLC, TITLEDB_DIR
 def get_game_info(title_id, silent=False):
     from db import Titles
 
-    global _titles_db, _game_info_cache
-
     if title_id is None:
         if not silent:
-            logger.error("get_game_info called with title_id=None")
+            _state.logger.error("get_game_info called with title_id=None")
         return None
 
     search_id = str(title_id).upper()
 
-    if search_id in _game_info_cache:
-        return _game_info_cache[search_id]
+    if search_id in _state._game_info_cache:
+        return _state._game_info_cache[search_id]
 
     res = {
         "name": f"Unknown ({title_id})",
@@ -48,19 +43,19 @@ def get_game_info(title_id, silent=False):
         "screenshots": [],
     }
 
-    if not _titles_db:
+    if not _state._titles_db:
         from titles.titledb_cache import load_titledb
         load_titledb()
 
     info = None
-    if _titles_db:
-        info = _titles_db.get(search_id)
+    if _state._titles_db:
+        info = _state._titles_db.get(search_id)
         if not info:
-            info = _titles_db.get(search_id.upper()) or _titles_db.get(search_id.lower())
+            info = _state._titles_db.get(search_id.upper()) or _state._titles_db.get(search_id.lower())
 
         if not info:
             search_id_upper = search_id.upper()
-            for data in _titles_db.values():
+            for data in _state._titles_db.values():
                 if not isinstance(data, dict):
                     continue
                 if str(data.get("id", "")).upper() == search_id_upper:
@@ -117,7 +112,7 @@ def get_game_info(title_id, silent=False):
 
     except Exception as e:
         if not silent:
-            logger.error(f"Error merging database info for {search_id}: {e}")
+            _state.logger.error(f"Error merging database info for {search_id}: {e}")
 
     if not res["iconUrl"] and not search_id.endswith("000"):
         possible_base_ids = [search_id[:-3] + "000"]
@@ -152,7 +147,7 @@ def get_game_info(title_id, silent=False):
             name = name.replace(r, "")
         res["name"] = name.strip()
 
-    _game_info_cache[search_id] = res
+    _state._game_info_cache[search_id] = res
     return res
 
 
@@ -165,14 +160,12 @@ def get_game_latest_version(all_existing_versions):
 
 
 def get_all_existing_versions(titleid):
-    global _versions_db
-
-    if not _titles_db_loaded:
+    if not _state._titles_db_loaded:
         from titles.titledb_cache import load_titledb
         load_titledb()
 
-    if _versions_db is None:
-        logger.warning("versions_db is not loaded.")
+    if _state._versions_db is None:
+        _state.logger.warning("versions_db is not loaded.")
         return []
 
     if not titleid:
@@ -181,8 +174,8 @@ def get_all_existing_versions(titleid):
     titleid = titleid.lower()
     versions_dict = {}
 
-    if _versions_db and titleid in _versions_db:
-        for v_str, release_date in _versions_db[titleid].items():
+    if _state._versions_db and titleid in _state._versions_db:
+        for v_str, release_date in _state._versions_db[titleid].items():
             try:
                 versions_dict[int(v_str)] = release_date
             except (ValueError, TypeError):
@@ -204,43 +197,40 @@ def get_all_existing_versions(titleid):
 
 
 def get_all_app_existing_versions(app_id):
-    global _cnmts_db
-    if _cnmts_db is None:
-        logger.warning("cnmts_db is not loaded. Call load_titledb first.")
+    if _state._cnmts_db is None:
+        _state.logger.warning("cnmts_db is not loaded. Call load_titledb first.")
         return None
 
     if not app_id:
         return None
     app_id = app_id.lower()
-    if app_id in _cnmts_db:
-        versions_from_cnmts_db = _cnmts_db[app_id].keys()
+    if app_id in _state._cnmts_db:
+        versions_from_cnmts_db = _state._cnmts_db[app_id].keys()
         if len(versions_from_cnmts_db):
             return sorted(versions_from_cnmts_db)
         else:
-            logger.warning(f"No keys in cnmts.json for app ID: {app_id.upper()}")
+            _state.logger.warning(f"No keys in cnmts.json for app ID: {app_id.upper()}")
             return None
     else:
         return None
 
 
 def get_app_id_version_from_versions_txt(app_id):
-    global _versions_txt_db
-    if _versions_txt_db is None:
-        logger.error("versions_txt_db is not loaded. Call load_titledb first.")
+    if _state._versions_txt_db is None:
+        _state.logger.error("versions_txt_db is not loaded. Call load_titledb first.")
         return None
 
     if not app_id:
         return None
     app_id = app_id.lower()
-    if app_id in _versions_txt_db:
-        return _versions_txt_db[app_id]
+    if app_id in _state._versions_txt_db:
+        return _state._versions_txt_db[app_id]
     return None
 
 
 def get_all_existing_dlc(title_id):
-    global _cnmts_db, _dlcs_by_base_id
-    if _cnmts_db is None:
-        logger.error("cnmts_db is not loaded. Call load_titledb first.")
+    if _state._cnmts_db is None:
+        _state.logger.error("cnmts_db is not loaded. Call load_titledb first.")
         return []
 
     if not title_id:
@@ -249,10 +239,10 @@ def get_all_existing_dlc(title_id):
     title_id = title_id.lower()
 
     dlcs = []
-    if _dlcs_by_base_id and title_id in _dlcs_by_base_id:
-        dlcs = list(_dlcs_by_base_id[title_id])
+    if _state._dlcs_by_base_id and title_id in _state._dlcs_by_base_id:
+        dlcs = list(_state._dlcs_by_base_id[title_id])
     else:
-        for app_id, versions in _cnmts_db.items():
+        for app_id, versions in _state._cnmts_db.items():
             if isinstance(versions, dict):
                 for version_key, version_description in versions.items():
                     if (
@@ -275,7 +265,7 @@ def get_all_existing_dlc(title_id):
             if app_id_upper not in dlcs:
                 dlcs.append(app_id_upper)
     except Exception as e:
-        logger.warning(f"Failed to load local DLCs for {title_id} from database: {e}")
+        _state.logger.warning(f"Failed to load local DLCs for {title_id} from database: {e}")
 
     filtered_dlcs = []
     for dlc_id in dlcs:
@@ -312,7 +302,7 @@ def get_loaded_titles_file():
 
         return ", ".join(sorted(source_names))
     except Exception as e:
-        logger.warning(f"Error getting loaded titles file: {e}")
+        _state.logger.warning(f"Error getting loaded titles file: {e}")
         return "Database (Error)"
 
 
@@ -327,19 +317,18 @@ def get_custom_title_info(title_id):
         custom_db = robust_json_load(custom_path) or {}
         return custom_db.get(str(title_id).upper())
     except Exception as e:
-        logger.debug(f"Error in get_custom_title_info: {e}")
+        _state.logger.debug(f"Error in get_custom_title_info: {e}")
         return None
 
 
 def search_titledb_by_name(query):
-    global _titles_db
-    if not _titles_db:
+    if not _state._titles_db:
         return []
 
     results = []
     query = query.lower()
 
-    for tid, data in _titles_db.items():
+    for tid, data in _state._titles_db.items():
         if not isinstance(data, dict):
             continue
 
@@ -366,13 +355,11 @@ def save_custom_title_info(title_id, data):
     from db import db, Titles
     import os
 
-    global _titles_db
-
     if not title_id or not data:
         return False, "Missing TitleID or Data"
 
     title_id = str(title_id).upper()
-    logger.info(f"Saving custom info for {title_id}...")
+    _state.logger.info(f"Saving custom info for {title_id}...")
 
     try:
         db_title = Titles.query.filter_by(title_id=title_id).first()
@@ -412,9 +399,9 @@ def save_custom_title_info(title_id, data):
 
         db_title.is_custom = True
         db.session.commit()
-        logger.info(f"Saved custom info to database for {title_id}")
+        _state.logger.info(f"Saved custom info to database for {title_id}")
     except Exception as e:
-        logger.error(f"Error saving custom info to DB for {title_id}: {e}")
+        _state.logger.error(f"Error saving custom info to DB for {title_id}: {e}")
         db.session.rollback()
 
     try:
@@ -439,42 +426,40 @@ def save_custom_title_info(title_id, data):
 
         safe_write_json(custom_path, custom_db, indent=4)
 
-        if _titles_db is not None:
-            if title_id in _titles_db:
-                if isinstance(_titles_db[title_id], dict):
-                    _titles_db[title_id].update(save_data)
+        if _state._titles_db is not None:
+            if title_id in _state._titles_db:
+                if isinstance(_state._titles_db[title_id], dict):
+                    _state._titles_db[title_id].update(save_data)
             else:
-                _titles_db[title_id] = save_data
+                _state._titles_db[title_id] = save_data
 
         return True, None
     except Exception as e:
-        logger.error(f"Error saving custom.json for {title_id}: {e}")
+        _state.logger.error(f"Error saving custom.json for {title_id}: {e}")
         return False, str(e)
 
 
 def sync_titles_to_db(force=False):
     from db import db, Titles
 
-    global _titles_db
-
-    if not _titles_db:
-        logger.warning("sync_titles_to_db: TitleDB not loaded, skipping sync.")
+    if not _state._titles_db:
+        _state.logger.warning("sync_titles_to_db: TitleDB not loaded, skipping sync.")
         return
 
     from flask import has_app_context
 
     if not has_app_context():
-        logger.warning("sync_titles_to_db: No app context, skipping sync.")
+        _state.logger.warning("sync_titles_to_db: No app context, skipping sync.")
         return
 
-    logger.info("Syncing TitleDB metadata to database...")
+    _state.logger.info("Syncing TitleDB metadata to database...")
 
     try:
         try:
             db_titles = Titles.query.all()
         except Exception as e:
             if "no such column" in str(e).lower():
-                logger.warning(
+                _state.logger.warning(
                     "sync_titles_to_db: Database schema is outdated (missing columns). Skipping sync until next restart."
                 )
                 return
@@ -484,8 +469,8 @@ def sync_titles_to_db(force=False):
 
         updated_count = 0
         for tid, title in db_titles_map.items():
-            if tid in _titles_db:
-                tdb_info = _titles_db[tid]
+            if tid in _state._titles_db:
+                tdb_info = _state._titles_db[tid]
 
                 if not isinstance(tdb_info, dict):
                     continue
@@ -529,7 +514,7 @@ def sync_titles_to_db(force=False):
                     yield_to_event_loop()
 
         db.session.commit()
-        logger.info(f"Sync complete. Updated {updated_count} titles in database metadata tracker.")
+        _state.logger.info(f"Sync complete. Updated {updated_count} titles in database metadata tracker.")
     except Exception as e:
-        logger.error(f"Error during TitleDB-to-DB sync: {e}")
+        _state.logger.error(f"Error during TitleDB-to-DB sync: {e}")
         db.session.rollback()

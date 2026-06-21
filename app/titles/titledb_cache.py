@@ -8,10 +8,8 @@ try:
 except ImportError:
     gevent = None
 
-from titles._state import (
-    logger, _cnmts_db, _titles_db, _versions_db, _titles_db_loaded,  # noqa: F401 - usado via global em funcoes
-    _dlc_map, _dlcs_by_base_id, _titledb_cache_timestamp, _titledb_cache_ttl, identification_in_progress_count,
-)
+import titles._state as _state
+from titles._state import logger
 from titles.utils import robust_json_load
 from constants import TITLEDB_DIR, CONFIG_DIR
 from utils import now_utc
@@ -19,34 +17,30 @@ from settings import load_settings
 
 
 def get_titles_count():
-    global _titles_db
-    return len(_titles_db) if _titles_db else 0
+    return len(_state._titles_db) if _state._titles_db else 0
 
 
 def _enrich_dlc_map_from_titles():
-    global _titles_db, _dlc_map, _dlcs_by_base_id
-    if not _titles_db:
+    if not _state._titles_db:
         return
     inferred = 0
-    for tid_upper, tdata in list(_titles_db.items()):
+    for tid_upper, tdata in list(_state._titles_db.items()):
         if len(tid_upper) == 16 and not tid_upper.endswith("000") and not tid_upper.endswith("800"):
             base_candidate = tid_upper[:12] + "8000"
-            if base_candidate in _titles_db and base_candidate != tid_upper:
-                if tid_upper not in _dlc_map:
-                    _dlc_map[tid_upper] = base_candidate
+            if base_candidate in _state._titles_db and base_candidate != tid_upper:
+                if tid_upper not in _state._dlc_map:
+                    _state._dlc_map[tid_upper] = base_candidate
                 base_lower = base_candidate.lower()
-                if base_lower not in _dlcs_by_base_id:
-                    _dlcs_by_base_id[base_lower] = []
-                if tid_upper not in _dlcs_by_base_id[base_lower]:
-                    _dlcs_by_base_id[base_lower].append(tid_upper)
+                if base_lower not in _state._dlcs_by_base_id:
+                    _state._dlcs_by_base_id[base_lower] = []
+                if tid_upper not in _state._dlcs_by_base_id[base_lower]:
+                    _state._dlcs_by_base_id[base_lower].append(tid_upper)
                     inferred += 1
     if inferred:
         logger.info(f"  Inferred {inferred} additional DLC mappings from title ID patterns")
 
 
 def load_titledb_from_db():
-    global _titles_db, _versions_db, _cnmts_db, _dlc_map, _dlcs_by_base_id, _titledb_cache_timestamp, _titles_db_loaded
-
     logger.info("Loading TitleDB from PostgreSQL database...")
 
     try:
@@ -64,23 +58,23 @@ def load_titledb_from_db():
         logger.info(f"Loading TitleDB from database cache ({cache_count} titles)...")
         cached_titles = TitleDBCache.query.all()
 
-        _titles_db = {}
+        _state._titles_db = {}
         for entry in cached_titles:
             if entry.title_id:
-                _titles_db[entry.title_id.upper()] = entry.data
+                _state._titles_db[entry.title_id.upper()] = entry.data
 
         cached_versions = TitleDBVersions.query.all()
-        _versions_db = {}
+        _state._versions_db = {}
         for entry in cached_versions:
             if entry.title_id:
                 tid = entry.title_id.lower()
-                if tid not in _versions_db:
-                    _versions_db[tid] = {}
-                _versions_db[tid][str(entry.version)] = entry.release_date
+                if tid not in _state._versions_db:
+                    _state._versions_db[tid] = {}
+                _state._versions_db[tid][str(entry.version)] = entry.release_date
 
-        _cnmts_db = {}
-        _dlc_map = {}
-        _dlcs_by_base_id = {}
+        _state._cnmts_db = {}
+        _state._dlc_map = {}
+        _state._dlcs_by_base_id = {}
         cached_dlcs = TitleDBDLCs.query.all()
         for entry in cached_dlcs:
             if not entry.base_title_id or not entry.dlc_app_id:
@@ -89,44 +83,44 @@ def load_titledb_from_db():
             dlc_app_id = entry.dlc_app_id.upper()
 
             dlc_id_lower = dlc_app_id.lower()
-            if dlc_id_lower not in _cnmts_db:
-                _cnmts_db[dlc_id_lower] = {}
-            _cnmts_db[dlc_id_lower]["0"] = {
+            if dlc_id_lower not in _state._cnmts_db:
+                _state._cnmts_db[dlc_id_lower] = {}
+            _state._cnmts_db[dlc_id_lower]["0"] = {
                 "titleType": 130,
                 "otherApplicationId": base_tid,
             }
-            _dlc_map[dlc_app_id] = base_tid
+            _state._dlc_map[dlc_app_id] = base_tid
 
-            if base_tid not in _dlcs_by_base_id:
-                _dlcs_by_base_id[base_tid] = []
-            if dlc_app_id not in _dlcs_by_base_id[base_tid]:
-                _dlcs_by_base_id[base_tid].append(dlc_app_id)
+            if base_tid not in _state._dlcs_by_base_id:
+                _state._dlcs_by_base_id[base_tid] = []
+            if dlc_app_id not in _state._dlcs_by_base_id[base_tid]:
+                _state._dlcs_by_base_id[base_tid].append(dlc_app_id)
 
-        for tid, data in _titles_db.items():
+        for tid, data in _state._titles_db.items():
             if isinstance(data, dict) and data.get("parentId"):
                 base_tid = str(data["parentId"]).lower()
                 dlc_app_id = tid.upper()
 
                 dlc_id_lower = dlc_app_id.lower()
-                if dlc_id_lower not in _cnmts_db:
-                    _cnmts_db[dlc_id_lower] = {}
-                    _cnmts_db[dlc_id_lower]["0"] = {
+                if dlc_id_lower not in _state._cnmts_db:
+                    _state._cnmts_db[dlc_id_lower] = {}
+                    _state._cnmts_db[dlc_id_lower]["0"] = {
                         "titleType": 130,
                         "otherApplicationId": base_tid,
                     }
 
-                if dlc_app_id not in _dlc_map:
-                    _dlc_map[dlc_app_id] = base_tid
+                if dlc_app_id not in _state._dlc_map:
+                    _state._dlc_map[dlc_app_id] = base_tid
 
-                if base_tid not in _dlcs_by_base_id:
-                    _dlcs_by_base_id[base_tid] = []
-                if dlc_app_id not in _dlcs_by_base_id[base_tid]:
-                    _dlcs_by_base_id[base_tid].append(dlc_app_id)
+                if base_tid not in _state._dlcs_by_base_id:
+                    _state._dlcs_by_base_id[base_tid] = []
+                if dlc_app_id not in _state._dlcs_by_base_id[base_tid]:
+                    _state._dlcs_by_base_id[base_tid].append(dlc_app_id)
 
-        _titles_db_loaded = True
-        _titledb_cache_timestamp = time.time()
+        _state._titles_db_loaded = True
+        _state._titledb_cache_timestamp = time.time()
         logger.info(
-            f"TitleDB loaded from DB cache: {len(_titles_db)} titles, {len(_versions_db)} versions, {len(cached_dlcs)} DLCs"
+            f"TitleDB loaded from DB cache: {len(_state._titles_db)} titles, {len(_state._versions_db)} versions, {len(cached_dlcs)} DLCs"
         )
         return True
 
@@ -136,8 +130,6 @@ def load_titledb_from_db():
 
 
 def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
-    global _titles_db, _versions_db, _cnmts_db, _titledb_cache_timestamp
-
     try:
         from flask import has_app_context
 
@@ -176,8 +168,8 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
         pending_entries = []
         BATCH_SIZE = 500
 
-        logger.info(f"Starting to process {len(_titles_db)} titles in batches of {BATCH_SIZE}...")
-        for i, (tid, data) in enumerate(_titles_db.items()):
+        logger.info(f"Starting to process {len(_state._titles_db)} titles in batches of {BATCH_SIZE}...")
+        for i, (tid, data) in enumerate(_state._titles_db.items()):
             if gevent and i % 50 == 0:
                 gevent.sleep(0.001)
 
@@ -240,8 +232,8 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                 pending_entries = []
 
                 if progress_callback:
-                    prog = 81 + int((i / len(_titles_db)) * 10)
-                    progress_callback(f"Salvando títulos no cache ({i}/{len(_titles_db)})...", prog)
+                    prog = 81 + int((i / len(_state._titles_db)) * 10)
+                    progress_callback(f"Salvando títulos no cache ({i}/{len(_state._titles_db)})...", prog)
 
                 if gevent:
                     gevent.sleep(0.01)
@@ -293,7 +285,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
 
         seen_versions = set()
 
-        version_items = list((_versions_db or {}).items())
+        version_items = list((_state._versions_db or {}).items())
         for i, (tid, versions) in enumerate(version_items):
             if gevent and i % 50 == 0:
                 gevent.sleep(0.001)
@@ -347,7 +339,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
         dlc_entries = []
         seen_dlcs = set()
 
-        cnmts_items = list((_cnmts_db or {}).items())
+        cnmts_items = list((_state._cnmts_db or {}).items())
         for i, (base_tid, dlcs) in enumerate(cnmts_items):
             if gevent and i % 50 == 0:
                 gevent.sleep(0.001)
@@ -396,7 +388,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
         version_count = len(seen_versions)
         dlc_count = len(seen_dlcs)
 
-        _titledb_cache_timestamp = time.time()
+        _state._titledb_cache_timestamp = time.time()
         logger.info(f"TitleDB saved to DB cache: {title_count} titles, {version_count} versions, {dlc_count} DLCs")
 
         return True
@@ -418,28 +410,22 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
 
 
 def is_db_cache_valid():
-    global _titledb_cache_timestamp, _titledb_cache_ttl
-
-    if _titledb_cache_timestamp is None:
+    if _state._titledb_cache_timestamp is None:
         return False
 
-    age = time.time() - _titledb_cache_timestamp
-    return age < _titledb_cache_ttl
+    age = time.time() - _state._titledb_cache_timestamp
+    return age < _state._titledb_cache_ttl
 
 
 def get_titledb_cache_timestamp():
-    global _titledb_cache_timestamp
-    return _titledb_cache_timestamp
+    return _state._titledb_cache_timestamp
 
 
 def set_titledb_cache_timestamp(timestamp):
-    global _titledb_cache_timestamp
-    _titledb_cache_timestamp = timestamp
+    _state._titledb_cache_timestamp = timestamp
 
 
 def load_titledb_from_disk_fallback():
-    global _titles_db, _versions_db, _cnmts_db, _dlc_map, _dlcs_by_base_id, _titledb_cache_timestamp
-
     logger.info("TitleDB cache empty. Attempting fallback load from JSON files on disk...")
 
     try:
@@ -468,7 +454,7 @@ def load_titledb_from_disk_fallback():
                 if len(raw_tid) < 16 and isinstance(tdata, dict) and tdata.get("id"):
                     actual_tid = tdata["id"]
                 if actual_tid:
-                    _titles_db[actual_tid.upper()] = tdata
+                    _state._titles_db[actual_tid.upper()] = tdata
                     loaded += 1
             logger.info(f"  Loaded {loaded} titles from {filename}")
         except Exception as e:
@@ -481,10 +467,10 @@ def load_titledb_from_disk_fallback():
             if data and isinstance(data, dict):
                 for tid, v_dict in data.items():
                     tid_lower = tid.lower()
-                    if tid_lower not in _versions_db:
-                        _versions_db[tid_lower] = {}
+                    if tid_lower not in _state._versions_db:
+                        _state._versions_db[tid_lower] = {}
                     for v_str, rdate in v_dict.items():
-                        _versions_db[tid_lower][str(v_str)] = str(rdate) if rdate else ""
+                        _state._versions_db[tid_lower][str(v_str)] = str(rdate) if rdate else ""
                 logger.info(f"  Loaded {len(data)} version entries from versions.json")
         except Exception as e:
             logger.warning(f"  Failed to load versions.json: {e}")
@@ -500,22 +486,22 @@ def load_titledb_from_disk_fallback():
                         if info.get("titleType") == 130 and info.get("otherApplicationId"):
                             base_tid = info["otherApplicationId"]
                             dlc_id = tid.upper()
-                            _dlc_map[dlc_id] = base_tid
+                            _state._dlc_map[dlc_id] = base_tid
                             base_lower = base_tid.lower()
-                            if base_lower not in _dlcs_by_base_id:
-                                _dlcs_by_base_id[base_lower] = []
-                            if dlc_id not in _dlcs_by_base_id[base_lower]:
-                                _dlcs_by_base_id[base_lower].append(dlc_id)
+                            if base_lower not in _state._dlcs_by_base_id:
+                                _state._dlcs_by_base_id[base_lower] = []
+                            if dlc_id not in _state._dlcs_by_base_id[base_lower]:
+                                _state._dlcs_by_base_id[base_lower].append(dlc_id)
                             dlc_count += 1
                 logger.info(f"  Loaded {dlc_count} DLC mappings from cnmts.json")
         except Exception as e:
             logger.warning(f"  Failed to load cnmts.json: {e}")
 
-    if _titles_db:
+    if _state._titles_db:
         _enrich_dlc_map_from_titles()
-        _titledb_cache_timestamp = time.time()
+        _state._titledb_cache_timestamp = time.time()
         logger.info(
-            f"TitleDB fallback loaded: {len(_titles_db)} titles, {len(_versions_db or {})} versions, {len(_dlc_map)} DLCs from disk"
+            f"TitleDB fallback loaded: {len(_state._titles_db)} titles, {len(_state._versions_db or {})} versions, {len(_state._dlc_map)} DLCs from disk"
         )
         return True
 
@@ -524,34 +510,25 @@ def load_titledb_from_disk_fallback():
 
 
 def load_titledb(force=False, progress_callback=None):
-    global _titles_db_loaded
-    global _titledb_cache_timestamp
-    global _titledb_cache_ttl
-    global _titles_db
-    global _versions_db
-    global _cnmts_db
-    global _dlc_map
-    global _dlcs_by_base_id
-
     current_time = time.time()
     cache_expired = False
-    if _titledb_cache_timestamp is not None:
+    if _state._titledb_cache_timestamp is not None:
         try:
             app_settings = load_settings()
-            _titledb_cache_ttl = app_settings.get("titledb", {}).get("cache_ttl", 3600)
+            _state._titledb_cache_ttl = app_settings.get("titledb", {}).get("cache_ttl", 3600)
         except Exception:
             pass
 
-        elapsed = current_time - _titledb_cache_timestamp
-        if elapsed > _titledb_cache_ttl:
+        elapsed = current_time - _state._titledb_cache_timestamp
+        if elapsed > _state._titledb_cache_ttl:
             cache_expired = True
             logger.info("TitleDB cache expired. Reloading...")
 
     if force or cache_expired:
-        _titles_db_loaded = False
-        _titledb_cache_timestamp = None
+        _state._titles_db_loaded = False
+        _state._titledb_cache_timestamp = None
 
-    if _titles_db_loaded:
+    if _state._titles_db_loaded:
         return
 
     logger.info("Loading TitleDB from database...")
@@ -559,7 +536,7 @@ def load_titledb(force=False, progress_callback=None):
         progress_callback("Carregando banco de dados de títulos...", 10)
 
     if load_titledb_from_db():
-        _titles_db_loaded = True
+        _state._titles_db_loaded = True
         logger.info("TitleDB loaded successfully from DB.")
 
         _enrich_dlc_map_from_titles()
@@ -573,39 +550,27 @@ def load_titledb(force=False, progress_callback=None):
         logger.warning("Failed to load TitleDB from database (or empty).")
         if not load_titledb_from_disk_fallback():
             logger.warning("TitleDB disk fallback also failed. Titles will remain unnamed.")
-            if _titles_db is None:
-                _titles_db = {}
-        if _versions_db is None:
-            _versions_db = {}
-        if _cnmts_db is None:
-            _cnmts_db = {}
-        if _dlc_map is None:
-            _dlc_map = {}
-        _titles_db_loaded = True
+            if _state._titles_db is None:
+                _state._titles_db = {}
+        if _state._versions_db is None:
+            _state._versions_db = {}
+        if _state._cnmts_db is None:
+            _state._cnmts_db = {}
+        if _state._dlc_map is None:
+            _state._dlc_map = {}
+        _state._titles_db_loaded = True
 
 
 def unload_titledb():
-    global _cnmts_db
-    global _titles_db
-    global _versions_db
-    global _versions_txt_db
-    global identification_in_progress_count
-    global _titles_db_loaded
-    global _titledb_cache_timestamp
-
-    if identification_in_progress_count:
+    if _state.identification_in_progress_count:
         logger.debug("Identification still in progress, not unloading TitleDB.")
         return
 
     logger.info("Unloading TitleDBs from memory...")
-    global _cnmts_db
-    global _titles_db
-    global _versions_db
-    global _game_info_cache
-    _cnmts_db = None
-    _titles_db = None
-    _versions_db = None
-    _titles_db_loaded = False
-    _titledb_cache_timestamp = None
-    _game_info_cache = {}
+    _state._cnmts_db = None
+    _state._titles_db = None
+    _state._versions_db = None
+    _state._titles_db_loaded = False
+    _state._titledb_cache_timestamp = None
+    _state._game_info_cache = {}
     logger.info("TitleDBs unloaded.")

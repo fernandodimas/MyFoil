@@ -2,9 +2,7 @@ import os
 from pathlib import Path
 from binascii import hexlify as hx
 
-from titles._state import (
-    logger, _cnmts_db, _dlc_map, _titles_db,
-)
+import titles._state as _state
 from titles.utils import get_app_id_from_filename, get_version_from_filename
 from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC
 from nstools.Fs import Pfs0, Nca, Type, factory
@@ -24,11 +22,10 @@ def get_title_id_from_app_id(app_id, app_type):
         if (app_type == APP_TYPE_DLC or app_type == APP_TYPE_UPD) and (val % 2 != 0):
             even_char = hex(val - 1)[2:].upper()
             even_id = prefix[:-1] + even_char + "000"
-            global _titles_db
-            if _titles_db:
-                if std_id.lower() in _titles_db:
+            if _state._titles_db:
+                if std_id.lower() in _state._titles_db:
                     return std_id
-                if even_id.lower() in _titles_db:
+                if even_id.lower() in _state._titles_db:
                     return even_id
             return even_id
     except (ValueError, TypeError):
@@ -40,8 +37,7 @@ def get_title_id_from_app_id(app_id, app_type):
 def identify_appId(app_id):
     app_id = app_id.lower()
 
-    global _cnmts_db, _dlc_map
-    if _cnmts_db is None:
+    if _state._cnmts_db is None:
         if app_id.endswith("000"):
             return app_id.upper(), APP_TYPE_BASE
         elif app_id.endswith("800"):
@@ -49,10 +45,10 @@ def identify_appId(app_id):
         else:
             return get_title_id_from_app_id(app_id, APP_TYPE_DLC), APP_TYPE_DLC
 
-    if app_id in _cnmts_db:
-        app_id_keys = list(_cnmts_db[app_id].keys())
+    if app_id in _state._cnmts_db:
+        app_id_keys = list(_state._cnmts_db[app_id].keys())
         if len(app_id_keys):
-            app = _cnmts_db[app_id][app_id_keys[-1]]
+            app = _state._cnmts_db[app_id][app_id_keys[-1]]
 
             if app["titleType"] == 128:
                 app_type = APP_TYPE_BASE
@@ -70,7 +66,7 @@ def identify_appId(app_id):
                 else:
                     title_id = get_title_id_from_app_id(app_id, app_type)
         else:
-            logger.warning(f"{app_id} has no keys in cnmts_db, fallback to default identification.")
+            _state.logger.warning(f"{app_id} has no keys in cnmts_db, fallback to default identification.")
             if app_id.endswith("000"):
                 app_type = APP_TYPE_BASE
                 title_id = app_id
@@ -81,13 +77,13 @@ def identify_appId(app_id):
                 app_type = APP_TYPE_DLC
                 title_id = get_title_id_from_app_id(app_id, app_type)
 
-    elif _dlc_map and app_id.upper() in _dlc_map:
-        base_id = _dlc_map[app_id.upper()]
+    elif _state._dlc_map and app_id.upper() in _state._dlc_map:
+        base_id = _state._dlc_map[app_id.upper()]
         title_id = base_id.upper()
         app_type = APP_TYPE_DLC
 
     else:
-        logger.debug(f"{app_id} not in cnmts_db, fallback to default identification.")
+        _state.logger.debug(f"{app_id} not in cnmts_db, fallback to default identification.")
         if app_id.endswith("000"):
             app_type = APP_TYPE_BASE
             title_id = app_id
@@ -162,8 +158,8 @@ def identify_file_from_cnmt(filepath):
 def identify_file(filepath):
     filename = os.path.split(filepath)[-1]
 
-    db_size = len(_titles_db) if _titles_db else 0
-    logger.info(f"Identifying '{filename}'... (Keys loaded: {Keys.keys_loaded}, TitleDB: {db_size} titles)")
+    db_size = len(_state._titles_db) if _state._titles_db else 0
+    _state.logger.info(f"Identifying '{filename}'... (Keys loaded: {Keys.keys_loaded}, TitleDB: {db_size} titles)")
 
     contents = []
     success = True
@@ -171,14 +167,14 @@ def identify_file(filepath):
     if Keys.keys_loaded:
         identification = "cnmt"
         try:
-            logger.debug(f"Attempting CNMT identification for {filename}")
+            _state.logger.debug(f"Attempting CNMT identification for {filename}")
             cnmt_contents = identify_file_from_cnmt(filepath)
             if not cnmt_contents:
-                logger.debug(f"No CNMT content found for {filename}")
+                _state.logger.debug(f"No CNMT content found for {filename}")
                 error = "No content found in NCA containers."
                 success = False
             else:
-                logger.debug(f"CNMT found for {filename}: {cnmt_contents}")
+                _state.logger.debug(f"CNMT found for {filename}: {cnmt_contents}")
                 for content in cnmt_contents:
                     app_type, app_id, version = content
                     if app_type != APP_TYPE_BASE:
@@ -187,7 +183,7 @@ def identify_file(filepath):
                         title_id = app_id
                     contents.append((title_id, app_type, app_id, version))
         except Exception as e:
-            logger.warning(
+            _state.logger.warning(
                 f"Could not identify file {filepath} from metadata (this is common if keys are missing): {e}"
             )
             error = str(e)
@@ -216,10 +212,10 @@ def identify_file(filepath):
             ]
 
     if not contents and not success:
-        logger.debug(f"Falling back to filename identification for {filename}")
+        _state.logger.debug(f"Falling back to filename identification for {filename}")
         app_id, title_id, app_type, version, f_error = identify_file_from_filename(filename)
         if title_id:
-            logger.debug(f"Filename identification success for {filename}: {title_id}")
+            _state.logger.debug(f"Filename identification success for {filename}: {title_id}")
             contents = [
                 {
                     "title_id": title_id,

@@ -8,6 +8,7 @@ from db import (
     logger,
     get_libraries,
     get_library_id,
+    get_library_path,
     add_library,
     get_all_titles,
     set_library_scan_time,
@@ -437,7 +438,17 @@ def identify_single_file(filepath):
 
 
 def identify_library_files(library):
-    library_id, library_path = library
+    if isinstance(library, (list, tuple)):
+        library_id, library_path = library
+    elif isinstance(library, int):
+        library_id = library
+        library_path = get_library_path(library_id)
+    elif isinstance(library, str) and library.isdigit():
+        library_id = int(library)
+        library_path = get_library_path(library_id)
+    else:
+        library_path = library
+        library_id = get_library_id(library_path)
 
     if not library_id:
         logger.warning(f"Skipping identification for library with no ID: {library_path}")
