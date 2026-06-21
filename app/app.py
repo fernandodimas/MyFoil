@@ -126,13 +126,9 @@ class SafeSocketIO(SocketIO):
 
 
 # Initialize SocketIO with production-ready configuration
-# - cors_allowed_origins="*": Allow connections from any domain (safe for this use case)
-# - async_mode='gevent': Use gevent for async operations (already monkey-patched)
-# - logger=False, engineio_logger=False: Disable detailed logging in production
-# - ping_timeout=120, ping_interval=20: Longer timeouts and shorter intervals for stability behind proxies
-# - manage_session=True: Keep Flask session integration
+# cors_allowed_origins defaults to localhost; override via SOCKETIO_CORS_ORIGINS env var
 socketio = SafeSocketIO(
-    cors_allowed_origins="*",
+    cors_allowed_origins=os.environ.get("SOCKETIO_CORS_ORIGINS", "http://localhost:8465"),
     async_mode="gevent",
     logger=False,
     engineio_logger=False,

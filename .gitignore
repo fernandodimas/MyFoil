@@ -1,43 +1,39 @@
-__pycache__
-config
-data
 
+!bin/
+!scripts/
+# Allow bin/ and scripts/ helper execution scripts to be committed when necessary
+# Development scripts
+# Grep output
 # Python cache
-*.pyc
-*.py[cod]
-*$py.class
-
+# TitleDB JSON
+# pyenv
 # venv
+*$py.class
+*.backup
+*.db
+*.dump
+*.py[cod]
+*.pyc
+*.sql
+.coverage
+.python-version*.db
+/Scripts
 /bin
-/venv
 /include
 /lib
 /lib64
 /pyvenv.cfg
 /share
-/Scripts
-
-# pyenv
-.python-version*.db
+/venv
+__pycache__
 app/config/*.db
-*.db
-*.sql
-*.dump
-*.backup
-
-# TitleDB JSON
-titles.json
-titles.BR.pt.json
-
-# Development scripts
-reproduce_issue.py
 check_db.py
+config
+data
 debug_watcher.py
 get_library_path.py
-
-# Allow bin/ and scripts/ helper execution scripts to be committed when necessary
-!bin/
-!scripts/
-
-# Grep output
 grep_results.txt
+htmlcov/
+reproduce_issue.py
+titles.BR.pt.json
+titles.json
