@@ -26,4 +26,8 @@ class Wishlist(db.Model):
     ignore_dlc = db.Column(db.Boolean, default=False)
     ignore_update = db.Column(db.Boolean, default=False)
 
+    __table_args__ = (
+        db.Index("idx_wishlist_user_id", "user_id"),
+    )
+
 

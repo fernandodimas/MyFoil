@@ -8,6 +8,14 @@ try:
 except ImportError:
     gevent = None
 
+
+def _safe_sleep(seconds):
+    """Sleep using gevent if available, otherwise time.sleep"""
+    if gevent:
+        gevent.sleep(seconds)
+    else:
+        time.sleep(seconds)
+
 import titles._state as _state
 from titles._state import logger
 from titles.utils import robust_json_load
@@ -276,7 +284,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                                 f"DB locked during bulk save (attempt {attempt + 1}/{max_retries}). Retrying in {wait_time}s..."
                             )
                             db.session.rollback()
-                            time.sleep(wait_time)
+                            _safe_sleep(wait_time)
                             continue
                         raise
                     except Exception as e:
@@ -326,7 +334,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                             f"DB locked during final bulk save (attempt {attempt + 1}/{max_retries}). Retrying in {wait_time}s..."
                         )
                         db.session.rollback()
-                        time.sleep(wait_time)
+                        _safe_sleep(wait_time)
                         continue
                     raise
                 except Exception as e:
@@ -366,7 +374,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                                 if "locked" in str(e).lower() and attempt < max_retries - 1:
                                     logger.warning(f"DB locked during versions bulk save (attempt {attempt + 1})...")
                                     db.session.rollback()
-                                    time.sleep(retry_delay)
+                                    _safe_sleep(retry_delay)
                                     continue
                                 raise
                         version_entries = []
@@ -385,7 +393,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                     if "locked" in str(e).lower() and attempt < max_retries - 1:
                         logger.warning(f"DB locked during final versions bulk save (attempt {attempt + 1})...")
                         db.session.rollback()
-                        time.sleep(retry_delay)
+                        _safe_sleep(retry_delay)
                         continue
                     raise
         version_entries = []
@@ -417,7 +425,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                             if "locked" in str(e).lower() and attempt < max_retries - 1:
                                 logger.warning(f"DB locked during DLC bulk save (attempt {attempt + 1})...")
                                 db.session.rollback()
-                                time.sleep(retry_delay)
+                                _safe_sleep(retry_delay)
                                 continue
                             raise
                     dlc_entries = []
@@ -434,7 +442,7 @@ def save_titledb_to_db(source_files, app_context=None, progress_callback=None):
                     if "locked" in str(e).lower() and attempt < max_retries - 1:
                         logger.warning(f"DB locked during final DLC bulk save (attempt {attempt + 1})...")
                         db.session.rollback()
-                        time.sleep(retry_delay)
+                        _safe_sleep(retry_delay)
                         continue
                     raise
             dlc_entries = []
@@ -624,6 +632,7 @@ def unload_titledb():
     _state._cnmts_db = None
     _state._titles_db = None
     _state._versions_db = None
+    _state._dlcs_by_base_id = {}
     _state._titles_db_loaded = False
     _state._titledb_cache_timestamp = None
     _state._game_info_cache = {}

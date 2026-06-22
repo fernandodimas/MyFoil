@@ -48,22 +48,26 @@ structlog.configure(
 logger = structlog.get_logger("main")
 
 
+_flask_app = None
+
+
 def create_app_context():
-    """Create a minimal app context for celery tasks"""
+    """Create a minimal app context for celery tasks (singleton)"""
+    global _flask_app
+    if _flask_app is not None:
+        return _flask_app
+
     app = Flask(__name__)
-    # We need to reach constants for DB path
     from constants import MYFOIL_DB
 
     app.config["SQLALCHEMY_DATABASE_URI"] = MYFOIL_DB
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     db.init_app(app)
 
-    # Initialize job tracker for worker
     from job_tracker import job_tracker
-
-    # Set socket emitter for notifications
     job_tracker.set_emitter(get_socketio_emitter())
 
+    _flask_app = app
     return app
 
 

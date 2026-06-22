@@ -440,11 +440,20 @@ def identify_single_file(filepath):
         return True
     except Exception as e:
         logger.error(f"Error identifying file {filepath}: {e}")
-        file_obj.identified = False
-        file_obj.identification_error = str(e)
-        file_obj.last_attempt = now_utc()
-        db.session.rollback()
-        db.session.commit()
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        try:
+            file_obj.identified = False
+            file_obj.identification_error = str(e)
+            file_obj.last_attempt = now_utc()
+            db.session.commit()
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
         return False
 
 

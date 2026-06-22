@@ -77,8 +77,18 @@ def compute_apps_hash():
 
     for meta in all_metadata:
         hash_md5.update(str(meta.title_id).encode())
+        if meta.description:
+            hash_md5.update(str(meta.description)[:200].encode())
         if meta.rating is not None:
             hash_md5.update(str(meta.rating).encode())
+        if meta.genres:
+            hash_md5.update(str(meta.genres).encode())
+        if meta.screenshots:
+            hash_md5.update(str(len(meta.screenshots)).encode())
+
+    from db import Files
+    file_count = db.session.query(Files).filter(Files.identified == True).count()
+    hash_md5.update(str(file_count).encode())
 
     return hash_md5.hexdigest()
 

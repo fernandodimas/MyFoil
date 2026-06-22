@@ -40,4 +40,8 @@ class SystemJob(db.Model):
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
         }
 
+    __table_args__ = (
+        db.Index("idx_systemjob_type_status", "job_type", "status"),
+    )
+
 

@@ -31,6 +31,8 @@ class Files(db.Model):
         db.Index("idx_files_library_identified", "library_id", "identified"),
         # Index for filepath lookups (helps with joins and lookups)
         db.Index("ix_files_filepath", "filepath"),
+        # Index for folder-based queries (file explorer, cleanup)
+        db.Index("idx_files_folder", "folder"),
     )
 
 

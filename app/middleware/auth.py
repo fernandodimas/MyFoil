@@ -113,13 +113,12 @@ def basic_auth(request):
     user = User.query.filter_by(user=username).first()
     
     if user:
-        # Support both hashed and plain text (for very old legacy migrations, though MyFoil uses hash)
         password_ok = False
         if user.password.startswith(('pbkdf2:sha256:', 'scrypt:')):
             password_ok = check_password_hash(user.password, password)
         else:
-            # Fallback for plain text if any remains
-            password_ok = (user.password == password)
+            import hmac
+            password_ok = hmac.compare_digest(user.password, password)
             
         if password_ok:
             if not user.has_shop_access():
