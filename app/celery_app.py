@@ -35,6 +35,22 @@ def make_celery(app_name=__name__):
         result_serializer="json",
         timezone="UTC",
         enable_utc=True,
+        # Redis connection resilience
+        broker_transport_options={
+            "socket_keepalive": True,
+            "socket_connect_timeout": 5,
+            "socket_timeout": 5,
+            "retry_on_timeout": True,
+        },
+        result_backend_transport_options={
+            "socket_keepalive": True,
+            "socket_connect_timeout": 5,
+            "socket_timeout": 5,
+            "retry_on_timeout": True,
+        },
+        broker_connection_retry_on_startup=True,
+        broker_connection_max_retries=5,
+        broker_connection_retry_delay=1.0,
     )
 
     # Auto-flush Redis ONLY if explicitly requested via environment variable
