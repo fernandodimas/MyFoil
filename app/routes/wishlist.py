@@ -240,11 +240,13 @@ def export_wishlist():
         )
 
     elif format_type == "html":
+        import html as html_mod
         html = "<html><head><title>Wishlist Export</title></head><body>"
         html += "<h1>Wishlist</h1>"
         html += '<table border="1"><tr><th>Name</th><th>Added Date</th></tr>'
         for item in items:
-            html += f"<tr><td>{item.name or 'Unknown'}</td>"
+            safe_name = html_mod.escape(item.name or 'Unknown')
+            html += f"<tr><td>{safe_name}</td>"
             html += f"<td>{item.added_date}</td></tr>"
         html += "</table></body></html>"
         return Response(html, mimetype="text/html")

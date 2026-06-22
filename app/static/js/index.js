@@ -437,18 +437,6 @@ function renderCardView(items) {
     observeImages();
 }
 
-// Socket listener for library updates
-// Socket listener for library updates
-if (typeof window.socket !== 'undefined' || (typeof socket !== 'undefined') || (window.statusManager && window.statusManager.socket)) {
-    const s = window.socket || socket || window.statusManager.socket;
-    if (s) {
-        s.on('library_updated', () => {
-
-            refreshLibrary();
-        });
-    }
-}
-
 function renderIconView(items) {
     items.forEach((game, index) => {
         const statusDotClass = game.status_color === 'orange' ? 'bg-orange' : (game.status_color === 'green' ? 'bg-green' : 'bg-gray');

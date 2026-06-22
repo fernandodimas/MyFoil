@@ -62,9 +62,10 @@ function showToast(message, type = 'success') {
         <button class="delete" onclick="this.parentElement.remove()"></button>
         <div class="is-flex is-align-items-center gap-2">
             <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
-            <strong>${message}</strong>
+            <strong></strong>
         </div>
     `;
+    notification.querySelector('strong').textContent = message;
 
     container.appendChild(notification);
     setTimeout(() => {

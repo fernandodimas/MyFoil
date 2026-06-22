@@ -36,7 +36,7 @@ def index():
 
         files_list, titles_map = gen_shop_files(db, base_url=base_url)
         shop["files"] = files_list
-        shop["titles"] = titles_map
+        shop["titledb"] = titles_map
 
         if load_settings()["shop"]["encrypt"]:
             return Response(encrypt_shop(shop), mimetype="application/octet-stream")

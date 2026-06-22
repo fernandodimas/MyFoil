@@ -32,7 +32,7 @@ import db as db_module
 from i18n import I18n
 import titles
 import titledb
-from rest_api import init_rest_api
+# from rest_api import init_rest_api  # DISABLED: broken imports - see rest_api.py
 import structlog
 from metrics import init_metrics
 from backup import BackupManager
@@ -460,9 +460,10 @@ def create_app(minimal=False):
     def upcoming_page():
         return render_template("upcoming.html", title="Upcoming")
 
-    api_bp = Blueprint("api", __name__, url_prefix="/api")
-    init_rest_api(api_bp)
-    app.register_blueprint(api_bp)
+    # DISABLED: rest_api.py has broken imports - Flask-RESTX docs disabled until fixed
+    # api_bp = Blueprint("api", __name__, url_prefix="/api")
+    # init_rest_api(api_bp)
+    # app.register_blueprint(api_bp)
 
     init_metrics(app)
 

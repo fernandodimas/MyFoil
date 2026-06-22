@@ -151,6 +151,7 @@ def add_files_to_library(library, files):
                     compressed=file_info.get("compressed", False),
                 )
                 batch.append(new_file)
+                new_files.append(filepath)
 
             if len(batch) >= BATCH_SIZE:
                 db.session.bulk_save_objects(batch)

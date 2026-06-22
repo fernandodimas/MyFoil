@@ -75,9 +75,7 @@ window.confirmAction = function (options) {
 function showGameDetails(id) {
     $.getJSON(`/api/app_info/${id}`, (game) => {
         // normalize possible envelope responses (e.g. { code, success, data })
-        if (typeof unwrap === 'function') {
-            game = unwrap(game) || {};
-        } else if (game && game.data !== undefined) {
+        if (game && game.data !== undefined && game.code !== undefined) {
             game = game.data || {};
         } else {
             game = game || {};
@@ -513,7 +511,7 @@ function showGameDetails(id) {
 }
 
 function showDlcDetails(id) {
-    $.getJSON(`/ api / app_info / ${id} `, (dlc) => {
+    $.getJSON(`/api/app_info/${id}`, (dlc) => {
         $('#dlcModalTitle').text(dlc.name);
         let content = `
             < div class="p-6" >

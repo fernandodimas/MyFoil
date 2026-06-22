@@ -137,7 +137,7 @@ function renderUpcoming() {
 
 function renderCardView(games, container) {
     games.forEach((game, index) => {
-        const genres = (game.genres || []).map(g => `<span class="tag is-dark is-light is-size-7 mr-1 mb-1">${g.name}</span>`).join('');
+        const genres = (game.genres || []).map(g => `<span class="tag is-dark is-light is-size-7 mr-1 mb-1">${escapeHtml(g.name)}</span>`).join('');
 
         const safeNameJs = game.name.replace(/'/g, "\\'");
         const releaseDate = game.release_date || game.release_date_formatted || "";
@@ -147,7 +147,7 @@ function renderCardView(games, container) {
             <div class="card box p-0 shadow-sm border-none bg-glass upcoming-card h-100 is-flex is-flex-direction-column" onclick="showUpcomingDetails(${index})">
                 <div class="card-image is-relative">
                     <figure class="image is-square bg-light-soft">
-                        <img src="${game.cover_url}" alt="${game.name}">
+                        <img src="${escapeHtml(game.cover_url)}" alt="${escapeHtml(game.name)}">
                     </figure>
                     <div class="date-badge">
                         <i class="bi bi-calendar-check mr-1"></i> ${game.release_date_formatted}
@@ -157,7 +157,7 @@ function renderCardView(games, container) {
                     </button>
                 </div>
                 <div class="card-content p-4 is-flex is-flex-direction-column is-flex-grow-1">
-                    <h3 class="title is-6 mb-0 has-text-weight-bold line-clamp-2" style="height: 3em; overflow: hidden;" title="${game.name}">${game.name}</h3>
+                    <h3 class="title is-6 mb-0 has-text-weight-bold line-clamp-2" style="height: 3em; overflow: hidden;" title="${escapeHtml(game.name)}">${escapeHtml(game.name)}</h3>
                 </div>
             </div>
         `;
@@ -170,9 +170,9 @@ function renderIconView(games, container) {
         const card = document.createElement('div');
         card.className = 'grid-item';
         card.innerHTML = `
-            <div class="card shadow-sm border-none bg-glass h-100 upcoming-card" style="border-radius: 12px; overflow: hidden; position: relative;" title="${game.name}" onclick="showUpcomingDetails(${index})">
+            <div class="card shadow-sm border-none bg-glass h-100 upcoming-card" style="border-radius: 12px; overflow: hidden; position: relative;" title="${escapeHtml(game.name)}" onclick="showUpcomingDetails(${index})">
                 <figure class="image is-square bg-light-soft">
-                    <img src="${game.cover_url}" alt="${game.name}" style="object-fit: cover; height: 100%; width: 100%; border-radius: 0;">
+                    <img src="${escapeHtml(game.cover_url)}" alt="${escapeHtml(game.name)}" style="object-fit: cover; height: 100%; width: 100%; border-radius: 0;">
                 </figure>
                 <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; padding: 2px 5px; font-size: 0.65rem; text-align: center;">
                     ${game.release_date_formatted}
@@ -191,9 +191,9 @@ function renderListView(games, container) {
         const releaseDate = game.release_date || game.release_date_formatted || "";
         return `
         <tr class="list-view-row" onclick="showUpcomingDetails(${index})">
-            <td width="60" class="p-2"><img src="${game.cover_url}" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;"></td>
+            <td width="60" class="p-2"><img src="${escapeHtml(game.cover_url)}" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;"></td>
             <td class="is-vcentered">
-                <strong>${game.name}</strong>
+                <strong>${escapeHtml(game.name)}</strong>
             </td>
             <td class="is-vcentered has-text-centered font-mono is-size-7">${game.release_date_formatted}</td>
             <td class="is-vcentered has-text-right p-3">

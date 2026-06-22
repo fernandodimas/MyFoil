@@ -71,7 +71,18 @@ def gen_shop_files(db, base_url=""):
         try:
             info = get_game_info(tid, silent=True)
             if info and info.get("name") and not info["name"].startswith("Unknown"):
-                titles_map[tid] = info["name"].strip()
+                titles_map[tid] = {
+                    "id": tid,
+                    "name": info["name"].strip(),
+                    "version": 0,
+                    "region": "US",
+                    "releaseDate": 0,
+                    "rating": 10,
+                    "publisher": info.get("publisher", "N/A"),
+                    "description": info.get("description", ""),
+                    "size": 0,
+                    "rank": 1,
+                }
         except Exception:
             pass
 

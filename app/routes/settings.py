@@ -163,6 +163,7 @@ def renaming_settings_api():
 
 
 @settings_bp.post("/settings/shop")
+@access_required("admin")
 @handle_api_errors
 def set_shop_settings_api():
     """Atualizar configurações da loja"""

@@ -420,7 +420,7 @@ def add_file_to_app(app_id, app_version, file_id):
         if file_obj and file_obj not in app.files:
             app.files.append(file_obj)
             app.owned = True
-            db.session.flush()
+            db.session.commit()
             return True
     return False
 
@@ -437,7 +437,7 @@ def remove_file_from_apps(file_id):
             apps_updated += 1
             logger.debug(f"Removed file_id {file_id} from app {app.app_id} v{app.app_version}. Owned: {app.owned}")
         if apps_updated > 0:
-            db.session.flush()
+            db.session.commit()
     return apps_updated
 
 
@@ -466,11 +466,15 @@ def remove_titles_without_owned_apps():
 
 
 def delete_files_by_library(library_path):
-    from db import db, Files
+    from db import db, Files, Libraries
     success = True
     errors = []
     try:
-        files_to_delete = Files.query.filter_by(library=library_path).all()
+        lib = Libraries.query.filter_by(path=library_path).first()
+        if not lib:
+            logger.warning(f"Library path '{library_path}' not found in DB")
+            return True, []
+        files_to_delete = Files.query.filter_by(library_id=lib.id).all()
         total_apps_updated = 0
         for file in files_to_delete:
             apps_updated = remove_file_from_apps(file.id)
