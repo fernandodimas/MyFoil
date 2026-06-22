@@ -20,12 +20,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Pre-pull Buildx dependencies (with retries)
+        run: |
+          set -euo pipefail
+          for image in tonistiigi/binfmt:latest moby/buildkit:buildx-stable-1; do
+            for attempt in 1 2 3; do
+              echo "Pulling ${image} (attempt ${attempt}/3)..."
+              if docker pull "${image}"; then
+                break
+              fi
+              if [ "${attempt}" -eq 3 ]; then
+                echo "Failed to pull ${image} after 3 attempts"
+                exit 1
+              fi
+              sleep $((attempt * 10))
+            done
+          done
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: image=moby/buildkit:buildx-stable-1
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
