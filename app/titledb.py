@@ -146,6 +146,11 @@ def process_and_store_json(filename: str, source_name: str) -> bool:
         with open(filepath, "r", encoding="utf-8") as f:
             data = json.load(f)
 
+        # Validate top-level structure
+        if not isinstance(data, dict):
+            logger.error(f"Expected dict from {filename}, got {type(data).__name__}. Skipping.")
+            return False
+
         # 1. VERSIONS
         if "versions" in filename:
             logger.info(f"Storing {len(data)} version entries...")
