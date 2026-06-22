@@ -43,7 +43,7 @@ api_request_duration_seconds = Histogram(
 api_requests_total = Counter("myfoil_api_requests_total", "Total API requests", ["endpoint", "method", "status_code"])
 
 # Identification Metrics
-files_identified_total = Counter("myfoil_files_identified_total", "Total files identified", ["app_type", "status"])
+files_identified_total = Counter("myfoil_files_identified_total", "Total files identified")
 
 # Celery/Background Metrics
 celery_queue_length = Gauge("myfoil_celery_queue_length", "Number of tasks in Celery queue", ["queue"])
