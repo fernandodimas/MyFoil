@@ -100,7 +100,11 @@ def validate_library_path(path):
 
 
 def add_files_to_library(library, files):
-    library_id, library_path = library
+    if isinstance(library, (list, tuple)):
+        library_id, library_path = library
+    else:
+        library_id = get_library_id(library)
+        library_path = library
 
     if not files:
         return [], []

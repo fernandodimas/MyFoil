@@ -485,7 +485,8 @@ def delete_files_by_library(library_path):
 
 
 def delete_file_by_filepath(filepath):
-    from db import db, Files, NoResultFound
+    from db import db, Files
+    from sqlalchemy.orm.exc import NoResultFound
     try:
         file_to_delete = Files.query.filter_by(filepath=filepath).one()
         file_id = file_to_delete.id
