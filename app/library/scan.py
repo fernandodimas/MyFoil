@@ -545,7 +545,7 @@ def add_missing_apps_to_db():
         title_id = title.title_id
         title_pk = title.id
         try:
-            existing_base = get_app_by_id_and_version(title_id, None)
+            existing_base = get_app_by_id_and_version(title_id + "000", 0)
             if not existing_base:
                 app = Apps(
                     app_id=title_id + "000",
@@ -573,7 +573,7 @@ def add_missing_apps_to_db():
             dlcs = titles_lib.get_all_existing_dlc(title_id)
             if dlcs:
                 for dlc_id in dlcs:
-                    existing = get_app_by_id_and_version(dlc_id, None)
+                    existing = get_app_by_id_and_version(dlc_id, 0)
                     if not existing:
                         app = Apps(
                             app_id=dlc_id,
