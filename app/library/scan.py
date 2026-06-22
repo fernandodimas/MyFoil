@@ -516,7 +516,7 @@ def update_or_create_app_and_link_file(app_id, version, app_type, title_id_db, f
             app_id=app_id,
             title_id=title_id_db,
             app_type=app_type,
-            version=version,
+            app_version=version,
         )
         db.session.add(app)
         db.session.flush()
@@ -546,7 +546,7 @@ def add_missing_apps_to_db():
                     app_id=title_id + "000",
                     title_id=title_id,
                     app_type=APP_TYPE_BASE,
-                    version=0,
+                    app_version=0,
                 )
                 db.session.add(app)
 
@@ -561,7 +561,7 @@ def add_missing_apps_to_db():
                             app_id=update_app_id,
                             title_id=title_id,
                             app_type=APP_TYPE_UPD,
-                            version=ver,
+                            app_version=ver,
                         )
                         db.session.add(app)
 
@@ -574,7 +574,7 @@ def add_missing_apps_to_db():
                             app_id=dlc_id,
                             title_id=title_id,
                             app_type=APP_TYPE_DLC,
-                            version=0,
+                            app_version=0,
                         )
                         db.session.add(app)
 
