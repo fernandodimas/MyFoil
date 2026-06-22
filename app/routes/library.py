@@ -1733,7 +1733,7 @@ def search_rawg_api():
     if not query:
         return error_response(ErrorCode.INVALID_PARAMS, "Query parameter 'q' required")
 
-    from app_services.rating_service import RAWGClient
+    from app_services.rating_service import RAWGClient, RAWG_BASE_URL
 
     settings = load_settings()
     api_key = settings.get("apis", {}).get("rawg_api_key")
@@ -1742,8 +1742,78 @@ def search_rawg_api():
         return error_response(ErrorCode.INTERNAL_ERROR, "RAWG API key not configured")
 
     client = RAWGClient(api_key)
-    result = client.search_game(query)
-    return success_response(data=result or {})
+
+    # Return all results (up to 10)
+    try:
+        client._rate_limit()
+        response = client.session.get(
+            f"{RAWG_BASE_URL}/games",
+            params={
+                "key": api_key,
+                "search": query,
+                "platforms": "7",
+                "page_size": 10,
+            },
+            timeout=10,
+        )
+        response.raise_for_status()
+        results = response.json().get("results", [])
+        return success_response(data=results)
+    except Exception as e:
+        return error_response(ErrorCode.INTERNAL_ERROR, str(e))
+
+
+@library_bp.route("/library/match-rawg", methods=["POST"])
+@access_required("admin")
+@handle_api_errors
+def match_rawg_api():
+    """Manually match a title to a RAWG game result"""
+    data = request.json
+    title_id = data.get("title_id")
+    rawg_id = data.get("rawg_id")
+
+    if not title_id or not rawg_id:
+        return error_response(ErrorCode.INVALID_PARAMS, "title_id and rawg_id required")
+
+    from db import db, Titles
+    from app_services.rating_service import RAWGClient
+    from utils import now_utc, ensure_utc
+    from settings import load_settings
+
+    settings = load_settings()
+    api_key = settings.get("apis", {}).get("rawg_api_key")
+
+    if not api_key:
+        return error_response(ErrorCode.INTERNAL_ERROR, "RAWG API key not configured")
+
+    client = RAWGClient(api_key)
+    details = client.get_game_details(rawg_id)
+
+    if not details:
+        return error_response(ErrorCode.INTERNAL_ERROR, "Failed to fetch RAWG game details")
+
+    db_title = Titles.query.filter_by(title_id=title_id.upper()).first()
+    if not db_title:
+        return error_response(ErrorCode.NOT_FOUND, f"Title {title_id} not found")
+
+    db_title.rawg_id = rawg_id
+    db_title.metacritic_score = details.get("metacritic") or db_title.metacritic_score
+    db_title.rawg_rating = details.get("rating") or db_title.rawg_rating
+    db_title.rating_count = details.get("ratings_count") or db_title.rating_count
+    db_title.playtime_main = details.get("playtime") or db_title.playtime_main
+    db_title.genres_json = [g["name"] for g in details.get("genres", [])] if details.get("genres") else db_title.genres_json
+    db_title.tags_json = [t["name"] for t in details.get("tags", [])[:10]] if details.get("tags") else db_title.tags_json
+    db_title.screenshots_json = [
+        {"url": s["image"], "source": "rawg"}
+        for s in details.get("short_screenshots", [])[:5]
+    ] if details.get("short_screenshots") else db_title.screenshots_json
+    db_title.api_source = "manual"
+    db_title.api_last_update = now_utc()
+    db_title.is_custom = True
+
+    db.session.commit()
+
+    return success_response(data={"title_id": title_id, "rawg_id": rawg_id, "name": details.get("name")})
 
 
 @library_bp.route("/library/search-igdb", methods=["GET"])

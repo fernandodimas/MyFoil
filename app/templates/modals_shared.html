@@ -51,6 +51,24 @@
                 <div id="titleDBSearchResults" class="mt-2 title-db-results"></div>
             </div>
 
+            <!-- Search RAWG Section -->
+            <div class="box has-background-light-soft mb-4">
+                <label class="label is-small">Buscar Metadados na RAWG (Jogos)</label>
+                <div class="field has-addons">
+                    <div class="control is-expanded">
+                        <input class="input is-small" type="text" id="searchRAWGInput"
+                            placeholder="Digite o nome do jogo (ex: Zelda)">
+                    </div>
+                    <div class="control">
+                        <button class="button is-small is-link" onclick="searchRAWG()">
+                            <span class="icon is-small"><i class="bi bi-search"></i></span>
+                            <span>Buscar</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="rawgSearchResults" class="mt-2 title-db-results"></div>
+            </div>
+
             <input type="hidden" id="editMetaId">
             <input type="hidden" id="editMetaFullData">
             <div class="field">

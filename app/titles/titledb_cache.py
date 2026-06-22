@@ -21,9 +21,9 @@ def get_titles_count():
 
 
 def get_titles_type_breakdown():
-    """Count titles by type: games (base), DLCs, updates"""
+    """Count titles by type: games (base), DLCs, updates, unmatched"""
     if not _state._titles_db:
-        return {"games": 0, "dlcs": 0, "updates": 0, "total": 0}
+        return {"games": 0, "dlcs": 0, "updates": 0, "unmatched": 0, "total": 0}
 
     # Collect all known DLC app IDs from multiple sources
     known_dlcs = set()
@@ -39,6 +39,19 @@ def get_titles_type_breakdown():
                 for vdata in versions.values():
                     if isinstance(vdata, dict) and vdata.get("titleType") == 130:
                         known_dlcs.add(app_id.upper())
+
+    # Count unmatched titles from DB
+    unmatched = 0
+    try:
+        from db import Titles
+        from db import db as _db
+        unmatched = Titles.query.filter(
+            Titles.rawg_id.is_(None),
+            Titles.igdb_id.is_(None),
+            Titles.api_source.is_(None),
+        ).count()
+    except Exception:
+        pass
 
     games = 0
     dlcs = 0
@@ -58,7 +71,7 @@ def get_titles_type_breakdown():
         else:
             games += 1
 
-    return {"games": games, "dlcs": dlcs, "updates": updates, "total": games + dlcs + updates}
+    return {"games": games, "dlcs": dlcs, "updates": updates, "unmatched": unmatched, "total": games + dlcs + updates}
 
 
 def _enrich_dlc_map_from_titles():

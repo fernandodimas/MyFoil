@@ -219,6 +219,15 @@ class TitlesRepository:
         return Titles.query.filter((Titles.metacritic_score.isnot(None)) | (Titles.rawg_rating.isnot(None))).count()
 
     @staticmethod
+    def count_unmatched():
+        """Count titles without external API metadata (rawg_id and igdb_id both NULL)"""
+        return Titles.query.filter(
+            Titles.rawg_id.is_(None),
+            Titles.igdb_id.is_(None),
+            Titles.api_source.is_(None),
+        ).count()
+
+    @staticmethod
     def get_genre_distribution():
         """Get distribution of games by genre"""
         all_titles = Titles.query.filter(Titles.genres_json.isnot(None)).all()

@@ -684,6 +684,12 @@
                                                 <span class="has-text-warning" title="{{ t('Updates') }}">
                                                     <i class="bi bi-arrow-up-circle mr-1"></i>{{ active_source.titles_breakdown.updates }}
                                                 </span>
+                                                {% if active_source.titles_breakdown.unmatched > 0 %}
+                                                &middot;
+                                                <span class="has-text-danger" title="{{ t('Unmatched - need manual metadata') }}">
+                                                    <i class="bi bi-question-circle mr-1"></i>{{ active_source.titles_breakdown.unmatched }}
+                                                </span>
+                                                {% endif %}
                                             </p>
                                             {% endif %}
                                         </div>

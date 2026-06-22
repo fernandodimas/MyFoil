@@ -892,6 +892,15 @@ function editGameMetadata(titleId) {
             $('#editMetaGenre').val(d.genre || (game ? (Array.isArray(game.category) ? game.category.join(', ') : game.category) : ''));
             $('#editMetaRelease').val(d.release_date || (game ? (game.release_date || game.releaseDate) : ''));
 
+            // Auto-fill search inputs with game name
+            const gameName = d.name || (game ? game.name : '');
+            if (gameName) {
+                $('#searchTitleDBInput').val(gameName);
+                $('#searchRAWGInput').val(gameName);
+            }
+            $('#rawgSearchResults').empty();
+            $('#titleDBSearchResults').empty();
+
             openModal('editMetadataModal');
         }
     });
@@ -1024,6 +1033,80 @@ function useMetadata(item) {
     setVal('#editMetaSize', item.size);
 
     showToast(t('Metadados carregados! Todos os campos foram preenchidos.'), 'info');
+}
+
+function searchRAWG() {
+    const query = $('#searchRAWGInput').val();
+    if (!query || query.length < 2) return;
+    const resultsContainer = $('#rawgSearchResults');
+    resultsContainer.html(`<p class="is-size-7 p-2">${t('Buscando...')}</p>`);
+
+    $.getJSON(`/api/library/search-rawg?q=${encodeURIComponent(query)}`, (response) => {
+        const results = response.data || response;
+        if (!results || (Array.isArray(results) && results.length === 0) || (!Array.isArray(results) && !results.id)) {
+            resultsContainer.html(`<p class="is-size-7 p-2">${t('Nenhum resultado.')}</p>`);
+            return;
+        }
+
+        const items = Array.isArray(results) ? results : [results];
+        let html = '<div class="list is-hoverable">';
+        items.forEach((item, index) => {
+            const itemId = `rawgResult_${index}`;
+            window.__rawgResults = window.__rawgResults || {};
+            window.__rawgResults[itemId] = item;
+            const img = item.background_image || '/static/img/no-icon.png';
+            const rating = item.rating ? `★ ${item.rating.toFixed(1)}` : '';
+            const year = item.released ? `(${item.released.substring(0, 4)})` : '';
+            html += `
+                <a class="list-item" onclick="useRAWGMetadata('${itemId}')">
+                    <div class="media is-align-items-center">
+                        <div class="media-left">
+                            <figure class="image is-32x32"><img src="${escapeHtml(img)}" class="is-rounded"></figure>
+                        </div>
+                        <div class="media-content">
+                            <p class="is-size-7 has-text-weight-bold">${escapeHtml(item.name)} ${year}</p>
+                            <p class="is-size-7 opacity-50">${rating} ${item.platforms ? '· ' + item.platforms.map(p => p.platform && p.platform.name).filter(Boolean).join(', ') : ''}</p>
+                        </div>
+                    </div>
+                </a>`;
+        });
+        html += '</div>';
+        resultsContainer.html(html);
+    });
+}
+
+function useRAWGMetadata(elementId) {
+    const item = window.__rawgResults && window.__rawgResults[elementId];
+    if (!item) return;
+
+    const titleId = $('#editMetaId').val();
+    if (!titleId) {
+        showToast(t('Nenhum jogo selecionado para vincular.'), 'error');
+        return;
+    }
+
+    if (!confirm(t('Vincular este jogo da RAWG ao título selecionado? Isso irá preencher gêneros, avaliação e screenshots.'))) {
+        return;
+    }
+
+    $.ajax({
+        url: '/api/library/match-rawg',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ title_id: titleId, rawg_id: item.id }),
+        success: function (res) {
+            if (res.success) {
+                showToast(t('Jogo vinculado com sucesso!') + ' ' + (res.data.name || ''), 'success');
+                if (typeof refreshLibrary === 'function') refreshLibrary();
+                showGameDetails(titleId);
+            } else {
+                showToast(t('Erro ao vincular: ') + (res.error || ''), 'error');
+            }
+        },
+        error: function () {
+            showToast(t('Erro de conexão ao vincular.'), 'error');
+        }
+    });
 }
 
 // Keyboard Navigation for Game Details Modal
