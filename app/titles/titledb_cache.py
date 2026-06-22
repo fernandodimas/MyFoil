@@ -25,6 +25,21 @@ def get_titles_type_breakdown():
     if not _state._titles_db:
         return {"games": 0, "dlcs": 0, "updates": 0, "total": 0}
 
+    # Collect all known DLC app IDs from multiple sources
+    known_dlcs = set()
+    if _state._dlc_map:
+        known_dlcs.update(k.upper() for k in _state._dlc_map.keys())
+    if _state._dlcs_by_base_id:
+        for dlc_ids in _state._dlcs_by_base_id.values():
+            for d in dlc_ids:
+                known_dlcs.add(d.upper())
+    if _state._cnmts_db:
+        for app_id, versions in _state._cnmts_db.items():
+            if isinstance(versions, dict):
+                for vdata in versions.values():
+                    if isinstance(vdata, dict) and vdata.get("titleType") == 130:
+                        known_dlcs.add(app_id.upper())
+
     games = 0
     dlcs = 0
     updates = 0
@@ -38,7 +53,7 @@ def get_titles_type_breakdown():
 
         if tid.endswith("800"):
             updates += 1
-        elif tdata.get("parentId"):
+        elif tid in known_dlcs or tdata.get("parentId"):
             dlcs += 1
         else:
             games += 1
