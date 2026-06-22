@@ -51,6 +51,11 @@ def make_celery(app_name=__name__):
         broker_connection_retry_on_startup=True,
         broker_connection_max_retries=5,
         broker_connection_retry_delay=1.0,
+        # Prevent workers from hanging indefinitely
+        worker_timeout=600,  # Kill worker after 10 min without task completion
+        task_time_limit=1800,  # Hard kill task after 30 min
+        task_soft_time_limit=1200,  # Raise SoftTimeLimitExceeded after 20 min
+        worker_max_tasks_per_child=100,  # Recycle worker after 100 tasks (prevent memory leaks)
     )
 
     # Auto-flush Redis ONLY if explicitly requested via environment variable
