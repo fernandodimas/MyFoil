@@ -533,7 +533,8 @@ def add_missing_apps_to_db():
     if not all_titles:
         return
 
-    for title_id, _ in all_titles.items():
+    for title in all_titles:
+        title_id = title.title_id
         try:
             existing_base = get_app_by_id_and_version(title_id, None)
             if not existing_base:
