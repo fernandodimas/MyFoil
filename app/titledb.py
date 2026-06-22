@@ -802,6 +802,7 @@ def get_active_source_info(force=False) -> Dict:
             "last_download_date": last_download_date,
             "last_process_date": last_process_date,
             "titles_count": titles.get_titles_count(),
+            "titles_breakdown": titles.get_titles_type_breakdown(),
             "remote_date": remote_date_str,
             "loaded_titles_file": loaded_file,
             "is_fetching": getattr(active, "is_fetching", False),

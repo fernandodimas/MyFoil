@@ -671,6 +671,21 @@
                                         <div>
                                             <p class="heading">{{ t('Titles Detected') }}</p>
                                             <p class="title is-5">{{ active_source.titles_count }}</p>
+                                            {% if active_source.titles_breakdown %}
+                                            <p class="is-size-7 has-text-grey">
+                                                <span class="has-text-link" title="{{ t('Games') }}">
+                                                    <i class="bi bi-controller mr-1"></i>{{ active_source.titles_breakdown.games }}
+                                                </span>
+                                                &middot;
+                                                <span class="has-text-success" title="{{ t('DLCs') }}">
+                                                    <i class="bi bi-puzzle mr-1"></i>{{ active_source.titles_breakdown.dlcs }}
+                                                </span>
+                                                &middot;
+                                                <span class="has-text-warning" title="{{ t('Updates') }}">
+                                                    <i class="bi bi-arrow-up-circle mr-1"></i>{{ active_source.titles_breakdown.updates }}
+                                                </span>
+                                            </p>
+                                            {% endif %}
                                         </div>
                                     </div>
                                     <div class="level-item has-text-centered">

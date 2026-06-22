@@ -20,6 +20,32 @@ def get_titles_count():
     return len(_state._titles_db) if _state._titles_db else 0
 
 
+def get_titles_type_breakdown():
+    """Count titles by type: games (base), DLCs, updates"""
+    if not _state._titles_db:
+        return {"games": 0, "dlcs": 0, "updates": 0, "total": 0}
+
+    games = 0
+    dlcs = 0
+    updates = 0
+
+    for tid_upper, tdata in _state._titles_db.items():
+        if not isinstance(tdata, dict):
+            continue
+        tid = tid_upper.upper() if isinstance(tid_upper, str) else str(tid_upper).upper()
+        if len(tid) != 16:
+            continue
+
+        if tid.endswith("800"):
+            updates += 1
+        elif tdata.get("parentId"):
+            dlcs += 1
+        else:
+            games += 1
+
+    return {"games": games, "dlcs": dlcs, "updates": updates, "total": games + dlcs + updates}
+
+
 def _enrich_dlc_map_from_titles():
     if not _state._titles_db:
         return

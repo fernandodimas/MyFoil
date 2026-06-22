@@ -50,6 +50,7 @@ from titles.utils import (
 
 from titles.titledb_cache import (
     get_titles_count,
+    get_titles_type_breakdown,
     load_titledb_from_db,
     save_titledb_to_db,
     is_db_cache_valid,
