@@ -357,6 +357,8 @@ def library_paged_api():
 
     if sort_by == "added":
         sort_by = "added_at"
+    elif sort_by == "release":
+        sort_by = "release_date"
 
     valid_sort_fields = ["name", "added_at", "release_date", "size"]
     if sort_by not in valid_sort_fields:
@@ -604,6 +606,8 @@ def library_search_paged_api():
 
     if sort_by == "added":
         sort_by = "added_at"
+    elif sort_by == "release":
+        sort_by = "release_date"
 
     valid_sort_fields = ["name", "added_at", "release_date", "size"]
     if sort_by not in valid_sort_fields:

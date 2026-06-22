@@ -923,7 +923,7 @@ def post_library_change():
     """Called after library changes to update titles and regenerate library cache (DEBOUNCED)"""
 
     def _do_post_library_change():
-        from app import create_app
+        from app_factory import create_app
 
         # Use minimal app to avoid side effects (watchers, threads) in background task
         app = create_app(minimal=True)
