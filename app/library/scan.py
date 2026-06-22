@@ -120,9 +120,10 @@ def add_files_to_library(library, files):
 
     for filepath in files:
         try:
-            valid, reason = validate_file(filepath)
-            if not valid:
-                logger.debug(f"Skipping invalid file {filepath}: {reason}")
+            try:
+                validate_file(filepath)
+            except (ValueError, FileNotFoundError) as e:
+                logger.debug(f"Skipping invalid file {filepath}: {e}")
                 continue
 
             file_info = titles_lib.get_file_info(filepath)
