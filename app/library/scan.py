@@ -102,6 +102,9 @@ def validate_library_path(path):
 def add_files_to_library(library, files):
     if isinstance(library, (list, tuple)):
         library_id, library_path = library
+    elif isinstance(library, int):
+        library_id = library
+        library_path = get_library_path(library_id)
     else:
         library_id = get_library_id(library)
         library_path = library
@@ -539,12 +542,13 @@ def add_missing_apps_to_db():
 
     for title in all_titles:
         title_id = title.title_id
+        title_pk = title.id
         try:
             existing_base = get_app_by_id_and_version(title_id, None)
             if not existing_base:
                 app = Apps(
                     app_id=title_id + "000",
-                    title_id=title_id,
+                    title_id=title_pk,
                     app_type=APP_TYPE_BASE,
                     app_version=0,
                 )
@@ -559,7 +563,7 @@ def add_missing_apps_to_db():
                     if not existing:
                         app = Apps(
                             app_id=update_app_id,
-                            title_id=title_id,
+                            title_id=title_pk,
                             app_type=APP_TYPE_UPD,
                             app_version=ver,
                         )
@@ -572,7 +576,7 @@ def add_missing_apps_to_db():
                     if not existing:
                         app = Apps(
                             app_id=dlc_id,
-                            title_id=title_id,
+                            title_id=title_pk,
                             app_type=APP_TYPE_DLC,
                             app_version=0,
                         )
