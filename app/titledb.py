@@ -104,7 +104,7 @@ def download_titledb_legacy(
         return False, str(e)
 
 
-def download_titledb_file(filename: str, force: bool = False, silent_404: bool = False) -> bool:
+def download_titledb_file(filename: str, force: bool = False, silent_404: bool = False, source=None) -> bool:
     """
     Download a single TitleDB file using the source manager.
     The source_manager handles fallback and error handling automatically.
@@ -118,6 +118,46 @@ def download_titledb_file(filename: str, force: bool = False, silent_404: bool =
 
     # Use source_manager which has proper fallback logic
     source_manager = get_source_manager()
+
+    # If a specific source is provided, download directly from it
+    if source is not None:
+        url = source.get_file_url(filename)
+        logger.info(f"Attempting to download {filename} from {source.name}...")
+        try:
+            import requests as req
+            response = req.get(url, timeout=120, stream=True)
+            response.raise_for_status()
+
+            tmp_path = dest_path + ".tmp"
+            with open(tmp_path, "wb") as f:
+                first_chunk = True
+                for chunk in response.iter_content(chunk_size=8192):
+                    if first_chunk:
+                        if chunk.lstrip().startswith(b"<!DOCTYPE html") or chunk.lstrip().startswith(b"<html"):
+                            logger.warning(f"Source {source.name} returned HTML instead of expected file. Skipping.")
+                            raise Exception("Invalid content: Received HTML")
+                        first_chunk = False
+                    f.write(chunk)
+
+            if os.path.exists(dest_path):
+                os.remove(dest_path)
+            os.rename(tmp_path, dest_path)
+
+            source.last_success = datetime.now(timezone.utc)
+            source.last_error = None
+            source_manager.save_sources()
+
+            logger.info(f"Successfully downloaded {filename} from {source.name}")
+            return True
+        except Exception as e:
+            error_str = str(e)
+            if silent_404 and ("404" in error_str or "not found" in error_str.lower()):
+                logger.debug(f"{filename} not found on {source.name} (skipping silently)")
+            else:
+                logger.warning(f"Failed to download {filename} from {source.name}: {error_str}")
+            source.last_error = error_str
+            source_manager.save_sources()
+            return False
 
     # Increase timeout to 120 seconds for large files (e.g., 76MB US.en.json)
     success, source_name, error = source_manager.download_file(filename, dest_path, timeout=120, silent_404=silent_404)
@@ -451,7 +491,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                 log_tdb(f"Downloading core files from {source.name}...", 3)
                 core_files = ["cnmts.json", "versions.json", "languages.json"]
                 for filename in core_files:
-                    if download_titledb_file(filename, force=force):
+                    if download_titledb_file(filename, force=force, source=source):
                         results[filename] = process_and_store_json(filename, source.name)
                     else:
                         results[filename] = False
@@ -459,7 +499,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                 # 1. Always attempt to download titles.json FIRST (Global coverage)
                 # We do this first so its basic metadata can be overwritten by richer regional data
                 log_tdb("Downloading global titles.json for full coverage...", 5)
-                if download_titledb_file("titles.json", force=force, silent_404=True):
+                if download_titledb_file("titles.json", force=force, silent_404=True, source=source):
                     results["titles.json"] = process_and_store_json("titles.json", source.name)
                 else:
                     results["titles.json"] = False
@@ -473,7 +513,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                 region_success = False
                 for region_filename in region_filenames:
                     logger.info(f"Attempting to download region-specific file: {region_filename}")
-                    if download_titledb_file(region_filename, force=force, silent_404=True):
+                    if download_titledb_file(region_filename, force=force, silent_404=True, source=source):
                         region_success = process_and_store_json(region_filename, source.name)
                         results[region_filename] = region_success
                         if region_success:
@@ -482,7 +522,7 @@ def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = 
                 # 3. FALLBACK REGION: If the primary region failed and isn't US.en, try US.en as it's the most complete
                 if not region_success and (region != "US" or language != "en"):
                     logger.info("Primary regional title download failed, trying US.en.json as fallback...")
-                    if download_titledb_file("US.en.json", force=force, silent_404=True):
+                    if download_titledb_file("US.en.json", force=force, silent_404=True, source=source):
                         region_success = process_and_store_json("US.en.json", source.name)
                         results["US.en.json"] = region_success
 
