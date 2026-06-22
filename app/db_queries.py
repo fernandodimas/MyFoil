@@ -20,7 +20,8 @@ def get_file_from_db(file_id):
 
 
 def update_file_path(library, old_path, new_path):
-    from db import db, Files, NoResultFound
+    from db import db, Files
+    from sqlalchemy.orm.exc import NoResultFound
     try:
         file_entry = Files.query.filter_by(filepath=old_path).one()
         folder = os.path.dirname(new_path)
