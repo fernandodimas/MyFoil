@@ -109,9 +109,12 @@ def delete_file_from_db_and_disk(file_id):
         return False, str(e)
 
 
-def get_files_with_identification_from_library(library_id, identification_type):
-    from db import Files
-    return Files.query.filter_by(library_id=library_id, identification_type=identification_type).all()
+def get_files_with_identification_from_library(library_id, identification_type=None):
+    from db import Files, db
+    query = Files.query.filter_by(library_id=library_id)
+    if identification_type is not None:
+        query = query.filter_by(identification_type=identification_type)
+    return query.all()
 
 
 def get_filename_identified_files_needing_reidentification(library_id, current_titledb_timestamp):

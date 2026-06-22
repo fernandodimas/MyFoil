@@ -1069,7 +1069,7 @@ def delete_webhook_api(id):
 @handle_api_errors
 def create_backup_api():
     """Criar backup manual"""
-    from app import backup_manager
+    from app_factory import backup_manager
     from job_tracker import job_tracker, JobType
     from socket_helper import get_socketio_emitter
     import time
@@ -1096,7 +1096,7 @@ def create_backup_api():
 @handle_api_errors
 def list_backups_api():
     """Listar backups disponíveis"""
-    from app import backup_manager
+    from app_factory import backup_manager
 
     if not backup_manager:
         return error_response(ErrorCode.INTERNAL_ERROR, message="Backup manager not initialized", status_code=500)
@@ -1110,7 +1110,7 @@ def list_backups_api():
 @handle_api_errors
 def restore_backup_api():
     """Restaurar backup"""
-    from app import backup_manager
+    from app_factory import backup_manager
     from job_tracker import job_tracker, JobType
     from socket_helper import get_socketio_emitter
     import time
@@ -1143,7 +1143,7 @@ def restore_backup_api():
 @handle_api_errors
 def download_backup_api(filename):
     """Download a backup file"""
-    from app import backup_manager
+    from app_factory import backup_manager
 
     if not backup_manager:
         return error_response(ErrorCode.INTERNAL_ERROR, message="Backup manager not initialized", status_code=500)
@@ -1156,7 +1156,7 @@ def download_backup_api(filename):
 @handle_api_errors
 def delete_backup_api(filename):
     """Delete a backup file"""
-    from app import backup_manager
+    from app_factory import backup_manager
 
     if not backup_manager:
         return error_response(ErrorCode.INTERNAL_ERROR, message="Backup manager not initialized", status_code=500)
