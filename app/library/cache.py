@@ -63,14 +63,13 @@ def compute_apps_hash():
     all_metadata = db.session.query(TitleMetadata).order_by(TitleMetadata.id).all()
 
     for app in all_apps:
-        hash_md5.update(str(app.id).encode())
-        hash_md5.update(str(app.title_id).encode())
-        hash_md5.update(str(app.app_id).encode())
-        hash_md5.update(str(app.app_type).encode())
-        hash_md5.update(str(app.owned).encode())
-        hash_md5.update(str(app.ignored).encode())
-        if app.version:
-            hash_md5.update(str(app.version).encode())
+        hash_md5.update(str(app.get("id", "")).encode())
+        hash_md5.update(str(app.get("title_id", "")).encode())
+        hash_md5.update(str(app.get("app_id", "")).encode())
+        hash_md5.update(str(app.get("app_type", "")).encode())
+        hash_md5.update(str(app.get("owned", "")).encode())
+        if app.get("app_version"):
+            hash_md5.update(str(app["app_version"]).encode())
 
     for tag in all_tags:
         hash_md5.update(str(tag.id).encode())
