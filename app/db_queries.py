@@ -9,6 +9,11 @@ def file_exists_in_db(filepath):
     return Files.query.filter_by(filepath=filepath).first() is not None
 
 
+def get_file_by_filepath(filepath):
+    from db import Files
+    return Files.query.filter_by(filepath=filepath).first()
+
+
 def get_file_from_db(file_id):
     from db import Files
     return Files.query.filter_by(id=file_id).first()

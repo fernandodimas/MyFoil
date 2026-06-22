@@ -15,6 +15,7 @@ from db import (
     remove_file_from_apps,
     log_activity,
     get_file_from_db,
+    get_file_by_filepath,
     get_app_by_id_and_version,
     get_all_non_identified_files_from_library,
     get_files_with_identification_from_library,
@@ -130,7 +131,7 @@ def add_files_to_library(library, files):
             if file_info is None:
                 continue
 
-            existing_file = get_file_from_db(filepath)
+            existing_file = get_file_by_filepath(filepath)
             if existing_file:
                 if existing_file.size != file_info.get("size", 0):
                     logger.info(
@@ -160,6 +161,7 @@ def add_files_to_library(library, files):
 
         except Exception as e:
             logger.error(f"Error processing file {filepath}: {e}")
+            db.session.rollback()
 
     if batch:
         db.session.bulk_save_objects(batch)

@@ -343,7 +343,7 @@ from models.activitylog import ActivityLog
 
 # Legacy query functions (extracted to separate module)
 from db_queries import (
-    file_exists_in_db, get_file_from_db, update_file_path,
+    file_exists_in_db, get_file_from_db, get_file_by_filepath, update_file_path,
     get_all_titles_from_db, get_all_title_files,
     get_all_files_with_identification, get_all_files_without_identification,
     get_all_apps, get_all_non_identified_files_from_library,
@@ -383,7 +383,7 @@ __all__ = [
     "SystemJob",
     "ActivityLog",
     "db",
-    "file_exists_in_db", "get_file_from_db", "update_file_path",
+    "file_exists_in_db", "get_file_from_db", "get_file_by_filepath", "update_file_path",
     "get_all_titles_from_db", "get_all_title_files",
     "get_all_files_with_identification", "get_all_files_without_identification",
     "get_all_apps", "get_all_non_identified_files_from_library",
