@@ -486,7 +486,9 @@ def identify_library_files(library):
 
     def process_file(file_obj):
         try:
-            identify_single_file(file_obj.filepath)
+            from tasks import get_flask_app
+            with get_flask_app().app_context():
+                identify_single_file(file_obj.filepath)
             return True
         except Exception as e:
             logger.error(f"Failed to identify {file_obj.filepath}: {e}")
