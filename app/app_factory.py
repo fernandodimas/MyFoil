@@ -472,6 +472,27 @@ def create_app(minimal=False):
     def add_cache_control_headers(response):
         from flask import request
 
+        origin = request.headers.get("Origin")
+        if origin:
+            allowed = False
+            if _cors_origins == "*":
+                allowed = True
+            elif isinstance(_cors_origins, list):
+                allowed = origin in _cors_origins
+            elif isinstance(_cors_origins, str):
+                allowed = origin == _cors_origins
+
+            if allowed:
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With"
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                response.headers["Access-Control-Max-Age"] = "86400"
+
+        if request.method == "OPTIONS":
+            response.status_code = 204
+            return response
+
         if request.path.startswith("/static/"):
             if request.path.endswith((".js", ".css")):
                 response.headers["Cache-Control"] = "no-cache, must-revalidate"
