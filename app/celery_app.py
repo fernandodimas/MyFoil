@@ -38,18 +38,19 @@ def make_celery(app_name=__name__):
         # Redis connection resilience
         broker_transport_options={
             "socket_keepalive": True,
-            "socket_connect_timeout": 5,
-            "socket_timeout": 5,
+            "socket_connect_timeout": 10,
+            "socket_timeout": 10,
             "retry_on_timeout": True,
+            "health_check_interval": 30,
         },
         result_backend_transport_options={
             "socket_keepalive": True,
-            "socket_connect_timeout": 5,
-            "socket_timeout": 5,
+            "socket_connect_timeout": 10,
+            "socket_timeout": 10,
             "retry_on_timeout": True,
         },
         broker_connection_retry_on_startup=True,
-        broker_connection_max_retries=5,
+        broker_connection_max_retries=-1,
         broker_connection_retry_delay=1.0,
         # Prevent workers from hanging indefinitely
         worker_timeout=600,  # Kill worker after 10 min without task completion
