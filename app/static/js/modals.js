@@ -511,10 +511,12 @@ function showGameDetails(id) {
 }
 
 function showDlcDetails(id) {
-    $.getJSON(`/api/app_info/${id}`, (dlc) => {
+    $.getJSON(`/api/app_info/${id}`, (raw) => {
+        const dlc = (raw && raw.data !== undefined && raw.code !== undefined) ? raw.data : raw;
+        if (!dlc || !dlc.name) return;
         $('#dlcModalTitle').text(dlc.name);
         let content = `
-            < div class="p-6" >
+            <div class="p-6">
                 <div class="columns">
                     <div class="column is-4">
                         <figure class="image is-square box p-0 shadow-sm overflow-hidden mb-4">

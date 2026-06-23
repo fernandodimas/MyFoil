@@ -33,6 +33,8 @@ class Files(db.Model):
         db.Index("ix_files_filepath", "filepath"),
         # Index for folder-based queries (file explorer, cleanup)
         db.Index("idx_files_folder", "folder"),
+        # Index for extension-based queries (search, filtering)
+        db.Index("idx_files_extension", "extension"),
     )
 
 
