@@ -56,5 +56,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
           cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/myfoil:buildcache
           cache-to: type=registry,ref=ghcr.io/${{ github.repository_owner }}/myfoil:buildcache,mode=max
