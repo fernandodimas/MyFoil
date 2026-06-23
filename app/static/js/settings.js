@@ -1,0 +1,1568 @@
+/**
+ * MyFoil Settings Bundle
+ * tokens.js + settings_bundled.js
+ * DO NOT EDIT - run: python scripts/build_js.py
+ */
+
+// ============================================================
+// tokens.js
+// ============================================================
+/**
+ * API Tokens Manager
+ * Handles frontend logic for managing API tokens in Settings
+ */
+
+const tokensManager = {
+    init: function () {
+        // Only load if on settings page and user is admin
+        const tokensSection = document.getElementById('section-ApiTokens');
+        if (tokensSection) {
+            this.loadTokens();
+
+            // Add event listener to refresh when checking tab
+            document.querySelectorAll('.menu-list a').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    if (e.currentTarget.getAttribute('data-target') === 'ApiTokens') {
+                        this.loadTokens();
+                    }
+                });
+            });
+        }
+    },
+
+    loadTokens: async function () {
+        const tbody = document.getElementById('tokensTableBody');
+        if (!tbody) return;
+
+        tbody.innerHTML = '<tr><td colspan="5" class="has-text-centered"><i class="fas fa-spinner fa-spin"></i> Carregando...</td></tr>';
+
+        try {
+            const response = await window.safeFetch('/api/settings/tokens');
+            const raw = await response.json();
+
+            // Normalize response shapes: envelope { code, success, data } or direct array
+            const payload = (raw && raw.data !== undefined) ? raw.data : raw;
+            let tokens = [];
+            if (Array.isArray(payload)) tokens = payload;
+            else if (payload && typeof payload === 'object') tokens = payload.tokens || payload.results || payload || [];
+
+            if (!Array.isArray(tokens) || tokens.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="has-text-centered has-text-grey">Nenhum token encontrado.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = tokens.map(t => `
+                <tr>
+                    <td><strong>${this.escape(t.name)}</strong></td>
+                    <td><code class="is-size-7">${t.prefix}</code></td>
+                    <td class="is-size-7">${t.created_at}</td>
+                    <td class="is-size-7">${t.last_used || 'Nunca'}</td>
+                    <td class="has-text-right">
+                        <button class="button is-small is-danger is-light" onclick="tokensManager.deleteToken(${t.id})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            console.error('Error loading tokens:', error);
+            tbody.innerHTML = `<tr><td colspan="5" class="has-text-danger">Erro ao carregar tokens: ${error.message}</td></tr>`;
+        }
+    },
+
+    openCreateModal: function () {
+        document.getElementById('newTokenName').value = '';
+        document.getElementById('generatedTokenContainer').classList.add('is-hidden');
+        document.getElementById('btnGenerateToken').disabled = false;
+        document.getElementById('createTokenModal').classList.add('is-active');
+        document.getElementById('newTokenName').focus();
+    },
+
+    closeCreateModal: function () {
+        document.getElementById('createTokenModal').classList.remove('is-active');
+        this.loadTokens(); // Refresh list
+    },
+
+    generateToken: async function () {
+        const nameInput = document.getElementById('newTokenName');
+        const name = nameInput.value.trim();
+
+        if (!name) {
+            alert('Por favor, digite um nome para o token.');
+            nameInput.focus();
+            return;
+        }
+
+        const btn = document.getElementById('btnGenerateToken');
+        btn.classList.add('is-loading');
+
+        try {
+            const response = await window.safeFetch('/api/settings/tokens', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ name: name })
+            });
+
+            const raw = await response.json();
+            // Support envelope: { code, success, data } or direct payload
+            const payload = raw && raw.data !== undefined ? raw.data : raw;
+            const ok = (raw && raw.success) || (payload && payload.success);
+
+            if (ok) {
+                document.getElementById('generatedTokenValue').value = payload.token || '';
+                document.getElementById('generatedTokenContainer').classList.remove('is-hidden');
+                btn.disabled = true;
+                // Don't close immediately, let user copy
+            } else {
+                alert('Erro ao gerar token: ' + (payload && (payload.error || payload.message) ? (payload.error || payload.message) : (raw.error || 'Erro desconhecido')));
+            }
+        } catch (error) {
+            console.error('Error generating token:', error);
+            alert('Erro ao gerar token: ' + error.message);
+        } finally {
+            btn.classList.remove('is-loading');
+        }
+    },
+
+    deleteToken: async function (id) {
+        if (!confirm('Tem certeza que deseja revogar este token? Aplicações usando ele perderão acesso.')) {
+            return;
+        }
+
+        try {
+            const response = await window.safeFetch(`/api/settings/tokens/${id}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.loadTokens();
+            } else {
+                alert('Erro ao apagar token: ' + (result.error || 'Erro desconhecido'));
+            }
+        } catch (error) {
+            console.error('Error deleting token:', error);
+        }
+    },
+
+    copyToken: function () {
+        const tokenInput = document.getElementById('generatedTokenValue');
+        tokenInput.select();
+        document.execCommand('copy'); // Fallback
+
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(tokenInput.value).then(() => {
+                const btn = document.querySelector('#generatedTokenContainer .button.is-info');
+                const originalIcon = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-check"></i>';
+                setTimeout(() => btn.innerHTML = originalIcon, 2000);
+            });
+        }
+    },
+
+    escape: function (str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+};
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    tokensManager.init();
+});
+
+
+// ============================================================
+// settings_bundled.js
+// ============================================================
+
+
+let allUsernames = [];
+
+// Helper functions
+const getInputVal = (id) => $(`#${id}`).val();
+const getCheckboxStatus = (id) => $(`#${id}`).is(":checked");
+// openModal and closeModal are defined in modals_shared.html (included globally)
+
+// Normalize envelope-style API responses: { code, success, data } or direct payload
+const unwrap = (res) => {
+    try {
+        if (res && res.data !== undefined) return res.data;
+    } catch (e) {
+        // ignore
+    }
+    return res;
+}
+
+// Coerce various API shapes into an array for safe iteration
+const coerceArray = (res) => {
+    const payload = unwrap(res);
+    if (Array.isArray(payload)) return payload;
+    if (!payload || typeof payload !== 'object') return [];
+    // Common keys that may contain arrays
+    const keys = ['plugins', 'paths', 'sources', 'backups', 'tokens', 'users', 'webhooks', 'files', 'results'];
+    for (let k of keys) if (Array.isArray(payload[k])) return payload[k];
+    // Fallback: return first array-valued property
+    for (let k of Object.keys(payload)) if (Array.isArray(payload[k])) return payload[k];
+    return [];
+}
+
+// --- External API Settings ---
+window.saveAPISettings = function () {
+    const rawg_api_key = $('#rawgApiKey').val();
+    const igdb_client_id = $('#igdbClientId').val();
+    const igdb_client_secret = $('#igdbClientSecret').val();
+    const upcoming_days_ahead = $('#upcomingDaysAhead').val();
+    $.ajax({
+        url: '/api/settings/apis',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            rawg_api_key,
+            igdb_client_id,
+            igdb_client_secret,
+            upcoming_days_ahead
+        }),
+        success: (res) => {
+            if (res.success) {
+                showToast(t('settings.api_saved'));
+                if (typeof fillMetadataStats === 'function') fillMetadataStats();
+            }
+            else showToast(t('settings.api_save_error'), 'error');
+        },
+        error: () => showToast(t('common.error.communication'), 'error')
+    });
+};
+
+window.fillMetadataStats = function () {
+    $.getJSON('/api/stats', (stats) => {
+        const payload = unwrap(stats);
+        $('#statMetadataGames').text(payload.metadata_games || 0);
+        // RAWG status
+        if ($('#rawgApiKey').val()) {
+            $('#statusRAWG').removeClass('is-danger').addClass('is-success').text(t('status.active'));
+        } else {
+            $('#statusRAWG').removeClass('is-success').addClass('is-danger').text(t('status.inactive'));
+        }
+        // IGDB status
+        if ($('#igdbClientId').val() && $('#igdbClientSecret').val()) {
+            $('#statusIGDB').removeClass('is-danger').addClass('is-success').text(t('status.active'));
+        } else {
+            $('#statusIGDB').removeClass('is-success').addClass('is-danger').text(t('status.inactive'));
+        }
+    });
+};
+
+window.testRAWGConnection = function () {
+    const btn = $(event.currentTarget);
+    btn.addClass('is-loading');
+    $.getJSON('/api/library/search-rawg?q=zelda', (res) => {
+        btn.removeClass('is-loading');
+        if (res && res.name) {
+            showToast(t('settings.connection_ok') + res.name);
+        } else {
+            showToast(t('settings.connection_fail_key'), 'warning');
+        }
+    }).fail((err) => {
+        btn.removeClass('is-loading');
+        showToast(t('settings.connection_error') + (err.responseJSON?.error || t('common.error.unknown')), 'error');
+    });
+};
+
+window.testIGDBConnection = function () {
+    const btn = $(event.currentTarget);
+    btn.addClass('is-loading');
+    $.getJSON('/api/library/search-igdb?q=zelda', (res) => {
+        btn.removeClass('is-loading');
+        if (Array.isArray(res) && res.length > 0) {
+            showToast(t('settings.connection_ok') + res[0].name);
+        } else if (res && res.name) {
+            showToast(t('settings.connection_ok') + res.name);
+        } else {
+            showToast(t('settings.connection_fail_key'), 'warning');
+        }
+    }).fail((err) => {
+        btn.removeClass('is-loading');
+        showToast(t('settings.connection_error') + (err.responseJSON?.error || t('common.error.unknown')), 'error');
+    });
+};
+
+window.refreshAllMetadata = function () {
+    confirmAction({
+        title: t('settings.refresh_metadata'),
+        message: t('settings.refresh_metadata_confirm'),
+        confirmText: t('settings.refresh_all'),
+        confirmClass: 'is-info',
+        onConfirm: () => {
+            const btn = $('#btnRefreshAllMetadata');
+            btn.addClass('is-loading');
+            $.post('/api/library/metadata/refresh-all', (res) => {
+                showToast(t('settings.refresh_started'));
+                setTimeout(() => btn.removeClass('is-loading'), 3000);
+            }).fail(() => {
+                btn.removeClass('is-loading');
+                showToast(t('settings.refresh_error'), 'error');
+            });
+        }
+    });
+};
+
+function createTag() {
+    const name = $('#tagNameInput').val();
+    const color = $('#tagColorInput').val();
+    const icon = $('#tagIconInput').val();
+    if (!name) return showToast(t('settings.tag_name_required'), 'error');
+
+    $.ajax({
+        url: '/api/tags',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ name, color, icon }),
+        success: (res) => {
+            showToast(t('settings.tag_created'));
+            $('#tagNameInput').val('');
+            fillTagsTable();
+        },
+        error: (err) => showToast(t('settings.tag_create_error') + (err.responseJSON?.error || t('common.error.unknown')), 'error')
+    });
+}
+
+function fillTagsTable() {
+    $.getJSON('/api/tags', (tagsRes) => {
+        const tbody = $('#tagsTable tbody').empty();
+        let list = tagsRes;
+        if (typeof coerceArray === 'function') list = coerceArray(tagsRes);
+        if (!Array.isArray(list)) list = [];
+        list.forEach(t => {
+            const iconHtml = (t && t.icon && typeof t.icon === 'string' && t.icon.startsWith('bi-')) ? `<i class="bi ${t.icon} mr-1"></i>` : `<i class="fas ${t && t.icon ? t.icon : ''} mr-1"></i>`;
+            tbody.append(`
+                <tr>
+                    <td><strong>${escapeHtml(t.name)}</strong></td>
+                    <td>
+                        <span class="tag" style="background-color: ${t.color}; color: #fff;">
+                            ${iconHtml} ${escapeHtml(t.name)}
+                        </span>
+                    </td>
+                    <td class="has-text-right">
+                        <button class="button is-small is-ghost has-text-danger" onclick="deleteTag(${t.id})">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </td>
+                </tr>
+            `);
+        });
+    }).fail(() => debugWarn('Failed to load tags'));
+}
+
+function deleteTag(id) {
+    confirmAction({
+        title: t('settings.delete_tag'),
+        message: t('settings.delete_tag_confirm'),
+        confirmText: t('common.delete'),
+        confirmClass: 'is-danger',
+        onConfirm: () => {
+            $.ajax({
+                url: `/api/tags/${id}`,
+                type: 'DELETE',
+                success: () => {
+                    showToast(t('settings.tag_deleted'));
+                    fillTagsTable();
+                },
+                error: (err) => showToast(t('settings.tag_delete_error'), 'error')
+            });
+        }
+    });
+}
+
+function fillActivityLogs() {
+    $.getJSON('/api/activity', (logsRes) => {
+        const listEl = $('#activityLogsList').empty();
+        let list = logsRes;
+        if (typeof coerceArray === 'function') list = coerceArray(logsRes);
+        if (!Array.isArray(list) || list.length === 0) {
+            listEl.append(`<p class="has-text-centered py-6 opacity-40 italic">${t('settings.no_activity')}</p>`);
+            return;
+        }
+        list.forEach(log => {
+            const date = new Date(log.timestamp).toLocaleString();
+            let iconClass = 'bi-info-circle';
+            let color = '#7c3aed';
+
+            if (log.action && (log.action.includes('error') || log.action.includes('failed'))) {
+                iconClass = 'bi-exclamation-circle-fill';
+                color = '#ef4444';
+            } else if (log.action && log.action.includes('file_added')) {
+                iconClass = 'bi-file-earmark-plus';
+                color = '#10b981';
+            } else if (log.action && log.action.includes('scan')) {
+                iconClass = 'bi-search';
+            } else if (log.action && log.action.includes('backup')) {
+                iconClass = 'bi-safe';
+            }
+
+            listEl.append(`
+                <div class="activity-item">
+                    <div class="activity-dot" style="border-color: ${color}"></div>
+                    <div class="activity-content">
+                        <span class="activity-meta">${date}</span>
+                        <p class="has-text-weight-bold mb-1">
+                            <i class="bi ${iconClass} mr-2" style="color: ${color}"></i>
+                            ${escapeHtml((log.action || '').toUpperCase().replace(/_/g, ' '))}
+                        </p>
+                        <div class="is-size-7 opacity-70">
+                            ${log.title_id ? `<span class="tag is-info is-light is-small mr-2">${log.title_id}</span>` : ''}
+                            ${escapeHtml(JSON.stringify(log.details || {}).replace(/[{}\"]/g, '').replace(/:/g, ': ').replace(/,/g, ' | '))}
+                        </div>
+                    </div>
+                </div>
+            `);
+        });
+    }).fail(() => debugWarn('Failed to load activity logs'));
+}
+
+// Tab Navigation Logic
+$('#settingsNav a').on('click', function () {
+    const target = $(this).data('target');
+    $('#settingsNav a').removeClass('is-active');
+    $(this).addClass('is-active');
+    $('.settings-section').addClass('is-hidden');
+    $(`#section-${target}`).removeClass('is-hidden');
+    sessionStorage.setItem('lastSettingsTab', target);
+
+    // Initial load for specific tabs
+    if (target === 'Tags') fillTagsTable();
+    if (target === 'Activity') fillActivityLogs();
+    if (target === 'Library') fillLibraryTable();
+});
+
+// File Input Helper
+$('#consoleKeysInput').on('change', function () {
+    const file = this.files[0];
+    $('#fileNameDisplay').text(file ? file.name : t("settings.no_file_chosen"));
+});
+
+// Toggle Add Source Form
+$('#toggleAddSource').on('click', function () {
+    $('#addSourceForm').toggleClass('is-hidden');
+});
+
+// Populate Functions
+function fillLibraryTable() {
+    $.getJSON("/api/settings/library/paths", (result) => {
+        const payload = unwrap(result);
+        const tbody = $('#pathsTable tbody').empty();
+        if (!payload.paths?.length) {
+            tbody.append(`<tr><td colspan="6" class="has-text-centered py-6 opacity-40 italic">${t("settings.no_paths")}</td></tr>`);
+        } else {
+            payload.paths.forEach(p => {
+                tbody.append(`
+                    <tr>
+                        <td>
+                            <p class="font-mono is-size-7 mb-0">${escapeHtml(p.path)}</p>
+                        </td>
+                        <td class="has-text-centered"><span class="tag is-light">${p.titles_count}</span></td>
+                        <td class="has-text-centered"><span class="tag is-light">${p.files_count}</span></td>
+                        <td class="has-text-centered"><span class="tag is-primary is-light font-mono">${p.total_size_formatted}</span></td>
+                        <td class="has-text-centered"><span class="is-size-7 opacity-50">${p.last_scan || '--'}</span></td>
+                        <td class="has-text-right">
+                            <div class="buttons is-right">
+                                <button class="button is-small is-ghost has-text-info" onclick="scanLibrary('${p.path}')" title="${t('settings.scan_folder')}"><i class="bi bi-arrow-clockwise"></i></button>
+                                <button class="button is-small is-ghost has-text-danger" onclick="showDeletePathModal('${p.path}')" title="${t('settings.remove_path')}"><i class="bi bi-trash3"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+    }).fail(() => debugWarn('Failed to load library paths'));
+}
+
+// Check watchdog status
+function checkWatchdogStatus() {
+    $.getJSON("/api/status", (status) => {
+        const payload = unwrap(status);
+        const banner = $('#watchdogStatusBanner');
+        const text = $('#watchdogStatusText');
+        const headerStatus = $('#watchdogStatus');
+
+        if (payload && payload.watching !== undefined) {
+            banner.removeClass('is-info is-warning is-danger').addClass(payload.watching ? 'is-success' : 'is-warning');
+            headerStatus.find('.icon i').removeClass('bi-check-circle bi-pause-circle').addClass(payload.watching ? 'bi-check-circle' : 'bi-pause-circle');
+            headerStatus.find('span:last-child').text(`Watchdog: ${payload.watching ? t("settings.watchdog_monitoring") : t("settings.watchdog_not_monitoring")}`);
+
+            const icon = payload.watching ? 'bi-broadcast' : 'bi-pause-circle';
+            const count = payload.libraries || 0;
+            const libText = count === 1 ? t("common.library") : t("common.libraries");
+
+            text.html(`<span class="icon mr-2"><i class="bi ${icon}"></i></span>
+                Watchdog: ${payload.watching ? t("settings.watchdog_monitoring") : t("settings.watchdog_not_monitoring")} | 
+                ${count} ${libText}`);
+        } else {
+            $.getJSON("/api/settings/library/paths", (paths) => {
+                const pp = unwrap(paths);
+                const hasPaths = pp.paths && pp.paths.length > 0;
+                banner.removeClass('is-info is-warning is-danger').addClass(hasPaths ? 'is-success' : 'is-warning');
+                headerStatus.find('span:last-child').text(`Watchdog: ${hasPaths ? t("settings.watchdog_monitoring") : t("settings.watchdog_no_libs")}`);
+
+                const icon = hasPaths ? 'bi-broadcast' : 'bi-pause-circle';
+                text.html(`<span class="icon mr-2"><i class="bi ${icon}"></i></span>
+                    Watchdog: ${hasPaths ? t("settings.watchdog_monitoring") : t("settings.watchdog_no_libs")}`);
+            });
+        }
+    }).fail(() => {
+        $.getJSON("/api/settings/library/paths", (paths) => {
+            const pp = unwrap(paths);
+            const hasPaths = pp.paths && pp.paths.length > 0;
+            const banner = $('#watchdogStatusBanner');
+            const text = $('#watchdogStatusText');
+            const headerStatus = $('#watchdogStatus');
+
+            banner.removeClass('is-info is-warning is-danger').addClass(hasPaths ? 'is-success' : 'is-warning');
+            headerStatus.find('span:last-child').text(`Watchdog: ${hasPaths ? t("settings.watchdog_monitoring") : t("settings.watchdog_no_libs")}`);
+
+            const icon = hasPaths ? 'bi-broadcast' : 'bi-pause-circle';
+            text.html(`<span class="icon mr-2"><i class="bi ${icon}"></i></span>
+                Watchdog: ${hasPaths ? t("settings.watchdog_monitoring") : t("settings.watchdog_no_libs")}`);
+        });
+    });
+}
+
+function fillUserTable() {
+    $.getJSON("/api/users", (result) => {
+        const tbody = $('#userTable tbody').empty();
+        const list = coerceArray(result);
+        allUsernames = list.map(u => u.user);
+        if (!list.length) {
+            tbody.append(`<tr><td colspan="3" class="has-text-centered py-6 opacity-40 italic">${t("settings.no_users")}</td></tr>`);
+        } else {
+            list.forEach(user => {
+                const self = user.user === window.currentUser;
+                tbody.append(`
+                    <tr>
+                        <td class="has-text-weight-bold">
+                            <i class="bi bi-person-circle mr-2 opacity-50"></i> ${escapeHtml(user.user)} ${self ? `<span class="tag is-info is-light is-small ml-2">${t('settings.you')}</span>` : ''}
+                        </td>
+                        <td>
+                            <div class="tags">
+                                <span class="tag ${user.shop_access ? 'is-success' : 'is-light'} is-small">${t('settings.access_shop')}</span>
+                                <span class="tag ${user.backup_access ? 'is-success' : 'is-light'} is-small">${t('settings.access_backup')}</span>
+                                <span class="tag ${user.admin_access ? 'is-primary' : 'is-light'} is-small">${t('settings.access_admin')}</span>
+                            </div>
+                        </td>
+                        <td class="has-text-right">
+                            ${!self ? `
+                                <button class="button is-small is-ghost has-text-danger" onclick="showDeleteUserModal(${user.id}, '${user.user}')">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+    }).fail(() => debugWarn('Failed to load users'));
+}
+
+function refreshTitleDBFiles() {
+    const tbody = $('#titledbFilesTable tbody');
+    tbody.html(`<tr><td colspan="4" class="has-text-centered is-italic opacity-50">${t('common.loading')}...</td></tr>`);
+    $.getJSON("/api/settings/titledb/files", (result) => {
+        const payload = unwrap(result);
+        if (!payload || !payload.files) return;
+        tbody.empty();
+        if (payload.files.length === 0) {
+            tbody.html(`<tr><td colspan="4" class="has-text-centered is-italic opacity-50">${t('settings.tdb_no_date')}</td></tr>`);
+            return;
+        }
+        payload.files.forEach(file => {
+            let statusHtml, statusClass;
+            if (!file.exists) {
+                statusHtml = `<span class="tag is-danger is-light is-small">${t('Missing')}</span>`;
+            } else {
+                const modified = file.modified || 'Unknown';
+                const now = new Date();
+                const fileDate = new Date(modified);
+                const daysOld = Math.floor((now - fileDate) / (1000 * 60 * 60 * 24));
+                if (daysOld > 7) {
+                    statusHtml = `<span class="tag is-warning is-light is-small" title="${daysOld} ${t('days old')}">${daysOld}d ${t('old')}</span>`;
+                } else {
+                    statusHtml = `<span class="tag is-success is-light is-small">${t('Recent')}</span>`;
+                }
+            }
+            const fmt = (s) => { const u = ['B','KB','MB','GB']; let i=0; while(s>=1024 && i<3){s/=1024;i++} return s.toFixed(i>0?1:0)+' '+u[i]; };
+            const sizeStr = file.exists ? fmt(file.size) : '-';
+            const dateStr = file.exists ? (file.modified || '-') : '-';
+            tbody.append(`
+                <tr>
+                    <td><code>${escapeHtml(file.filename)}</code></td>
+                    <td>${sizeStr}</td>
+                    <td>${dateStr}</td>
+                    <td>${statusHtml}</td>
+                </tr>
+            `);
+        });
+    }).fail(() => {
+        tbody.html(`<tr><td colspan="4" class="has-text-centered has-text-danger is-italic opacity-50">${t('common.error')}</td></tr>`);
+    });
+}
+
+function fillTitleDBSourcesTable() {
+    $.getJSON("/api/settings/titledb/sources", (result) => {
+        const payload = unwrap(result);
+        if (!payload || !payload.sources) return;
+        const tbody = $('#titledbSourcesTable tbody').empty();
+        if (!tbody.data('sortable-init')) {
+            const sortableEl = document.getElementById('titledbSourcesTable').querySelector('tbody');
+            if (sortableEl) {
+                new Sortable(sortableEl, {
+                    handle: '.drag-handle',
+                    animation: 150,
+                    onEnd: function (evt) {
+                        const priorities = {};
+                        $('#titledbSourcesTable tbody tr').each((index, row) => {
+                            const name = $(row).find('p.has-text-weight-bold').text();
+                            priorities[name] = index * 10;
+                            $(row).find('input[type="number"]').val(index * 10);
+                        });
+
+                        $.ajax({
+                            url: '/api/settings/titledb/sources/reorder',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(priorities),
+                            success: function (res) {
+                                if (res.success) showToast(t('settings.priorities_updated'));
+                                else showToast(t('settings.priorities_fail'), 'error');
+                            }
+                        });
+                    }
+                });
+                tbody.data('sortable-init', true);
+            }
+        }
+
+        payload.sources.forEach(source => {
+            let remoteDateHtml = '';
+            if (source.is_fetching) {
+                remoteDateHtml = `<span class="is-size-7 italic opacity-50"><i class="bi bi-arrow-repeat spin mr-1"></i> ${t('common.loading')}</span>`;
+            } else if (source.remote_date) {
+                remoteDateHtml = `<span class="is-size-7">${new Date(source.remote_date).toLocaleString()}</span>`;
+            } else {
+                const errorMsg = source.last_error ? `${t('common.error')}: ${source.last_error}` : t('settings.tdb_no_date');
+                remoteDateHtml = `<span class="is-size-7 has-text-danger italic opacity-50" title="${errorMsg}" style="cursor: help;">${t('common.not_found')} <i class="bi bi-question-circle"></i></span>`;
+            }
+
+            const localDate = source.last_success ? new Date(source.last_success).toLocaleString() : t('common.never');
+
+            tbody.append(`
+                <tr>
+                    <td>
+                        <div class="is-flex is-align-items-center">
+                            <i class="bi ${source.source_type === 'json' ? 'bi-filetype-json' : 'bi-file-zip'} mr-2 opacity-40"></i>
+                            <div>
+                                <p class="has-text-weight-bold has-text-primary is-size-6 m-0">${escapeHtml(source.name)}</p>
+                                <p class="is-family-monospace is-size-7 opacity-40" style="word-break: break-all;">${escapeHtml(source.base_url)}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="is-flex is-align-items-center">
+                            <i class="bi bi-cloud-check mr-2 has-text-info"></i>
+                            ${remoteDateHtml}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="is-flex is-align-items-center">
+                            <i class="bi bi-download mr-2 opacity-50"></i>
+                            <span class="is-size-7">${localDate}</span>
+                        </div>
+                    </td>
+                    <td><input type="number" class="input is-small" value="${source.priority}" style="width: 70px" onchange="updateSourcePriority('${source.name}', this.value)" /></td>
+                    <td>
+                        <span class="tag ${source.enabled ? 'is-success' : 'is-light'} is-small">
+                            ${source.enabled ? t('common.enabled') : t('common.disabled')}
+                        </span>
+                    </td>
+                    <td class="has-text-right">
+                        <div class="buttons is-right">
+                            <button class="button is-small is-ghost has-text-${source.enabled ? 'warning' : 'success'}" onclick="toggleSource('${source.name}', ${!source.enabled})">
+                                <i class="bi bi-${source.enabled ? 'pause-fill' : 'play-fill'}"></i>
+                            </button>
+                            <button class="button is-small is-ghost has-text-danger" onclick="deleteSource('${source.name}')">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                            <button class="button is-small is-ghost drag-handle" style="cursor: move">
+                                <i class="bi bi-grip-vertical"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `);
+        });
+    }).fail(() => debugWarn('Failed to load titledb sources'));
+}
+
+function fillErrorsTable() {
+    $('#bulkActionsBar').addClass('is-hidden');
+    $('#selectAllErrors').prop('checked', false);
+
+    $.getJSON("/api/files/unidentified", (result) => {
+        const tbody = $('#errorsTable tbody').empty();
+        const list = coerceArray(result);
+        if (!list.length) {
+            tbody.append(`<tr><td colspan="4" class="has-text-centered py-6 opacity-40 italic">${t('settings.no_errors')}</td></tr>`);
+        } else {
+            list.forEach(file => {
+                const isRecognitionError = file.error && file.error.includes('Banco de Dados');
+                const tidMatch = isRecognitionError ? file.error.match(/\((0100[0-9A-F]+)\)/) : null;
+                const tid = tidMatch ? tidMatch[1] : null;
+
+                tbody.append(`
+                    <tr>
+                        <td><input type="checkbox" class="error-checkbox" data-id="${file.id}" onclick="updateBulkBar()"></td>
+                        <td>
+                            <p class="has-text-weight-bold is-size-7 break-word">${escapeHtml(file.filename)}</p>
+                            <p class="is-family-monospace is-size-7 opacity-40 break-word">${escapeHtml(file.filepath)}</p>
+                        </td>
+                        <td>
+                            <span class="is-size-7 ${isRecognitionError ? 'has-text-warning' : 'has-text-danger'}">
+                                <i class="bi ${isRecognitionError ? 'bi-question-circle' : 'bi-exclamation-triangle'} mr-1"></i>
+                                ${escapeHtml(file.error || t('common.error.unknown'))}
+                            </span>
+                        </td>
+                        <td class="has-text-right">
+                            <div class="buttons is-right">
+                                ${tid ? `
+                                    <button class="button is-small is-info is-light" onclick="openEditModalFromError('${tid}')" title="${t('settings.manual_id')}">
+                                        <i class="bi bi-pencil-square mr-1"></i> ${t('settings.recognize')}
+                                    </button>
+                                ` : ''}
+                                <button class="button is-small is-ghost has-text-danger" onclick="deleteErrorFile(${file.id})" title="${t('settings.delete_file')}">
+                                    <i class="bi bi-trash3"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+    }).fail(() => debugWarn('Failed to load unidentified files'));
+}
+
+function openEditModalFromError(titleId) {
+    if (!titleId) return;
+    $('#editMetaId').val(titleId);
+    $('#editMetaName').val(t('common.unknown') + ' (' + titleId + ')');
+    $('#editMetaPublisher, #editMetaDescription, #editMetaIcon, #editMetaBanner, #editMetaGenre, #editMetaRelease').val('');
+    $('#titleDBSearchResults').empty();
+    $('#searchTitleDBInput').val('');
+
+    $.get(`/api/games/${titleId}/custom`, function (d) {
+        if (d && !d.error) {
+            if (d.name) $('#editMetaName').val(d.name);
+            if (d.publisher) $('#editMetaPublisher').val(d.publisher);
+            if (d.description) $('#editMetaDescription').val(d.description);
+            if (d.iconUrl) $('#editMetaIcon').val(d.iconUrl);
+            if (d.bannerUrl) $('#editMetaBanner').val(d.bannerUrl);
+            if (d.genre || d.category) $('#editMetaGenre').val(d.genre || d.category);
+            if (d.release_date || d.releaseDate) $('#editMetaRelease').val(d.release_date || d.releaseDate);
+        }
+    });
+
+    openModal('editMetadataModal');
+}
+
+function deleteErrorFile(id) {
+    confirmAction({
+        title: t('settings.delete_file'),
+        message: t('settings.delete_file_confirm'),
+        confirmText: t('common.delete'),
+        confirmClass: 'is-danger',
+        onConfirm: () => {
+            $.post(`/api/files/delete/${id}`, (res) => {
+                if (res.success) {
+                    showToast(t('settings.file_deleted'));
+                    fillErrorsTable();
+                    if (currentExplorerPath !== undefined) fillFilesExplorer();
+                } else {
+                    showToast(t('settings.file_delete_error') + res.error, 'error');
+                }
+            });
+        }
+    });
+}
+
+function toggleAllErrors(checkbox) {
+    $('.error-checkbox').prop('checked', checkbox.checked);
+    updateBulkBar();
+}
+
+function updateBulkBar() {
+    const selected = $('.error-checkbox:checked').length;
+    $('#selectedCountText').text(`${selected} ${t('common.items_selected')}`);
+    if (selected > 0) $('#bulkActionsBar').removeClass('is-hidden');
+    else $('#bulkActionsBar').addClass('is-hidden');
+}
+
+function bulkDeleteFiles() {
+    const selectedIds = $('.error-checkbox:checked').map(function () {
+        return $(this).data('id');
+    }).get();
+
+    if (selectedIds.length === 0) {
+        showToast(t('settings.no_file_selected'), 'error');
+        return;
+    }
+
+    confirmAction({
+        title: t('settings.delete_files'),
+        message: t('settings.delete_files') + ' ' + selectedIds.length + t('settings.delete_files_disk_confirm'),
+        confirmText: t('common.delete'),
+        confirmClass: 'is-danger',
+        onConfirm: () => {
+            let deleted = 0;
+            let errors = 0;
+
+            selectedIds.forEach((id, index) => {
+                $.post(`/api/files/delete/${id}`, (res) => {
+                    if (res.success) deleted++;
+                    else errors++;
+
+                    if (index === selectedIds.length - 1) {
+                        setTimeout(() => {
+                            if (deleted > 0) showToast(deleted + t('settings.files_deleted_success'));
+                            if (errors > 0) showToast(errors + t('settings.files_delete_error'), 'error');
+                            fillErrorsTable();
+                        }, 500);
+                    }
+                }).fail(() => {
+                    errors++;
+                    if (index === selectedIds.length - 1) {
+                        setTimeout(() => {
+                            showToast(errors + t('settings.files_delete_error'), 'error');
+                            fillErrorsTable();
+                        }, 500);
+                    }
+                });
+            });
+        }
+    });
+}
+
+function showDeleteUserModal(id, user) {
+    $('#deleteUserModal .modal-text').text(t('settings.delete_user_confirm') + ` "${user}"? ` + t('common.cannot_undo'));
+    $('#deleteUserModal .btn-confirm').off('click').on('click', () => deleteUser(id));
+    openModal('deleteUserModal');
+}
+
+function showDeletePathModal(path) {
+    $('#deletePathModal .modal-text').text(t('settings.remove_path_modal') + ` "${path}"? ` + t('settings.path_remove_warn'));
+    $('#deletePathModal .btn-confirm').off('click').on('click', () => deleteLibraryPath(path));
+    openModal('deletePathModal');
+}
+
+function deleteUser(id) {
+    $.ajax({ url: "/api/user", type: 'DELETE', data: JSON.stringify({ user_id: id }), contentType: "application/json", success: () => { fillUserTable(); closeModal('deleteUserModal'); showToast(t('settings.user_deleted')); } });
+}
+
+function deleteLibraryPath(path) {
+    $.ajax({ url: "/api/settings/library/paths", type: 'DELETE', data: JSON.stringify({ path }), contentType: "application/json", success: () => { fillLibraryTable(); closeModal('deletePathModal'); showToast(t('settings.path_removed')); } });
+}
+
+function submitNewUser() {
+    const user = getInputVal("inputNewUser");
+    const password = getInputVal("inputNewUserPassword");
+    if (!user || !password) return showToast(t('settings.fill_fields'), 'error');
+
+    $.ajax({
+        url: "/api/user", type: 'POST',
+        data: JSON.stringify({
+            user, password,
+            shop_access: getCheckboxStatus("checkboxNewUserShopAccess"),
+            backup_access: getCheckboxStatus("checkboxNewUserBackupAccess"),
+            admin_access: getCheckboxStatus("checkboxNewUserAdminAccess")
+        }),
+        contentType: "application/json",
+        success: (r) => {
+            if (r.success) {
+                fillUserTable();
+                $('#inputNewUser, #inputNewUserPassword').val('');
+                showToast(t('settings.user_created'));
+            } else {
+                showToast(r.errors?.[0]?.error || t('settings.user_create_fail'), 'error');
+            }
+        }
+    });
+}
+
+function submitNewLibraryPath() {
+    const path = getInputVal("libraryPathInput");
+    if (!path) return showToast(t('settings.path_required'), 'warning');
+    $.ajax({
+        url: "/api/settings/library/paths",
+        type: 'POST',
+        data: JSON.stringify({ path }),
+        contentType: "application/json",
+        success: (r) => {
+            if (r.success) {
+                fillLibraryTable();
+                $('#libraryPathInput').val('');
+                showToast(t('settings.path_added'));
+            } else {
+                showToast(r.errors?.[0]?.error || t('settings.path_add_fail'), 'error');
+            }
+        }
+    });
+}
+
+function scanLibrary(path = null) {
+    $('.scanBtn').addClass('is-loading');
+    showToast(t('settings.scan_started'));
+    $.ajax({
+        url: '/api/library/scan',
+        type: 'POST',
+        data: JSON.stringify({ path }),
+        contentType: "application/json",
+        success: (result) => {
+            $('.scanBtn').removeClass('is-loading');
+            if (result.success) showToast(t('settings.scan_triggered'));
+        }
+    });
+}
+
+function loadCleanupStats() {
+    $.getJSON('/api/cleanup/stats', (data) => {
+        if (data.success && data.has_orphaned) {
+            $('#cleanupStats').removeClass('is-hidden');
+            $('#cleanupMissingFiles').text(data.missing_files);
+            $('#cleanupMissingApps').text(data.missing_apps);
+        } else {
+            $('#cleanupStats').addClass('is-hidden');
+        }
+    }).fail(() => $('#cleanupStats').addClass('is-hidden'));
+}
+
+function cleanupOrphaned() {
+    confirmAction({
+        title: t('settings.cleanup_orphaned'),
+        message: t('settings.cleanup_confirm'),
+        confirmText: t('common.clean'),
+        confirmClass: 'is-warning',
+        onConfirm: () => {
+            const btn = $('#btnCleanupOrphaned');
+            btn.addClass('is-loading');
+            btn.find('span:last').text(t('common.cleaning'));
+
+            $.post('/api/cleanup/orphaned', (res) => {
+                btn.removeClass('is-loading');
+                btn.find('span:last').text(t('settings.btn_cleanup'));
+
+                if (res.success) {
+                    showToast(res.message, 'success');
+                    loadCleanupStats();
+                } else {
+                    showToast(t('common.error') + ': ' + (res.error || t('common.unknown')), 'error');
+                }
+            }).fail((xhr) => {
+                btn.removeClass('is-loading');
+                btn.find('span:last').text(t('settings.btn_cleanup'));
+                showToast(t('common.error.communication') + (xhr.responseJSON?.error || t('common.unknown')), 'error');
+            });
+        }
+    });
+}
+
+function refreshTitleDBDates() {
+    $.post('/api/settings/titledb/sources/refresh-dates', () => {
+        showToast(t('settings.fetching_dates'));
+        let checks = 0;
+        const interval = setInterval(() => {
+            fillTitleDBSourcesTable();
+            checks++;
+            if (checks > 10) clearInterval(interval);
+        }, 2000);
+    });
+}
+
+function toggleSource(name, enabled) {
+    $.ajax({ url: "/api/settings/titledb/sources", type: 'PUT', data: JSON.stringify({ name, enabled }), contentType: "application/json", success: fillTitleDBSourcesTable });
+}
+
+function updateSourcePriority(name, priority) {
+    $.ajax({ url: "/api/settings/titledb/sources", type: 'PUT', data: JSON.stringify({ name, priority: parseInt(priority) }), contentType: "application/json", success: fillTitleDBSourcesTable });
+}
+
+function deleteSource(name) {
+    confirmAction({
+        title: t('settings.delete_source'),
+        message: t('settings.delete_source_confirm') + `"${name}"?`,
+        confirmText: t('common.delete'),
+        confirmClass: 'is-danger',
+        onConfirm: () => {
+            $.ajax({ url: "/api/settings/titledb/sources", type: 'DELETE', data: JSON.stringify({ name }), contentType: "application/json", success: () => { showToast(t('settings.source_deleted')); fillTitleDBSourcesTable(); } });
+        }
+    });
+}
+
+function submitNewSource() {
+    const name = getInputVal('inputSourceName');
+    const url = getInputVal('inputSourceUrl');
+    if (!name || !url) return showToast(t('settings.source_name_url_req'), 'error');
+
+    const data = {
+        name, base_url: url,
+        priority: parseInt(getInputVal('inputSourcePriority')),
+        source_type: $('#inputSourceType').val(),
+        enabled: true
+    };
+    $.ajax({
+        url: "/api/settings/titledb/sources", type: 'POST', data: JSON.stringify(data), contentType: "application/json",
+        success: () => {
+            fillTitleDBSourcesTable();
+            $('#inputSourceName, #inputSourceUrl').val('');
+            $('#addSourceForm').addClass('is-hidden');
+            showToast(t('Source added'));
+        }
+    });
+}
+
+function forceTitleDBUpdate() {
+    const btn = $('.updateTitleDBBtn');
+    btn.addClass('is-loading');
+    $.post("/api/settings/titledb/update", (r) => {
+        if (r.success) showToast(t('Update started in background!'));
+        else showToast(t('Update failed!'), 'error');
+        setTimeout(() => { btn.removeClass('is-loading'); fillTitleDBSourcesTable(); }, 2000);
+    });
+}
+
+function saveTitleDBSettings() {
+    $.ajax({
+        url: "/api/settings/titles", type: 'POST', data: JSON.stringify({ auto_use_latest: $('#autoUseLatest').is(':checked') }), contentType: "application/json",
+        success: (r) => { if (!r.success) showToast(r.errors?.[0]?.error, 'error'); else showToast(t('Settings saved')); }
+    });
+}
+
+function submitTitlesSettings() {
+    const data = {
+        region: $('#selectRegion').val(),
+        language: $('#selectLanguage').val(),
+        auto_use_latest: $('#autoUseLatest').is(':checked')
+    };
+    $.ajax({ url: "/api/settings/titles", type: 'POST', data: JSON.stringify(data), contentType: "application/json", success: (r) => { if (!r.success) showToast(r.errors?.[0]?.error, 'error'); else showToast(t('Settings saved')); } });
+
+    const keysFile = $('#consoleKeysInput')[0].files[0];
+    if (keysFile) {
+        const formData = new FormData();
+        formData.append('file', keysFile);
+        showToast(t('Uploading keys...'));
+        $.ajax({
+            url: "/api/settings/keys", type: 'POST', data: formData, processData: false, contentType: false,
+            success: (r) => {
+                if (r.success) { showToast(t('Keys updated! Reloading...')); setTimeout(() => window.location.reload(), 1500); }
+                else showToast(t('Invalid keys file!'), 'error');
+            }
+        });
+    }
+}
+
+function submitShopSettings() {
+    const data = {
+        host: getInputVal('shopHostInput'),
+        public: getCheckboxStatus('publicShopCheck'),
+        public_profile: getCheckboxStatus('publicProfileCheck'),
+        encrypt: getCheckboxStatus('encryptShopCheck'),
+        motd: getInputVal('motdTextArea')
+    };
+    $.ajax({ url: "/api/settings/shop", type: 'POST', data: JSON.stringify(data), contentType: "application/json", success: () => showToast(t('Shop settings saved')) });
+}
+
+function changeLanguage(lang) {
+    document.cookie = "language=" + lang + ";path=/;max-age=31536000";
+    window.location.reload();
+}
+
+function connectCloud(provider) {
+    $.getJSON(`/api/cloud/auth/${provider}`, (data) => { if (data.auth_url) window.open(data.auth_url, '_blank'); }).fail((err) => {
+        if (err.status === 503) {
+            showToast(err.responseJSON?.message || 'Cloud sync已被移除 in v2.2.0', 'warning');
+        } else {
+            showToast(err.responseJSON?.error || t('Erro ao iniciar autenticação'), 'error');
+        }
+    });
+}
+
+function fillCloudStatus() {
+    $.getJSON('/api/cloud/status', (status) => {
+        ['gdrive', 'dropbox'].forEach(p => {
+            const box = $(`#cloud-${p}`);
+            const s = status[p];
+            if (s) {
+                if (s.enabled === false) {
+                    box.find('.btn-connect').prop('disabled', true).text('Descontinuado');
+                } else if (s.authenticated) {
+                    box.find('.btn-connect').prop('disabled', false).text(t('Reconectar'));
+                    box.find('.cloud-status').removeClass('is-hidden');
+                } else {
+                    box.find('.btn-connect').prop('disabled', false).text(t('Conectar'));
+                }
+                box.find('.btn-config-needed').addClass('is-hidden');
+            } else {
+                box.find('.btn-connect').addClass('is-hidden');
+                box.find('.btn-config-needed').removeClass('is-hidden');
+            }
+        });
+    });
+}
+
+function fillPluginsList() {
+    // Plugins feature removed - show informational message
+    const container = $('#pluginsList').empty();
+    container.append(`<div class="notification is-ghost border p-4 mb-3"><p class="has-text-weight-bold">${t('Plugins feature removed')}</p><p class="is-size-7 opacity-60">${t('Plugin management has been removed from this build. Install plugins manually in the app/plugins directory if required.')}</p></div>`);
+}
+
+function togglePlugin(pluginId, enabled) {
+    showToast(t('Plugins feature removed'), 'warning');
+}
+
+let allFiles = [];
+let explorerLibraries = [];
+let currentExplorerPath = '';
+
+function setExplorerPath(path) {
+    currentExplorerPath = path;
+    renderFilesExplorer();
+    updateExplorerBreadcrumb();
+}
+
+function updateExplorerBreadcrumb() {
+    const breadcrumb = $('#fileExplorerBreadcrumb').empty();
+    const rootLi = $(`<li class="${currentExplorerPath === '' ? 'is-active' : ''}"></li>`);
+    rootLi.append($(`<a href="javascript:void(0)" onclick="setExplorerPath('')"><i class="bi bi-hdd-fill mr-1"></i> ${t('Root')}</a>`));
+    breadcrumb.append(rootLi);
+
+    if (currentExplorerPath) {
+        const parts = currentExplorerPath.split('/').filter(p => p !== '');
+        let acc = '';
+        parts.forEach((p, i) => {
+            acc += '/' + p;
+            const li = $(`<li class="${i === parts.length - 1 ? 'is-active' : ''}"></li>`);
+            li.append($(`<a href="javascript:void(0)" onclick="setExplorerPath('${acc}')">${p}</a>`));
+            breadcrumb.append(li);
+        });
+    }
+}
+
+function fillFilesExplorer() {
+    $.getJSON('/api/settings/library/paths', (res) => {
+        explorerLibraries = coerceArray(res).length ? coerceArray(res) : (unwrap(res).paths || []);
+        $.getJSON('/api/files/all', (files) => { allFiles = unwrap(files) || files || []; renderFilesExplorer(); updateExplorerBreadcrumb(); }).fail(() => $('#filesExplorerTable tbody').html(`<tr><td colspan="6" class="has-text-centered py-4 has-text-danger">${t('Erro ao carregar arquivos.')}</td></tr>`));
+    });
+}
+
+function renderFilesExplorer() {
+    const tbody = $('#filesExplorerTable tbody').empty();
+    const search = $('#fileSearchInput').val().toLowerCase();
+    const typeF = $('#fileTypeFilter').val();
+    const statusF = $('#fileStatusFilter').val();
+
+    if (search) {
+        $('.breadcrumb').addClass('is-hidden');
+        const filtered = allFiles.filter(f => {
+            if (!f.filename.toLowerCase().includes(search) && !f.filepath.toLowerCase().includes(search)) return false;
+            if (typeF && f.extension !== typeF) return false;
+            if (statusF === 'identified' && !f.identified) return false;
+            if (statusF === 'error' && (f.identified || !f.identification_error)) return false;
+            return true;
+        });
+        if (filtered.length === 0) tbody.append(`<tr><td colspan="6" class="has-text-centered py-4 opacity-50">${t('Nenhum arquivo encontrado para a busca.')}</td></tr>`);
+        else renderFileList(tbody, filtered, true);
+        $('#filesExplorerCount').text(filtered.length + t(' arquivos encontrados'));
+        return;
+    }
+
+    $('.breadcrumb').removeClass('is-hidden');
+    if (currentExplorerPath === '') {
+        (Array.isArray(explorerLibraries) ? explorerLibraries : []).forEach(lib => tbody.append(`<tr class="is-clickable" onclick="setExplorerPath('${lib.path}')"><td colspan="6" class="table-cell-full"><div class="folder-item"><i class="bi bi-folder-fill has-text-warning mr-2"></i><span class="has-text-weight-bold">${escapeHtml(lib.path)}</span><span class="tag is-light ml-2">${lib.files_count} ${t('arquivos')}</span></div></td></tr>`));
+        $('#filesExplorerCount').text((Array.isArray(explorerLibraries) ? explorerLibraries.length : 0) + t(' bibliotecas configuradas'));
+    } else {
+        const items = [], folders = new Set();
+        (Array.isArray(allFiles) ? allFiles : []).forEach(f => {
+            if (f.filepath.startsWith(currentExplorerPath)) {
+                let rel = f.filepath.substring(currentExplorerPath.length);
+                if (rel.startsWith('/')) rel = rel.substring(1);
+                if (!rel) return;
+                const parts = rel.split('/');
+                if (parts.length > 1) folders.add(parts[0]);
+                else {
+                    if (typeF && f.extension !== typeF) return;
+                    if (statusF === 'identified' && !f.identified) return;
+                    if (statusF === 'error' && (f.identified || !f.identification_error)) return;
+                    items.push(f);
+                }
+            }
+        });
+
+        let par = '';
+        if (!explorerLibraries.some(l => l.path === currentExplorerPath)) {
+            const last = currentExplorerPath.lastIndexOf('/');
+            par = last > 0 ? currentExplorerPath.substring(0, last) : '';
+        }
+
+        tbody.append(`<tr class="is-clickable" onclick="setExplorerPath('${par}')"><td colspan="6" class="table-cell-full"><div class="folder-item"><i class="bi bi-arrow-up-circle mr-2 opacity-50"></i><span class="has-text-weight-bold">..</span></div></td></tr>`);
+        Array.from(folders).sort().forEach(f => tbody.append(`<tr class="is-clickable" onclick="setExplorerPath('${currentExplorerPath.endsWith('/') ? currentExplorerPath + f : currentExplorerPath + '/' + f}')"><td colspan="6" class="table-cell-full"><div class="folder-item"><i class="bi bi-folder-fill has-text-warning mr-2"></i><span class="has-text-weight-bold">${escapeHtml(f)}</span></div></td></tr>`));
+        renderFileList(tbody, items, false);
+        $('#filesExplorerCount').text(folders.size + t(' pastas, ') + items.length + t(' arquivos nesta pasta'));
+    }
+}
+
+function renderFileList(tbody, files, showPath) {
+    files.forEach(f => {
+        const badge = f.identified ? `<span class="tag is-success is-light is-small"><i class="bi bi-check-circle mr-1"></i> ${t('Identificado')}</span>` : `<span class="tag is-danger is-light is-small"><i class="bi bi-x-circle mr-1"></i> ${t('Erro')}</span>`;
+        const tColor = { '.nsp': 'is-info', '.nsz': 'is-primary', '.xci': 'is-warning', '.xcz': 'is-danger' }[f.extension] || 'is-light';
+        const iconClass = { '.nsp': 'bi-filetype-exe', '.nsz': 'bi-file-zip', '.xci': 'bi-disc', '.xcz': 'bi-disc-fill' }[f.extension] || 'bi-file-earmark';
+
+        const filenameCell = `
+            <div class="is-flex is-align-items-center">
+                <i class="bi ${iconClass} mr-2 opacity-40 is-size-5"></i>
+                <div style="min-width: 0;">
+                    <p class="has-text-weight-bold has-text-primary is-size-7 m-0 truncate">${escapeHtml(f.filename)}</p>
+                    <p class="is-family-monospace is-size-7 opacity-40 truncate">${escapeHtml(f.filepath)}</p>
+                </div>
+            </div>
+        `;
+
+        const metadataCell = f.title_name ? `
+            <div class="is-flex is-align-items-center">
+                <i class="bi bi-link-45deg mr-2 has-text-info"></i>
+                <div style="min-width: 0;">
+                    <span class="has-text-weight-semibold is-size-7 truncate">${escapeHtml(f.title_name)}</span>
+                    <span class="is-size-7 opacity-50 block">${f.title_id || ''}</span>
+                </div>
+            </div>
+        ` : `
+            <div class="is-flex is-align-items-center opacity-40 italic">
+                <i class="bi bi-link-45deg mr-2"></i>
+                <span class="is-size-7">${t('Desconhecido')}</span>
+            </div>
+        `;
+
+        tbody.append(`
+            <tr>
+                <td>${filenameCell}</td>
+                <td>${metadataCell}</td>
+                <td>
+                    <div class="is-flex is-align-items-center">
+                        <i class="bi bi-hdd mr-2 opacity-50"></i>
+                        <span class="is-size-7">${f.size_formatted}</span>
+                    </div>
+                </td>
+                <td><span class="tag ${tColor} is-light is-small">${f.extension.toUpperCase().replace('.', '')}</span></td>
+                <td>${badge}</td>
+                <td class="has-text-right">
+                    <div class="buttons is-right">
+                        <button class="button is-small is-ghost has-text-danger" onclick="deleteErrorFile(${f.id})" title="${t('Excluir arquivo')}">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `);
+    });
+}
+
+// Local fallback for debounce to avoid cache/loading issues
+const _debounce = (func, wait) => {
+    let timeout;
+    return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+};
+
+$(document).on('input', '#fileSearchInput', _debounce(renderFilesExplorer, 300));
+$(document).on('change', '#fileTypeFilter, #fileStatusFilter', renderFilesExplorer);
+
+function fillWebhooksList() {
+    // Webhooks removed - show informational message
+    const c = $('#webhooksList').empty();
+    c.append(`<div class="notification is-ghost border p-4 mb-3"><p class="has-text-weight-bold">${t('Webhooks feature removed')}</p><p class="is-size-7 opacity-60">${t('Webhook integrations have been removed in this build.')}</p></div>`);
+}
+
+function addWebhook() {
+    showToast(t('Webhooks feature removed'), 'warning');
+}
+
+function deleteWebhook(id) {
+    showToast(t('Webhooks feature removed'), 'warning');
+}
+
+function loadRenamingSettings() {
+    $.getJSON('/api/settings/renaming', (r) => { if (r.success && r.settings) { $('#patternBase').val(r.settings.pattern_base); $('#patternUpd').val(r.settings.pattern_upd); $('#patternDlc').val(r.settings.pattern_dlc); } });
+}
+
+function saveRenamingSettings() {
+    const data = { pattern_base: $('#patternBase').val(), pattern_upd: $('#patternUpd').val(), pattern_dlc: $('#patternDlc').val(), enabled: true };
+    $.ajax({ url: '/api/settings/renaming', type: 'POST', contentType: 'application/json', data: JSON.stringify(data), success: (r) => { if (r.success) showToast(t('Padrões de renomeação salvos com sucesso!')); else showToast(t('Erro ao salvar padrões.'), 'error'); } });
+}
+
+function insertTag(tag) {
+    const f = document.activeElement;
+    if (f && f.id.startsWith('pattern')) {
+        const s = f.selectionStart, e = f.selectionEnd, v = f.value;
+        f.value = v.substring(0, s) + tag + v.substring(e);
+        f.focus();
+        f.selectionStart = f.selectionEnd = s + tag.length;
+    } else $('#patternBase').val($('#patternBase').val() + tag);
+}
+
+function previewRenaming() {
+    const data = { pattern_base: $('#patternBase').val(), pattern_upd: $('#patternUpd').val(), pattern_dlc: $('#patternDlc').val() };
+    $.ajax({
+        url: '/api/renaming/preview', type: 'POST', contentType: 'application/json', data: JSON.stringify(data), success: (r) => {
+            if (r.success) {
+                let h = '';
+                let previewList = [];
+                if (typeof coerceArray === 'function') previewList = coerceArray(r.preview);
+                else previewList = Array.isArray(r.preview) ? r.preview : [];
+                previewList.forEach(p => h += `<div class="mb-2"><span class="tag is-white border mr-2">${p.type}</span><span class="has-text-grey-light strikethrough mr-2">${escapeHtml(p.original)}</span><i class="bi bi-arrow-right mr-2 opacity-50"></i><span class="has-text-success has-text-weight-bold">${escapeHtml(p.new)}</span></div>`);
+                $('#previewContent').html(h || t('Nenhum arquivo encontrado para pré-visualização.'));
+                $('#renamingPreview').removeClass('is-hidden');
+            }
+        }
+    });
+}
+
+function runRenamingJob() {
+    confirmAction({ title: t('Renomeação em Massa'), message: t('Isso irá renomear fisicamente os arquivos no seu disco. Tem certeza?'), confirmText: t('Iniciar Renomeação'), confirmClass: 'is-warning', onConfirm: () => { saveRenamingSettings(); $.post('/api/renaming/run', (r) => { if (r.success) showToast(t('Job de renomeação iniciado em segundo plano.')); }); } });
+}
+
+// --- Backup Management ---
+function fillBackupsTable() {
+    $.getJSON('/api/backup/list', (res) => {
+        const list = coerceArray(res);
+        const tbody = $('#backupsTable tbody').empty();
+        if (!list || list.length === 0) {
+            tbody.append(`<tr><td colspan="5" class="has-text-centered has-text-grey">${t('Nenhum backup encontrado.')}</td></tr>`);
+            return;
+        }
+
+        list.forEach(b => {
+            const date = b.created.replace('T', ' ').split('.')[0];
+            const size = (b.size / 1024 / 1024).toFixed(2) + ' MB';
+            let typeColor = 'is-info';
+            if (b.type === 'settings') typeColor = 'is-warning';
+            if (b.type === 'keys') typeColor = 'is-success';
+
+            tbody.append(`
+                <tr>
+                    <td class="font-mono is-size-7">${b.filename}</td>
+                    <td><span class="tag ${typeColor} is-light">${b.type}</span></td>
+                    <td>${size}</td>
+                    <td>${date}</td>
+                    <td class="has-text-right">
+                        <div class="buttons is-right">
+                            <a href="/api/backup/download/${b.filename}" class="button is-small is-ghost" title="Download">
+                                <i class="bi bi-download"></i>
+                            </a>
+                            <button class="button is-small is-warning is-light" onclick="restoreBackup('${b.filename}')" title="Restaurar">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                            <button class="button is-small is-danger is-light" onclick="deleteBackup('${b.filename}')" title="Excluir">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `);
+        });
+    });
+}
+
+function createManualBackup() {
+    const btn = $('#btnCreateBackup');
+    btn.addClass('is-loading');
+    $.post('/api/backup/create', (res) => {
+        btn.removeClass('is-loading');
+        if (res.success) {
+            showToast(t('Backup criado com sucesso!'));
+            fillBackupsTable();
+        } else {
+            showToast(t('Erro ao criar backup'), 'error');
+        }
+    });
+}
+
+function restoreBackup(filename) {
+    confirmAction({
+        title: t('Restaurar Backup'),
+        message: t('ATENÇÃO: Isso irá substituir o arquivo atual pelo conteúdo do backup. O sistema pode precisar ser reiniciado. Deseja continuar?'),
+        confirmText: t('Restaurar Agora'),
+        confirmClass: 'is-danger',
+        onConfirm: () => {
+            $.ajax({
+                url: '/api/backup/restore',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ filename }),
+                success: (res) => {
+                    if (res.success) showToast(res.message, 'success');
+                    else showToast(t('Erro na restauração'), 'error');
+                }
+            });
+        }
+    });
+}
+
+function deleteBackup(filename) {
+    confirmAction({
+        title: t('Excluir Backup'),
+        message: t('Tem certeza que deseja remover permanentemente este arquivo de backup?'),
+        confirmText: t('Excluir'),
+        confirmClass: 'is-danger',
+        onConfirm: () => {
+            $.ajax({
+                url: `/api/backup/${filename}`,
+                type: 'DELETE',
+                success: (res) => {
+                    if (res.success) {
+                        showToast(t('Backup excluído'));
+                        fillBackupsTable();
+                    }
+                }
+            });
+        }
+    });
+}
+
+$(document).ready(async () => {
+    const lastTab = sessionStorage.getItem('lastSettingsTab') || 'General';
+    $(`#settingsNav a[data-target="${lastTab}"]`).click();
+
+    $('a[data-target="Renaming"]').click(() => loadRenamingSettings());
+    $('a[data-target="Backups"]').click(() => fillBackupsTable());
+
+    fillUserTable();
+    fillLibraryTable();
+    checkWatchdogStatus();
+    loadCleanupStats();
+    fillTitleDBSourcesTable();
+    refreshTitleDBFiles();
+    fillErrorsTable();
+    fillFilesExplorer();
+    fillWebhooksList();
+    fillPluginsList();
+    fillCloudStatus();
+    fillBackupsTable();
+
+    try {
+        const [regRaw, langRaw, setRaw] = await Promise.all([
+            $.getJSON("/api/settings/regions").catch(e => { debugWarn("Failed to load regions"); return { regions: [] }; }),
+            $.getJSON("/api/settings/languages").catch(e => { debugWarn("Failed to load languages"); return { languages: [] }; }),
+            $.getJSON("/api/settings").catch(e => { throw e; }) // Critical
+        ]);
+
+        const reg = (typeof unwrap === 'function') ? unwrap(regRaw) : regRaw;
+        const lang = (typeof unwrap === 'function') ? unwrap(langRaw) : langRaw;
+        const set = (typeof unwrap === 'function') ? unwrap(setRaw) : setRaw;
+
+        const selR = $('#selectRegion').empty();
+        const regions = (reg && Array.isArray(reg.regions)) ? reg.regions : [];
+        (Array.isArray(regions) ? regions : []).forEach(r => selR.append(new Option(r, r)));
+        if (set && set['titles/region']) selR.val(set['titles/region']);
+
+        const selL = $('#selectLanguage').empty();
+        const languages = (lang && Array.isArray(lang.languages)) ? lang.languages : [];
+        (Array.isArray(languages) ? languages : []).forEach(l => selL.append(new Option(l, l)));
+        if (set && set['titles/language']) selL.val(set['titles/language']);
+
+        $('#autoUseLatest').prop('checked', set['titles/auto_use_latest'] === true);
+        $('#languageSelect').val(document.cookie.match(/language=([^;]+)/)?.[1] || 'en');
+        $('#shopHostInput').val(set['shop/host']);
+        $('#publicShopCheck').prop('checked', set['shop/public']);
+        $('#publicProfileCheck').prop('checked', set['shop/public_profile']);
+        $('#encryptShopCheck').prop('checked', set['shop/encrypt']);
+        if (set['shop/motd']) $('#motdTextArea').val(set['shop/motd']);
+        if (set['apis/rawg_api_key']) $('#rawgApiKey').val(set['apis/rawg_api_key']);
+        if (set['apis/igdb_client_id']) $('#igdbClientId').val(set['apis/igdb_client_id']);
+        if (set['apis/igdb_client_secret']) $('#igdbClientSecret').val(set['apis/igdb_client_secret']);
+        if (set['apis/upcoming_days_ahead']) $('#upcomingDaysAhead').val(set['apis/upcoming_days_ahead']);
+        if (typeof fillMetadataStats === 'function') fillMetadataStats();
+    } catch (e) {
+        console.error("Failed to load critical settings:", e);
+        showToast(t('Failed to load settings from server'), 'error');
+    } finally {
+        $('#settingsLoading').addClass('is-hidden');
+        $('#settingsContent').removeClass('is-hidden');
+    }
+});
+
+$('.modal-background').on('click', function () { closeModal($(this).parent().attr('id')); });
+
+// Metadata Fetch Logic
+async function triggerMetadataFetch(force = false) {
+    try {
+        const response = await window.safeFetch('/api/system/metadata/fetch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ force: force })
+        });
+
+        if (response.ok) {
+            if (typeof showToast === 'function') showToast('Busca de metadados iniciada', 'success');
+            else if (typeof showNotification === 'function') showNotification('Busca de metadados iniciada', 'success');
+
+            // Refresh status after a short delay
+            setTimeout(updateMetadataStatus, 2000);
+        } else {
+            if (typeof showToast === 'function') showToast('Falha ao iniciar busca', 'error');
+        }
+    } catch (error) {
+        console.error('Error triggering metadata fetch:', error);
+    }
+}
+
+async function updateMetadataStatus() {
+    const timeEl = document.getElementById('last-metadata-fetch-time');
+    if (!timeEl) return;
+
+    try {
+        const response = await window.safeFetch('/api/system/metadata/status');
+        if (response.ok) {
+            const data = await response.json();
+
+            if (data.has_run && data.last_fetch) {
+                const last = data.last_fetch;
+                const date = new Date(last.started_at).toLocaleString();
+                let statusHtml = `<strong>${date}</strong><br>`;
+
+                if (last.status === 'running') {
+                    statusHtml += '<span class="has-text-info">Em execução...</span>';
+                } else if (last.status === 'completed') {
+                    statusHtml += `<span class="has-text-success">t('common.success'): ${last.updated} atualizados / ${last.processed} total</span>`;
+                } else {
+                    statusHtml += '<span class="has-text-danger">Falha na última execução</span>';
+                }
+
+                timeEl.innerHTML = statusHtml;
+            }
+        }
+    } catch (error) {
+        console.error('Error updating metadata status:', error);
+    }
+}
+
+// Initialize metadata status check
+$(document).ready(function () {
+    if (document.getElementById('metadata-fetch-status-container')) {
+        updateMetadataStatus();
+        // Periodically refresh if on the page
+        setInterval(updateMetadataStatus, 60000);
+    }
+});
+
