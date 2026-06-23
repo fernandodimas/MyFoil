@@ -198,8 +198,11 @@ def get_all_existing_versions(titleid):
 
 def get_all_app_existing_versions(app_id):
     if _state._cnmts_db is None:
-        _state.logger.warning("cnmts_db is not loaded. Call load_titledb first.")
-        return None
+        from titles import load_titledb
+        load_titledb()
+        if _state._cnmts_db is None:
+            _state.logger.warning("cnmts_db is not loaded. Call load_titledb first.")
+            return None
 
     if not app_id:
         return None
@@ -217,8 +220,11 @@ def get_all_app_existing_versions(app_id):
 
 def get_app_id_version_from_versions_txt(app_id):
     if _state._versions_txt_db is None:
-        _state.logger.error("versions_txt_db is not loaded. Call load_titledb first.")
-        return None
+        from titles import load_titledb
+        load_titledb()
+        if _state._versions_txt_db is None:
+            _state.logger.error("versions_txt_db is not loaded. Call load_titledb first.")
+            return None
 
     if not app_id:
         return None
@@ -230,8 +236,11 @@ def get_app_id_version_from_versions_txt(app_id):
 
 def get_all_existing_dlc(title_id):
     if _state._cnmts_db is None:
-        _state.logger.error("cnmts_db is not loaded. Call load_titledb first.")
-        return []
+        from titles import load_titledb
+        load_titledb()
+        if _state._cnmts_db is None:
+            _state.logger.error("cnmts_db is not loaded. Call load_titledb first.")
+            return []
 
     if not title_id:
         return []
