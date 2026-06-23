@@ -547,7 +547,7 @@ function showDlcDetails(id) {
                                     <div class="mb-2 pb-2" style="border-bottom: 1px solid rgba(0,0,0,0.05)">
                                         <p class="is-size-7 has-text-weight-bold truncate" title="${escapeHtml(f.filename)}">${escapeHtml(f.filename)}</p>
                                         <p class="is-size-7 opacity-50 font-mono truncate" style="font-size: 0.65rem !important;" title="${escapeHtml(f.filepath)}">${escapeHtml(f.filepath)}</p>
-                                        <p class="is-size-7 opacity-50">${t('Tamanho')}: ${escapeHtml(f.size_formatted)}</p>
+                                        <p class="is-size-7 opacity-50">${t('Tamanho')}: ${escapeHtml(f.size_formatted || '--')}</p>
                                     </div>
                                 `).join('')}
                             </div>
@@ -1065,7 +1065,7 @@ function searchRAWG() {
                         </div>
                         <div class="media-content">
                             <p class="is-size-7 has-text-weight-bold">${escapeHtml(item.name)} ${year}</p>
-                            <p class="is-size-7 opacity-50">${rating} ${item.platforms ? '· ' + item.platforms.map(p => p.platform && p.platform.name).filter(Boolean).join(', ') : ''}</p>
+                            <p class="is-size-7 opacity-50">${rating} ${item.platforms ? '· ' + item.platforms.map(p => p.platform && escapeHtml(p.platform.name)).filter(Boolean).join(', ') : ''}</p>
                         </div>
                     </div>
                 </a>`;
