@@ -757,8 +757,9 @@ def get_active_source_info(force=False) -> Dict:
 
                         try:
                             if hasattr(current_app, "scheduler"):
+                                import uuid
                                 current_app.scheduler.add_job(
-                                    job_id=f"auto_update_{int(time.time())}",
+                                    job_id=f"auto_update_{uuid.uuid4().hex[:8]}",
                                     func=_trigger_update,
                                     run_once=True,
                                     start_date=now_utc() + timedelta(seconds=delay_seconds),
