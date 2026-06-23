@@ -17,7 +17,7 @@ import flask.cli
 flask.cli.show_server_banner = lambda *args: None
 
 # Silence noisy libraries
-logging.getLogger("engineio.server").setLevel(logging.WARNING)
+logging.getLogger("engineio.server").setLevel(logging.CRITICAL)
 logging.getLogger("socketio.server").setLevel(logging.WARNING)
 logging.getLogger("werkzeug").setLevel(logging.WARNING)
 logging.getLogger("geventwebsocket.handler").setLevel(logging.WARNING)
