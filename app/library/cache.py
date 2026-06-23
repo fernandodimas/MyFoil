@@ -130,14 +130,16 @@ def invalidate_library_cache():
 
 def detect_changed_titles(since_seconds=None):
     from datetime import timedelta
+    from models.apps import app_files
 
     if since_seconds is None:
         since_seconds = 300
     cutoff_time = now_utc() - timedelta(seconds=since_seconds)
     changed = (
         db.session.query(Titles)
-        .join(Apps)
-        .join(Files)
+        .join(Apps, Titles.id == Apps.title_id)
+        .join(app_files, Apps.id == app_files.c.app_id)
+        .join(Files, Files.id == app_files.c.file_id)
         .filter(Files.last_attempt >= cutoff_time)
         .distinct()
         .all()
