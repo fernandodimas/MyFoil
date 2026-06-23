@@ -5,7 +5,7 @@
 let genreChart = null;
 
 // Normalize envelope-style API responses: { code, success, data } or direct payload
-const unwrap = (res) => {
+const unwrap = (typeof window.unwrap === 'function') ? window.unwrap : (res) => {
     try {
         if (res && res.data !== undefined) return res.data;
     } catch (e) {

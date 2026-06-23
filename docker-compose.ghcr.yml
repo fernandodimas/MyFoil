@@ -29,7 +29,7 @@ services:
       - RUN_POST_DEPLOY_RECOMPUTE=1
       - WATCHDOG_INTERVAL=10  # Watchdog polling interval in seconds
       - USER_ADMIN_NAME=${USER_ADMIN_NAME:-admin}
-      - USER_ADMIN_PASSWORD=${USER_ADMIN_PASSWORD:-admin}
+      - USER_ADMIN_PASSWORD=${USER_ADMIN_PASSWORD:-admin}  # ⚠️ Change in production!
     volumes:
       - /path/to/your/games:/games # ⚠️ UPDATE THIS PATH!
       - ./config:/app/config
@@ -66,7 +66,7 @@ services:
       - TZ=America/Sao_Paulo
       - REDIS_URL=redis://redis:6379/0
       - USER_ADMIN_NAME=${USER_ADMIN_NAME:-admin}
-      - USER_ADMIN_PASSWORD=${USER_ADMIN_PASSWORD:-admin}
+      - USER_ADMIN_PASSWORD=${USER_ADMIN_PASSWORD:-admin}  # ⚠️ Change in production!
     volumes:
       - /path/to/your/games:/games # ⚠️ UPDATE THIS PATH!
       - ./config:/app/config

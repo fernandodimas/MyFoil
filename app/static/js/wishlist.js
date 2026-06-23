@@ -2,7 +2,7 @@ let allWishlistItems = [];
 let currentWishlistView = localStorage.getItem('wishlistViewMode') || 'list';
 
 // Normalize envelope-style API responses: { code, success, data } or direct payload
-const unwrap = (res) => {
+const unwrap = (typeof window.unwrap === 'function') ? window.unwrap : (res) => {
     try {
         if (res && res.data !== undefined) return res.data;
     } catch (e) {
@@ -12,7 +12,7 @@ const unwrap = (res) => {
 }
 
 // Coerce various API shapes into an array for safe iteration
-const coerceArray = (res) => {
+const coerceArray = (typeof window.coerceArray === 'function') ? window.coerceArray : (res) => {
     const payload = unwrap(res);
     if (Array.isArray(payload)) return payload;
     if (!payload || typeof payload !== 'object') return [];

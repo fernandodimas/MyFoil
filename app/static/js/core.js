@@ -97,6 +97,29 @@ window.escapeHtml = function (text) {
 };
 
 /**
+ * Normalize envelope-style API responses: { code, success, data } or direct payload
+ */
+window.unwrap = function (res) {
+    try {
+        if (res && res.data !== undefined) return res.data;
+    } catch (e) {}
+    return res;
+};
+
+/**
+ * Coerce various API shapes into an array for safe iteration
+ */
+window.coerceArray = function (res) {
+    const payload = unwrap(res);
+    if (Array.isArray(payload)) return payload;
+    if (!payload || typeof payload !== 'object') return [];
+    const keys = ['plugins', 'paths', 'sources', 'backups', 'tokens', 'users', 'webhooks', 'files', 'results'];
+    for (let k of keys) if (Array.isArray(payload[k])) return payload[k];
+    for (let k of Object.keys(payload)) if (Array.isArray(payload[k])) return payload[k];
+    return [];
+};
+
+/**
  * Toggle between light and dark themes
  */
 function toggleTheme() {

@@ -251,11 +251,11 @@ function showUpcomingDetails(index) {
                     </figure>
                     <div class="mt-4 box is-shadowless border bg-light-soft">
                         <p class="heading mb-1 opacity-50">${t('upcoming.card_launch')}</p>
-                        <p class="is-size-6 has-text-weight-bold mb-3">${game.release_date_formatted}</p>
+                            <p class="is-size-6 has-text-weight-bold mb-3">${escapeHtml(game.release_date_formatted)}</p>
                         
                         <p class="heading mb-1 opacity-50">${t('upcoming.card_genres')}</p>
                         <div class="tags">
-                            ${(game.genres || []).map(g => `<span class="tag is-small">${g.name}</span>`).join('')}
+                            ${(game.genres || []).map(g => `<span class="tag is-small">${escapeHtml(g.name)}</span>`).join('')}
                         </div>
                         
                         <hr class="my-4 opacity-10">
@@ -266,11 +266,11 @@ function showUpcomingDetails(index) {
                     </div>
                 </div>
                 <div class="column is-8">
-                    <h3 class="title is-3 mb-2" style="margin-top: 10px;">${game.name}</h3>
-                    <p class="subtitle is-6 opacity-60 mb-5">${game.involved_companies?.[0]?.company?.name || ''}</p>
+                    <h3 class="title is-3 mb-2" style="margin-top: 10px;">${escapeHtml(game.name)}</h3>
+                    <p class="subtitle is-6 opacity-60 mb-5">${escapeHtml(game.involved_companies?.[0]?.company?.name || '')}</p>
                     
                     <div class="content opacity-80" style="font-size: 0.95rem; line-height: 1.6;">
-                        ${game.summary || `<em>${t('upcoming.no_description')}</em>`}
+                        ${game.summary ? escapeHtml(game.summary) : `<em>${t('upcoming.no_description')}</em>`}
                     </div>
                     
                     ${game.screenshots && game.screenshots.length > 0 ? `

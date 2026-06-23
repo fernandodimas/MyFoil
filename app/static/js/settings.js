@@ -66,7 +66,7 @@ const tokensManager = {
             `).join('');
         } catch (error) {
             console.error('Error loading tokens:', error);
-            tbody.innerHTML = `<tr><td colspan="5" class="has-text-danger">Erro ao carregar tokens: ${error.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="has-text-danger">Erro ao carregar tokens: ${escapeHtml(error.message)}</td></tr>`;
         }
     },
 
@@ -190,7 +190,7 @@ const getCheckboxStatus = (id) => $(`#${id}`).is(":checked");
 // openModal and closeModal are defined in modals_shared.html (included globally)
 
 // Normalize envelope-style API responses: { code, success, data } or direct payload
-const unwrap = (res) => {
+const unwrap = (typeof window.unwrap === 'function') ? window.unwrap : (res) => {
     try {
         if (res && res.data !== undefined) return res.data;
     } catch (e) {
@@ -200,7 +200,7 @@ const unwrap = (res) => {
 }
 
 // Coerce various API shapes into an array for safe iteration
-const coerceArray = (res) => {
+const coerceArray = (typeof window.coerceArray === 'function') ? window.coerceArray : (res) => {
     const payload = unwrap(res);
     if (Array.isArray(payload)) return payload;
     if (!payload || typeof payload !== 'object') return [];

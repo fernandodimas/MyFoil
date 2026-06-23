@@ -442,7 +442,7 @@ function showGameDetails(id) {
 
                             <div class="content is-size-6 opacity-80" style="line-height: 1.7;">
                                 ${game.intro ? `<p class="has-text-weight-bold">${game.intro}</p>` : ''}
-                                ${game.description ? game.description : `<p class="italic opacity-50">${t('No description available')}</p>`}
+                                ${game.description ? escapeHtml(game.description) : `<p class="italic opacity-50">${t('No description available')}</p>`}
                             </div>
                         </div>
                         

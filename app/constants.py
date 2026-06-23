@@ -21,7 +21,7 @@ TITLEDB_DEFAULT_FILES = [
 MYFOIL_DB = os.environ.get("DATABASE_URL")
 
 
-BUILD_VERSION = '20260623_1410'
+BUILD_VERSION = '20260623_1501'
 
 DEFAULT_SETTINGS = {
     "library": {
@@ -45,8 +45,8 @@ DEFAULT_SETTINGS = {
         "public": False,
         "public_profile": False,
         "encrypt": True,
-        "clientCertPub": "-----BEGIN PUBLIC KEY-----",
-        "clientCertKey": "-----BEGIN PRIVATE KEY-----",
+        "clientCertPub": "-----BEGIN PUBLIC KEY-----",  # Placeholder — configure via settings UI
+        "clientCertKey": "-----BEGIN PRIVATE KEY-----",  # Placeholder — configure via settings UI
         "host": "",
         "hauth": "",
     },

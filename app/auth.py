@@ -237,6 +237,13 @@ def init_users(app):
             init_user_from_environment(environment_name="USER_GUEST", admin=False)
 
 
+def _is_safe_redirect(url):
+    if not url or not isinstance(url, str):
+        return False
+    # Only allow relative URLs (same-origin)
+    return url.startswith("/") and not url.startswith("//")
+
+
 @auth_blueprint.route("/login", methods=["GET", "POST"])
 def login():
     # Import here to avoid circular dependency
@@ -248,7 +255,7 @@ def login():
         if request.method == "GET":
             next_url = request.args.get("next", "")
             if current_user.is_authenticated:
-                return redirect(next_url if len(next_url) else "/")
+                return redirect(next_url if _is_safe_redirect(next_url) else "/")
             return render_template("login.html", title="Login", build_version=BUILD_VERSION)
 
         # login code goes here
@@ -259,17 +266,18 @@ def login():
 
         user = User.query.filter_by(user=username).first()
 
-        # check if the user actually exists
-        # take the user-supplied password, hash it, and compare it to the hashed password in the database
-        if not user or not check_password_hash(user.password, password):
-            logger.warning(f"Incorrect login for user {username}")
-            return redirect(url_for("auth.login"))  # if the user doesn't exist or password is wrong, reload the page
+        # Constant-time comparison to prevent user enumeration via timing
+        if user and not check_password_hash(user.password, password):
+            user = None  # Normalize: wrong password = user not found
 
-        # if the above check passes, then we know the user has the right credentials
+        if not user:
+            logger.warning(f"Incorrect login for user {username}")
+            return redirect(url_for("auth.login"))
+
         logger.info(f"Sucessfull login for user {username}")
         login_user(user, remember=remember)
 
-        return redirect(next_url if len(next_url) else "/")
+        return redirect(next_url if _is_safe_redirect(next_url) else "/")
 
     return _rate_limited_login()
 

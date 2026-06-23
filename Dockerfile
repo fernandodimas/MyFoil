@@ -54,6 +54,11 @@ RUN chmod +x /app/run.sh /app/entrypoint.sh
 # Create necessary directories
 RUN mkdir -p /app/config /app/data /games
 
+# Create non-root user
+RUN groupadd -r myfoil && useradd -r -g myfoil -d /app -s /bin/false myfoil && \
+    chown -R myfoil:myfoil /app /games
+USER myfoil
+
 # Expose port
 EXPOSE 8465
 

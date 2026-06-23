@@ -57,7 +57,7 @@ const tokensManager = {
             `).join('');
         } catch (error) {
             console.error('Error loading tokens:', error);
-            tbody.innerHTML = `<tr><td colspan="5" class="has-text-danger">Erro ao carregar tokens: ${error.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5" class="has-text-danger">Erro ao carregar tokens: ${escapeHtml(error.message)}</td></tr>`;
         }
     },
 

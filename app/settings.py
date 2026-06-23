@@ -1,6 +1,7 @@
 from constants import CONFIG_FILE, DEFAULT_SETTINGS, KEYS_FILE
 import yaml
 import os
+import threading
 
 from nstools.nut import Keys
 
@@ -24,40 +25,41 @@ def load_keys(key_file=KEYS_FILE):
     return valid
 
 
-# Cache variable
+# Cache variable with thread safety
 _cached_settings = None
+_settings_lock = threading.RLock()
 
 
 def load_settings(force=False):
     global _cached_settings
 
-    if _cached_settings and not force:
-        return _cached_settings
+    with _settings_lock:
+        if _cached_settings and not force:
+            return _cached_settings
 
-    if os.path.exists(CONFIG_FILE):
-        logger.debug(f"Reading configuration file: {CONFIG_FILE}")
-        with open(CONFIG_FILE, "r") as yaml_file:
-            settings = yaml.safe_load(yaml_file) or {}
+        if os.path.exists(CONFIG_FILE):
+            logger.debug(f"Reading configuration file: {CONFIG_FILE}")
+            with open(CONFIG_FILE, "r") as yaml_file:
+                settings = yaml.safe_load(yaml_file) or {}
 
-        # Deep merge with defaults to ensure new keys (like apis) are present
-        merged_settings = DEFAULT_SETTINGS.copy()
-        for section, values in settings.items():
-            if isinstance(values, dict) and section in merged_settings and isinstance(merged_settings[section], dict):
-                merged_settings[section].update(values)
-            else:
-                merged_settings[section] = values
-        settings = merged_settings
+            # Deep merge with defaults to ensure new keys (like apis) are present
+            merged_settings = DEFAULT_SETTINGS.copy()
+            for section, values in settings.items():
+                if isinstance(values, dict) and section in merged_settings and isinstance(merged_settings[section], dict):
+                    merged_settings[section].update(values)
+                else:
+                    merged_settings[section] = values
+            settings = merged_settings
 
-        valid_keys = load_keys()
-        settings["titles"]["valid_keys"] = valid_keys
+            valid_keys = load_keys()
+            settings["titles"]["valid_keys"] = valid_keys
+        else:
+            settings = DEFAULT_SETTINGS
+            with open(CONFIG_FILE, "w") as yaml_file:
+                yaml.dump(settings, yaml_file)
 
-    else:
-        settings = DEFAULT_SETTINGS
-        with open(CONFIG_FILE, "w") as yaml_file:
-            yaml.dump(settings, yaml_file)
-
-    _cached_settings = settings
-    return settings
+        _cached_settings = settings
+        return settings
 
 
 def verify_settings(section, data):
@@ -92,8 +94,9 @@ def add_library_path_to_settings(path):
     else:
         library_paths = [path]
     settings["library"]["paths"] = library_paths
-    with open(CONFIG_FILE, "w") as yaml_file:
-        yaml.dump(settings, yaml_file)
+    with _settings_lock:
+        with open(CONFIG_FILE, "w") as yaml_file:
+            yaml.dump(settings, yaml_file)
     reload_conf()
     return success, errors
 
@@ -108,8 +111,9 @@ def delete_library_path_from_settings(path):
         if path in library_paths:
             library_paths.remove(path)
             settings["library"]["paths"] = library_paths
-            with open(CONFIG_FILE, "w") as yaml_file:
-                yaml.dump(settings, yaml_file)
+            with _settings_lock:
+                with open(CONFIG_FILE, "w") as yaml_file:
+                    yaml.dump(settings, yaml_file)
             reload_conf()
         else:
             success = False
@@ -126,8 +130,9 @@ def set_titles_settings(region, language, dbi_versions=None, auto_use_latest=Non
         settings["titles"]["dbi_versions"] = dbi_versions
     if auto_use_latest is not None:
         settings["titles"]["auto_use_latest"] = auto_use_latest
-    with open(CONFIG_FILE, "w") as yaml_file:
-        yaml.dump(settings, yaml_file)
+    with _settings_lock:
+        with open(CONFIG_FILE, "w") as yaml_file:
+            yaml.dump(settings, yaml_file)
     reload_conf()
 
 
@@ -138,8 +143,9 @@ def set_shop_settings(data):
     if "://" in shop_host:
         data["host"] = shop_host.split("://")[-1]
     settings["shop"].update(data)
-    with open(CONFIG_FILE, "w") as yaml_file:
-        yaml.dump(settings, yaml_file)
+    with _settings_lock:
+        with open(CONFIG_FILE, "w") as yaml_file:
+            yaml.dump(settings, yaml_file)
     reload_conf()
 
 
