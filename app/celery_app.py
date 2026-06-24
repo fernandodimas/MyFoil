@@ -16,10 +16,17 @@ if not os.path.exists(data_dir):
 
 log_file = os.path.join(data_dir, "celery_debug.log")
 log_level = getattr(logging, os.environ.get("LOG_LEVEL", "INFO").upper())
+
+handlers = [logging.StreamHandler(sys.stdout)]
+try:
+    handlers.insert(0, logging.FileHandler(log_file))
+except PermissionError:
+    pass  # Volume may have root-owned files from a previous container
+
 logging.basicConfig(
     level=log_level,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler(log_file), logging.StreamHandler(sys.stdout)],
+    handlers=handlers,
 )
 logger = logging.getLogger(__name__)
 logger.info("Celery App initializing...")
