@@ -4,6 +4,9 @@ set -euo pipefail
 # the app unless DISABLE_AUTO_MIGRATE=1 is set. Auto-migrate is conservative and
 # only runs alembic upgrade head; it will not run the heavy backfill automatically.
 
+# Ensure mounted volumes are writable by the myfoil user
+chown -R myfoil:myfoil /app/data /app/config 2>/dev/null || true
+
 # if [[ "${DISABLE_AUTO_MIGRATE:-0}" != "1" ]]; then
 #   if [[ -n "${DATABASE_URL:-}" ]]; then
 #     echo "[entrypoint] Running alembic upgrade head"
@@ -34,7 +37,7 @@ set -euo pipefail
 
 # Execute passed command or start default gunicorn
 if [[ $# -gt 0 ]]; then
-  exec "$@"
+  exec gosu myfoil:myfoil "$@"
 else
   # Decide gunicorn app target depending on package layout inside the container.
   # If the repository was copied so that /app is the package root, importing
@@ -57,5 +60,5 @@ _devnull.close()
 PY
 )
   echo "[entrypoint] Using gunicorn target: ${TARGET}:create_app()"
-  exec gunicorn -k gevent -b 0.0.0.0:8465 --chdir /app "${TARGET}:create_app()"
+  exec gosu myfoil:myfoil gunicorn -k gevent -b 0.0.0.0:8465 --chdir /app "${TARGET}:create_app()"
 fi

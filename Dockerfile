@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     procps \
     postgresql-client \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -52,12 +53,12 @@ COPY ./docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/run.sh /app/entrypoint.sh
 
 # Create necessary directories
-RUN mkdir -p /app/config /app/data /games
+RUN mkdir -p /app/config /app/data /games && \
+    gosu nobody true
 
-# Create non-root user
+# Create non-root user for runtime
 RUN groupadd -r myfoil && useradd -r -g myfoil -d /app -s /bin/false myfoil && \
     chown -R myfoil:myfoil /app /games
-USER myfoil
 
 # Expose port
 EXPOSE 8465
