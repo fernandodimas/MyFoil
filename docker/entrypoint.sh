@@ -5,7 +5,9 @@ set -euo pipefail
 # only runs alembic upgrade head; it will not run the heavy backfill automatically.
 
 # Ensure mounted volumes are writable by the myfoil user
-chown -R myfoil:myfoil /app/data /app/config 2>/dev/null || true
+# Try chown first (works on local volumes), fall back to chmod (for NFS/host bind mounts)
+chown -R myfoil:myfoil /app/data /app/config 2>/dev/null || \
+    chmod -R ugo+rwX /app/data /app/config 2>/dev/null || true
 
 # if [[ "${DISABLE_AUTO_MIGRATE:-0}" != "1" ]]; then
 #   if [[ -n "${DATABASE_URL:-}" ]]; then

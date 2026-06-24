@@ -11,10 +11,17 @@ class BackupManager:
         self.config_dir = config_dir
         self.data_dir = data_dir
         self.backup_dir = os.path.join(config_dir, 'backups')
-        os.makedirs(self.backup_dir, exist_ok=True)
+        try:
+            os.makedirs(self.backup_dir, exist_ok=True)
+        except PermissionError:
+            logger.warning(f"Cannot create backup directory at {self.backup_dir} — backups disabled")
+            self.backup_dir = None
     
     def create_backup(self):
         """Create a timestamped backup of database and settings"""
+        if self.backup_dir is None:
+            logger.warning("Backups disabled — cannot create backup")
+            return False, None
         timestamp = now_utc().strftime('%Y%m%d_%H%M%S')
         backup_created = False
         
@@ -48,6 +55,8 @@ class BackupManager:
     
     def cleanup_old_backups(self, keep=7):
         """Keep only the most recent N backups"""
+        if self.backup_dir is None:
+            return
         try:
             # Get all backup files grouped by type
             backup_files = {
@@ -83,6 +92,8 @@ class BackupManager:
     
     def list_backups(self):
         """List all available backups"""
+        if self.backup_dir is None:
+            return []
         backups = []
         try:
             for filename in os.listdir(self.backup_dir):
@@ -114,6 +125,9 @@ class BackupManager:
     
     def restore_backup(self, backup_filename):
         """Restore from a specific backup file"""
+        if self.backup_dir is None:
+            logger.error("Backups disabled — cannot restore")
+            return False
         try:
             backup_path = os.path.join(self.backup_dir, backup_filename)
             if not os.path.exists(backup_path):
@@ -146,6 +160,9 @@ class BackupManager:
 
     def delete_backup(self, filename):
         """Delete a specific backup file"""
+        if self.backup_dir is None:
+            logger.error("Backups disabled — cannot delete backup")
+            return False
         try:
             filepath = os.path.join(self.backup_dir, filename)
             if os.path.exists(filepath):
