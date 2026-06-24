@@ -137,11 +137,17 @@ if not os.path.exists(ensure_data_dir):
         pass
 
 log_level = getattr(logging, os.environ.get("LOG_LEVEL", "INFO").upper())
-file_handler = logging.FileHandler(os.path.join(ensure_data_dir, "debug.log"))
-file_handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s (%(module)s) %(message)s"))
-file_handler.setLevel(log_level)
 
-logging.basicConfig(level=log_level, handlers=[handler, file_handler])
+handlers = [handler]
+try:
+    file_handler = logging.FileHandler(os.path.join(ensure_data_dir, "debug.log"))
+    file_handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s (%(module)s) %(message)s"))
+    file_handler.setLevel(log_level)
+    handlers.append(file_handler)
+except PermissionError:
+    pass  # Volume may have root-owned files from previous container
+
+logging.basicConfig(level=log_level, handlers=handlers)
 
 structlog.configure(
     processors=[
