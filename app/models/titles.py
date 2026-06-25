@@ -4,6 +4,11 @@ Extracted from db.py during Phase 3.1 refactoring
 """
 
 from db import db
+from sqlalchemy import JSON
+from sqlalchemy.dialects.postgresql import JSONB
+
+# Use JSONB on PostgreSQL (supports equality for DISTINCT), fallback to JSON on SQLite
+jsonb = JSONB().with_variant(JSON, "sqlite")
 
 
 class Titles(db.Model):
@@ -41,9 +46,9 @@ class Titles(db.Model):
     playtime_completionist = db.Column(db.Integer)  # 100%
 
     # === METADADOS ADICIONAIS ===
-    genres_json = db.Column(db.JSON)  # ["Action", "Adventure"]
-    tags_json = db.Column(db.JSON)  # ["Open World", "RPG"]
-    screenshots_json = db.Column(db.JSON)  # [{"url": "...", "source": "rawg"}]
+    genres_json = db.Column(jsonb)  # ["Action", "Adventure"]
+    tags_json = db.Column(jsonb)  # ["Open World", "RPG"]
+    screenshots_json = db.Column(jsonb)  # [{"url": "...", "source": "rawg"}]
 
     # Materialized counters to speed up common filters (populated by update_titles)
     redundant_updates_count = db.Column(db.Integer, default=0, index=True)

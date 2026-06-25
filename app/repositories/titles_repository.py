@@ -75,11 +75,11 @@ class TitlesRepository:
             if filters.get("genre") and filters.get("genre") != "Todos os Gêneros":
                 # Assuming JSON list stored as text, simple contains check
                 g = filters.get("genre")
-                query = query.filter(Titles.genres_json.ilike(f"%{g}%"))
+                query = query.filter(Titles.genres_json.astext.ilike(f"%{g}%"))
 
             if filters.get("tag"):
                 t = filters.get("tag")
-                query = query.filter(Titles.tags_json.ilike(f"%{t}%"))
+                query = query.filter(Titles.tags_json.astext.ilike(f"%{t}%"))
 
             if filters.get("dlc"):
                 # DLC filter: Owned games that have missing DLCs.
