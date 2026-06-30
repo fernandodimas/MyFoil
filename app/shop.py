@@ -39,27 +39,23 @@ def gen_shop_files(db, base_url=""):
         # Metadata for CyberFoil and other installers
         app_type_lower = file.get("app_type", "").lower() if file.get("app_type") else ""
         title_id = file.get("title_id") or ""
-        base_title_id = title_id.upper() if title_id else ""
-
-        # app_name: resolved display name from get_shop_files (DLC-specific name when available)
-        app_name = file.get("app_name") or ""
+        title_id_upper = title_id.upper() if title_id else ""
 
         shop_files.append({
             "url": file_url,
             "size": file["size"],
             "name": file["filename"],
-            "title_id": base_title_id,
+            "title_id": title_id_upper,
             "app_id": file.get("app_id") or "",
-            "base_title_id": base_title_id,
-            "title_name": app_name,
-            "app_name": app_name,
+            "title_name": file.get("title_name") or "",
+            "app_name": file.get("app_name") or "",
             "app_version": file.get("app_version", 0),
             "app_type": app_type_lower,
         })
 
         # Collect Base TitleIDs for the titledb
-        if base_title_id and base_title_id.endswith("000") and base_title_id not in seen_base_tids:
-            seen_base_tids.add(base_title_id)
+        if title_id_upper and title_id_upper.endswith("000") and title_id_upper not in seen_base_tids:
+            seen_base_tids.add(title_id_upper)
 
     # Build titles map: bulk query from DB, fallback to TitleDB cache
     titles_map = {}

@@ -173,17 +173,20 @@ def get_shop_files():
             except Exception as e:
                 logger.debug(f"get_shop_files: TitleDB fallback failed for {app.title.title_id}: {e}")
 
+        title_name = game_name
         if game_name:
-            game_name = re.sub(r'[\\/*?:"<>|]', "", game_name).strip()
-            if game_name:
-                game_name = game_name + " "
+            game_name_safe = re.sub(r'[\\/*?:"<>|]', "", game_name).strip()
+            if game_name_safe:
+                game_name_for_file = game_name_safe + " "
+        else:
+            game_name_for_file = ""
 
         if file.multicontent or file.extension.startswith("x"):
             title_id = app.title.title_id
-            final_filename = f"{game_name}[{title_id}].{file.extension}"
+            final_filename = f"{game_name_for_file}[{title_id}].{file.extension}"
         else:
             version_val = app.app_version if app.app_version is not None else 0
-            final_filename = f"{game_name}[{app.app_id}][v{version_val}].{file.extension}"
+            final_filename = f"{game_name_for_file}[{app.app_id}][v{version_val}].{file.extension}"
 
         app_name = ""
         try:
@@ -196,7 +199,7 @@ def get_shop_files():
             pass
 
         if not app_name:
-            app_name = app.title.name or game_name or ""
+            app_name = app.title.name or title_name or ""
 
         shop_files.append({
             "id": file.id,
@@ -204,6 +207,7 @@ def get_shop_files():
             "size": file.size,
             "title_id": app.title.title_id,
             "app_id": app.app_id,
+            "title_name": title_name,
             "app_name": app_name,
             "app_type": app.app_type,
             "app_version": app.app_version if app.app_version is not None else 0,
