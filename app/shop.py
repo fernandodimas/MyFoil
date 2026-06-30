@@ -25,7 +25,6 @@ logger = logging.getLogger("main")
 
 def gen_shop_files(db, base_url=""):
     shop_files = []
-    titles_map = {}
     files = get_shop_files()
 
     logger.info(f"gen_shop_files: Processing {len(files)} files from database (base_url={base_url})")
@@ -35,59 +34,67 @@ def gen_shop_files(db, base_url=""):
 
     for file in files:
         # Build absolute URL: Tinfoil requires full URLs (http/https)
-        # The fragment after # is used by Tinfoil as the display filename
-        # It must NOT be URL-encoded - Tinfoil reads it as raw text
         file_url = f"{base_url}/api/get_game/{file['id']}#{file['filename']}"
 
-        # Compatibilidade aprimorada com CyberFoil e outros instaladores do ecossistema.
-        # Esses instaladores leem metadados adicionais diretamente de cada entrada para mapear
-        # corretamente jogos, updates e DLCs.
+        # Metadata for CyberFoil and other installers
         app_type_lower = file.get("app_type", "").lower() if file.get("app_type") else ""
+        title_id = file.get("title_id") or ""
+        base_title_id = title_id.upper() if title_id else ""
 
-        shop_files.append(
-            {
-                "url": file_url,
-                "size": file["size"],
-                "name": file["filename"],
-                "title_id": file["app_id"],  # O ID do próprio arquivo (ex: ID da DLC ou do UPDATE)
-                "app_version": file.get("app_version", 0),
-                "app_type": app_type_lower,
-            }
-        )
+        # app_name: resolved display name from get_shop_files (DLC-specific name when available)
+        app_name = file.get("app_name") or ""
 
-        # Collect Base TitleIDs (ending in 000) for the titles map
-        # Only base IDs have entries in the TitleDB, so skip DLC/UPDATE IDs
-        title_id = file.get("title_id")
-        if title_id:
-            tid_upper = title_id.upper()
-            if tid_upper.endswith("000") and tid_upper not in seen_base_tids:
-                seen_base_tids.add(tid_upper)
+        shop_files.append({
+            "url": file_url,
+            "size": file["size"],
+            "name": file["filename"],
+            "title_id": base_title_id,
+            "app_id": file.get("app_id") or "",
+            "base_title_id": base_title_id,
+            "title_name": app_name,
+            "app_name": app_name,
+            "app_version": file.get("app_version", 0),
+            "app_type": app_type_lower,
+        })
 
-    # Build titles map: only Base TitleIDs (ending in 000)
-    # This is what Tinfoil uses to display game names
-    from titles import get_game_info
+        # Collect Base TitleIDs for the titledb
+        if base_title_id and base_title_id.endswith("000") and base_title_id not in seen_base_tids:
+            seen_base_tids.add(base_title_id)
 
-    for tid in seen_base_tids:
-        try:
-            info = get_game_info(tid, silent=True)
-            if info and info.get("name") and not info["name"].startswith("Unknown"):
+    # Build titles map: bulk query from DB, fallback to TitleDB cache
+    titles_map = {}
+    if seen_base_tids:
+        from db import db, Titles
+        base_titles = Titles.query.filter(Titles.title_id.in_(seen_base_tids)).all()
+        db_names = {t.title_id.upper(): t.name for t in base_titles if t.name}
+
+        for tid in sorted(seen_base_tids):
+            name = db_names.get(tid)
+            if not name:
+                try:
+                    from titles import get_game_info
+                    info = get_game_info(tid, silent=True)
+                    if info and info.get("name") and not info["name"].startswith("Unknown"):
+                        name = info["name"].strip()
+                except Exception:
+                    pass
+
+            if name:
                 titles_map[tid] = {
                     "id": tid,
-                    "name": info["name"].strip(),
+                    "name": name,
                     "version": 0,
                     "region": "US",
                     "releaseDate": 0,
                     "rating": 10,
-                    "publisher": info.get("publisher", "N/A"),
-                    "description": info.get("description", ""),
+                    "publisher": "",
+                    "description": "",
                     "size": 0,
                     "rank": 1,
                 }
-        except Exception:
-            pass
 
     logger.info(
-        f"gen_shop_files: Returning {len(shop_files)} files and {len(titles_map)} titles mapping for Tinfoil shop"
+        f"gen_shop_files: Returning {len(shop_files)} files and {len(titles_map)} titles for Tinfoil/CyberFoil shop"
     )
     return shop_files, titles_map
 
