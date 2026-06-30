@@ -46,9 +46,7 @@ def gen_shop_files(db, base_url=""):
             "size": file["size"],
             "name": file["filename"],
             "title_id": title_id_upper,
-            "app_id": file.get("app_id") or "",
             "title_name": file.get("title_name") or "",
-            "app_name": file.get("app_name") or "",
             "app_version": file.get("app_version", 0),
             "app_type": app_type_lower,
         })
