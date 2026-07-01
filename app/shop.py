@@ -7,6 +7,7 @@ import zstandard as zstd
 import random
 import json
 from datetime import datetime
+from calendar import timegm
 
 # https://github.com/blawar/tinfoil/blob/master/docs/files/public.key 1160174fa2d7589831f74d149bc403711f3991e4
 TINFOIL_PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
@@ -83,7 +84,8 @@ def gen_shop_files(db, base_url=""):
                     try:
                         formatted = format_release_date(release_date)
                         if formatted:
-                            release_ts = int(datetime.strptime(formatted, "%Y-%m-%d").timestamp())
+                            dt = datetime.strptime(formatted, "%Y-%m-%d")
+                            release_ts = timegm(dt.timetuple())
                     except Exception:
                         pass
 
