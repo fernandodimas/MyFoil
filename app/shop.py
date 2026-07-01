@@ -6,6 +6,7 @@ from Crypto.Cipher import AES
 import zstandard as zstd
 import random
 import json
+from datetime import datetime
 
 # https://github.com/blawar/tinfoil/blob/master/docs/files/public.key 1160174fa2d7589831f74d149bc403711f3991e4
 TINFOIL_PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
@@ -59,8 +60,10 @@ def gen_shop_files(db, base_url=""):
     titles_map = {}
     if seen_base_tids:
         from db import db, Titles
+        from titles.utils import format_release_date
         base_titles = Titles.query.filter(Titles.title_id.in_(seen_base_tids)).all()
         db_names = {t.title_id.upper(): t.name for t in base_titles if t.name}
+        db_release_dates = {t.title_id.upper(): t.release_date for t in base_titles if t.release_date}
 
         for tid in sorted(seen_base_tids):
             name = db_names.get(tid)
@@ -74,12 +77,22 @@ def gen_shop_files(db, base_url=""):
                     pass
 
             if name:
+                release_date = db_release_dates.get(tid)
+                release_ts = 0
+                if release_date:
+                    try:
+                        formatted = format_release_date(release_date)
+                        if formatted:
+                            release_ts = int(datetime.strptime(formatted, "%Y-%m-%d").timestamp())
+                    except Exception:
+                        pass
+
                 titles_map[tid] = {
                     "id": tid,
                     "name": name,
                     "version": 0,
                     "region": "US",
-                    "releaseDate": 0,
+                    "releaseDate": release_ts,
                     "rating": 10,
                     "publisher": "",
                     "description": "",
