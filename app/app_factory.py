@@ -10,6 +10,7 @@ from flask import Flask, render_template, Blueprint
 from flask_socketio import SocketIO
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 flask.cli.show_server_banner = lambda *args: None
 
@@ -422,6 +423,7 @@ def create_app(minimal=False):
     global _current_app
 
     app = Flask(__name__)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     if not MYFOIL_DB:
         raise RuntimeError("DATABASE_URL environment variable must be set for PostgreSQL")
 
