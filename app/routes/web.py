@@ -23,7 +23,7 @@ web_bp = Blueprint("web", __name__)
 def index():
     """Página inicial / Loja Tinfoil / Índice JSON"""
 
-@tinfoil_access
+    @tinfoil_access
     def access_tinfoil_shop():
         shop = {"success": load_settings()["shop"]["motd"]}
 
