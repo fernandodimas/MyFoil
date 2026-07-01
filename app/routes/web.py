@@ -27,12 +27,16 @@ def index():
     def access_tinfoil_shop():
         shop = {"success": load_settings()["shop"]["motd"]}
 
+        # Determine scheme from headers (works with ProxyFix + reverse proxy)
+        forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
+        scheme = "https" if forwarded_proto == "https" else ("https" if request.is_secure else "http")
+
         if request.verified_host is not None:
             shop["referrer"] = f"https://{request.verified_host}"
-            scheme = "https" if (request.is_secure or request.headers.get("X-Forwarded-Proto") == "https") else "http"
             base_url = f"{scheme}://{request.verified_host}"
         else:
-            base_url = request.host_url.rstrip("/")
+            host = request.headers.get("X-Forwarded-Host", request.host)
+            base_url = f"{scheme}://{host}"
 
         files_list, titles_map = gen_shop_files(db, base_url=base_url)
         shop["files"] = files_list
