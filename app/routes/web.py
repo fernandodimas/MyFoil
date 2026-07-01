@@ -23,9 +23,12 @@ web_bp = Blueprint("web", __name__)
 def index():
     """Página inicial / Loja Tinfoil / Índice JSON"""
 
-    @tinfoil_access
+@tinfoil_access
     def access_tinfoil_shop():
         shop = {"success": load_settings()["shop"]["motd"]}
+
+        # DEBUG: log headers received
+        logger.info(f"DEBUG headers: X-Forwarded-Proto={request.headers.get('X-Forwarded-Proto')} X-Forwarded-Host={request.headers.get('X-Forwarded-Host')} Host={request.headers.get('Host')} is_secure={request.is_secure}")
 
         # Determine scheme from headers (works with ProxyFix + reverse proxy)
         forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
