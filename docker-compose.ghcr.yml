@@ -30,6 +30,7 @@ services:
       - WATCHDOG_INTERVAL=10  # Watchdog polling interval in seconds
       - USER_ADMIN_NAME=${USER_ADMIN_NAME:-admin}
       - USER_ADMIN_PASSWORD=${USER_ADMIN_PASSWORD:-admin}  # ⚠️ Change in production!
+      - GUNICORN_WORKERS=2
     volumes:
       - /path/to/your/games:/games # ⚠️ UPDATE THIS PATH!
       - ./config:/app/config
