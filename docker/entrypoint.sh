@@ -25,5 +25,18 @@ _devnull.close()
 PY
 )
   echo "[entrypoint] Using gunicorn target: ${TARGET}:create_app()"
-  exec gunicorn -k gevent -b 0.0.0.0:8465 --chdir /app "${TARGET}:create_app()"
+  # Gunicorn settings:
+  # - timeout 120: increase from default 30s for slow requests (large file downloads)
+  # - worker-class gevent: async workers for I/O bound operations
+  # - workers: default to 2, override with GUNICORN_WORKERS env
+  # - max-requests: recycle workers to prevent memory leaks
+  exec gunicorn -k gevent \
+    -b 0.0.0.0:8465 \
+    --chdir /app \
+    --timeout 120 \
+    --workers ${GUNICORN_WORKERS:-2} \
+    --max-requests 1000 \
+    --max-requests-jitter 100 \
+    --worker-tmp-dir /dev/shm \
+    "${TARGET}:create_app()"
 fi
