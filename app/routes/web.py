@@ -89,6 +89,13 @@ def wishlist_page():
     return render_template("wishlist.html", title="Wishlist", build_version=BUILD_VERSION)
 
 
+@web_bp.route("/api/health")
+@web_bp.route("/health")
+def health():
+    """Healthcheck endpoint — always returns 200 regardless of auth"""
+    return "OK", 200
+
+
 @web_bp.route("/api/get_game/<int:id>")
 @tinfoil_access
 def serve_game(id):

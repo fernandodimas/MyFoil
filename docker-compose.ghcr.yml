@@ -38,10 +38,11 @@ services:
     ports:
       - "8465:8465"
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8465/" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:8465/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 15s
     deploy:
       resources:
         limits:
