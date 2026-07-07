@@ -49,18 +49,18 @@ def index():
             f"detected_scheme={scheme}"
         )
 
-        # Determine base host — prefer verified_host (Hauth passed), then X-Forwarded-Host, then request.host
+        # Determine base host and referrer.
+        # IMPORTANT: referrer is only sent when Hauth has been verified (verified_host set).
+        # Sending referrer unconditionally causes Tinfoil "bad referrer" errors
+        # because Tinfoil uses the referrer field to enforce the canonical shop URL
+        # and rejects connections that don't match it.
         if request.verified_host is not None:
             base_host = request.verified_host
+            shop["referrer"] = f"{scheme}://{base_host}"
         else:
             base_host = request.headers.get("X-Forwarded-Host", request.host)
 
         base_url = f"{scheme}://{base_host}"
-
-        # Always include referrer so Tinfoil knows the canonical shop URL.
-        # Previously this was only set when Hauth was verified, which left
-        # Tinfoil without a referrer on first connection, causing host mismatches.
-        shop["referrer"] = base_url
 
         files_list, titles_map = gen_shop_files(db, base_url=base_url)
         shop["files"] = files_list
