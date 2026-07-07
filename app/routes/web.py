@@ -32,11 +32,12 @@ def index():
 
         # Determine scheme from headers (works with ProxyFix + reverse proxy)
         forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
-        scheme = "https" if forwarded_proto == "https" else ("https" if request.is_secure else "http")
+        scheme = "https" if request.is_secure or "https" in forwarded_proto else "http"
 
         if request.verified_host is not None:
             shop["referrer"] = f"https://{request.verified_host}"
-            base_url = f"{scheme}://{request.verified_host}"
+            # verified_host é sempre HTTPS (Cloudflare termina SSL)
+            base_url = f"https://{request.verified_host}"
         else:
             host = request.headers.get("X-Forwarded-Host", request.host)
             base_url = f"{scheme}://{host}"
