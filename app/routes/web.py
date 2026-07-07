@@ -28,14 +28,12 @@ def index():
         shop = {"success": load_settings()["shop"]["motd"]}
 
         # Detect scheme dynamically from proxy headers.
-        # X-Forwarded-Proto is set by Cloudflare/nginx when terminating SSL.
-        # Fallback: check if the request itself is secure, then default to http.
-        # Hardcoding "https" was causing SSL failures when the Switch connected
-        # via a path that didn't match the assumed scheme.
-        forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
-        if forwarded_proto in ("http", "https"):
-            scheme = forwarded_proto
-        elif request.is_secure:
+        # X-Forwarded-Proto can contain multiple values (e.g. "https, http") behind multi-proxy chains.
+        # Check if 'https' is present in the header, or if Cloudflare's Cf-Visitor header indicates HTTPS.
+        forwarded_proto = request.headers.get("X-Forwarded-Proto", "").lower()
+        cf_visitor = request.headers.get("Cf-Visitor", "").lower()
+
+        if "https" in forwarded_proto or "https" in cf_visitor or request.is_secure:
             scheme = "https"
         else:
             scheme = "http"
