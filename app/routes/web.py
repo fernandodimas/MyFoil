@@ -27,18 +27,40 @@ def index():
     def access_tinfoil_shop():
         shop = {"success": load_settings()["shop"]["motd"]}
 
-        # DEBUG: log headers received
-        logger.info(f"DEBUG headers: X-Forwarded-Proto={request.headers.get('X-Forwarded-Proto')} X-Forwarded-Host={request.headers.get('X-Forwarded-Host')} Host={request.headers.get('Host')} is_secure={request.is_secure}")
-
-        # Always use HTTPS: the app is always behind Cloudflare which terminates SSL
-        scheme = "https"
-
-        if request.verified_host is not None:
-            shop["referrer"] = f"https://{request.verified_host}"
-            base_url = f"https://{request.verified_host}"
+        # Detect scheme dynamically from proxy headers.
+        # X-Forwarded-Proto is set by Cloudflare/nginx when terminating SSL.
+        # Fallback: check if the request itself is secure, then default to http.
+        # Hardcoding "https" was causing SSL failures when the Switch connected
+        # via a path that didn't match the assumed scheme.
+        forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
+        if forwarded_proto in ("http", "https"):
+            scheme = forwarded_proto
+        elif request.is_secure:
+            scheme = "https"
         else:
-            host = request.headers.get("X-Forwarded-Host", request.host)
-            base_url = f"{scheme}://{host}"
+            scheme = "http"
+
+        # DEBUG: log headers and detected scheme
+        logger.info(
+            f"DEBUG headers: X-Forwarded-Proto={request.headers.get('X-Forwarded-Proto')} "
+            f"X-Forwarded-Host={request.headers.get('X-Forwarded-Host')} "
+            f"Host={request.headers.get('Host')} "
+            f"is_secure={request.is_secure} "
+            f"detected_scheme={scheme}"
+        )
+
+        # Determine base host — prefer verified_host (Hauth passed), then X-Forwarded-Host, then request.host
+        if request.verified_host is not None:
+            base_host = request.verified_host
+        else:
+            base_host = request.headers.get("X-Forwarded-Host", request.host)
+
+        base_url = f"{scheme}://{base_host}"
+
+        # Always include referrer so Tinfoil knows the canonical shop URL.
+        # Previously this was only set when Hauth was verified, which left
+        # Tinfoil without a referrer on first connection, causing host mismatches.
+        shop["referrer"] = base_url
 
         files_list, titles_map = gen_shop_files(db, base_url=base_url)
         shop["files"] = files_list
