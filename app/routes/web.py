@@ -119,11 +119,23 @@ def health():
 @tinfoil_access
 def serve_game(id):
     """Servir arquivo de jogo para Tinfoil"""
+    logger.info(f"Serve game requested: id={id} from IP={request.remote_addr}")
     file = Files.query.get(id)
     if not file:
+        logger.warning(f"Serve game failed: file ID {id} not found in database")
         return "File not found", 404
-    filedir, filename = os.path.split(file.filepath)
-    return send_from_directory(filedir, filename)
+    
+    logger.info(f"Serving file: filepath={file.filepath}, size={file.size} bytes")
+    if not os.path.exists(file.filepath):
+        logger.error(f"Serve game failed: file does not exist on disk at '{file.filepath}'")
+        return "File not found on disk", 404
+
+    try:
+        filedir, filename = os.path.split(file.filepath)
+        return send_from_directory(filedir, filename)
+    except Exception as e:
+        logger.exception(f"Error serving game ID {id} from path '{file.filepath}': {e}")
+        raise
 
 
 def access_shop():
