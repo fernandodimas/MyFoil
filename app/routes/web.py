@@ -30,13 +30,11 @@ def index():
         # DEBUG: log headers received
         logger.info(f"DEBUG headers: X-Forwarded-Proto={request.headers.get('X-Forwarded-Proto')} X-Forwarded-Host={request.headers.get('X-Forwarded-Host')} Host={request.headers.get('Host')} is_secure={request.is_secure}")
 
-        # Determine scheme from headers (works with ProxyFix + reverse proxy)
-        forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
-        scheme = "https" if request.is_secure or "https" in forwarded_proto else "http"
+        # Always use HTTPS: the app is always behind Cloudflare which terminates SSL
+        scheme = "https"
 
         if request.verified_host is not None:
             shop["referrer"] = f"https://{request.verified_host}"
-            # verified_host é sempre HTTPS (Cloudflare termina SSL)
             base_url = f"https://{request.verified_host}"
         else:
             host = request.headers.get("X-Forwarded-Host", request.host)
