@@ -79,7 +79,15 @@ def access_required(access: str):
                 if settings.get("shop", {}).get("public_profile", False):
                     return f(*args, **kwargs)
 
-            # 5. Failed - return JSON unauthorized for API usage
+            # 5. Failed - check if client expects HTML (like a browser request)
+            # and is not under the /api/ path
+            is_api = request.path.startswith("/api/") or request.path.startswith("/tinfoil")
+            accept_header = request.headers.get("Accept", "")
+            expects_html = "text/html" in accept_header
+
+            if not is_api and expects_html and request.method in ("GET", "HEAD"):
+                return redirect(url_for("auth.login", next=request.full_path))
+
             return error_response(ErrorCode.UNAUTHORIZED, message="Unauthorized", status_code=401)
 
         return decorated_view
