@@ -72,6 +72,10 @@ def gen_shop_files(db, base_url="", force_lowercase=False):
         db_release_dates = {t.title_id.lower() if force_lowercase else t.title_id.upper(): t.release_date for t in base_titles if t.release_date}
         db_icons = {t.title_id.lower() if force_lowercase else t.title_id.upper(): t.icon_url for t in base_titles if t.icon_url}
         db_banners = {t.title_id.lower() if force_lowercase else t.title_id.upper(): t.banner_url for t in base_titles if t.banner_url}
+        db_publishers = {t.title_id.lower() if force_lowercase else t.title_id.upper(): t.publisher for t in base_titles if t.publisher}
+        db_descriptions = {t.title_id.lower() if force_lowercase else t.title_id.upper(): t.description for t in base_titles if t.description}
+        db_sizes = {t.title_id.lower() if force_lowercase else t.title_id.upper(): t.size for t in base_titles if t.size is not None}
+        db_screenshots = {t.title_id.lower() if force_lowercase else t.title_id.upper(): t.screenshots_json for t in base_titles if t.screenshots_json}
 
         for tid in sorted(seen_base_tids):
             name = db_names.get(tid)
@@ -115,6 +119,18 @@ def gen_shop_files(db, base_url="", force_lowercase=False):
                     except Exception:
                         pass
 
+                # Extract and format screenshots through local image proxy
+                screenshots_list = []
+                scr_data = db_screenshots.get(tid)
+                if scr_data and isinstance(scr_data, list):
+                    for scr in scr_data:
+                        if isinstance(scr, dict) and scr.get("url"):
+                            s_url = scr["url"]
+                            if s_url.startswith("http"):
+                                from urllib.parse import quote
+                                s_url = f"{base_url}/api/image_proxy?url={quote(s_url)}"
+                            screenshots_list.append(s_url)
+
                 title_obj = {
                     "id": tid,
                     "name": name,
@@ -122,11 +138,14 @@ def gen_shop_files(db, base_url="", force_lowercase=False):
                     "region": "US",
                     "releaseDate": release_val,
                     "rating": 10,
-                    "publisher": "",
-                    "description": "",
-                    "size": 0,
+                    "publisher": db_publishers.get(tid) or "",
+                    "description": db_descriptions.get(tid) or "",
+                    "size": db_sizes.get(tid) or 0,
                     "rank": 1,
                 }
+
+                if screenshots_list:
+                    title_obj["screenshots"] = screenshots_list
 
                 if icon_url:
                     if icon_url.startswith("http"):
