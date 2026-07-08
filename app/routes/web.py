@@ -44,7 +44,8 @@ def index():
             f"X-Forwarded-Host={request.headers.get('X-Forwarded-Host')} "
             f"Host={request.headers.get('Host')} "
             f"is_secure={request.is_secure} "
-            f"detected_scheme={scheme}"
+            f"detected_scheme={scheme} "
+            f"User-Agent={request.headers.get('User-Agent')}"
         )
 
         # Determine base host and referrer.
@@ -77,7 +78,13 @@ def index():
 
         files_list, titles_map = gen_shop_files(db, base_url=base_url)
         shop["files"] = files_list
-        shop["titledb"] = titles_map
+
+        # Check user agent to conditionally omit titledb (prevents Cyberfoil duplicates)
+        user_agent = request.headers.get("User-Agent", "")
+        if "Cyber" in user_agent or "Awoo" in user_agent:
+            logger.info("Cyberfoil/Awoo client detected: omitting titledb from shop JSON to prevent duplication")
+        else:
+            shop["titledb"] = titles_map
 
         if load_settings()["shop"]["encrypt"]:
             return Response(encrypt_shop(shop), mimetype="application/octet-stream")
