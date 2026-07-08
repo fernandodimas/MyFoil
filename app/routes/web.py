@@ -147,7 +147,12 @@ def serve_game(id):
 
     try:
         filedir, filename = os.path.split(file.filepath)
-        return send_from_directory(filedir, filename)
+        response = send_from_directory(filedir, filename)
+        # Instruct Nginx/NPM to not buffer large files on disk (improves speed/throughput)
+        response.headers["X-Accel-Buffering"] = "no"
+        # Disable caching of giant game files
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
     except Exception as e:
         logger.exception(f"Error serving game ID {id} from path '{file.filepath}': {e}")
         raise
