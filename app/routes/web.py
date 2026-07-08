@@ -79,12 +79,7 @@ def index():
         files_list, titles_map = gen_shop_files(db, base_url=base_url)
         shop["files"] = files_list
 
-        # Check user agent to conditionally omit titledb (prevents Cyberfoil duplicates)
-        user_agent = request.headers.get("User-Agent", "").lower()
-        if "cyber" in user_agent or "awoo" in user_agent:
-            logger.info("Cyberfoil/Awoo client detected: omitting titledb from shop JSON to prevent duplication")
-        else:
-            shop["titledb"] = titles_map
+        shop["titledb"] = titles_map
 
         if load_settings()["shop"]["encrypt"]:
             return Response(encrypt_shop(shop), mimetype="application/octet-stream")
