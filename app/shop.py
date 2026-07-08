@@ -93,6 +93,12 @@ def gen_shop_files(db, base_url=""):
                     pass
 
             if name:
+                # Fallback between icon and banner if one of them is missing
+                if not icon_url and banner_url:
+                    icon_url = banner_url
+                elif not banner_url and icon_url:
+                    banner_url = icon_url
+
                 release_date = db_release_dates.get(tid)
                 release_val = 0
                 if release_date:
