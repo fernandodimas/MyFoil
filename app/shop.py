@@ -100,7 +100,8 @@ def gen_shop_files(db, base_url=""):
                     banner_url = icon_url
 
                 release_date = db_release_dates.get(tid)
-                release_val = 0
+                # Default to 2000-01-01 to prevent Tinfoil UI alignment/rendering bugs on empty dates
+                release_val = 20000101
                 if release_date:
                     try:
                         formatted = format_release_date(release_date)
