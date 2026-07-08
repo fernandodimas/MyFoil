@@ -70,15 +70,25 @@ def gen_shop_files(db, base_url=""):
         base_titles = Titles.query.filter(Titles.title_id.in_(seen_base_tids)).all()
         db_names = {t.title_id.upper(): t.name for t in base_titles if t.name}
         db_release_dates = {t.title_id.upper(): t.release_date for t in base_titles if t.release_date}
+        db_icons = {t.title_id.upper(): t.icon_url for t in base_titles if t.icon_url}
+        db_banners = {t.title_id.upper(): t.banner_url for t in base_titles if t.banner_url}
 
         for tid in sorted(seen_base_tids):
             name = db_names.get(tid)
+            icon_url = db_icons.get(tid)
+            banner_url = db_banners.get(tid)
+
             if not name:
                 try:
                     from titles import get_game_info
                     info = get_game_info(tid, silent=True)
-                    if info and info.get("name") and not info["name"].startswith("Unknown"):
-                        name = info["name"].strip()
+                    if info:
+                        if info.get("name") and not info["name"].startswith("Unknown"):
+                            name = info["name"].strip()
+                        if not icon_url and info.get("iconUrl"):
+                            icon_url = info["iconUrl"]
+                        if not banner_url and info.get("bannerUrl"):
+                            banner_url = info["bannerUrl"]
                 except Exception:
                     pass
 
@@ -107,6 +117,11 @@ def gen_shop_files(db, base_url=""):
                     "size": 0,
                     "rank": 1,
                 }
+
+                if icon_url:
+                    titles_map[tid]["iconUrl"] = icon_url
+                if banner_url:
+                    titles_map[tid]["bannerUrl"] = banner_url
 
     logger.info(
         f"gen_shop_files: Returning {len(shop_files)} files and {len(titles_map)} titles for Tinfoil/CyberFoil shop"
