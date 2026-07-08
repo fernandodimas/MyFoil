@@ -124,13 +124,15 @@ def gen_shop_files(db, base_url="", force_lowercase=False):
                 scr_data = db_screenshots.get(tid)
                 if scr_data and isinstance(scr_data, list):
                     for scr in scr_data:
-                        if isinstance(scr, dict) and scr.get("url"):
-                            s_url = scr["url"]
-                            if s_url.startswith("http"):
-                                from urllib.parse import quote
-                                s_url = f"{base_url}/api/image_proxy?url={quote(s_url)}"
-                            screenshots_list.append(s_url)
+                        if isinstance(scr, dict):
+                            s_url = scr.get("url") or scr.get("image")
+                            if s_url:
+                                if s_url.startswith("http"):
+                                    from urllib.parse import quote
+                                    s_url = f"{base_url}/api/image_proxy?url={quote(s_url)}"
+                                screenshots_list.append(s_url)
 
+                publisher_val = db_publishers.get(tid) or ""
                 title_obj = {
                     "id": tid,
                     "name": name,
@@ -138,7 +140,8 @@ def gen_shop_files(db, base_url="", force_lowercase=False):
                     "region": "US",
                     "releaseDate": release_val,
                     "rating": 10,
-                    "publisher": db_publishers.get(tid) or "",
+                    "publisher": publisher_val,
+                    "developer": publisher_val,  # Duplicate to developer to ensure Tinfoil displays it
                     "description": db_descriptions.get(tid) or "",
                     "size": db_sizes.get(tid) or 0,
                     "rank": 1,
