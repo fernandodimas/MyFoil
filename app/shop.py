@@ -119,8 +119,14 @@ def gen_shop_files(db, base_url=""):
                 }
 
                 if icon_url:
+                    if icon_url.startswith("http"):
+                        from urllib.parse import quote
+                        icon_url = f"{base_url}/api/image_proxy?url={quote(icon_url)}"
                     titles_map[tid]["iconUrl"] = icon_url
                 if banner_url:
+                    if banner_url.startswith("http"):
+                        from urllib.parse import quote
+                        banner_url = f"{base_url}/api/image_proxy?url={quote(banner_url)}"
                     titles_map[tid]["bannerUrl"] = banner_url
 
     logger.info(

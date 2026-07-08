@@ -259,5 +259,33 @@ def run_renaming_api():
     import threading
 
     threading.Thread(target=run_wrapper).start()
+ 
+     return jsonify({"success": True, "message": "Renaming job started in background"})
+ 
+ 
+@web_bp.route("/api/image_proxy")
+def image_proxy():
+    """Proxy images from remote servers to bypass Switch DNS blocking on Nintendo domains"""
+    url = request.args.get("url")
+    if not url:
+        return "Missing url parameter", 400
 
-    return jsonify({"success": True, "message": "Renaming job started in background"})
+    if not url.startswith("http://") and not url.startswith("https://"):
+        return "Invalid protocol", 400
+
+    try:
+        import requests
+        r = requests.get(url, timeout=10, stream=True)
+        r.raise_for_status()
+
+        content_type = r.headers.get("Content-Type", "image/jpeg")
+
+        from flask import Response
+        # Stream content in chunks to save memory
+        response = Response(r.iter_content(chunk_size=10240), mimetype=content_type)
+        # Cache image for 7 days on the client
+        response.headers["Cache-Control"] = "public, max-age=604800"
+        return response
+    except Exception as e:
+        logger.error(f"Image proxy failed to fetch {url}: {e}")
+        return f"Failed to retrieve image: {e}", 502
