@@ -344,7 +344,7 @@ function showGameDetails(id) {
                                 </div>
                             </div>
                             <div class="mt-3 is-flex" style="gap: 0.5rem;">
-                                <a href="${game.nsuid ? 'https://ec.nintendo.com/apps/' + game.nsuid + '/US' : (window.currentLocale === 'pt_BR' ? 'https://www.nintendo.com/pt-br/search/#q=' + encodeURIComponent(game.name) : 'https://www.nintendo.com/us/search/#q=' + encodeURIComponent(game.name))}" target="_blank" class="button is-small is-light is-fullwidth" style="border-color: #e60012; color: #e60012; --bulma-text: #e60012; margin-bottom: 0;">
+                                <a href="${game.nsuid ? 'https://ec.nintendo.com/apps/' + game.nsuid + '/' + (window.currentLocale === 'pt_BR' ? 'BR' : 'US') : (window.currentLocale === 'pt_BR' ? 'https://www.nintendo.com/pt-br/search/#q=' + encodeURIComponent(game.name) : 'https://www.nintendo.com/us/search/#q=' + encodeURIComponent(game.name))}" target="_blank" class="button is-small is-light is-fullwidth" style="border-color: #e60012; color: #e60012; --bulma-text: #e60012; margin-bottom: 0;">
                                     <span class="icon"><i class="bi bi-shop"></i></span>
                                     <span>eShop</span>
                                 </a>
