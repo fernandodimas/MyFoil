@@ -80,8 +80,8 @@ def index():
         shop["files"] = files_list
 
         # Check user agent to conditionally omit titledb (prevents Cyberfoil duplicates)
-        user_agent = request.headers.get("User-Agent", "")
-        if "Cyber" in user_agent or "Awoo" in user_agent:
+        user_agent = request.headers.get("User-Agent", "").lower()
+        if "cyber" in user_agent or "awoo" in user_agent:
             logger.info("Cyberfoil/Awoo client detected: omitting titledb from shop JSON to prevent duplication")
         else:
             shop["titledb"] = titles_map
