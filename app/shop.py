@@ -84,13 +84,14 @@ def gen_shop_files(db, base_url=""):
 
             if name:
                 release_date = db_release_dates.get(tid)
-                release_ts = 0
+                release_val = 0
                 if release_date:
                     try:
                         formatted = format_release_date(release_date)
                         if formatted:
                             dt = datetime.strptime(formatted, "%Y-%m-%d")
-                            release_ts = timegm(dt.timetuple())
+                            # Tinfoil expects releaseDate in YYYYMMDD format as an integer
+                            release_val = int(dt.strftime("%Y%m%d"))
                     except Exception:
                         pass
 
@@ -99,7 +100,7 @@ def gen_shop_files(db, base_url=""):
                     "name": name,
                     "version": 0,
                     "region": "US",
-                    "releaseDate": release_ts,
+                    "releaseDate": release_val,
                     "rating": 10,
                     "publisher": "",
                     "description": "",
