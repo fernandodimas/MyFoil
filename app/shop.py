@@ -25,7 +25,7 @@ import logging
 logger = logging.getLogger("main")
 
 
-def gen_shop_files(db, base_url=""):
+def gen_shop_files(db, base_url="", force_lowercase=False):
     shop_files = []
     files = get_shop_files()
 
@@ -41,17 +41,17 @@ def gen_shop_files(db, base_url=""):
         # Metadata for CyberFoil and other installers
         app_type_lower = file.get("app_type", "").lower() if file.get("app_type") else ""
         title_id = file.get("title_id") or ""
-        title_id_lower = title_id.lower() if title_id else ""
+        title_id_formatted = title_id.lower() if force_lowercase else title_id.upper()
 
         app_id = file.get("app_id") or ""
-        app_id_lower = app_id.lower() if app_id else ""
+        app_id_formatted = app_id.lower() if force_lowercase else app_id.upper()
 
         shop_files.append({
             "url": file_url,
             "size": file["size"],
             "name": file["filename"],
-            "title_id": title_id_lower,
-            "app_id": app_id_lower,
+            "title_id": title_id_formatted,
+            "app_id": app_id_formatted,
             "title_name": file.get("title_name") or "",
             "app_name": file.get("app_name") or "",
             "app_version": file.get("app_version", 0),
@@ -59,8 +59,8 @@ def gen_shop_files(db, base_url=""):
         })
 
         # Collect Base TitleIDs for the titledb
-        if title_id_lower and title_id_lower.endswith("000") and title_id_lower not in seen_base_tids:
-            seen_base_tids.add(title_id_lower)
+        if title_id_formatted and title_id_formatted.endswith("000") and title_id_formatted not in seen_base_tids:
+            seen_base_tids.add(title_id_formatted)
 
     # Build titles map: bulk query from DB, fallback to TitleDB cache
     titles_map = {}
@@ -68,10 +68,10 @@ def gen_shop_files(db, base_url=""):
         from db import db, Titles
         from titles.utils import format_release_date
         base_titles = Titles.query.filter(Titles.title_id.in_(seen_base_tids)).all()
-        db_names = {t.title_id.lower(): t.name for t in base_titles if t.name}
-        db_release_dates = {t.title_id.lower(): t.release_date for t in base_titles if t.release_date}
-        db_icons = {t.title_id.lower(): t.icon_url for t in base_titles if t.icon_url}
-        db_banners = {t.title_id.lower(): t.banner_url for t in base_titles if t.banner_url}
+        db_names = {t.title_id.lower() if force_lowercase else t.title_id.upper(): t.name for t in base_titles if t.name}
+        db_release_dates = {t.title_id.lower() if force_lowercase else t.title_id.upper(): t.release_date for t in base_titles if t.release_date}
+        db_icons = {t.title_id.lower() if force_lowercase else t.title_id.upper(): t.icon_url for t in base_titles if t.icon_url}
+        db_banners = {t.title_id.lower() if force_lowercase else t.title_id.upper(): t.banner_url for t in base_titles if t.banner_url}
 
         for tid in sorted(seen_base_tids):
             name = db_names.get(tid)
@@ -116,7 +116,7 @@ def gen_shop_files(db, base_url=""):
                         pass
 
                 title_obj = {
-                    "id": tid.upper(),
+                    "id": tid,
                     "name": name,
                     "version": 0,
                     "region": "US",
@@ -139,9 +139,7 @@ def gen_shop_files(db, base_url=""):
                         banner_url = f"{base_url}/api/image_proxy?url={quote(banner_url)}"
                     title_obj["bannerUrl"] = banner_url
 
-                # Populate both lowercase and uppercase keys to support Tinfoil (upper) and Cyberfoil (lower)
-                titles_map[tid.lower()] = title_obj
-                titles_map[tid.upper()] = title_obj
+                titles_map[tid] = title_obj
 
     logger.info(
         f"gen_shop_files: Returning {len(shop_files)} files and {len(titles_map)} titles for Tinfoil/CyberFoil shop"

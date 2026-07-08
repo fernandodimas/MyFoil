@@ -76,7 +76,11 @@ def index():
 
         base_url = f"{scheme}://{creds}{base_host}"
 
-        files_list, titles_map = gen_shop_files(db, base_url=base_url)
+        # Check user-agent to determine Title ID casing (Tinfoil: UPPER, Cyberfoil/Awoo: lower)
+        user_agent = request.headers.get("User-Agent", "").lower()
+        force_lowercase = "cyber" in user_agent or "awoo" in user_agent
+
+        files_list, titles_map = gen_shop_files(db, base_url=base_url, force_lowercase=force_lowercase)
         shop["files"] = files_list
 
         shop["titledb"] = titles_map
