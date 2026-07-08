@@ -58,7 +58,22 @@ def index():
         else:
             base_host = request.headers.get("X-Forwarded-Host", request.host)
 
-        base_url = f"{scheme}://{base_host}"
+        # Embed user credentials in base_url if Basic Auth was used.
+        # This ensures Tinfoil can download the games by sending the credentials in the download URLs.
+        creds = ""
+        auth = request.headers.get("Authorization")
+        if auth and auth.startswith("Basic "):
+            try:
+                import base64
+                from urllib.parse import quote
+                decoded = base64.b64decode(auth[6:]).decode("utf-8")
+                if ":" in decoded:
+                    u, p = decoded.split(":", 1)
+                    creds = f"{quote(u)}:{quote(p)}@"
+            except Exception:
+                pass
+
+        base_url = f"{scheme}://{creds}{base_host}"
 
         files_list, titles_map = gen_shop_files(db, base_url=base_url)
         shop["files"] = files_list
