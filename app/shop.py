@@ -43,12 +43,17 @@ def gen_shop_files(db, base_url=""):
         title_id = file.get("title_id") or ""
         title_id_upper = title_id.upper() if title_id else ""
 
+        app_id = file.get("app_id") or ""
+        app_id_upper = app_id.upper() if app_id else ""
+
         shop_files.append({
             "url": file_url,
             "size": file["size"],
             "name": file["filename"],
             "title_id": title_id_upper,
+            "app_id": app_id_upper,
             "title_name": file.get("title_name") or "",
+            "app_name": file.get("app_name") or "",
             "app_version": file.get("app_version", 0),
             "app_type": app_type_lower,
         })
