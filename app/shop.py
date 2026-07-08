@@ -115,8 +115,8 @@ def gen_shop_files(db, base_url=""):
                     except Exception:
                         pass
 
-                titles_map[tid] = {
-                    "id": tid,
+                title_obj = {
+                    "id": tid.upper(),
                     "name": name,
                     "version": 0,
                     "region": "US",
@@ -132,12 +132,16 @@ def gen_shop_files(db, base_url=""):
                     if icon_url.startswith("http"):
                         from urllib.parse import quote
                         icon_url = f"{base_url}/api/image_proxy?url={quote(icon_url)}"
-                    titles_map[tid]["iconUrl"] = icon_url
+                    title_obj["iconUrl"] = icon_url
                 if banner_url:
                     if banner_url.startswith("http"):
                         from urllib.parse import quote
                         banner_url = f"{base_url}/api/image_proxy?url={quote(banner_url)}"
-                    titles_map[tid]["bannerUrl"] = banner_url
+                    title_obj["bannerUrl"] = banner_url
+
+                # Populate both lowercase and uppercase keys to support Tinfoil (upper) and Cyberfoil (lower)
+                titles_map[tid.lower()] = title_obj
+                titles_map[tid.upper()] = title_obj
 
     logger.info(
         f"gen_shop_files: Returning {len(shop_files)} files and {len(titles_map)} titles for Tinfoil/CyberFoil shop"
