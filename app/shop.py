@@ -105,9 +105,12 @@ def gen_shop_files(db, base_url=""):
                     try:
                         formatted = format_release_date(release_date)
                         if formatted:
-                            dt = datetime.strptime(formatted, "%Y-%m-%d")
-                            # Tinfoil expects releaseDate in YYYYMMDD format as an integer
-                            release_val = int(dt.strftime("%Y%m%d"))
+                            import re
+                            digits = re.sub(r"\D", "", str(formatted))
+                            if len(digits) >= 8:
+                                release_val = int(digits[:8])
+                            elif len(digits) == 4:
+                                release_val = int(digits + "0101")
                     except Exception:
                         pass
 
