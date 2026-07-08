@@ -259,8 +259,8 @@ def run_renaming_api():
     import threading
 
     threading.Thread(target=run_wrapper).start()
- 
-     return jsonify({"success": True, "message": "Renaming job started in background"})
+
+    return jsonify({"success": True, "message": "Renaming job started in background"})
  
  
 @web_bp.route("/api/image_proxy")
