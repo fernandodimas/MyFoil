@@ -436,6 +436,78 @@ def refresh_sources_dates_api():
         )
 
 
+@settings_bp.route("/settings/titledb/sources/<source_name>/files", methods=["GET"])
+@access_required("admin")
+@handle_api_errors
+def get_source_files_dates_api(source_name):
+    """Get remote file dates for a specific TitleDB source"""
+    import titledb_sources
+    from titledb import get_region_titles_filenames
+    from settings import load_settings
+    from constants import CONFIG_DIR
+    from utils import format_datetime
+
+    manager = titledb_sources.TitleDBSourceManager(CONFIG_DIR)
+    
+    # Find the source
+    source = None
+    for s in manager.sources:
+        if s.name == source_name:
+            source = s
+            break
+    
+    if not source:
+        return error_response(ErrorCode.NOT_FOUND, message=f"Source '{source_name}' not found", status_code=404)
+    
+    # Get possible filenames based on settings
+    app_settings = load_settings()
+    region = app_settings.get("titles", {}).get("region", "US")
+    language = app_settings.get("titles", {}).get("language", "en")
+    
+    # Core files + regional files
+    files_to_check = ["titles.json", "cnmts.json", "versions.json", "languages.json"]
+    regional_files = get_region_titles_filenames(region, language)
+    files_to_check.extend(regional_files)
+    
+    # Get remote dates for each file
+    file_dates = []
+    for filename in files_to_check:
+        url = source.get_file_url(filename)
+        remote_date = None
+        file_size = None
+        error = None
+        
+        try:
+            import requests
+            response = requests.head(url, timeout=10)
+            if response.status_code == 200:
+                if "Last-Modified" in response.headers:
+                    from datetime import datetime
+                    remote_date = format_datetime(
+                        datetime.strptime(response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S %Z")
+                    )
+                if "Content-Length" in response.headers:
+                    file_size = int(response.headers["Content-Length"])
+            else:
+                error = f"HTTP {response.status_code}"
+        except Exception as e:
+            error = str(e)
+        
+        file_dates.append({
+            "filename": filename,
+            "remote_date": remote_date,
+            "file_size": file_size,
+            "error": error,
+            "url": url
+        })
+    
+    return success_response(data={
+        "source_name": source.name,
+        "base_url": source.base_url,
+        "files": file_dates
+    })
+
+
 @settings_bp.route("/settings/titledb/refresh_remote", methods=["POST"])
 @access_required("admin")
 @handle_api_errors

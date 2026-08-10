@@ -750,6 +750,25 @@
                                     </div>
                                 </div>
 
+                                <!-- Source Files Detail Modal -->
+                                <div class="modal" id="sourceFilesModal">
+                                    <div class="modal-background" onclick="closeSourceFilesModal()"></div>
+                                    <div class="modal-card" style="max-width: 700px;">
+                                        <header class="modal-card-head">
+                                            <p class="modal-card-title is-size-5">
+                                                <i class="bi bi-cloud-download mr-2 has-text-info"></i>
+                                                <span id="sourceFilesModalTitle">Source Files</span>
+                                            </p>
+                                            <button class="delete" onclick="closeSourceFilesModal()"></button>
+                                        </header>
+                                        <section class="modal-card-body">
+                                            <div id="sourceFilesModalContent">
+                                                <p class="has-text-centered py-4">{{ t('common.loading') }}...</p>
+                                            </div>
+                                        </section>
+                                    </div>
+                                </div>
+
                                 <div class="block mt-6">
                                     <button class="button is-small is-primary is-outlined" id="toggleAddSource">
                                         <i class="bi bi-plus-lg mr-2"></i> {{ t('Add Custom Source') }}

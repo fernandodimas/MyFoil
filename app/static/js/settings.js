@@ -660,7 +660,7 @@ function fillTitleDBSourcesTable() {
             const localDate = source.last_success ? new Date(source.last_success).toLocaleString() : t('common.never');
 
             tbody.append(`
-                <tr>
+                <tr style="cursor: pointer;" onclick="showSourceFiles('${escapeHtml(source.name)}')">
                     <td>
                         <div class="is-flex is-align-items-center">
                             <i class="bi ${source.source_type === 'json' ? 'bi-filetype-json' : 'bi-file-zip'} mr-2 opacity-40"></i>
@@ -705,6 +705,79 @@ function fillTitleDBSourcesTable() {
             `);
         });
     }).fail(() => debugWarn('Failed to load titledb sources'));
+}
+
+function showSourceFiles(sourceName) {
+    const modal = document.getElementById('sourceFilesModal');
+    const title = document.getElementById('sourceFilesModalTitle');
+    const content = document.getElementById('sourceFilesModalContent');
+    
+    title.textContent = sourceName;
+    content.innerHTML = `<p class="has-text-centered py-4"><i class="bi bi-arrow-repeat spin mr-2"></i>${t('common.loading')}...</p>`;
+    
+    modal.classList.add('is-active');
+    
+    $.getJSON(`/api/settings/titledb/sources/${encodeURIComponent(sourceName)}/files`, (result) => {
+        const payload = unwrap(result);
+        if (!payload || !payload.files) {
+            content.innerHTML = `<p class="has-text-centered has-text-danger py-4">${t('common.error')}</p>`;
+            return;
+        }
+        
+        let html = `
+            <p class="is-size-7 mb-3 opacity-70">
+                <i class="bi bi-link-45deg mr-1"></i>
+                <code>${escapeHtml(payload.base_url)}</code>
+            </p>
+            <table class="table is-fullwidth is-size-7">
+                <thead>
+                    <tr>
+                        <th>${t('File')}</th>
+                        <th>${t('Size')}</th>
+                        <th>${t('Last Modified')}</th>
+                        <th>${t('Status')}</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        const fmt = (s) => { 
+            if (!s) return '-'; 
+            const u = ['B','KB','MB','GB']; 
+            let i = 0; 
+            while(s >= 1024 && i < 3) { s /= 1024; i++; } 
+            return s.toFixed(i > 0 ? 1 : 0) + ' ' + u[i]; 
+        };
+        
+        payload.files.forEach(file => {
+            let statusHtml;
+            if (file.error) {
+                statusHtml = `<span class="tag is-danger is-light is-small" title="${escapeHtml(file.error)}">${t('Error')}</span>`;
+            } else if (file.remote_date) {
+                statusHtml = `<span class="tag is-success is-light is-small">${t('OK')}</span>`;
+            } else {
+                statusHtml = `<span class="tag is-warning is-light is-small">${t('common.not_found')}</span>`;
+            }
+            
+            html += `
+                <tr>
+                    <td><code>${escapeHtml(file.filename)}</code></td>
+                    <td>${fmt(file.file_size)}</td>
+                    <td>${file.remote_date || '-'}</td>
+                    <td>${statusHtml}</td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table>';
+        content.innerHTML = html;
+    }).fail(() => {
+        content.innerHTML = `<p class="has-text-centered has-text-danger py-4">${t('common.error')}</p>`;
+    });
+}
+
+function closeSourceFilesModal() {
+    document.getElementById('sourceFilesModal').classList.remove('is-active');
 }
 
 function fillErrorsTable() {
@@ -1563,6 +1636,16 @@ $(document).ready(function () {
         updateMetadataStatus();
         // Periodically refresh if on the page
         setInterval(updateMetadataStatus, 60000);
+    }
+});
+
+// Close source files modal with ESC key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('sourceFilesModal');
+        if (modal && modal.classList.contains('is-active')) {
+            closeSourceFilesModal();
+        }
     }
 });
 
