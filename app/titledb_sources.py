@@ -150,26 +150,25 @@ class TitleDBSource:
                         if getattr(self, "_rate_limit_hit", False):
                             return None
 
-            # Fallback to standard HEAD request for each filename
-            for fname in filenames:
+            # Fallback to standard HEAD request - check all files and return the most recent date
+            most_recent = None
+            files_to_check = list(filenames)
+            if "titles.json" not in files_to_check:
+                files_to_check.append("titles.json")
+
+            for fname in files_to_check:
                 url = self.get_file_url(fname)
                 try:
                     response = requests.head(url, timeout=5)
-                    if response.status_code == 200:
-                        if "Last-Modified" in response.headers:
-                            return datetime.strptime(response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S %Z")
+                    if response.status_code == 200 and "Last-Modified" in response.headers:
+                        dt = datetime.strptime(response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S %Z")
+                        if most_recent is None or dt > most_recent:
+                            most_recent = dt
                 except requests.RequestException:
                     pass
 
-            # Final attempt: try generic titles.json
-            if "titles.json" not in filenames:
-                url_generic = self.get_file_url("titles.json")
-                try:
-                    response = requests.head(url_generic, timeout=5)
-                    if response.status_code == 200 and "Last-Modified" in response.headers:
-                        return datetime.strptime(response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S %Z")
-                except requests.RequestException:
-                    pass
+            if most_recent:
+                return most_recent
 
         except Exception as e:
             logger.debug(f"Error fetching remote date for {self.name}: {e}")
