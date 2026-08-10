@@ -447,6 +447,8 @@ def get_source_files_dates_api(source_name=None):
     from settings import load_settings
     from constants import CONFIG_DIR
     from utils import format_datetime
+    from datetime import datetime
+    import requests
 
     # Get source_name from query param if not in path
     if not source_name:
@@ -474,6 +476,22 @@ def get_source_files_dates_api(source_name=None):
     regional_files = get_region_titles_filenames(region, language)
     files_to_check.extend(regional_files)
     
+    # Check if it's a GitHub source
+    is_github = "raw.githubusercontent.com" in source.base_url
+    github_user = None
+    github_repo = None
+    github_branch = None
+    
+    if is_github:
+        parts = source.base_url.split("/")
+        if len(parts) >= 6:
+            github_user = parts[3]
+            github_repo = parts[4]
+            if parts[5] == "refs" and len(parts) >= 8 and parts[6] == "heads":
+                github_branch = parts[7].rstrip("/")
+            else:
+                github_branch = parts[5].rstrip("/")
+    
     # Get remote dates for each file
     file_dates = []
     for filename in files_to_check:
@@ -484,16 +502,30 @@ def get_source_files_dates_api(source_name=None):
         exists = True
         
         try:
-            import requests
             response = requests.head(url, timeout=10)
             if response.status_code == 200:
+                # Get file size
+                if "Content-Length" in response.headers:
+                    file_size = int(response.headers["Content-Length"])
+                
+                # Get last modified date
                 if "Last-Modified" in response.headers:
-                    from datetime import datetime
                     remote_date = format_datetime(
                         datetime.strptime(response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S %Z")
                     )
-                if "Content-Length" in response.headers:
-                    file_size = int(response.headers["Content-Length"])
+                elif is_github and github_user and github_repo and github_branch:
+                    # Use GitHub API to get commit date
+                    try:
+                        api_url = f"https://api.github.com/repos/{github_user}/{github_repo}/commits?path={filename}&sha={github_branch}&per_page=1"
+                        headers = {"User-Agent": "MyFoil-App", "Accept": "application/vnd.github.v3+json"}
+                        api_resp = requests.get(api_url, headers=headers, timeout=5)
+                        if api_resp.status_code == 200:
+                            data = api_resp.json()
+                            if data and isinstance(data, list) and len(data) > 0:
+                                commit_date = data[0]["commit"]["committer"]["date"]
+                                remote_date = format_datetime(datetime.fromisoformat(commit_date.replace("Z", "+00:00")))
+                    except Exception:
+                        pass
             elif response.status_code == 404:
                 exists = False
                 error = None
