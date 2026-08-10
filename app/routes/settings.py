@@ -476,6 +476,7 @@ def get_source_files_dates_api(source_name):
         remote_date = None
         file_size = None
         error = None
+        exists = True
         
         try:
             import requests
@@ -488,6 +489,9 @@ def get_source_files_dates_api(source_name):
                     )
                 if "Content-Length" in response.headers:
                     file_size = int(response.headers["Content-Length"])
+            elif response.status_code == 404:
+                exists = False
+                error = None
             else:
                 error = f"HTTP {response.status_code}"
         except Exception as e:
@@ -498,7 +502,8 @@ def get_source_files_dates_api(source_name):
             "remote_date": remote_date,
             "file_size": file_size,
             "error": error,
-            "url": url
+            "url": url,
+            "exists": exists
         })
     
     return success_response(data={

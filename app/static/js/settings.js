@@ -751,7 +751,9 @@ function showSourceFiles(sourceName) {
         
         payload.files.forEach(file => {
             let statusHtml;
-            if (file.error) {
+            if (file.exists === false) {
+                statusHtml = `<span class="tag is-light is-small has-text-grey">${t('Not available')}</span>`;
+            } else if (file.error) {
                 statusHtml = `<span class="tag is-danger is-light is-small" title="${escapeHtml(file.error)}">${t('Error')}</span>`;
             } else if (file.remote_date) {
                 statusHtml = `<span class="tag is-success is-light is-small">${t('OK')}</span>`;
@@ -760,9 +762,9 @@ function showSourceFiles(sourceName) {
             }
             
             html += `
-                <tr>
+                <tr${file.exists === false ? ' class="has-text-grey"' : ''}>
                     <td><code>${escapeHtml(file.filename)}</code></td>
-                    <td>${fmt(file.file_size)}</td>
+                    <td>${file.exists === false ? '-' : fmt(file.file_size)}</td>
                     <td>${file.remote_date || '-'}</td>
                     <td>${statusHtml}</td>
                 </tr>
