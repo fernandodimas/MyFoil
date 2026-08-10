@@ -436,10 +436,11 @@ def refresh_sources_dates_api():
         )
 
 
-@settings_bp.route("/settings/titledb/sources/<source_name>/files", methods=["GET"])
+@settings_bp.route("/settings/titledb/sources/files", methods=["GET"])
+@settings_bp.route("/settings/titledb/sources/<path:source_name>/files", methods=["GET"])
 @access_required("admin")
 @handle_api_errors
-def get_source_files_dates_api(source_name):
+def get_source_files_dates_api(source_name=None):
     """Get remote file dates for a specific TitleDB source"""
     import titledb_sources
     from titledb import get_region_titles_filenames
@@ -447,6 +448,10 @@ def get_source_files_dates_api(source_name):
     from constants import CONFIG_DIR
     from utils import format_datetime
 
+    # Get source_name from query param if not in path
+    if not source_name:
+        source_name = request.args.get("name", "")
+    
     manager = titledb_sources.TitleDBSourceManager(CONFIG_DIR)
     
     # Find the source

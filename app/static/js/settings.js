@@ -717,7 +717,7 @@ function showSourceFiles(sourceName) {
     
     modal.classList.add('is-active');
     
-    $.getJSON(`/api/settings/titledb/sources/${encodeURIComponent(sourceName)}/files`, (result) => {
+    $.getJSON(`/api/settings/titledb/sources/files?name=${encodeURIComponent(sourceName)}`, (result) => {
         const payload = unwrap(result);
         if (!payload || !payload.files) {
             content.innerHTML = `<p class="has-text-centered has-text-danger py-4">${t('common.error')}</p>`;
