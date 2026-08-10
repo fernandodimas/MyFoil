@@ -197,20 +197,25 @@ class TitleDBSource:
 class TitleDBSourceManager:
     """Manages multiple TitleDB sources with fallback support"""
 
-    # Default sources
+    # Default sources - tinfoil.media prioritized for most recent updates
     DEFAULT_SOURCES = [
+        TitleDBSource(
+            name="tinfoil.media",
+            base_url="https://tinfoil.media/repo/db",
+            priority=1,
+            source_type="json",
+        ),
         TitleDBSource(
             name="blawar/titledb (GitHub)",
             base_url="https://raw.githubusercontent.com/blawar/titledb/refs/heads/master",
             priority=10,
             source_type="json",
         ),
-        TitleDBSource(name="tinfoil.media", base_url="https://tinfoil.media/repo/db", priority=1, source_type="json"),
         TitleDBSource(
             name="MyFoil (Legacy)",
             base_url="https://nightly.link/a1ex4/ownfoil/workflows/region_titles/master/titledb.zip",
-            enabled=True,
-            priority=5,
+            enabled=False,
+            priority=20,
             source_type="zip_legacy",
         ),
     ]
