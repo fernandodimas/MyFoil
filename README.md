@@ -31,6 +31,8 @@
  - **💾 Backup Management**: Built-in system for database and configuration backups.
  - **⚙️ Configurable Sources**: Full web UI to manage, prioritize, and monitor TitleDB sources.
  - **📊 Better Caching**: Intelligent library caching with configurable TTL.
+ - **🔍 Source File Details**: Click on any TitleDB source to view detailed file information (dates, sizes, status).
+ - **📅 Smart Date Detection**: Automatically uses GitHub API for commit dates on GitHub sources.
 
 ## 🎯 Core Features
 
@@ -149,22 +151,21 @@ TitleDB sources provide the metadata about Switch games, updates, and DLCs. MyFo
 
 ## Default Sources
 
-MyFoil comes with four pre-configured sources (in priority order):
+MyFoil comes with three pre-configured sources (in priority order):
 
-1. **tinfoil.media** - Priority 1 (Enabled)
-   - Official Tinfoil API
-   - Reliable and fast
+1. **tinfoil.media** - Priority 1 (Primary)
+   - Most frequently updated source
    - Direct JSON access
+   - Best for game updates
 
-2. **MyFoil (Legacy)** - Priority 2 (Enabled)
-   - Original MyFoil ZIP-based source (inherited from Ownfoil)
+2. **blawar/titledb (GitHub)** - Priority 10 (Fallback)
+   - The original community source
+   - Comprehensive metadata
+   - Fallback when tinfoil.media is unavailable
+
+3. **MyFoil (Legacy)** - Priority 20 (Disabled by default)
+   - Original ZIP-based source (inherited from Ownfoil)
    - Kept for maximum compatibility
-   - Updated via nightly link workflows
-
-3. **blawar/titledb (GitHub)** - Priority 3 (Enabled)
-   - The original and most comprehensive community source
-   - Updated frequently by the community
-   - Direct from GitHub's raw content
 
 ## How It Works
 
@@ -222,6 +223,17 @@ curl -X DELETE http://localhost:8465/api/settings/titledb/sources \
 curl -X POST http://localhost:8465/api/settings/titledb/update \
   -H "Authorization: Basic YWRtaW46cGFzc3dvcmQ="
 ```
+
+### Get Source File Details
+```bash
+curl "http://localhost:8465/api/settings/titledb/sources/files?name=tinfoil.media" \
+  -H "Authorization: Basic YWRtaW46cGFzc3dvcmQ="
+```
+
+Returns detailed information about each file in the source, including:
+- File size
+- Last modified date (remote)
+- Availability status (OK, Not available, Error)
 
 ## Creating Your Own Source
 
