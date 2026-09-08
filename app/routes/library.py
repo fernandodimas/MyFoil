@@ -302,7 +302,11 @@ def _serialize_title_with_apps(title: Titles, ignore_map=None) -> dict:
     title_id = title.title_id
 
     # Get all title apps (owned and unowned)
-    all_title_apps_dict = get_all_title_apps(title_id)
+    try:
+        all_title_apps_dict = get_all_title_apps(title_id)
+    except Exception as e:
+        logger.warning(f"Error fetching apps for title {title_id}: {e}")
+        all_title_apps_dict = []
 
     # Build title_data structure expected by library.get_game_info_item
     title_data = {
@@ -410,7 +414,8 @@ def library_paged_api():
     # page of titles to process in memory and then paginate the filtered results.
     if dlc_filter or redundant_filter:
         # Fetch a large set (reasonable upper bound) to filter in memory
-        FETCH_LIMIT = 5000
+        # Reduced from 5000 to 1000 to prevent OOM
+        FETCH_LIMIT = 1000
         # Narrow initial DB result using materialized counters where possible
         filter_args = {}
         # For DLC and Redundant filters, we rely on the RUNTIME check (Python loop below)
