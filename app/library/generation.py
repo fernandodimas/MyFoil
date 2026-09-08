@@ -36,7 +36,8 @@ def update_titles():
             db.session.rollback()
 
         # Optimized query to fetch titles and their apps in fixed number of queries
-        titles = Titles.query.options(joinedload(Titles.apps).joinedload(Apps.files)).all()
+        # Use yield_per to stream results instead of loading everything into memory
+        titles = Titles.query.options(joinedload(Titles.apps).joinedload(Apps.files)).yield_per(100)
         for n, title in enumerate(titles):
             # Yield to other gevent co-routines
             import gevent
@@ -146,8 +147,12 @@ def update_titles():
             # Commit every 100 titles to avoid excessive memory use
             if (n + 1) % 100 == 0:
                 db.session.commit()
+                # Clear identity map to free memory
+                db.session.expunge_all()
 
         db.session.commit()
+        # Clear identity map after processing all titles to free memory
+        db.session.expunge_all()
 
         # Recalculate precomputed per-user flags so they are always in sync with TitleDB
         try:

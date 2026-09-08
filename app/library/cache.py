@@ -57,39 +57,36 @@ def _clear_titledb_caches():
 
 
 def compute_apps_hash():
+    """Compute hash using SQL aggregation instead of loading all data into memory"""
+    from sqlalchemy import func
     hash_md5 = hashlib.md5(usedforsecurity=False)
-    all_apps = get_all_apps()
-    all_tags = db.session.query(Tag).order_by(Tag.id).all()
-    all_metadata = db.session.query(TitleMetadata).order_by(TitleMetadata.id).all()
-
-    for app in all_apps:
-        hash_md5.update(str(app.get("id", "")).encode())
-        hash_md5.update(str(app.get("title_id", "")).encode())
-        hash_md5.update(str(app.get("app_id", "")).encode())
-        hash_md5.update(str(app.get("app_type", "")).encode())
-        hash_md5.update(str(app.get("owned", "")).encode())
-        if app.get("app_version"):
-            hash_md5.update(str(app["app_version"]).encode())
-
-    for tag in all_tags:
-        hash_md5.update(str(tag.id).encode())
-        hash_md5.update(str(tag.name).encode())
-
-    for meta in all_metadata:
-        hash_md5.update(str(meta.title_id).encode())
-        if meta.description:
-            hash_md5.update(str(meta.description)[:200].encode())
-        if meta.rating is not None:
-            hash_md5.update(str(meta.rating).encode())
-        if meta.genres:
-            hash_md5.update(str(meta.genres).encode())
-        if meta.screenshots:
-            hash_md5.update(str(len(meta.screenshots)).encode())
-
+    
+    # Use COUNT queries instead of loading all rows
+    apps_count = db.session.query(func.count(Apps.id)).scalar() or 0
+    apps_max_id = db.session.query(func.max(Apps.id)).scalar() or 0
+    apps_max_version = db.session.query(func.max(Apps.app_version)).scalar() or 0
+    hash_md5.update(f"apps:{apps_count}:{apps_max_id}:{apps_max_version}".encode())
+    
+    # Count apps by type and owned status
+    for app_type in ['BASE', 'UPD', 'DLC']:
+        for owned in [True, False]:
+            count = db.session.query(func.count(Apps.id)).filter(
+                Apps.app_type == app_type, Apps.owned == owned
+            ).scalar() or 0
+            hash_md5.update(f"{app_type}:{owned}:{count}".encode())
+    
+    tags_count = db.session.query(func.count(Tag.id)).scalar() or 0
+    tags_max_id = db.session.query(func.max(Tag.id)).scalar() or 0
+    hash_md5.update(f"tags:{tags_count}:{tags_max_id}".encode())
+    
+    meta_count = db.session.query(func.count(TitleMetadata.id)).scalar() or 0
+    meta_max_id = db.session.query(func.max(TitleMetadata.id)).scalar() or 0
+    hash_md5.update(f"meta:{meta_count}:{meta_max_id}".encode())
+    
     from db import Files
     file_count = db.session.query(Files).filter(Files.identified == True).count()
     hash_md5.update(str(file_count).encode())
-
+    
     return hash_md5.hexdigest()
 
 

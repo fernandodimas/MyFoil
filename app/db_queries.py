@@ -286,12 +286,12 @@ def get_all_titles():
 def get_all_titles_with_apps():
     from sqlalchemy.orm import joinedload
     from db import Titles, Apps, to_dict, logger as db_logger
+    # Use yield_per to stream results instead of loading everything into memory
     titles = (
         Titles.query.filter(Titles.title_id.isnot(None))
         .options(joinedload(Titles.apps).joinedload(Apps.files), joinedload(Titles.tags))
-        .all()
+        .yield_per(100)
     )
-    db_logger.info(f"get_all_titles_with_apps: Found {len(titles)} titles in DB.")
 
     results = []
     for t in titles:
@@ -325,6 +325,14 @@ def get_all_titles_with_apps():
             t_dict["apps"].append(a_dict)
         t_dict["tags"] = [tag.name for tag in t.tags]
         results.append(t_dict)
+        
+        # Clear identity map periodically to free memory
+        if len(results) % 100 == 0:
+            db.session.expunge_all()
+    
+    # Clear identity map after processing
+    db.session.expunge_all()
+    db_logger.info(f"get_all_titles_with_apps: Found {len(results)} titles in DB.")
     return results
 
 

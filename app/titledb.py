@@ -303,8 +303,12 @@ def process_and_store_json(filename: str, source_name: str, max_retries: int = 3
                 # Commit every few batches to keep transactions small
                 if i % (batch_size * 4) == 0:
                     db.session.commit()
+                    # Clear identity map to free memory
+                    db.session.expunge_all()
 
             db.session.commit()
+            # Clear identity map after processing to free memory
+            db.session.expunge_all()
             return True
 
         except OperationalError as e:
