@@ -541,8 +541,10 @@ def remove_missing_files_from_db():
             count = Files.query.filter(Files.id.in_(ids_to_delete)).delete(synchronize_session=False)
             db.session.commit()
             logger.info(f"Cleanup done: removed {count} missing files from DB, updated {total_apps_updated} app entries.")
+            return count
         else:
             logger.debug("No missing files found to cleanup.")
+            return 0
     except Exception as e:
         db.session.rollback()
         logger.error(f"An error occurred while cleaning up missing files: {str(e)}")

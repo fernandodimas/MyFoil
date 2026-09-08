@@ -28,6 +28,7 @@ from db import db, TitleDBCache, TitleDBVersions, TitleDBDLCs
 import json
 
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import OperationalError
 
 # Retrieve main logger
 logger = logging.getLogger("main")
@@ -174,81 +175,84 @@ def download_titledb_file(filename: str, force: bool = False, silent_404: bool =
         return False
 
 
-def process_and_store_json(filename: str, source_name: str) -> bool:
-    """Read downloaded JSON file and store in Database"""
+def process_and_store_json(filename: str, source_name: str, max_retries: int = 3) -> bool:
+    """Read downloaded JSON file and store in Database with retry logic for transient failures"""
+    import time
     filepath = os.path.join(TITLEDB_DIR, filename)
     if not os.path.exists(filepath):
         logger.warning(f"File {filepath} not found for processing")
         return False
 
-    try:
-        logger.info(f"Processing {filename} for database storage...")
-        with open(filepath, "r", encoding="utf-8") as f:
-            data = json.load(f)
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"Processing {filename} for database storage (attempt {attempt + 1}/{max_retries})...")
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
 
-        # Validate top-level structure
-        if not isinstance(data, dict):
-            logger.error(f"Expected dict from {filename}, got {type(data).__name__}. Skipping.")
-            return False
+            # Validate top-level structure
+            if not isinstance(data, dict):
+                logger.error(f"Expected dict from {filename}, got {type(data).__name__}. Skipping.")
+                return False
 
-        # 1. VERSIONS
-        if "versions" in filename:
-            logger.info(f"Storing {len(data)} version entries...")
-            # Ideally we'd truncate/replace or upsert. For now, let's upsert batch.
-            # Truncating is faster for full updates:
-            # db.session.query(TitleDBVersions).delete()
-            # But let's stick to upsert to be safe with partial data?
-            # Actually versions.json is usually global. Let's truncate for now to avoid stale data.
-            db.session.query(TitleDBVersions).delete()
+            # 1. VERSIONS
+            if "versions" in filename:
+                logger.info(f"Storing {len(data)} version entries...")
+                # Ideally we'd truncate/replace or upsert. For now, let's upsert batch.
+                # Truncating is faster for full updates:
+                # db.session.query(TitleDBVersions).delete()
+                # But let's stick to upsert to be safe with partial data?
+                # Actually versions.json is usually global. Let's truncate for now to avoid stale data.
+                db.session.query(TitleDBVersions).delete()
 
-            bulk_data = []
-            for tid, v_dict in data.items():
-                for version, date in v_dict.items():
-                    bulk_data.append({"title_id": tid, "version": int(version), "release_date": str(date)})
+                bulk_data = []
+                for tid, v_dict in data.items():
+                    for version, date in v_dict.items():
+                        bulk_data.append({"title_id": tid, "version": int(version), "release_date": str(date)})
 
-            if bulk_data:
-                db.session.bulk_insert_mappings(TitleDBVersions, bulk_data)
-                db.session.commit()
-            return True
+                if bulk_data:
+                    db.session.bulk_insert_mappings(TitleDBVersions, bulk_data)
+                    db.session.commit()
+                return True
 
-        # 2. CNMTS (DLCs and Updates mapping)
-        elif "cnmts" in filename:
-            logger.info(f"Storing {len(data)} DLC (CNMT) entries...")
-            db.session.query(TitleDBDLCs).delete()
+            # 2. CNMTS (DLCs and Updates mapping)
+            elif "cnmts" in filename:
+                logger.info(f"Storing {len(data)} DLC (CNMT) entries...")
+                db.session.query(TitleDBDLCs).delete()
 
-            bulk_data = []
-            for tid, versions in data.items():
-                for v_str, info in versions.items():
-                    base_tid = info.get("otherApplicationId")
-                    title_type = info.get("titleType")
-                    if base_tid and title_type == 130:  # ONLY DLC
-                        bulk_data.append({"base_title_id": base_tid, "dlc_app_id": tid})
-                    # Also include the title itself in the reverse map if it's a DLC
-                    elif title_type == 130:
-                        # Some DLCs don't have otherApplicationId? Rare but possible
-                        pass
+                bulk_data = []
+                for tid, versions in data.items():
+                    for v_str, info in versions.items():
+                        base_tid = info.get("otherApplicationId")
+                        title_type = info.get("titleType")
+                        if base_tid and title_type == 130:  # ONLY DLC
+                            bulk_data.append({"base_title_id": base_tid, "dlc_app_id": tid})
+                        # Also include the title itself in the reverse map if it's a DLC
+                        elif title_type == 130:
+                            # Some DLCs don't have otherApplicationId? Rare but possible
+                            pass
 
-            # Deduplicate entries (same base and DLC can appear multiple times for different versions)
-            unique_bulk = {}
-            for item in bulk_data:
-                key = (item["base_title_id"], item["dlc_app_id"])
-                unique_bulk[key] = item
+                # Deduplicate entries (same base and DLC can appear multiple times for different versions)
+                unique_bulk = {}
+                for item in bulk_data:
+                    key = (item["base_title_id"], item["dlc_app_id"])
+                    unique_bulk[key] = item
 
-            bulk_data = list(unique_bulk.values())
+                bulk_data = list(unique_bulk.values())
 
-            if bulk_data:
-                db.session.bulk_insert_mappings(TitleDBDLCs, bulk_data)
-                db.session.commit()
-            return True
+                if bulk_data:
+                    db.session.bulk_insert_mappings(TitleDBDLCs, bulk_data)
+                    db.session.commit()
+                return True
 
-        # 3. TITLES (titles.json, US.en.json, etc)
-        else:
-            logger.info(f"Storing {len(data)} title entries from {filename}...")
-            import gevent
+            # 3. TITLES (titles.json, US.en.json, etc)
+            else:
+                logger.info(f"Storing {len(data)} title entries from {filename}...")
+                import gevent
 
-            # Use batches for performance and to prevent long locks/freezes
-            batch_size = 500
-            items = list(data.items())
+                # Use batches for performance and to prevent long locks/freezes
+                # Reduced from 500 to 50 - large batches cause PostgreSQL memory/network overload
+                batch_size = 50
+                items = list(data.items())
 
             # Sort by NSUID descending so that older versions (smaller NSUID) are processed LAST
             # and thus take precedence in database upserts.
@@ -303,10 +307,19 @@ def process_and_store_json(filename: str, source_name: str) -> bool:
             db.session.commit()
             return True
 
-    except Exception as e:
-        logger.error(f"Failed to process {filename}: {e}", exc_info=True)
-        db.session.rollback()
-        return False
+        except OperationalError as e:
+            db.session.rollback()
+            if attempt < max_retries - 1:
+                wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                logger.warning(f"Database connection error on attempt {attempt + 1}, retrying in {wait_time}s: {e}")
+                time.sleep(wait_time)
+            else:
+                logger.error(f"Failed to process {filename} after {max_retries} attempts: {e}")
+                return False
+        except Exception as e:
+            logger.error(f"Failed to process {filename}: {e}", exc_info=True)
+            db.session.rollback()
+            return False
 
 
 def update_titledb_files(app_settings: Dict, force: bool = False, job_id: str = None) -> Dict[str, bool]:

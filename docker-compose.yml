@@ -11,6 +11,10 @@ services:
       POSTGRES_DB: myfoil
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
   redis:
     image: redis:7-alpine
@@ -24,6 +28,10 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   worker:
     healthcheck:
@@ -42,7 +50,8 @@ services:
         - myfoil:latest
     restart: unless-stopped
     # Use gevent pool since we are monkeypatching everything
-    command: celery -A celery_app.celery worker --loglevel=info --concurrency=20 -P gevent
+    # Reduced concurrency from 20 to 4 to prevent OOM (each greenlet can load TitleDB)
+    command: celery -A celery_app.celery worker --loglevel=info --concurrency=4 -P gevent
     depends_on:
       redis:
         condition: service_healthy
@@ -62,6 +71,10 @@ services:
       - /path/to/your/externo:/externo
       - ./config:/app/config
       - ./data:/app/data
+    deploy:
+      resources:
+        limits:
+          memory: 2G
 
 volumes:
   postgres_data:
