@@ -15,8 +15,8 @@ from utils import debounce
 
 
 def update_titles():
-    # Ensure TitleDB is loaded to avoid clearing up_to_date and complete status flags
-    titles_lib.load_titledb()
+    # Force reload TitleDB to ensure we have latest version data for up_to_date calculation
+    titles_lib.load_titledb(force=True)
     try:
         # Remove titles that no longer have any owned apps
         titles_removed = remove_titles_without_owned_apps()
