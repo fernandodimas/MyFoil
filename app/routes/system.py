@@ -934,9 +934,18 @@ def process_status_api():
             pass
 
     # Also check DB for active jobs to support Celery workers report
-    has_active_scan = SystemJobRepository.is_job_type_running("library_scan")
-    has_active_tdb = SystemJobRepository.is_job_type_running("titledb_update")
-    has_active_metadata = SystemJobRepository.is_metadata_job_running()
+    # Wrap in try-except to handle database connection errors gracefully
+    has_active_scan = False
+    has_active_tdb = False
+    has_active_metadata = False
+    try:
+        has_active_scan = SystemJobRepository.is_job_type_running("library_scan")
+        has_active_tdb = SystemJobRepository.is_job_type_running("titledb_update")
+        has_active_metadata = SystemJobRepository.is_metadata_job_running()
+    except Exception as e:
+        logger.warning(f"Error checking job status: {e}")
+        # Return basic status without DB checks
+        pass
 
     return success_response(
         data={
