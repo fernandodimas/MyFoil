@@ -72,10 +72,12 @@ class I18n:
 
     def context_processor(self):
         from constants import BUILD_VERSION
+        import os
         return dict(
             t=self.t, 
             get_locale=self.get_locale, 
             get_translations=self.get_translations_dict,
             get_available_languages=self.get_available_languages,
-            build_version=BUILD_VERSION
+            build_version=BUILD_VERSION,
+            container_tz=os.getenv("TZ", "UTC")
         )

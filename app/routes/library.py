@@ -717,9 +717,61 @@ def library_search_paged_api():
         )
 
     # Default path: no dlc/redundant post-filtering required
-    paginated = TitlesRepository.get_paged(
-        page=page, per_page=per_page, query_text=query_text, filters=filters, sort_by=sort_by, order=order
-    )
+    # For pending filter, we need to fetch all have_base titles and filter post-serialization
+    # because Titles.up_to_date in the DB can be stale
+    if pending:
+        FETCH_LIMIT = 5000
+        paginated = TitlesRepository.get_paged(
+            page=1, per_page=FETCH_LIMIT, query_text=query_text, filters=filters, sort_by=sort_by, order=order
+        )
+        all_titles = paginated.items
+
+        # Preload user ignore prefs for pending computation
+        ignores_by_user = {}
+        try:
+            flat = WishlistIgnoreRepository.get_flattened_ignores_for_user(current_user.id)
+            for tid, sets in flat.items():
+                ignores_by_user[tid] = {
+                    "dlcs": {k: True for k in sets.get("dlcs", set())},
+                    "updates": {v: True for v in sets.get("updates", set())},
+                }
+        except Exception:
+            ignores_by_user = {}
+
+        items_all = []
+        for title in all_titles:
+            try:
+                item = _serialize_title_with_apps(title, ignore_map=ignores_by_user)
+                if not item:
+                    continue
+                # Compute pending dynamically: has base but does NOT have latest version
+                if not item.get("has_base") or item.get("has_latest_version"):
+                    continue
+                items_all.append(item)
+            except Exception as e:
+                logger.error(f"Error serializing title {title.title_id}: {e}")
+                continue
+
+        # Manual pagination on filtered results
+        total_items = len(items_all)
+        total_pages = (total_items + per_page - 1) // per_page
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        items = items_all[start_idx:end_idx]
+
+        return success_response(
+            data={
+                "items": items,
+                "pagination": {
+                    "page": page,
+                    "per_page": per_page,
+                    "total_items": total_items,
+                    "total_pages": total_pages,
+                    "has_next": page < total_pages,
+                    "has_prev": page > 1,
+                },
+            }
+        )
 
     # Serialize items directly without secondary filtering
     items = []

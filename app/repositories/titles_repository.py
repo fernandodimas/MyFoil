@@ -67,7 +67,9 @@ class TitlesRepository:
                 query = query.filter(Titles.up_to_date == True)
             if filters.get("pending"):
                 # pending means owned but not up_to_date
-                query = query.filter(Titles.have_base == True, Titles.up_to_date == False)
+                # Use have_base=True as broad pre-filter; actual pending status is
+                # computed post-serialization in the route using live TitleDB data
+                query = query.filter(Titles.have_base == True)
 
             if filters.get("missing"):
                 query = query.filter(or_(Titles.have_base == False, Titles.have_base.is_(None)))

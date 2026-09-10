@@ -514,7 +514,7 @@ class SystemStatusManager {
 
         let timeStr = 'Unknown';
         if (job.completed_at) {
-            timeStr = new Date(job.completed_at).toLocaleTimeString();
+            timeStr = window.formatTime(job.completed_at);
         }
 
         // Preview of results

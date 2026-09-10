@@ -628,7 +628,7 @@ def reidentify_all_files_job():
 
     with app.app_context():
         logger.info("Starting complete re-identification job...")
-        job_id = f"reidentify_all_{int(datetime.datetime.now().timestamp())}"
+        job_id = f"reidentify_all_{int(datetime.datetime.now(datetime.timezone.utc).timestamp())}"
         job_tracker.register_job("reidentify_all", {}, job_id=job_id)
         job_tracker.start_job(job_id)
 

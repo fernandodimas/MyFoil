@@ -7,7 +7,7 @@ import os
 import json
 import time
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import Blueprint
 from app_services.rating_service import IGDBClient
 from settings import load_settings
@@ -81,9 +81,9 @@ def get_upcoming():
     # Normalize/Format data if needed
     for game in games:
         if "first_release_date" in game:
-            game["release_date_formatted"] = datetime.fromtimestamp(game["first_release_date"]).strftime("%d/%m/%Y")
+            game["release_date_formatted"] = datetime.fromtimestamp(game["first_release_date"], tz=timezone.utc).strftime("%d/%m/%Y")
             # Save as YYYY-MM-DD for standard sorting and logical comparisons
-            game["release_date"] = datetime.fromtimestamp(game["first_release_date"]).strftime("%Y-%m-%d")
+            game["release_date"] = datetime.fromtimestamp(game["first_release_date"], tz=timezone.utc).strftime("%Y-%m-%d")
 
         if "cover" in game and "url" in game["cover"]:
             # Upgrade cover resolution

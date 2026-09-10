@@ -389,7 +389,7 @@ function fillActivityLogs() {
             return;
         }
         list.forEach(log => {
-            const date = new Date(log.timestamp).toLocaleString();
+            const date = window.formatDateTime(log.timestamp);
             let iconClass = 'bi-info-circle';
             let color = '#7c3aed';
 
@@ -651,13 +651,13 @@ function fillTitleDBSourcesTable() {
             if (source.is_fetching) {
                 remoteDateHtml = `<span class="is-size-7 italic opacity-50"><i class="bi bi-arrow-repeat spin mr-1"></i> ${t('common.loading')}</span>`;
             } else if (source.remote_date) {
-                remoteDateHtml = `<span class="is-size-7">${new Date(source.remote_date).toLocaleString()}</span>`;
+                remoteDateHtml = `<span class="is-size-7">${window.formatDateTime(source.remote_date)}</span>`;
             } else {
                 const errorMsg = source.last_error ? `${t('common.error')}: ${source.last_error}` : t('settings.tdb_no_date');
                 remoteDateHtml = `<span class="is-size-7 has-text-danger italic opacity-50" title="${errorMsg}" style="cursor: help;">${t('common.not_found')} <i class="bi bi-question-circle"></i></span>`;
             }
 
-            const localDate = source.last_success ? new Date(source.last_success).toLocaleString() : t('common.never');
+            const localDate = source.last_success ? window.formatDateTime(source.last_success) : t('common.never');
 
             tbody.append(`
                 <tr style="cursor: pointer;" onclick="showSourceFiles('${escapeHtml(source.name)}')">
@@ -1613,7 +1613,7 @@ async function updateMetadataStatus() {
 
             if (data.has_run && data.last_fetch) {
                 const last = data.last_fetch;
-                const date = new Date(last.started_at).toLocaleString();
+                const date = window.formatDateTime(last.started_at);
                 let statusHtml = `<strong>${date}</strong><br>`;
 
                 if (last.status === 'running') {

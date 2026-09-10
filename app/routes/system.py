@@ -1755,7 +1755,7 @@ def health_check():
 
     health_status = {
         "status": "healthy",
-        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
         "database": "disconnected",
         "cache": "unknown",
         "metrics": "disabled",

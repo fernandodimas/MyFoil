@@ -395,9 +395,9 @@ class Handler(FileSystemEventHandler):
 
         # IDLE OPTIMIZATION: Record activity when file event detected
         if self.watcher:
-            from datetime import datetime
+            from datetime import datetime, timezone
 
-            self.watcher.last_event_time = datetime.now()
+            self.watcher.last_event_time = datetime.now(timezone.utc)
             self.watcher.record_activity()  # Reset idle timer
 
         library_event = SimpleNamespace(

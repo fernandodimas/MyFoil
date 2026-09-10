@@ -334,7 +334,7 @@ function showGameDetails(id) {
                             ${game.added_at ? `
                             <div class="mb-3">
                                 <p class="is-size-7 heading mb-1 opacity-30">${t('common.added_at')}</p>
-                                <p class="is-size-7 opacity-40 font-mono">${new Date(game.added_at).toLocaleDateString()}</p>
+                                <p class="is-size-7 opacity-40 font-mono">${window.formatDate(game.added_at)}</p>
                             </div>
                             ` : ''}
                             <div>

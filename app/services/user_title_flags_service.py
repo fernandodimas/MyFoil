@@ -83,7 +83,7 @@ def upsert_user_title_flags(user_id, title_id, flags):
         has_non_ignored_dlcs=flags.get("has_non_ignored_dlcs", False),
         has_non_ignored_updates=flags.get("has_non_ignored_updates", False),
         has_non_ignored_redundant=flags.get("has_non_ignored_redundant", False),
-        updated_at=datetime.datetime.utcnow(),
+        updated_at=datetime.datetime.now(datetime.timezone.utc),
     )
     stmt = stmt.on_conflict_do_update(
         index_elements=["user_id", "title_id"],

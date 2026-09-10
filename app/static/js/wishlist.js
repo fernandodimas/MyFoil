@@ -223,7 +223,7 @@ function renderCardView(items, container) {
                 </div>
                 <div class="card-content p-3 is-flex is-flex-direction-column is-flex-grow-1">
                     <h3 class="is-size-7 has-text-weight-bold line-clamp-2" style="height: 2.8em;" title="${item.name}">${escapeHtml(item.name || 'Unknown')}</h3>
-                    <p class="is-size-7 opacity-50 mt-1">${new Date(item.added_date).toLocaleDateString()}</p>
+                    <p class="is-size-7 opacity-50 mt-1">${window.formatDate(item.added_date)}</p>
                 </div>
             </div>
         `;
@@ -273,7 +273,7 @@ function renderListView(items, container) {
                     <strong class="is-size-7-mobile">${escapeHtml(item.name || 'Unknown')}</strong>
                 </td>
                 <td class="is-vcentered opacity-50 is-size-7 font-mono is-hidden-mobile">
-                    ${new Date(item.added_date).toLocaleDateString()}
+                    ${window.formatDate(item.added_date)}
                 </td>
                 <td class="is-vcentered ${date.class} is-size-7 has-text-weight-semibold">
                     ${date.icon}${date.text}
