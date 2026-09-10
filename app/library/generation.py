@@ -4,7 +4,7 @@ from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC
 from db import (
     db, Files, Apps, Titles, logger, get_all_titles_with_apps, remove_titles_without_owned_apps,
 )
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import selectinload
 from models.titlemetadata import TitleMetadata
 from library._state import LIBRARY_CACHE
 import titles as titles_lib
@@ -36,8 +36,10 @@ def update_titles():
             db.session.rollback()
 
         # Optimized query to fetch titles and their apps in fixed number of queries
-        # Use yield_per to stream results instead of loading everything into memory
-        titles = Titles.query.options(joinedload(Titles.apps).joinedload(Apps.files)).yield_per(100)
+        # Use yield_per with selectinload for memory-efficient streaming
+        titles = Titles.query.options(
+            selectinload(Titles.apps).selectinload(Apps.files)
+        ).yield_per(100)
         for n, title in enumerate(titles):
             # Yield to other gevent co-routines
             import gevent

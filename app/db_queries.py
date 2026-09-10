@@ -284,12 +284,12 @@ def get_all_titles():
 
 
 def get_all_titles_with_apps():
-    from sqlalchemy.orm import joinedload
+    from sqlalchemy.orm import selectinload
     from db import Titles, Apps, to_dict, logger as db_logger
-    # Use yield_per to stream results instead of loading everything into memory
+    # Use yield_per with selectinload for memory-efficient streaming
     titles = (
         Titles.query.filter(Titles.title_id.isnot(None))
-        .options(joinedload(Titles.apps).joinedload(Apps.files), joinedload(Titles.tags))
+        .options(selectinload(Titles.apps).selectinload(Apps.files), selectinload(Titles.tags))
         .yield_per(100)
     )
 
