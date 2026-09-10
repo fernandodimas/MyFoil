@@ -730,11 +730,12 @@ def get_game_info_item(tid, title_data, ignore_preferences=None):
 def generate_library(force=False):
     """Generate the game library grouped by TitleID, using cached version if unchanged"""
 
-    from library.cache import compute_apps_hash
+    from library.cache import compute_apps_hash, DISABLE_LIBRARY_CACHE, LIBRARY_CACHE_MAX_SIZE
 
     current_db_hash = compute_apps_hash()
 
-    if not force:
+    # If caching is disabled, always regenerate from DB (memory optimization)
+    if not DISABLE_LIBRARY_CACHE and not force:
         with LIBRARY_CACHE.lock:
             # Check if memory cache exists AND matches the current DB state
             if LIBRARY_CACHE.data and LIBRARY_CACHE.hash == current_db_hash:
@@ -800,9 +801,17 @@ def generate_library(force=False):
     from library.cache import save_library_to_disk
     save_library_to_disk(library_data)
 
-    with LIBRARY_CACHE.lock:
-        LIBRARY_CACHE.data = sorted_library
-        LIBRARY_CACHE.hash = current_db_hash
+    # Only cache in memory if not disabled (memory optimization for large libraries)
+    if not DISABLE_LIBRARY_CACHE:
+        with LIBRARY_CACHE.lock:
+            # Limit cache size for memory optimization
+            if LIBRARY_CACHE_MAX_SIZE > 0 and len(sorted_library) > LIBRARY_CACHE_MAX_SIZE:
+                logger.info(f"Library size {len(sorted_library)} exceeds cache limit {LIBRARY_CACHE_MAX_SIZE}, skipping in-memory cache")
+            else:
+                LIBRARY_CACHE.data = sorted_library
+                LIBRARY_CACHE.hash = current_db_hash
+    else:
+        logger.info("In-memory library cache disabled for memory optimization")
 
     titles_lib.identification_in_progress_count -= 1
     titles_lib.unload_titledb()
@@ -963,10 +972,10 @@ def post_library_change():
                 # which control the badges (UPDATE, DLC) and filters
                 update_titles()
 
-                # 4. Regenerate library cache (force=False)
-                # We use force=False to allow it to skip if hash matches (safety check)
+                # 4. Regenerate library cache (force=True)
+                # Force regeneration to ensure updated titles (up_to_date, complete, etc.) are reflected
                 gevent.sleep(0)
-                generate_library(force=False)
+                generate_library(force=True)
 
                 # 5. Notify frontend via WebSocket
                 from library.scan import trigger_library_update_notification

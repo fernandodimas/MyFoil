@@ -136,6 +136,7 @@ class Watcher:
         """Background thread that monitors observer health and auto-restarts if needed"""
         check_interval = 30  # Check every 30 seconds
         idle_check_counter = 0
+        memory_check_counter = 0
 
         while not self._stop_health_check.is_set():
             try:
@@ -150,11 +151,50 @@ class Watcher:
                     idle_check_counter = 0
                     self._check_idle_status()
 
+                # MEMORY OPTIMIZATION: Check memory usage every 10 cycles (300s = 5 min)
+                memory_check_counter += 1
+                if memory_check_counter >= 10:
+                    memory_check_counter = 0
+                    self._check_memory_and_cleanup()
+
             except Exception as e:
                 logger.error(f"Error in watchdog health check: {e}")
 
             # Wait for next check (allows early exit on stop)
             self._stop_health_check.wait(timeout=check_interval)
+
+    def _check_memory_and_cleanup(self):
+        """Check memory usage and trigger cleanup if needed"""
+        try:
+            import psutil
+            process = psutil.Process()
+            memory_mb = process.memory_info().rss / (1024 * 1024)
+            
+            # If memory exceeds 500MB, trigger cleanup
+            if memory_mb > 500:
+                logger.warning(f"[WATCHDOG-MEMORY] High memory usage: {memory_mb:.1f}MB - triggering cleanup")
+                
+                # Clear TitleDB caches to free memory
+                try:
+                    from library.cache import _clear_titledb_caches
+                    _clear_titledb_caches()
+                    logger.info("[WATCHDOG-MEMORY] Cleared TitleDB caches")
+                except Exception as e:
+                    logger.debug(f"Failed to clear TitleDB caches: {e}")
+                
+                # Force garbage collection
+                import gc
+                gc.collect()
+                logger.info("[WATCHDOG-MEMORY] Garbage collection triggered")
+                
+                # Log memory after cleanup
+                memory_after = process.memory_info().rss / (1024 * 1024)
+                logger.info(f"[WATCHDOG-MEMORY] Memory after cleanup: {memory_after:.1f}MB")
+        except ImportError:
+            # psutil not available, skip memory monitoring
+            pass
+        except Exception as e:
+            logger.debug(f"Memory check failed: {e}")
 
     def _auto_restart(self):
         """Attempt to restart the observer"""

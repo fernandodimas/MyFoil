@@ -33,6 +33,43 @@ services:
         limits:
           memory: 256M
 
+  myfoil:
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8465/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+    container_name: myfoil
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - myfoil:latest
+    restart: unless-stopped
+    ports:
+      - 8465:8465
+    environment:
+      - DATABASE_URL=postgresql://myfoil:${MYFOIL_DB_PASSWORD:-myfoilpassword}@postgres:5432/myfoil
+      - REDIS_URL=redis://redis:6379/0
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Sao_Paulo
+      # Memory optimization settings
+      - DISABLE_LIBRARY_CACHE=true  # Don't cache full library in memory
+      - LIBRARY_CACHE_MAX_SIZE=100  # If enabled, max titles to cache
+      - WATCHDOG_INTERVAL=30  # Increase polling interval for large libraries
+    volumes:
+      - /path/to/your/games:/games
+      - /path/to/your/externo:/externo
+      - ./config:/app/config
+      - ./data:/app/data
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
   worker:
     healthcheck:
       # Try celery ping first, fallback to checking process existence

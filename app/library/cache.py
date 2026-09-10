@@ -1,6 +1,7 @@
 import hashlib
 import json
 import functools
+import os
 from pathlib import Path
 
 from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC, LIBRARY_CACHE_FILE
@@ -21,7 +22,13 @@ from utils import now_utc, safe_write_json
 from models.titlemetadata import TitleMetadata
 
 
-@functools.lru_cache(maxsize=4096)
+# Memory optimization: configurable cache settings
+DISABLE_LIBRARY_CACHE = os.getenv("DISABLE_LIBRARY_CACHE", "false").lower() == "true"
+LIBRARY_CACHE_MAX_SIZE = int(os.getenv("LIBRARY_CACHE_MAX_SIZE", "100"))
+
+
+# Reduced cache sizes to save memory (was 4096 each)
+@functools.lru_cache(maxsize=512)
 def _cached_get_all_existing_dlc(tid):
     try:
         return titles_lib.get_all_existing_dlc(tid) or []
@@ -29,7 +36,7 @@ def _cached_get_all_existing_dlc(tid):
         return []
 
 
-@functools.lru_cache(maxsize=4096)
+@functools.lru_cache(maxsize=512)
 def _cached_get_all_existing_versions(tid):
     try:
         return titles_lib.get_all_existing_versions(tid) or []
@@ -37,7 +44,7 @@ def _cached_get_all_existing_versions(tid):
         return []
 
 
-@functools.lru_cache(maxsize=4096)
+@functools.lru_cache(maxsize=512)
 def _cached_get_all_app_existing_versions(app_id):
     try:
         return titles_lib.get_all_app_existing_versions(app_id) or []
@@ -74,6 +81,14 @@ def compute_apps_hash():
                 Apps.app_type == app_type, Apps.owned == owned
             ).scalar() or 0
             hash_md5.update(f"{app_type}:{owned}:{count}".encode())
+    
+    # Include Titles table in hash to detect up_to_date/have_base/complete changes
+    titles_count = db.session.query(func.count(Titles.id)).scalar() or 0
+    titles_max_id = db.session.query(func.max(Titles.id)).scalar() or 0
+    titles_up_to_date_count = db.session.query(func.count(Titles.id)).filter(Titles.up_to_date == True).scalar() or 0
+    titles_have_base_count = db.session.query(func.count(Titles.id)).filter(Titles.have_base == True).scalar() or 0
+    titles_complete_count = db.session.query(func.count(Titles.id)).filter(Titles.complete == True).scalar() or 0
+    hash_md5.update(f"titles:{titles_count}:{titles_max_id}:utd:{titles_up_to_date_count}:base:{titles_have_base_count}:complete:{titles_complete_count}".encode())
     
     tags_count = db.session.query(func.count(Tag.id)).scalar() or 0
     tags_max_id = db.session.query(func.max(Tag.id)).scalar() or 0

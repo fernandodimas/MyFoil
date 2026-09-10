@@ -1113,11 +1113,8 @@ def get_stats_overview():
     total_owned_dlcs = owned_apps_stats["dlcs"]
 
     # 4. Status breakdown and Genres (Logic from library cache)
-    lib_data = library.load_library_from_disk()
-    if not lib_data:
-        games = library.generate_library()
-    else:
-        games = lib_data.get("library", []) if isinstance(lib_data, dict) else lib_data
+    # Always use generate_library() to ensure fresh data (especially when in-memory cache is disabled)
+    games = library.generate_library()
 
     # Filter games list if library_id provided (Heuristic)
     filtered_games = games
