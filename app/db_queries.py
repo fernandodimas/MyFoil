@@ -286,11 +286,11 @@ def get_all_titles():
 def get_all_titles_with_apps():
     from sqlalchemy.orm import selectinload
     from db import Titles, Apps, to_dict, logger as db_logger
-    # Use yield_per with selectinload for memory-efficient streaming
+    # Fetch all titles with eager loading (no yield_per - it causes named cursor issues with gevent)
     titles = (
         Titles.query.filter(Titles.title_id.isnot(None))
         .options(selectinload(Titles.apps).selectinload(Apps.files), selectinload(Titles.tags))
-        .yield_per(100)
+        .all()
     )
 
     results = []

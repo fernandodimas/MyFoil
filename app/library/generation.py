@@ -35,11 +35,11 @@ def update_titles():
             logger.warning(f"Auto-heal owned status failed: {e}")
             db.session.rollback()
 
-        # Optimized query to fetch titles and their apps in fixed number of queries
-        # Use yield_per with selectinload for memory-efficient streaming
+        # Fetch all titles with eager loading (no yield_per - it causes named cursor
+        # corruption errors with gevent and connection pooling)
         titles = Titles.query.options(
             selectinload(Titles.apps).selectinload(Apps.files)
-        ).yield_per(100)
+        ).all()
         for n, title in enumerate(titles):
             # Yield to other gevent co-routines
             import gevent
