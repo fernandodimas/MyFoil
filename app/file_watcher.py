@@ -174,22 +174,47 @@ class Watcher:
             if memory_mb > 500:
                 logger.warning(f"[WATCHDOG-MEMORY] High memory usage: {memory_mb:.1f}MB - triggering cleanup")
                 
-                # Clear TitleDB caches to free memory
+                # 1. Clear in-memory library cache (biggest memory hog)
+                try:
+                    from library._state import LIBRARY_CACHE
+                    with LIBRARY_CACHE.lock:
+                        LIBRARY_CACHE.data = None
+                        LIBRARY_CACHE.hash = None
+                    logger.info("[WATCHDOG-MEMORY] Cleared library cache")
+                except Exception as e:
+                    logger.debug(f"Failed to clear library cache: {e}")
+                
+                # 2. Clear TitleDB in-memory state
+                try:
+                    import titles as titles_lib
+                    titles_lib.unload_titledb()
+                    logger.info("[WATCHDOG-MEMORY] Unloaded TitleDB state")
+                except Exception as e:
+                    logger.debug(f"Failed to unload TitleDB: {e}")
+                
+                # 3. Clear LRU caches
                 try:
                     from library.cache import _clear_titledb_caches
                     _clear_titledb_caches()
-                    logger.info("[WATCHDOG-MEMORY] Cleared TitleDB caches")
+                    logger.info("[WATCHDOG-MEMORY] Cleared TitleDB LRU caches")
                 except Exception as e:
-                    logger.debug(f"Failed to clear TitleDB caches: {e}")
+                    logger.debug(f"Failed to clear LRU caches: {e}")
                 
-                # Force garbage collection
+                # 4. Clear SQLAlchemy identity map
+                try:
+                    from db import db
+                    db.session.expunge_all()
+                    logger.info("[WATCHDOG-MEMORY] Cleared SQLAlchemy identity map")
+                except Exception as e:
+                    logger.debug(f"Failed to clear identity map: {e}")
+                
+                # 5. Force garbage collection
                 import gc
                 gc.collect()
-                logger.info("[WATCHDOG-MEMORY] Garbage collection triggered")
                 
                 # Log memory after cleanup
                 memory_after = process.memory_info().rss / (1024 * 1024)
-                logger.info(f"[WATCHDOG-MEMORY] Memory after cleanup: {memory_after:.1f}MB")
+                logger.info(f"[WATCHDOG-MEMORY] Memory after cleanup: {memory_after:.1f}MB (freed {memory_mb - memory_after:.1f}MB)")
         except ImportError:
             # psutil not available, skip memory monitoring
             pass

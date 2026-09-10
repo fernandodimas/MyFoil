@@ -636,11 +636,19 @@ def library_search_paged_api():
 
     # If dlc or redundant filters are requested, do post-serialization filtering with per-user ignore prefs
     if dlc or redundant:
-        FETCH_LIMIT = 5000
-        paginated_all = TitlesRepository.get_paged(
-            page=1, per_page=FETCH_LIMIT, query_text=query_text, filters=filters, sort_by=sort_by, order=order
-        )
-        all_titles = paginated_all.items
+        FETCH_LIMIT = 500
+        try:
+            paginated_all = TitlesRepository.get_paged(
+                page=1, per_page=FETCH_LIMIT, query_text=query_text, filters=filters, sort_by=sort_by, order=order
+            )
+            all_titles = paginated_all.items
+        except Exception as e:
+            logger.error(f"DLC/redundant filter query failed, attempting rollback: {e}")
+            db.session.rollback()
+            paginated_all = TitlesRepository.get_paged(
+                page=1, per_page=min(FETCH_LIMIT, 100), query_text=query_text, filters=filters, sort_by=sort_by, order=order
+            )
+            all_titles = paginated_all.items
 
         # Preload user ignore prefs
         ignores_by_user = {}
@@ -720,11 +728,20 @@ def library_search_paged_api():
     # For pending filter, we need to fetch all have_base titles and filter post-serialization
     # because Titles.up_to_date in the DB can be stale
     if pending:
-        FETCH_LIMIT = 5000
-        paginated = TitlesRepository.get_paged(
-            page=1, per_page=FETCH_LIMIT, query_text=query_text, filters=filters, sort_by=sort_by, order=order
-        )
-        all_titles = paginated.items
+        FETCH_LIMIT = 500
+        try:
+            paginated = TitlesRepository.get_paged(
+                page=1, per_page=FETCH_LIMIT, query_text=query_text, filters=filters, sort_by=sort_by, order=order
+            )
+            all_titles = paginated.items
+        except Exception as e:
+            logger.error(f"Pending filter query failed, attempting rollback: {e}")
+            db.session.rollback()
+            # Retry with smaller batch
+            paginated = TitlesRepository.get_paged(
+                page=1, per_page=min(FETCH_LIMIT, 100), query_text=query_text, filters=filters, sort_by=sort_by, order=order
+            )
+            all_titles = paginated.items
 
         # Preload user ignore prefs for pending computation
         ignores_by_user = {}
