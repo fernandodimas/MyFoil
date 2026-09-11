@@ -176,6 +176,7 @@ class TitlesRepository:
             logger.error(
                 f"TitlesRepository.get_paged failed: page={page} per_page={per_page} duration_ms={duration:.1f} error={e}"
             )
+            db.session.rollback()
             raise
 
     @staticmethod
@@ -223,11 +224,15 @@ class TitlesRepository:
     @staticmethod
     def count_unmatched():
         """Count titles without external API metadata (rawg_id and igdb_id both NULL)"""
-        return Titles.query.filter(
-            Titles.rawg_id.is_(None),
-            Titles.igdb_id.is_(None),
-            Titles.api_source.is_(None),
-        ).count()
+        try:
+            return Titles.query.filter(
+                Titles.rawg_id.is_(None),
+                Titles.igdb_id.is_(None),
+                Titles.api_source.is_(None),
+            ).count()
+        except Exception:
+            db.session.rollback()
+            return 0
 
     @staticmethod
     def get_genre_distribution():

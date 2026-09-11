@@ -180,7 +180,11 @@ logging.getLogger("alembic.runtime.migration").setLevel(logging.WARNING)
 @login_manager.user_loader
 def load_user(user_id):
     """Load user for Flask-Login"""
-    return db.session.get(User, int(user_id))
+    try:
+        return db.session.get(User, int(user_id))
+    except Exception:
+        db.session.rollback()
+        return db.session.get(User, int(user_id))
 
 
 

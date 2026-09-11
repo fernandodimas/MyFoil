@@ -16,7 +16,9 @@ from utils import debounce
 
 def update_titles():
     # Force reload TitleDB to ensure we have latest version data for up_to_date calculation
-    titles_lib.load_titledb(force=True)
+    # skip_sync=True because sync_titles_to_db() loads all Titles into session,
+    # causing conflicts when update_titles() loads them again at line 40
+    titles_lib.load_titledb(force=True, skip_sync=True)
     try:
         # Remove titles that no longer have any owned apps
         titles_removed = remove_titles_without_owned_apps()
@@ -149,12 +151,8 @@ def update_titles():
             # Commit every 100 titles to avoid excessive memory use
             if (n + 1) % 100 == 0:
                 db.session.commit()
-                # Clear identity map to free memory
-                db.session.expunge_all()
 
         db.session.commit()
-        # Clear identity map after processing all titles to free memory
-        db.session.expunge_all()
 
         # Recalculate precomputed per-user flags so they are always in sync with TitleDB
         try:

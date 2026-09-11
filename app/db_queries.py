@@ -218,13 +218,21 @@ def get_shop_files():
 
 
 def get_libraries():
-    from db import Libraries
-    return Libraries.query.all()
+    from db import Libraries, db
+    try:
+        return Libraries.query.all()
+    except Exception:
+        db.session.rollback()
+        return Libraries.query.all()
 
 
 def get_libraries_path():
-    from db import Libraries
-    libraries = Libraries.query.all()
+    from db import Libraries, db
+    try:
+        libraries = Libraries.query.all()
+    except Exception:
+        db.session.rollback()
+        libraries = Libraries.query.all()
     return [l.path for l in libraries]
 
 
@@ -285,7 +293,7 @@ def get_all_titles():
 
 def get_all_titles_with_apps():
     from sqlalchemy.orm import selectinload
-    from db import Titles, Apps, to_dict, logger as db_logger
+    from db import Titles, Apps, to_dict, db, logger as db_logger
     # Fetch all titles with eager loading (no yield_per - it causes named cursor issues with gevent)
     titles = (
         Titles.query.filter(Titles.title_id.isnot(None))
@@ -325,13 +333,7 @@ def get_all_titles_with_apps():
             t_dict["apps"].append(a_dict)
         t_dict["tags"] = [tag.name for tag in t.tags]
         results.append(t_dict)
-        
-        # Clear identity map periodically to free memory
-        if len(results) % 100 == 0:
-            db.session.expunge_all()
     
-    # Clear identity map after processing
-    db.session.expunge_all()
     db_logger.info(f"get_all_titles_with_apps: Found {len(results)} titles in DB.")
     return results
 

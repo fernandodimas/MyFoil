@@ -426,6 +426,11 @@ class JobTracker:
                 return [j.to_dict() for j in jobs]
         except Exception as e:
             logger.error(f"Failed to fetch jobs from DB: {e}")
+            try:
+                from db import db
+                db.session.rollback()
+            except Exception:
+                pass
             return []
 
     def get_active_jobs(self) -> List[Dict]:
@@ -442,6 +447,11 @@ class JobTracker:
                 return [j.to_dict() for j in jobs]
         except Exception as e:
             logger.error(f"Failed to fetch active jobs from DB: {e}")
+            try:
+                from db import db
+                db.session.rollback()
+            except Exception:
+                pass
             return []
 
     def get_job(self, job_id: str) -> Optional[Dict]:

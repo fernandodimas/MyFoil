@@ -303,12 +303,8 @@ def process_and_store_json(filename: str, source_name: str, max_retries: int = 3
                 # Commit every few batches to keep transactions small
                 if i % (batch_size * 4) == 0:
                     db.session.commit()
-                    # Clear identity map to free memory
-                    db.session.expunge_all()
 
             db.session.commit()
-            # Clear identity map after processing to free memory
-            db.session.expunge_all()
             return True
 
         except OperationalError as e:
@@ -607,11 +603,9 @@ def update_titledb(app_settings: Dict, force: bool = False) -> bool:
             job_tracker.update_progress(job_id, 90, message="Reloading database...")
             import titles
 
+            # load_titledb(force=True) already calls sync_titles_to_db() internally
+            # No need for an explicit sync_titles_to_db() call here
             titles.load_titledb(force=True)
-
-            # CRITICAL: Sync metadata to the Titles table so games don't remain "Unknown"
-            logger.info("Syncing TitleDB metadata to database...")
-            titles.sync_titles_to_db()
 
             # CRITICAL: Recalculate up_to_date / complete flags for all titles
             # (so update/DLC badges and filters reflect new TitleDB versions immediately)

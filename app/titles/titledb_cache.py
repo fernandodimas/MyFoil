@@ -571,7 +571,7 @@ def load_titledb_from_disk_fallback():
     return False
 
 
-def load_titledb(force=False, progress_callback=None):
+def load_titledb(force=False, progress_callback=None, skip_sync=False):
     current_time = time.time()
     cache_expired = False
     if _state._titledb_cache_timestamp is not None:
@@ -603,11 +603,12 @@ def load_titledb(force=False, progress_callback=None):
 
         _enrich_dlc_map_from_titles()
 
-        try:
-            from titles.game_info import sync_titles_to_db
-            sync_titles_to_db()
-        except Exception as sync_err:
-            logger.warning(f"Metadata sync after load failed: {sync_err}")
+        if not skip_sync:
+            try:
+                from titles.game_info import sync_titles_to_db
+                sync_titles_to_db()
+            except Exception as sync_err:
+                logger.warning(f"Metadata sync after load failed: {sync_err}")
     else:
         logger.warning("Failed to load TitleDB from database (or empty).")
         if not load_titledb_from_disk_fallback():

@@ -200,15 +200,7 @@ class Watcher:
                 except Exception as e:
                     logger.debug(f"Failed to clear LRU caches: {e}")
                 
-                # 4. Clear SQLAlchemy identity map
-                try:
-                    from db import db
-                    db.session.expunge_all()
-                    logger.info("[WATCHDOG-MEMORY] Cleared SQLAlchemy identity map")
-                except Exception as e:
-                    logger.debug(f"Failed to clear identity map: {e}")
-                
-                # 5. Force garbage collection
+                # 4. Force garbage collection
                 import gc
                 gc.collect()
                 
