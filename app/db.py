@@ -69,7 +69,10 @@ def log_activity(action_type, title_id=None, user_id=None, **details):
         try:
             db.session.rollback()
         except Exception:
-            pass
+            try:
+                db.session.close()
+            except Exception:
+                pass
 
 
 def init_db(app):

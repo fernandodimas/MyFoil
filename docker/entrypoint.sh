@@ -36,8 +36,8 @@ PY
     --chdir /app \
     --timeout 60 \
     --workers ${GUNICORN_WORKERS:-2} \
-    --max-requests 500 \
-    --max-requests-jitter 50 \
+    --max-requests 100 \
+    --max-requests-jitter 20 \
     --worker-tmp-dir /dev/shm \
     --preload \
     "${TARGET}:create_app()"

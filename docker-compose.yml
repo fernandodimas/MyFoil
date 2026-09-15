@@ -68,7 +68,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 768M
 
   worker:
     healthcheck:
@@ -87,8 +87,9 @@ services:
         - myfoil:latest
     restart: unless-stopped
     # Use gevent pool since we are monkeypatching everything
-    # Reduced concurrency from 20 to 4 to prevent OOM (each greenlet can load TitleDB)
-    command: celery -A celery_app.celery worker --loglevel=info --concurrency=4 -P gevent
+    # Concurrency=2 to prevent OOM (each greenlet can load TitleDB)
+    # max-tasks-per-child=50 forces worker recycling to prevent memory leaks
+    command: celery -A celery_app.celery worker --loglevel=info --concurrency=2 -P gevent --max-tasks-per-child=50
     depends_on:
       redis:
         condition: service_healthy
@@ -111,7 +112,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1536M
+          memory: 1G
 
 volumes:
   postgres_data:

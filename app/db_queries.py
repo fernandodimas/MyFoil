@@ -222,7 +222,10 @@ def get_libraries():
     try:
         return Libraries.query.all()
     except Exception:
-        db.session.rollback()
+        try:
+            db.session.rollback()
+        except Exception:
+            db.session.close()
         return Libraries.query.all()
 
 
@@ -231,7 +234,10 @@ def get_libraries_path():
     try:
         libraries = Libraries.query.all()
     except Exception:
-        db.session.rollback()
+        try:
+            db.session.rollback()
+        except Exception:
+            db.session.close()
         libraries = Libraries.query.all()
     return [l.path for l in libraries]
 
