@@ -176,6 +176,10 @@ def update_titles():
                 LIBRARY_CACHE.data = None
             from library.cache import invalidate_library_cache
             invalidate_library_cache()
+    except Exception as e:
+        logger.error(f"Error in update_titles: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 def update_single_game_in_cache(title_id):
