@@ -6,7 +6,12 @@ Application Factory e Inicialização
 
 from gevent import monkey
 
-monkey.patch_all()
+# CRITICAL: Do NOT patch sockets - gevent's socket patching breaks psycopg2's
+# C-level libpq, causing "PGRES_TUPLES_OK and no message from the libpq" errors
+# and cascading "Instance is not bound to a Session" failures.
+# monkey.patch_all(socket=False) patches threading/locks/time but leaves
+# sockets alone, so psycopg2 protocol stays intact.
+monkey.patch_all(socket=False)
 
 import os
 import sys

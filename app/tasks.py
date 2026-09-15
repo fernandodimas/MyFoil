@@ -5,10 +5,11 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # CRITICAL: Monkey patch gevent BEFORE importing anything else
-# This should only happen ONCE in the entire application
+# socket=False: Do NOT patch sockets - gevent's socket patching breaks psycopg2's
+# C-level libpq, causing "PGRES_TUPLES_OK and no message from the libpq" errors.
 from gevent import monkey
 
-monkey.patch_all()
+monkey.patch_all(socket=False)
 
 import structlog
 
