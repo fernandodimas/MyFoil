@@ -176,9 +176,6 @@ def update_titles():
                 LIBRARY_CACHE.data = None
             from library.cache import invalidate_library_cache
             invalidate_library_cache()
-    finally:
-        # Always unload to free memory resources
-        titles_lib.unload_titledb()
 
 
 def update_single_game_in_cache(title_id):
