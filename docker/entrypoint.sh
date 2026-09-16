@@ -31,7 +31,7 @@ PY
   # - workers: default to 2, override with GUNICORN_WORKERS env
   # - max-requests: recycle workers more aggressively to prevent memory leaks
   # - preload: load app once per worker to share memory
-  exec gunicorn -k gevent \
+  exec gunicorn \
     -b 0.0.0.0:8465 \
     --chdir /app \
     --timeout 60 \

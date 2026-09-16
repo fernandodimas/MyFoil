@@ -990,7 +990,9 @@ def post_library_change():
             titles_lib.unload_titledb()
 
     # Run in background so it doesn't block the scan job completion
-    gevent.spawn(_do_post_library_change)
+    import threading
+    t = threading.Thread(target=_do_post_library_change, daemon=True)
+    t.start()
 
 
 def version_to_string(version_num):
