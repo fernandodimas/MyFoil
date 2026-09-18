@@ -446,6 +446,28 @@ def create_app(minimal=False):
 
     db.init_app(app)
 
+    # CRITICAL: Install pool listener to detect and discard psycopg2 protocol corruption
+    # (PGRES_TUPLES_OK and no message from the libpq). This error leaves connections
+    # in the pool in a corrupted state; pre_ping doesn't catch it because the connection
+    # is "alive" but protocol is desynced. The listener catches the error on checkout
+    # and marks the connection as invalid so pool_pre_ping will replace it.
+    from sqlalchemy import event
+    from sqlalchemy.pool import Pool
+
+    @event.listens_for(Pool, "checkout")
+    def _detect_corrupted_connection(dbapi_connection, connection_record, connection_proxy):
+        # Check if connection is in a bad state by doing a lightweight ping
+        # If it fails with PGRES_TUPLES_OK, discard this connection
+        try:
+            # This will trigger the error if connection is corrupted
+            dbapi_connection.cursor().execute("SELECT 1")
+            dbapi_connection.rollback()
+        except Exception as e:
+            if "PGRES_TUPLES_OK" in str(e):
+                logger.warning("Detected corrupted DB connection (PGRES_TUPLES_OK), discarding from pool")
+                connection_proxy._pool._evict(connection_record)
+            raise
+
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
 
