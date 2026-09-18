@@ -34,7 +34,7 @@ PY
   exec gunicorn \
     -b 0.0.0.0:8465 \
     --chdir /app \
-    --timeout 60 \
+    --timeout 120 \
     --workers ${GUNICORN_WORKERS:-2} \
     --max-requests 100 \
     --max-requests-jitter 20 \
