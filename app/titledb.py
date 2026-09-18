@@ -110,6 +110,9 @@ def download_titledb_file(filename: str, force: bool = False, silent_404: bool =
     Download a single TitleDB file using the source manager.
     The source_manager handles fallback and error handling automatically.
     """
+    # Increase recursion limit for deep call stacks in requests/urllib3
+    import sys
+    sys.setrecursionlimit(10000)
     dest_path = os.path.join(TITLEDB_DIR, filename)
 
     # Check if update is needed
