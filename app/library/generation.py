@@ -733,8 +733,18 @@ def generate_library(force=False):
 
     current_db_hash = compute_apps_hash()
 
-    # If caching is disabled, always regenerate from DB (memory optimization)
-    if not DISABLE_LIBRARY_CACHE and not force:
+    # If caching is disabled, ONLY serve from disk cache - never regenerate in gunicorn workers
+    if DISABLE_LIBRARY_CACHE:
+        from library.cache import load_library_from_disk
+        saved_library = load_library_from_disk()
+        if saved_library and saved_library.get("hash") == current_db_hash:
+            logger.info("Library loaded from disk cache (DISABLE_LIBRARY_CACHE=true).")
+            return saved_library["library"]
+        logger.warning("DISABLE_LIBRARY_CACHE=true but disk cache invalid/empty. Returning empty library.")
+        return []
+
+    # Normal cache logic (when DISABLE_LIBRARY_CACHE is false)
+    if not force:
         with LIBRARY_CACHE.lock:
             # Check if memory cache exists AND matches the current DB state
             if LIBRARY_CACHE.data and LIBRARY_CACHE.hash == current_db_hash:
