@@ -8,17 +8,6 @@ from types import SimpleNamespace
 import logging
 import threading
 
-# Suppress gevent's KeyError in Thread._delete()
-# gevent monkey-patches threading and its greenlet cleanup tries to del _active[thread_id]
-# but the thread ID may already be removed, causing a spurious KeyError that kills observer threads.
-_original_thread_delete = threading.Thread._delete
-def _safe_thread_delete(self):
-    try:
-        _original_thread_delete(self)
-    except KeyError:
-        pass
-threading.Thread._delete = _safe_thread_delete
-
 # Retrieve main logger
 logger = logging.getLogger("main")
 

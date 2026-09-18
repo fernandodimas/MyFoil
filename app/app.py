@@ -4,6 +4,17 @@ Application Factory e Inicialização
 # Force rebuild for import fix
 """
 
+# CRITICAL: Patch threading.Thread._delete BEFORE any threads are created
+# to suppress gevent's KeyError when greenlet cleanup races with thread cleanup
+import threading
+_original_thread_delete = threading.Thread._delete
+def _safe_thread_delete(self):
+    try:
+        _original_thread_delete(self)
+    except KeyError:
+        pass
+threading.Thread._delete = _safe_thread_delete
+
 import os
 import sys
 import logging
