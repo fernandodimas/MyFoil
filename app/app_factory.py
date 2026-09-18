@@ -464,8 +464,10 @@ def create_app(minimal=False):
             dbapi_connection.rollback()
         except Exception as e:
             if "PGRES_TUPLES_OK" in str(e):
-                logger.warning("Detected corrupted DB connection (PGRES_TUPLES_OK), discarding from pool")
-                connection_proxy._pool._evict(connection_record)
+                logger.warning("Detected corrupted DB connection (PGRES_TUPLES_OK), invalidating")
+                # Raise DisconnectionError so SQLAlchemy invalidates this connection
+                from sqlalchemy.exc import DisconnectionError
+                raise DisconnectionError("PGRES_TUPLES_OK corruption detected") from e
             raise
 
     login_manager.init_app(app)
