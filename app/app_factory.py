@@ -261,18 +261,24 @@ def init_internal(app):
     except Exception as e:
         logger.warning(f"Stage 0 cache load failed: {e}")
 
-    def _load_titledb_async():
-        try:
-            with app.app_context():
-                logger.info("Background: Loading TitleDB cache...")
-                titles.load_titledb()
-                logger.info("TitleDB loaded successfully in background")
-        except Exception as e:
-            logger.error(f"Background TitleDB load failed: {e}")
+    # Only load TitleDB in background if NOT in memory-constrained mode
+    # When DISABLE_LIBRARY_CACHE=true, gunicorn workers should NEVER load TitleDB
+    from library.cache import DISABLE_LIBRARY_CACHE
+    if not DISABLE_LIBRARY_CACHE:
+        def _load_titledb_async():
+            try:
+                with app.app_context():
+                    logger.info("Background: Loading TitleDB cache...")
+                    titles.load_titledb()
+                    logger.info("TitleDB loaded successfully in background")
+            except Exception as e:
+                logger.error(f"Background TitleDB load failed: {e}")
 
-    titledb_thread = threading.Thread(target=_load_titledb_async, daemon=True, name="titledb-loader")
-    titledb_thread.start()
-    logger.info("TitleDB loading started in background (non-blocking)")
+        titledb_thread = threading.Thread(target=_load_titledb_async, daemon=True, name="titledb-loader")
+        titledb_thread.start()
+        logger.info("TitleDB loading started in background (non-blocking)")
+    else:
+        logger.info("DISABLE_LIBRARY_CACHE=true: Skipping background TitleDB load to save memory")
 
     def stage1_cache():
         logger.info("Init Stage 1: Verifying library cache...")

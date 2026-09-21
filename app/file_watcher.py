@@ -8,6 +8,18 @@ from types import SimpleNamespace
 import logging
 import threading
 
+# Suppress gevent's KeyError in Thread._delete()
+# gevent monkey-patches threading and its greenlet cleanup tries to del _active[thread_id]
+# but the thread ID may already be removed, causing a spurious KeyError that kills observer threads.
+# This MUST be applied before any threads are created (i.e., before observer creation).
+_original_thread_delete = threading.Thread._delete
+def _safe_thread_delete(self):
+    try:
+        _original_thread_delete(self)
+    except KeyError:
+        pass
+threading.Thread._delete = _safe_thread_delete
+
 # Retrieve main logger
 logger = logging.getLogger("main")
 
@@ -136,8 +148,6 @@ class Watcher:
         """Background thread that monitors observer health and auto-restarts if needed"""
         check_interval = 30  # Check every 30 seconds
         idle_check_counter = 0
-        memory_check_counter = 0
-        consecutive_cleanup_failures = 0
 
         while not self._stop_health_check.is_set():
             try:
@@ -152,16 +162,6 @@ class Watcher:
                     idle_check_counter = 0
                     self._check_idle_status()
 
-                # MEMORY OPTIMIZATION: Check memory usage every 10 cycles (300s = 5 min)
-                # Skip if cleanup hasn't freed memory in last 2 attempts (saves CPU)
-                memory_check_counter += 1
-                if memory_check_counter >= 10 and consecutive_cleanup_failures < 2:
-                    memory_check_counter = 0
-                    if not self._check_memory_and_cleanup():
-                        consecutive_cleanup_failures += 1
-                    else:
-                        consecutive_cleanup_failures = 0
-
             except Exception as e:
                 logger.error(f"Error in watchdog health check: {e}")
 
@@ -169,8 +169,8 @@ class Watcher:
             self._stop_health_check.wait(timeout=check_interval)
 
     def _check_memory_and_cleanup(self):
-        """Check memory usage and trigger cleanup if needed.
-        Returns True if cleanup freed memory, False otherwise."""
+        """Disabled - memory cleanup frees 0MB (Python allocator doesn't return to OS)"""
+        return True  # Always return True to keep checks enabled (but no-op)
         try:
             import psutil
             process = psutil.Process()

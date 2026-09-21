@@ -14,7 +14,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 512M
 
   redis:
     image: redis:7-alpine
@@ -31,7 +31,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 128M
 
   myfoil:
     healthcheck:
@@ -60,6 +60,7 @@ services:
       - DISABLE_LIBRARY_CACHE=true  # Don't cache full library in memory
       - LIBRARY_CACHE_MAX_SIZE=100  # If enabled, max titles to cache
       - WATCHDOG_INTERVAL=30  # Increase polling interval for large libraries
+      - GUNICORN_WORKERS=1  # Single worker to minimize memory
     volumes:
       - /path/to/your/games:/games
       - /path/to/your/externo:/externo
@@ -68,7 +69,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 768M
+          memory: 512M
 
   worker:
     healthcheck:
@@ -87,9 +88,9 @@ services:
         - myfoil:latest
     restart: unless-stopped
     # Use gevent pool since we are monkeypatching everything
-    # Concurrency=2 to prevent OOM (each greenlet can load TitleDB)
-    # max-tasks-per-child=50 forces worker recycling to prevent memory leaks
-    command: celery -A celery_app.celery worker --loglevel=info --concurrency=2 -P gevent --max-tasks-per-child=50
+    # Concurrency=1 to minimize memory (each greenlet can load TitleDB)
+    # max-tasks-per-child=20 forces worker recycling to prevent memory leaks
+    command: celery -A celery_app.celery worker --loglevel=info --concurrency=1 -P gevent --max-tasks-per-child=20
     depends_on:
       redis:
         condition: service_healthy
@@ -112,7 +113,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 768M
 
 volumes:
   postgres_data:
