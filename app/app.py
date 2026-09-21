@@ -401,10 +401,8 @@ def incremental_library_update_job():
 
 from app_factory import create_app
 
-# Create app instance
-app = create_app()
-
 if __name__ == "__main__":
+    app = create_app()
     logger.info(f"Build Version: {BUILD_VERSION}")
     logger.info("Starting server on port 8465...")
     socketio.run(app, debug=True, use_reloader=False, host="0.0.0.0", port=8465, allow_unsafe_werkzeug=True)

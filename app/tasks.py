@@ -4,12 +4,10 @@ import os
 # Add app directory to path BEFORE any imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-# CRITICAL: Monkey patch gevent BEFORE importing anything else
-# socket=False: Do NOT patch sockets - gevent's socket patching breaks psycopg2's
-# C-level libpq, causing "PGRES_TUPLES_OK and no message from the libpq" errors.
-from gevent import monkey
-
-monkey.patch_all(socket=False)
+# NOTE: monkey.patch_all() removed - causes psycopg2 protocol corruption
+# ("PGRES_TUPLES_OK" and "lost synchronization with server").
+# Celery worker uses -P gevent pool which handles gevent integration natively.
+# Do NOT add monkey.patch_all() here - it breaks PostgreSQL connections.
 
 import structlog
 

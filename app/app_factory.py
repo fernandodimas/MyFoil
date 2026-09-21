@@ -89,6 +89,7 @@ from socket_helper import get_socketio_emitter
 from exceptions import register_exception_handlers
 
 app_settings = {}
+_initialized = False
 
 
 class SafeSocketIO(SocketIO):
@@ -242,6 +243,12 @@ def on_library_change(events):
 
 
 def init_internal(app):
+    global _initialized
+    if _initialized:
+        logger.info("init_internal: Already initialized, skipping (idempotent guard)")
+        return
+    _initialized = True
+
     logger.info("=" * 80)
     logger.info("STARTUP: Cleaning up stale jobs from previous session...")
     logger.info("=" * 80)
@@ -295,6 +302,11 @@ def init_internal(app):
     def stage2_watchdog():
         logger.info("Init Stage 2: initializing Watchdog...")
         with app.app_context():
+            if getattr(state, 'watcher', None) and getattr(state.watcher, 'is_running', False):
+                logger.info("Watchdog already running, skipping re-initialization")
+                threading.Timer(5.0, stage3_scan).start()
+                return
+
             state.watcher = Watcher(on_library_change)
 
             state.watcher.run()
@@ -348,7 +360,15 @@ def init_internal(app):
     logger.info("Scheduled automated metadata fetch (every 24 hours)")
 
 
+_scan_started = False
+
 def check_initial_scan(app):
+    global _scan_started
+    if _scan_started:
+        logger.info("check_initial_scan: Already triggered, skipping (idempotent guard)")
+        return
+    _scan_started = True
+
     from datetime import datetime, timezone
     from constants import TITLEDB_DIR
 
@@ -462,18 +482,17 @@ def create_app(minimal=False):
 
     @event.listens_for(Pool, "checkout")
     def _detect_corrupted_connection(dbapi_connection, connection_record, connection_proxy):
-        # Check if connection is in a bad state by doing a lightweight ping
-        # If it fails with PGRES_TUPLES_OK, discard this connection
         try:
-            # This will trigger the error if connection is corrupted
-            dbapi_connection.cursor().execute("SELECT 1")
+            cursor = dbapi_connection.cursor()
+            cursor.execute("SELECT 1")
+            cursor.close()
             dbapi_connection.rollback()
         except Exception as e:
-            if "PGRES_TUPLES_OK" in str(e):
-                logger.warning("Detected corrupted DB connection (PGRES_TUPLES_OK), invalidating")
-                # Raise DisconnectionError so SQLAlchemy invalidates this connection
+            err_str = str(e).lower()
+            if any(kw in err_str for kw in ["pgres_tuples_ok", "lost synchronization", "insufficient data", "no message from the libpq"]):
+                logger.warning(f"Detected corrupted DB connection: {e} - invalidating")
                 from sqlalchemy.exc import DisconnectionError
-                raise DisconnectionError("PGRES_TUPLES_OK corruption detected") from e
+                raise DisconnectionError(f"DB protocol corruption: {e}") from e
             raise
 
     login_manager.init_app(app)

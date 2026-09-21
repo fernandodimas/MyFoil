@@ -26,19 +26,17 @@ PY
 )
   echo "[entrypoint] Using gunicorn target: ${TARGET}:create_app()"
   # Gunicorn settings:
-  # - timeout 60: reduced from 120s - if request takes longer, something is wrong
-  # - worker-class gevent: async workers for I/O bound operations
-  # - workers: default to 2, override with GUNICORN_WORKERS env
-  # - max-requests: recycle workers more aggressively to prevent memory leaks
-  # - preload: load app once per worker to share memory
+  # - timeout 120: allow time for TitleDB operations
+  # - workers: single worker to minimize memory (override with GUNICORN_WORKERS)
+  # - max-requests: recycle workers to prevent memory leaks
+  # NOTE: --preload removed: causes timer/thread duplication when forking
   exec gunicorn \
     -b 0.0.0.0:8465 \
     --chdir /app \
     --timeout 120 \
-    --workers ${GUNICORN_WORKERS:-2} \
+    --workers ${GUNICORN_WORKERS:-1} \
     --max-requests 100 \
     --max-requests-jitter 20 \
     --worker-tmp-dir /dev/shm \
-    --preload \
     "${TARGET}:create_app()"
 fi
