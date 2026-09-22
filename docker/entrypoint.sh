@@ -27,14 +27,15 @@ PY
   echo "[entrypoint] Using gunicorn target: ${TARGET}:create_app()"
   # Gunicorn settings:
   # - timeout 120: allow time for TitleDB operations
+  # - worker-class eventlet: async workers for SocketIO long-polling support
   # - workers: single worker to minimize memory (override with GUNICORN_WORKERS)
   # - max-requests: recycle workers to prevent memory leaks
-  # NOTE: --preload removed: causes timer/thread duplication when forking
   exec gunicorn \
     -b 0.0.0.0:8465 \
     --chdir /app \
     --timeout 120 \
     --workers ${GUNICORN_WORKERS:-1} \
+    --worker-class eventlet \
     --max-requests 100 \
     --max-requests-jitter 20 \
     --worker-tmp-dir /dev/shm \

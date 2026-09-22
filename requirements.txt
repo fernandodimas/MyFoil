@@ -10,6 +10,7 @@ redis==7.1.0
 SQLAlchemy==2.0.45
 Werkzeug==3.1.5
 gunicorn==23.0.0
+eventlet==0.37.0
 gevent==25.9.1
 gevent-websocket==0.10.1
 structlog==25.5.0
