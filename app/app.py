@@ -127,6 +127,12 @@ backup_manager = None
 plugin_manager = None
 
 
+def _get_app():
+    """Get the Flask app instance from app_factory."""
+    from app_factory import _current_app
+    return _current_app
+
+
 # Logging configuration
 formatter = ColoredFormatter(
     "[%(asctime)s.%(msecs)03d] %(levelname)s (%(module)s) %(message)s",
@@ -200,7 +206,7 @@ def load_user(user_id):
 
 def update_titledb_job(force=False):
     """Update TitleDB in background"""
-    with app.app_context():
+    with _get_app().app_context():
         job_tracker.set_emitter(get_socketio_emitter())
 
         # Track job
@@ -280,7 +286,7 @@ def update_titledb_job(force=False):
 def scan_library_job():
     """Scan library in background"""
     logger.info(f"DEBUG: Entering scan_library_job (BUILD: {BUILD_VERSION})")
-    with app.app_context():
+    with _get_app().app_context():
         # Track job
         job_id = job_tracker.register_job("aggregate_scan")
         job_tracker.start_job(job_id)
@@ -384,7 +390,7 @@ def create_automatic_backup():
 def incremental_library_update_job():
     """Incremental library update job (Phase 3.2)"""
     logger.info("Starting incremental library update job...")
-    with app.app_context():
+    with _get_app().app_context():
         job_id = job_tracker.register_job("incremental_library_update")
         job_tracker.start_job(job_id)
 
