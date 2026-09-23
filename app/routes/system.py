@@ -1201,23 +1201,6 @@ def activity_api():
     return success_response(data=results)
 
 
-@system_bp.route("/plugins", methods=["GET"])
-@access_required("admin")
-@handle_api_errors
-def plugins_api():
-    """Obter lista de plugins"""
-    # Plugins feature removed: return empty list to avoid frontend errors
-    return success_response(data=[])
-
-
-@system_bp.post("/plugins/toggle")
-@access_required("admin")
-@handle_api_errors
-def toggle_plugin_api():
-    """Alternar status do plugin"""
-    return error_response(ErrorCode.VALIDATION_ERROR, message="Plugins feature removed", status_code=410)
-
-
 @system_bp.route("/system/jobs", methods=["GET"])
 @handle_api_errors
 def get_all_jobs_api():

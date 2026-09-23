@@ -150,28 +150,6 @@ def set_shop_settings(data):
 
 
 
-def toggle_plugin_settings(plugin_id, enabled):
-    settings = load_settings()
-    if "plugins" not in settings:
-        settings["plugins"] = {"disabled": []}
-
-    disabled_list = settings["plugins"].get("disabled", [])
-
-    if enabled:
-        if plugin_id in disabled_list:
-            disabled_list.remove(plugin_id)
-    else:
-        if plugin_id not in disabled_list:
-            disabled_list.append(plugin_id)
-
-    settings["plugins"]["disabled"] = disabled_list
-    with open(CONFIG_FILE, "w") as yaml_file:
-        yaml.dump(settings, yaml_file)
-    reload_conf()
-    return True
-
-
-
 def reload_conf():
     """Reload application settings cache"""
     global _cached_settings

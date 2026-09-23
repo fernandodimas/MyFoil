@@ -41,7 +41,6 @@ from constants import (
     MYFOIL_DB,
     BUILD_VERSION,
     CONFIG_DIR,
-    PLUGINS_DIR,
     DATA_DIR,
 )
 from settings import load_settings, reload_conf
@@ -55,7 +54,6 @@ from rest_api import init_rest_api
 import structlog
 from metrics import init_metrics
 from backup import BackupManager
-from plugin_system import get_plugin_manager
 
 # Routes and services
 
@@ -124,7 +122,6 @@ from socket_helper import get_socketio_emitter
 job_tracker.set_emitter(get_socketio_emitter())
 
 backup_manager = None
-plugin_manager = None
 
 
 def _get_app():

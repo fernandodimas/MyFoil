@@ -10,7 +10,6 @@ LIBRARY_CACHE_FILE = os.path.join(CACHE_DIR, "library.json")
 ALEMBIC_DIR = os.path.join(APP_DIR, "migrations")
 ALEMBIC_CONF = os.path.join(ALEMBIC_DIR, "alembic.ini")
 TITLEDB_DIR = os.path.join(DATA_DIR, "titledb")
-PLUGINS_DIR = os.path.join(APP_DIR, "plugins")
 
 TITLEDB_DEFAULT_FILES = [
     "cnmts.json",
@@ -21,7 +20,7 @@ TITLEDB_DEFAULT_FILES = [
 MYFOIL_DB = os.environ.get("DATABASE_URL")
 
 
-BUILD_VERSION = '20260923_1038'
+BUILD_VERSION = '20260923_1055'
 
 DEFAULT_SETTINGS = {
     "library": {

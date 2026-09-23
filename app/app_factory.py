@@ -24,7 +24,6 @@ from constants import (
     MYFOIL_DB,
     BUILD_VERSION,
     CONFIG_DIR,
-    PLUGINS_DIR,
     DATA_DIR,
 )
 from settings import load_settings, reload_conf
@@ -37,7 +36,6 @@ import titledb
 import structlog
 from metrics import init_metrics
 from backup import BackupManager
-from plugin_system import get_plugin_manager
 
 from routes.library import library_bp
 from routes.settings import settings_bp
@@ -131,7 +129,6 @@ else:
     limiter = Limiter(key_func=get_remote_address, default_limits=["20000 per day", "5000 per hour"])
 
 backup_manager = None
-plugin_manager = None
 _current_app = None
 
 formatter = ColoredFormatter(
@@ -565,7 +562,7 @@ def create_app(minimal=False):
         return response
 
     with app.app_context():
-        global backup_manager, plugin_manager
+        global backup_manager
 
         backup_manager = BackupManager(CONFIG_DIR, DATA_DIR)
 
@@ -577,10 +574,6 @@ def create_app(minimal=False):
         if not minimal:
             job_tracker.init_app(app)
             init_internal(app)
-
-        plugin_manager = get_plugin_manager(PLUGINS_DIR, app)
-        disabled_plugins = app_settings.get("plugins", {}).get("disabled", [])
-        plugin_manager.load_plugins(disabled_plugins)
 
     if CELERY_ENABLED:
         logger.info("Celery tasks loaded and enabled.")
