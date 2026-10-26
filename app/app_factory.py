@@ -583,20 +583,36 @@ def create_app(minimal=False):
 
 
 def _update_titledb_job(force=False):
-    from app import update_titledb_job
-    return update_titledb_job(force=force)
+    try:
+        from app import update_titledb_job
+        return update_titledb_job(force=force)
+    except Exception as e:
+        logger.error(f"Error in background _update_titledb_job: {e}")
+        return False
 
 
 def _scan_library_job():
-    from app import scan_library_job
-    return scan_library_job()
+    try:
+        from app import scan_library_job
+        return scan_library_job()
+    except Exception as e:
+        logger.error(f"Error in background _scan_library_job: {e}")
+        return False
 
 
 def _create_automatic_backup():
-    from app import create_automatic_backup
-    return create_automatic_backup()
+    try:
+        from app import create_automatic_backup
+        return create_automatic_backup()
+    except Exception as e:
+        logger.error(f"Error in background _create_automatic_backup: {e}")
+        return False
 
 
 def _incremental_library_update_job():
-    from app import incremental_library_update_job
-    return incremental_library_update_job()
+    try:
+        from app import incremental_library_update_job
+        return incremental_library_update_job()
+    except Exception as e:
+        logger.error(f"Error in background _incremental_library_update_job: {e}")
+        return False

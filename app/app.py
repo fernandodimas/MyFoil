@@ -125,7 +125,13 @@ backup_manager = None
 
 
 def _get_app():
-    """Get the Flask app instance from app_factory."""
+    """Get the Flask app instance from Flask context or app_factory."""
+    try:
+        from flask import current_app
+        if current_app:
+            return current_app._get_current_object()
+    except Exception:
+        pass
     from app_factory import _current_app
     return _current_app
 
@@ -203,7 +209,11 @@ def load_user(user_id):
 
 def update_titledb_job(force=False):
     """Update TitleDB in background"""
-    with _get_app().app_context():
+    app_inst = _get_app()
+    if not app_inst:
+        logger.warning("No Flask app instance available for update_titledb_job.")
+        return False
+    with app_inst.app_context():
         job_tracker.set_emitter(get_socketio_emitter())
 
         # Track job
@@ -283,7 +293,11 @@ def update_titledb_job(force=False):
 def scan_library_job():
     """Scan library in background"""
     logger.info(f"DEBUG: Entering scan_library_job (BUILD: {BUILD_VERSION})")
-    with _get_app().app_context():
+    app_inst = _get_app()
+    if not app_inst:
+        logger.warning("No Flask app instance available for scan_library_job.")
+        return False
+    with app_inst.app_context():
         # Track job
         job_id = job_tracker.register_job("aggregate_scan")
         job_tracker.start_job(job_id)
@@ -387,7 +401,11 @@ def create_automatic_backup():
 def incremental_library_update_job():
     """Incremental library update job (Phase 3.2)"""
     logger.info("Starting incremental library update job...")
-    with _get_app().app_context():
+    app_inst = _get_app()
+    if not app_inst:
+        logger.warning("No Flask app instance available for incremental_library_update_job.")
+        return False
+    with app_inst.app_context():
         job_id = job_tracker.register_job("incremental_library_update")
         job_tracker.start_job(job_id)
 

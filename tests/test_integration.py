@@ -3,7 +3,15 @@ Integration Test for Myfoil TitleDB Download
 Attempts to download real files from official sources
 """
 import os
+import socket
 import unittest
+
+def is_online():
+    try:
+        socket.create_connection(("raw.githubusercontent.com", 443), timeout=2)
+        return True
+    except OSError:
+        return False
 
 # Add app directory to path
 
@@ -17,6 +25,7 @@ class TestTitleDBIntegration(unittest.TestCase):
         self.manager = TitleDBSourceManager(CONFIG_DIR)
         os.makedirs(TITLEDB_DIR, exist_ok=True)
 
+    @unittest.skipUnless(is_online(), "Requires internet access to GitHub")
     def test_real_download_from_github(self):
         """Test downloading versions.json from GitHub source"""
         filename = "versions.txt"
@@ -39,6 +48,7 @@ class TestTitleDBIntegration(unittest.TestCase):
             print(f"❌ Failed: {error}")
             self.fail(f"Download failed: {error}")
 
+    @unittest.skipUnless(is_online(), "Requires internet access to GitHub")
     def test_fallback_mechanism(self):
         """Test if it falls back to second source when first fails"""
         # Add a fake failing source with priority 1
