@@ -459,7 +459,6 @@ function renderIconView(items) {
                     <div class="card-image">
                          <figure class="image is-square bg-light relative">
                             ${ratingBadge}
-                              ${game.metacritic_score ? `<div class="metacritic-badge" title="Metacritic: ${game.metacritic_score}">${game.metacritic_score}</div>` : ''}
                             <img src="/static/img/no-icon.png" 
                                  data-src="${game.iconUrl || '/static/img/no-icon.png'}" 
                                  alt="${safeName}" 
@@ -831,7 +830,7 @@ function searchLibraryServer(page = 1, append = false) {
         window.filteredGames = games.slice();
 
         // Update UI counts
-        $('#totalItemsCount, #totalItemsCountMobile').text(`${totalItems} ${t('Jogos')}`);
+        $('#totalItemsCount, #totalItemsCountMobile').text(`${totalItems} ${t('dashboard.games_count')}`);
 
         // Render results
         resetInfiniteScroll();
@@ -842,6 +841,7 @@ function searchLibraryServer(page = 1, append = false) {
         console.error('Server search failed:', textStatus, err, jqXHR.responseText);
         $('#loadingIndicator').addClass('is-hidden');
         $('#paginationLoader').addClass('is-hidden');
+        showToast(t('dashboard.search_error') || 'Erro na busca. Tente novamente.', 'danger');
     });
 }
 

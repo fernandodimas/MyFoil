@@ -30,7 +30,7 @@
                     <i class="bi bi-calendar-event mr-2"></i> {{ t('nav.upcoming') }}
                 </a>
 
-                {% if current_user.is_admin or admin_account_created == false %}
+                {% if current_user.is_admin or not admin_account_created %}
                 <a class="navbar-item {% if title=='Settings' %}is-active{% endif %}" href="/settings">
                     <i class="bi bi-sliders mr-2"></i> {{ t('nav.settings') }}
                 </a>

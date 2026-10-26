@@ -9,6 +9,7 @@ from db import (
     Titles,
     get_all_title_apps,
     logger,
+    db,
 )
 from flask_login import current_user
 from constants import APP_TYPE_BASE, APP_TYPE_UPD, APP_TYPE_DLC
@@ -363,8 +364,10 @@ def library_paged_api():
         sort_by = "added_at"
     elif sort_by == "release":
         sort_by = "release_date"
+    elif sort_by == "id":
+        sort_by = "title_id"
 
-    valid_sort_fields = ["name", "added_at", "release_date", "size"]
+    valid_sort_fields = ["name", "added_at", "release_date", "size", "title_id"]
     if sort_by not in valid_sort_fields:
         sort_by = "name"
 
@@ -468,6 +471,7 @@ def library_paged_api():
                         "rawg_rating": title.rawg_rating,
                         "rating_count": title.rating_count,
                         "playtime_main": title.playtime_main,
+                        "added_at": title.added_at,
                         "apps": get_all_title_apps(title.title_id),
                     },
                     ignore_preferences=ignores_by_user,
@@ -613,8 +617,10 @@ def library_search_paged_api():
         sort_by = "added_at"
     elif sort_by == "release":
         sort_by = "release_date"
+    elif sort_by == "id":
+        sort_by = "title_id"
 
-    valid_sort_fields = ["name", "added_at", "release_date", "size"]
+    valid_sort_fields = ["name", "added_at", "release_date", "size", "title_id"]
     if sort_by not in valid_sort_fields:
         sort_by = "name"
 
@@ -789,6 +795,14 @@ def library_search_paged_api():
                 },
             }
         )
+
+    # Default path: simple text/genre/tag/owned search without post-filtering
+    # IMPORTANT: paginated must be defined here — it was missing, causing NameError on all simple searches
+    paginated = TitlesRepository.get_paged(
+        page=page, per_page=per_page,
+        query_text=query_text, filters=filters,
+        sort_by=sort_by, order=order
+    )
 
     # Serialize items directly without secondary filtering
     items = []
