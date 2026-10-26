@@ -93,10 +93,15 @@ def init_libraries(app, watcher, paths):
 def validate_library_path(path):
     if not path or not path.strip():
         return "Path is empty"
-    if not os.path.exists(path):
-        return f"Path does not exist: {path}"
-    if not os.path.isdir(path):
-        return f"Path is not a directory: {path}"
+    try:
+        if not os.path.exists(path):
+            return f"Path does not exist: {path}"
+        if not os.path.isdir(path):
+            return f"Path is not a directory: {path}"
+        with os.scandir(path):
+            pass
+    except OSError as e:
+        return f"I/O error accessing path {path}: {e}"
     return None
 
 
@@ -175,7 +180,6 @@ def add_files_to_library(library, files):
 def scan_library_path(library_path, job_id=None):
     from library.generation import post_library_change
 
-    cleanup_metadata_files(library_path)
     library_id = get_library_id(library_path)
 
     # Register and start job if not provided
@@ -184,14 +188,17 @@ def scan_library_path(library_path, job_id=None):
         job_tracker.start_job(job_id)
 
     logger.info(f"Scanning library path {library_path} (library_id={library_id}, job_id={job_id})...")
-    if not os.path.isdir(library_path):
-        error_msg = f"Path '{library_path}' is not a directory or doesn't exist."
-        logger.warning(error_msg)
+    invalid_reason = validate_library_path(library_path)
+    if invalid_reason:
+        error_msg = f"Cannot scan '{library_path}': {invalid_reason}"
+        logger.error(error_msg)
         from db import log_activity
 
         log_activity("library_scan_error", details={"path": library_path, "error": error_msg})
         job_tracker.fail_job(job_id, error_msg)
         return
+
+    cleanup_metadata_files(library_path)
 
     try:
         # Check permissions
@@ -223,6 +230,24 @@ def scan_library_path(library_path, job_id=None):
     db_files = Files.query.filter_by(library_id=library_id).all()
     db_files_map = {f.filepath: f for f in db_files}
     filepaths_in_library = set(db_files_map.keys())
+
+    # Safety guard: if 0 game files were found on disk, but the DB had records for this library,
+    # check if the directory is completely empty (e.g., unmounted external drive) to prevent wiping the DB.
+    if not files and filepaths_in_library:
+        try:
+            with os.scandir(library_path) as it:
+                has_any_entry = any(True for _ in it)
+        except OSError as e:
+            has_any_entry = False
+            logger.error(f"I/O error verifying {library_path}: {e}")
+        if not has_any_entry:
+            warn_msg = (
+                f"Mount '{library_path}' appears empty or unmounted on host while {len(filepaths_in_library)} "
+                f"files exist in DB. Aborting scan to prevent accidental deletion."
+            )
+            logger.warning(warn_msg)
+            job_tracker.fail_job(job_id, warn_msg)
+            return
 
     # 1. Detect New vs Updated vs Deleted
     new_files = []

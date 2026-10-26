@@ -10,11 +10,8 @@ except ImportError:
 
 
 def _safe_sleep(seconds):
-    """Sleep using gevent if available, otherwise time.sleep"""
-    if gevent:
-        gevent.sleep(seconds)
-    else:
-        time.sleep(seconds)
+    """Yield cooperatively to eventlet/gevent or standard time.sleep"""
+    time.sleep(seconds)
 
 import titles._state as _state
 from titles._state import logger
@@ -106,10 +103,10 @@ def load_titledb_from_db():
     logger.info("Loading TitleDB from PostgreSQL database...")
 
     try:
-        from db import TitleDBCache, TitleDBVersions, TitleDBDLCs
+        from db import db, TitleDBCache, TitleDBVersions, TitleDBDLCs
 
         try:
-            cache_count = TitleDBCache.query.count()
+            cache_count = db.session.query(TitleDBCache.id).count()
             if cache_count == 0:
                 logger.info("TitleDB cache is empty, will load from files")
                 return False
@@ -118,31 +115,38 @@ def load_titledb_from_db():
             return False
 
         logger.info(f"Loading TitleDB from database cache ({cache_count} titles)...")
-        cached_titles = TitleDBCache.query.all()
-
         _state._titles_db = {}
-        for entry in cached_titles:
-            if entry.title_id:
-                _state._titles_db[entry.title_id.upper()] = entry.data
+        title_query = db.session.query(TitleDBCache.title_id, TitleDBCache.data).yield_per(2000)
+        for idx, (tid, data) in enumerate(title_query):
+            if tid:
+                _state._titles_db[tid.upper()] = data
+            if idx % 2000 == 0 and idx > 0:
+                _safe_sleep(0.001)
 
-        cached_versions = TitleDBVersions.query.all()
         _state._versions_db = {}
-        for entry in cached_versions:
-            if entry.title_id:
-                tid = entry.title_id.lower()
+        ver_query = db.session.query(
+            TitleDBVersions.title_id, TitleDBVersions.version, TitleDBVersions.release_date
+        ).yield_per(5000)
+        for idx, (tid_raw, ver, rel_date) in enumerate(ver_query):
+            if tid_raw:
+                tid = tid_raw.lower()
                 if tid not in _state._versions_db:
                     _state._versions_db[tid] = {}
-                _state._versions_db[tid][str(entry.version)] = entry.release_date
+                _state._versions_db[tid][str(ver)] = rel_date
+            if idx % 5000 == 0 and idx > 0:
+                _safe_sleep(0.001)
 
         _state._cnmts_db = {}
         _state._dlc_map = {}
         _state._dlcs_by_base_id = {}
-        cached_dlcs = TitleDBDLCs.query.all()
-        for entry in cached_dlcs:
-            if not entry.base_title_id or not entry.dlc_app_id:
+        dlc_count = 0
+        dlc_query = db.session.query(TitleDBDLCs.base_title_id, TitleDBDLCs.dlc_app_id).yield_per(5000)
+        for idx, (base_raw, dlc_raw) in enumerate(dlc_query):
+            if not base_raw or not dlc_raw:
                 continue
-            base_tid = entry.base_title_id.lower()
-            dlc_app_id = entry.dlc_app_id.upper()
+            dlc_count += 1
+            base_tid = base_raw.lower()
+            dlc_app_id = dlc_raw.upper()
 
             dlc_id_lower = dlc_app_id.lower()
             if dlc_id_lower not in _state._cnmts_db:
@@ -157,8 +161,10 @@ def load_titledb_from_db():
                 _state._dlcs_by_base_id[base_tid] = []
             if dlc_app_id not in _state._dlcs_by_base_id[base_tid]:
                 _state._dlcs_by_base_id[base_tid].append(dlc_app_id)
+            if idx % 5000 == 0 and idx > 0:
+                _safe_sleep(0.001)
 
-        for tid, data in _state._titles_db.items():
+        for idx, (tid, data) in enumerate(_state._titles_db.items()):
             if isinstance(data, dict) and data.get("parentId"):
                 base_tid = str(data["parentId"]).lower()
                 dlc_app_id = tid.upper()
@@ -178,11 +184,13 @@ def load_titledb_from_db():
                     _state._dlcs_by_base_id[base_tid] = []
                 if dlc_app_id not in _state._dlcs_by_base_id[base_tid]:
                     _state._dlcs_by_base_id[base_tid].append(dlc_app_id)
+            if idx % 5000 == 0 and idx > 0:
+                _safe_sleep(0.001)
 
         _state._titles_db_loaded = True
         _state._titledb_cache_timestamp = time.time()
         logger.info(
-            f"TitleDB loaded from DB cache: {len(_state._titles_db)} titles, {len(_state._versions_db)} versions, {len(cached_dlcs)} DLCs"
+            f"TitleDB loaded from DB cache: {len(_state._titles_db)} titles, {len(_state._versions_db)} versions, {dlc_count} DLCs"
         )
         return True
 

@@ -29,8 +29,8 @@ class Watcher:
         self.directories = set()  # Use a set to store directories
         self.callback = callback
         # Use PollingObserver with configurable timeout to reduce CPU usage
-        # Default: 10s (configurable via WATCHDOG_INTERVAL env var)
-        self.base_timeout = float(os.getenv("WATCHDOG_INTERVAL", "10.0"))
+        # Default: 30s (configurable via WATCHDOG_INTERVAL env var)
+        self.base_timeout = float(os.getenv("WATCHDOG_INTERVAL", "30.0"))
         self.timeout = self.base_timeout
         self.observer = PollingObserver(timeout=self.timeout)
         self.scheduler_map = {}
@@ -288,9 +288,21 @@ class Watcher:
 
     def add_directory(self, directory):
         if directory not in self.directories:
-            if not os.path.exists(directory):
-                logger.warning(f"Directory {directory} does not exist, not added to watchdog.")
+            try:
+                if not os.path.exists(directory):
+                    logger.warning(f"Directory {directory} does not exist, not added to watchdog.")
+                    return False
+                with os.scandir(directory):
+                    pass
+            except OSError as e:
+                logger.error(
+                    f"Directory {directory} is inaccessible due to OS/mount I/O error ({e}). "
+                    f"Skipping Watchdog monitoring for {directory} until mount is healthy."
+                )
+                self.error_count += 1
+                self.last_error = str(e)
                 return False
+
             logger.info(f"Adding directory {directory} to watchdog.")
             try:
                 task = self.observer.schedule(self.event_handler, directory, recursive=True)

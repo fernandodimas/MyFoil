@@ -26,18 +26,18 @@ PY
 )
   echo "[entrypoint] Using gunicorn target: ${TARGET}:create_app()"
   # Gunicorn settings:
-  # - timeout 120: allow time for TitleDB operations
+  # - timeout 180: allow time for TitleDB and disk operations
   # - worker-class eventlet: async workers for SocketIO long-polling support
   # - workers: single worker to minimize memory (override with GUNICORN_WORKERS)
-  # - max-requests: recycle workers to prevent memory leaks
+  # - max-requests: recycle workers periodically without thrashing on every page load
   exec gunicorn \
     -b 0.0.0.0:8465 \
     --chdir /app \
-    --timeout 120 \
+    --timeout ${GUNICORN_TIMEOUT:-180} \
     --workers ${GUNICORN_WORKERS:-1} \
     --worker-class eventlet \
-    --max-requests 100 \
-    --max-requests-jitter 20 \
+    --max-requests ${GUNICORN_MAX_REQUESTS:-2000} \
+    --max-requests-jitter ${GUNICORN_MAX_REQUESTS_JITTER:-200} \
     --worker-tmp-dir /dev/shm \
     "${TARGET}:create_app()"
 fi
