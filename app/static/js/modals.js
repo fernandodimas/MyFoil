@@ -290,7 +290,7 @@ function showGameDetails(id) {
                             
                             ${game.rating !== undefined && game.rating !== null ? `
                             <div class="mb-3">
-                                <p class="is-size-7 heading mb-1 opacity-50">Classificação</p>
+                                <p class="is-size-7 heading mb-1 opacity-50">${t('modal.age_rating')}</p>
                                 <p class="is-size-6">
                                     <span class="tag ${
                                         game.rating <= 7 ? 'is-success' : 
@@ -303,14 +303,14 @@ function showGameDetails(id) {
                             
                             ${game.ratingContent && game.ratingContent.length > 0 ? `
                             <div class="mb-3">
-                                <p class="is-size-7 heading mb-1 opacity-50">Avisos</p>
+                                <p class="is-size-7 heading mb-1 opacity-50">${t('modal.content_warnings')}</p>
                                 <p class="is-size-7 opacity-80" style="line-height: 1.3;">${game.ratingContent.map(escapeHtml).join(', ')}</p>
                             </div>
                             ` : ''}
                             
                             ${game.languages && game.languages.length > 0 ? `
                             <div class="mb-3">
-                                <p class="is-size-7 heading mb-1 opacity-50">Idiomas</p>
+                                <p class="is-size-7 heading mb-1 opacity-50">${t('modal.languages')}</p>
                                 <div class="tags mt-1">
                                     ${game.languages.map(l => {
                                         const flag = getLanguageFlag(l);
@@ -323,7 +323,7 @@ function showGameDetails(id) {
                             
                             ${game.region ? `
                             <div class="mb-3">
-                                <p class="is-size-7 heading mb-1 opacity-50">Região</p>
+                                <p class="is-size-7 heading mb-1 opacity-50">${t('modal.region')}</p>
                                 <p class="is-size-7 opacity-80"><span class="tag is-small is-light border bg-white">${escapeHtml(game.region)}</span></p>
                             </div>
                             ` : ''}

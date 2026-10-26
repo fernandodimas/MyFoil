@@ -49,19 +49,30 @@ window.t = function (key) {
 /**
  * Show a toast notification
  * @param {string} message 
- * @param {string} type 'success' | 'danger'
+ * @param {string} type 'success' | 'danger' | 'error' | 'info' | 'warning'
  */
 function showToast(message, type = 'success') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
     const notification = document.createElement('div');
-    const colorClass = type === 'success' ? 'is-success' : 'is-danger';
+    let colorClass = 'is-danger';
+    let iconClass = 'exclamation-circle';
+    if (type === 'success') {
+        colorClass = 'is-success';
+        iconClass = 'check-circle';
+    } else if (type === 'info') {
+        colorClass = 'is-info';
+        iconClass = 'info-circle';
+    } else if (type === 'warning') {
+        colorClass = 'is-warning';
+        iconClass = 'exclamation-triangle';
+    }
 
     notification.className = `notification ${colorClass} is-toast`;
     notification.innerHTML = `
         <button class="delete" onclick="this.parentElement.remove()"></button>
         <div class="is-flex is-align-items-center gap-2">
-            <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+            <i class="bi bi-${iconClass}"></i>
             <strong></strong>
         </div>
     `;

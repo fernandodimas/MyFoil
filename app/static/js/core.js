@@ -58,19 +58,30 @@ window.t = function (key) {
 /**
  * Show a toast notification
  * @param {string} message 
- * @param {string} type 'success' | 'danger'
+ * @param {string} type 'success' | 'danger' | 'error' | 'info' | 'warning'
  */
 function showToast(message, type = 'success') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
     const notification = document.createElement('div');
-    const colorClass = type === 'success' ? 'is-success' : 'is-danger';
+    let colorClass = 'is-danger';
+    let iconClass = 'exclamation-circle';
+    if (type === 'success') {
+        colorClass = 'is-success';
+        iconClass = 'check-circle';
+    } else if (type === 'info') {
+        colorClass = 'is-info';
+        iconClass = 'info-circle';
+    } else if (type === 'warning') {
+        colorClass = 'is-warning';
+        iconClass = 'exclamation-triangle';
+    }
 
     notification.className = `notification ${colorClass} is-toast`;
     notification.innerHTML = `
         <button class="delete" onclick="this.parentElement.remove()"></button>
         <div class="is-flex is-align-items-center gap-2">
-            <i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+            <i class="bi bi-${iconClass}"></i>
             <strong></strong>
         </div>
     `;
@@ -435,9 +446,9 @@ class SystemStatusManager {
             }
 
             if (remoteEl) {
-                let content = tdb.remote_date || 'Unknown';
+                let content = tdb.remote_date || t('common.unknown');
                 if (tdb.update_available) {
-                    content += ' <span class="tag is-info is-light is-small ml-2">Update Available</span>';
+                    content += ` <span class="tag is-info is-light is-small ml-2">${t('status.update_available')}</span>`;
                 }
 
                 if (tdb.last_error) {
@@ -604,7 +615,7 @@ async function clearAllJobs() {
     if (button && button.dataset.confirming !== "true") {
         button.dataset.confirming = "true";
         const originalText = button.textContent;
-        button.textContent = "Confirm Clear?";
+        button.textContent = t('status.confirm_clear');
         button.classList.add('is-warning');
 
         // Reset after 3 seconds
@@ -619,11 +630,11 @@ async function clearAllJobs() {
     }
 
     clearAllJobsRunning = true;
-    const originalText = button ? (button.getAttribute('data-original-text') || 'Clear All') : 'Clear';
+    const originalText = button ? (button.getAttribute('data-original-text') || t('status.clear_all')) : t('status.clear_all');
 
     // Show loading state
     if (button) {
-        button.textContent = 'Clearing...';
+        button.textContent = t('status.clearing');
         button.disabled = true;
     }
 

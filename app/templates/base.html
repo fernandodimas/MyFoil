@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ get_locale() }}" class="has-navbar-fixed-top">
+<html lang="{{ get_locale().replace('_', '-') }}" class="has-navbar-fixed-top">
 
 <head>
     <meta charset="utf-8">
@@ -56,20 +56,23 @@
         // Date formatting utilities using container timezone
         window.formatDate = function(dateStr) {
             if (!dateStr) return '--';
+            const bcpLocale = (window.currentLocale || 'pt-BR').replace('_', '-');
             try {
-                return new Date(dateStr).toLocaleDateString(window.currentLocale, { timeZone: window.CONTAINER_TZ });
+                return new Date(dateStr).toLocaleDateString(bcpLocale, { timeZone: window.CONTAINER_TZ });
             } catch (e) { return new Date(dateStr).toLocaleDateString(); }
         };
         window.formatDateTime = function(dateStr) {
             if (!dateStr) return '--';
+            const bcpLocale = (window.currentLocale || 'pt-BR').replace('_', '-');
             try {
-                return new Date(dateStr).toLocaleString(window.currentLocale, { timeZone: window.CONTAINER_TZ });
+                return new Date(dateStr).toLocaleString(bcpLocale, { timeZone: window.CONTAINER_TZ });
             } catch (e) { return new Date(dateStr).toLocaleString(); }
         };
         window.formatTime = function(dateStr) {
             if (!dateStr) return '--';
+            const bcpLocale = (window.currentLocale || 'pt-BR').replace('_', '-');
             try {
-                return new Date(dateStr).toLocaleTimeString(window.currentLocale, { timeZone: window.CONTAINER_TZ });
+                return new Date(dateStr).toLocaleTimeString(bcpLocale, { timeZone: window.CONTAINER_TZ });
             } catch (e) { return new Date(dateStr).toLocaleTimeString(); }
         };
 

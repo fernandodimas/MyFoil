@@ -190,9 +190,9 @@ class SystemStatusManager {
             }
 
             if (remoteEl) {
-                let content = tdb.remote_date || 'Unknown';
+                let content = tdb.remote_date || t('common.unknown');
                 if (tdb.update_available) {
-                    content += ' <span class="tag is-info is-light is-small ml-2">Update Available</span>';
+                    content += ` <span class="tag is-info is-light is-small ml-2">${t('status.update_available')}</span>`;
                 }
 
                 if (tdb.last_error) {
@@ -359,7 +359,7 @@ async function clearAllJobs() {
     if (button && button.dataset.confirming !== "true") {
         button.dataset.confirming = "true";
         const originalText = button.textContent;
-        button.textContent = "Confirm Clear?";
+        button.textContent = t('status.confirm_clear');
         button.classList.add('is-warning');
 
         // Reset after 3 seconds
@@ -374,11 +374,11 @@ async function clearAllJobs() {
     }
 
     clearAllJobsRunning = true;
-    const originalText = button ? (button.getAttribute('data-original-text') || 'Clear All') : 'Clear';
+    const originalText = button ? (button.getAttribute('data-original-text') || t('status.clear_all')) : t('status.clear_all');
 
     // Show loading state
     if (button) {
-        button.textContent = 'Clearing...';
+        button.textContent = t('status.clearing');
         button.disabled = true;
     }
 

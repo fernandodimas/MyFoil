@@ -682,13 +682,13 @@ function fillTitleDBSourcesTable() {
                             <span class="is-size-7">${localDate}</span>
                         </div>
                     </td>
-                    <td><input type="number" class="input is-small" value="${source.priority}" style="width: 70px" onchange="updateSourcePriority('${source.name}', this.value)" /></td>
+                    <td><input type="number" class="input is-small" value="${source.priority}" style="width: 70px" onclick="event.stopPropagation();" onchange="updateSourcePriority('${source.name}', this.value)" /></td>
                     <td>
                         <span class="tag ${source.enabled ? 'is-success' : 'is-light'} is-small">
                             ${source.enabled ? t('common.enabled') : t('common.disabled')}
                         </span>
                     </td>
-                    <td class="has-text-right">
+                    <td class="has-text-right" onclick="event.stopPropagation();">
                         <div class="buttons is-right">
                             <button class="button is-small is-ghost has-text-${source.enabled ? 'warning' : 'success'}" onclick="toggleSource('${source.name}', ${!source.enabled})">
                                 <i class="bi bi-${source.enabled ? 'pause-fill' : 'play-fill'}"></i>
@@ -711,19 +711,20 @@ function showSourceFiles(sourceName) {
     const modal = document.getElementById('sourceFilesModal');
     const title = document.getElementById('sourceFilesModalTitle');
     const content = document.getElementById('sourceFilesModalContent');
-    
+    if (!modal || !title || !content) return;
+
     title.textContent = sourceName;
     content.innerHTML = `<p class="has-text-centered py-4"><i class="bi bi-arrow-repeat spin mr-2"></i>${t('common.loading')}...</p>`;
-    
+
     modal.classList.add('is-active');
-    
+
     $.getJSON(`/api/settings/titledb/sources/files?name=${encodeURIComponent(sourceName)}`, (result) => {
         const payload = unwrap(result);
         if (!payload || !payload.files) {
             content.innerHTML = `<p class="has-text-centered has-text-danger py-4">${t('common.error')}</p>`;
             return;
         }
-        
+
         let html = `
             <p class="is-size-7 mb-3 opacity-70">
                 <i class="bi bi-link-45deg mr-1"></i>
@@ -740,15 +741,15 @@ function showSourceFiles(sourceName) {
                 </thead>
                 <tbody>
         `;
-        
-        const fmt = (s) => { 
-            if (!s) return '-'; 
-            const u = ['B','KB','MB','GB']; 
-            let i = 0; 
-            while(s >= 1024 && i < 3) { s /= 1024; i++; } 
-            return s.toFixed(i > 0 ? 1 : 0) + ' ' + u[i]; 
+
+        const fmt = (s) => {
+            if (!s) return '-';
+            const u = ['B', 'KB', 'MB', 'GB'];
+            let i = 0;
+            while (s >= 1024 && i < 3) { s /= 1024; i++; }
+            return s.toFixed(i > 0 ? 1 : 0) + ' ' + u[i];
         };
-        
+
         payload.files.forEach(file => {
             let statusHtml;
             if (file.exists === false) {
@@ -760,7 +761,7 @@ function showSourceFiles(sourceName) {
             } else {
                 statusHtml = `<span class="tag is-warning is-light is-small">${t('common.not_found')}</span>`;
             }
-            
+
             html += `
                 <tr${file.exists === false ? ' class="has-text-grey"' : ''}>
                     <td><code>${escapeHtml(file.filename)}</code></td>
@@ -770,7 +771,7 @@ function showSourceFiles(sourceName) {
                 </tr>
             `;
         });
-        
+
         html += '</tbody></table>';
         content.innerHTML = html;
     }).fail(() => {
@@ -779,7 +780,8 @@ function showSourceFiles(sourceName) {
 }
 
 function closeSourceFilesModal() {
-    document.getElementById('sourceFilesModal').classList.remove('is-active');
+    const modal = document.getElementById('sourceFilesModal');
+    if (modal) modal.classList.remove('is-active');
 }
 
 function fillErrorsTable() {
@@ -1557,7 +1559,7 @@ $(document).ready(async () => {
         if (set && set['titles/language']) selL.val(set['titles/language']);
 
         $('#autoUseLatest').prop('checked', set['titles/auto_use_latest'] === true);
-        $('#languageSelect').val(document.cookie.match(/language=([^;]+)/)?.[1] || 'en');
+        $('#languageSelect').val(document.cookie.match(/language=([^;]+)/)?.[1] || window.currentLocale || 'pt_BR');
         $('#shopHostInput').val(set['shop/host']);
         $('#publicShopCheck').prop('checked', set['shop/public']);
         $('#publicProfileCheck').prop('checked', set['shop/public_profile']);
@@ -1617,11 +1619,11 @@ async function updateMetadataStatus() {
                 let statusHtml = `<strong>${date}</strong><br>`;
 
                 if (last.status === 'running') {
-                    statusHtml += '<span class="has-text-info">Em execução...</span>';
+                    statusHtml += `<span class="has-text-info">${t('status.running')}...</span>`;
                 } else if (last.status === 'completed') {
-                    statusHtml += `<span class="has-text-success">t('common.success'): ${last.updated} atualizados / ${last.processed} total</span>`;
+                    statusHtml += `<span class="has-text-success">${t('common.success')}: ${last.updated} / ${last.processed}</span>`;
                 } else {
-                    statusHtml += '<span class="has-text-danger">Falha na última execução</span>';
+                    statusHtml += `<span class="has-text-danger">${t('common.error')}</span>`;
                 }
 
                 timeEl.innerHTML = statusHtml;

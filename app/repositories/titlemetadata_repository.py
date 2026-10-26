@@ -20,6 +20,11 @@ class TitleMetadataRepository:
     def get_by_id(id):
         """Get TitleMetadata by ID"""
         return TitleMetadata.query.get(id)
+
+    @staticmethod
+    def get_by_title_id(title_id):
+        """Get all TitleMetadata records for a specific TitleID"""
+        return TitleMetadata.query.filter_by(title_id=title_id).all()
     
     @staticmethod
     def create(**kwargs):

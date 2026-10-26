@@ -15,7 +15,7 @@
     <div class="modal-background" onclick="closeModal('dlcDetailsModal')"></div>
     <div class="modal-card modal-card-dlc">
         <header class="modal-card-head">
-            <p class="modal-card-title is-size-5" id="dlcModalTitle">Detalhes da DLC</p>
+            <p class="modal-card-title is-size-5" id="dlcModalTitle">{{ t('modal.dlc_details_title') }}</p>
             <button class="delete" aria-label="close" onclick="closeModal('dlcDetailsModal')"></button>
         </header>
         <section class="modal-card-body p-0 overflow-y-auto" id="dlcModalContent">
@@ -29,22 +29,22 @@
     <div class="modal-background" onclick="closeModal('editMetadataModal')"></div>
     <div class="modal-card">
         <header class="modal-card-head">
-            <p class="modal-card-title">Editar Dados do Jogo</p>
+            <p class="modal-card-title">{{ t('modal.edit_game_data') }}</p>
             <button class="delete" aria-label="close" onclick="closeModal('editMetadataModal')"></button>
         </header>
         <section class="modal-card-body">
             <!-- Search TitleDB Section -->
             <div class="box has-background-light-soft mb-4">
-                <label class="label is-small">Buscar Metadados na Base Geral (TitleDB)</label>
+                <label class="label is-small">{{ t('modal.search_titledb_label') }}</label>
                 <div class="field has-addons">
                     <div class="control is-expanded">
                         <input class="input is-small" type="text" id="searchTitleDBInput"
-                            placeholder="Digite o nome do jogo (ex: Mario)">
+                            placeholder="{{ t('modal.search_titledb_placeholder') }}">
                     </div>
                     <div class="control">
                         <button class="button is-small is-info" onclick="searchTitleDB()">
                             <span class="icon is-small"><i class="bi bi-search"></i></span>
-                            <span>Buscar</span>
+                            <span>{{ t('common.search') }}</span>
                         </button>
                     </div>
                 </div>
@@ -53,16 +53,16 @@
 
             <!-- Search RAWG Section -->
             <div class="box has-background-light-soft mb-4">
-                <label class="label is-small">Buscar Metadados na RAWG (Jogos)</label>
+                <label class="label is-small">{{ t('modal.search_rawg_label') }}</label>
                 <div class="field has-addons">
                     <div class="control is-expanded">
                         <input class="input is-small" type="text" id="searchRAWGInput"
-                            placeholder="Digite o nome do jogo (ex: Zelda)">
+                            placeholder="{{ t('modal.search_rawg_placeholder') }}">
                     </div>
                     <div class="control">
                         <button class="button is-small is-link" onclick="searchRAWG()">
                             <span class="icon is-small"><i class="bi bi-search"></i></span>
-                            <span>Buscar</span>
+                            <span>{{ t('common.search') }}</span>
                         </button>
                     </div>
                 </div>
@@ -72,31 +72,31 @@
             <input type="hidden" id="editMetaId">
             <input type="hidden" id="editMetaFullData">
             <div class="field">
-                <label class="label">Nome</label>
+                <label class="label">{{ t('common.name') }}</label>
                 <div class="control">
                     <input class="input" type="text" id="editMetaName">
                 </div>
             </div>
             <div class="field">
-                <label class="label">Publisher</label>
+                <label class="label">{{ t('common.publisher') }}</label>
                 <div class="control">
                     <input class="input" type="text" id="editMetaPublisher">
                 </div>
             </div>
             <div class="field">
-                <label class="label">Descrição</label>
+                <label class="label">{{ t('modal.description_label') }}</label>
                 <div class="control">
                     <textarea class="textarea" id="editMetaDescription"></textarea>
                 </div>
             </div>
             <div class="field">
-                <label class="label">URL do Ícone</label>
+                <label class="label">{{ t('modal.icon_url_label') }}</label>
                 <div class="control">
                     <input class="input" type="text" id="editMetaIcon">
                 </div>
             </div>
             <div class="field">
-                <label class="label">URL do Banner</label>
+                <label class="label">{{ t('modal.banner_url_label') }}</label>
                 <div class="control">
                     <input class="input" type="text" id="editMetaBanner">
                 </div>
@@ -104,15 +104,15 @@
             <div class="columns">
                 <div class="column">
                     <div class="field">
-                        <label class="label">Gênero</label>
+                        <label class="label">{{ t('common.genre') }}</label>
                         <div class="control">
-                            <input class="input" type="text" id="editMetaGenre" placeholder="Ex: Ação, RPG">
+                            <input class="input" type="text" id="editMetaGenre" placeholder="{{ t('modal.genre_placeholder') }}">
                         </div>
                     </div>
                 </div>
                 <div class="column">
                     <div class="field">
-                        <label class="label">Data de Lançamento</label>
+                        <label class="label">{{ t('Data de Lançamento') }}</label>
                         <div class="control">
                             <input class="input" type="text" id="editMetaRelease" placeholder="Ex: 2023-11-14">
                         </div>
@@ -121,9 +121,8 @@
             </div>
         </section>
         <footer class="modal-card-foot is-justify-content-flex-end">
-            <button class="button" onclick="closeModal('editMetadataModal')">Cancelar</button>
-            <button class="button is-primary" id="btnSaveMetadata" onclick="saveGameMetadata()">Salvar
-                Alterações</button>
+            <button class="button" onclick="closeModal('editMetadataModal')">{{ t('common.cancel') }}</button>
+            <button class="button is-primary" id="btnSaveMetadata" onclick="saveGameMetadata()">{{ t('modal.save_changes') }}</button>
         </footer>
     </div>
 </div>
@@ -142,7 +141,7 @@
     <div class="modal-background" onclick="closeModal('genericConfirmModal')"></div>
     <div class="modal-card modal-card-confirm">
         <header class="modal-card-head py-3">
-            <p class="modal-card-title is-size-6" id="confirmTitle">Confirmar Ação</p>
+            <p class="modal-card-title is-size-6" id="confirmTitle">{{ t('modal.confirm_title') }}</p>
             <button class="delete" aria-label="close" onclick="closeModal('genericConfirmModal')"></button>
         </header>
         <section class="modal-card-body py-4">
@@ -150,12 +149,12 @@
                 <span class="icon is-large has-text-warning mr-2">
                     <i class="bi bi-exclamation-triangle-fill is-size-3"></i>
                 </span>
-                <p id="confirmMessage" class="is-size-6">Deseja realmente prosseguir com esta ação?</p>
+                <p id="confirmMessage" class="is-size-6">{{ t('modal.confirm_msg') }}</p>
             </div>
         </section>
         <footer class="modal-card-foot is-justify-content-flex-end py-2">
-            <button class="button is-small is-light" onclick="closeModal('genericConfirmModal')">Cancelar</button>
-            <button class="button is-small is-primary" id="btnConfirmAction">Confirmar</button>
+            <button class="button is-small is-light" onclick="closeModal('genericConfirmModal')">{{ t('common.cancel') }}</button>
+            <button class="button is-small is-primary" id="btnConfirmAction">{{ t('modal.confirm_btn') }}</button>
         </footer>
     </div>
 </div>
@@ -165,7 +164,7 @@
     <div class="modal-background" onclick="closeModal('titledbJsonModal')"></div>
     <div class="modal-card" style="width: 800px; max-width: 95vw;">
         <header class="modal-card-head">
-            <p class="modal-card-title">TitleDB JSON Data</p>
+            <p class="modal-card-title">{{ t('modal.titledb_json_title') }}</p>
             <button class="delete" aria-label="close" onclick="closeModal('titledbJsonModal')"></button>
         </header>
         <section class="modal-card-body p-4">
@@ -176,7 +175,7 @@
             </div>
         </section>
         <footer class="modal-card-foot is-justify-content-flex-end py-2">
-            <button class="button is-small" onclick="closeModal('titledbJsonModal')">Fechar</button>
+            <button class="button is-small" onclick="closeModal('titledbJsonModal')">{{ t('common.close') }}</button>
         </footer>
     </div>
 </div>

@@ -114,7 +114,7 @@ function renderGenreChart(genreData) {
                         label: function (tooltipItem) {
                             const count = tooltipItem.raw;
                             const pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
-                            return `${tooltipItem.label}: ${count} ${t('common.files')} (${pct}%)`;
+                            return `${tooltipItem.label}: ${count} ${t('common.games')} (${pct}%)`;
                         }
                     }
                 }

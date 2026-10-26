@@ -1395,6 +1395,8 @@ def app_info_api(id):
                     "bannerUrl": wish_item.banner_url or "",
                     "owned": False,
                     "has_base": False,
+                    "owned_version": 0,
+                    "display_version": "0",
                     "files": [],
                     "updates": [],
                     "dlcs": [],
