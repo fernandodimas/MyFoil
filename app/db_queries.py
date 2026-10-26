@@ -534,8 +534,39 @@ def delete_file_by_filepath(filepath):
 
 
 def remove_missing_files_from_db():
-    from db import db, Files
+    from db import db, Files, Libraries
     try:
+        # Pre-check health of all libraries to prevent mass deletion when a drive is offline/unmounted
+        offline_env = os.environ.get("OFFLINE_LIBRARIES", "") or os.environ.get("DISABLED_LIBRARY_PATHS", "")
+        explicitly_offline = {p.strip().rstrip("/") for p in offline_env.split(",") if p.strip()}
+
+        libraries = Libraries.query.all()
+        healthy_lib_ids = set()
+
+        for lib in libraries:
+            lib_path = (lib.path or "").rstrip("/")
+            if not lib_path:
+                continue
+
+            if lib_path in explicitly_offline:
+                logger.info(f"Library '{lib_path}' marked as offline via environment. Skipping cleanup.")
+                continue
+
+            if not os.path.exists(lib_path):
+                logger.warning(f"Library path '{lib_path}' is offline/unmounted. Skipping missing files cleanup for this library.")
+                continue
+
+            try:
+                with os.scandir(lib_path) as it:
+                    has_any = any(True for _ in it)
+                    if not has_any:
+                        logger.warning(f"Library path '{lib_path}' appears empty/unmounted. Skipping missing files cleanup.")
+                        continue
+                healthy_lib_ids.add(lib.id)
+            except OSError as e:
+                logger.warning(f"Library path '{lib_path}' has I/O error ({e}). Skipping missing files cleanup for this library.")
+                continue
+
         files = Files.query.all()
         ids_to_delete = []
         for i, file_entry in enumerate(files):
@@ -545,7 +576,22 @@ def remove_missing_files_from_db():
                     gevent.sleep(0)
                 except Exception:
                     pass
-            if not os.path.exists(file_entry.filepath):
+
+            # NEVER delete files belonging to unmounted, offline, or broken libraries
+            if file_entry.library_id and file_entry.library_id not in healthy_lib_ids:
+                continue
+
+            # Check if parent library path is explicitly offline
+            if any(file_entry.filepath.startswith(off_path) for off_path in explicitly_offline):
+                continue
+
+            try:
+                exists = os.path.exists(file_entry.filepath)
+            except OSError as e:
+                logger.warning(f"I/O error checking file {file_entry.filepath}: {e}. Skipping deletion.")
+                continue
+
+            if not exists:
                 ids_to_delete.append(file_entry.id)
                 logger.info(f"File not found on disk, marking for deletion: {file_entry.filepath}")
 
@@ -564,3 +610,4 @@ def remove_missing_files_from_db():
     except Exception as e:
         db.session.rollback()
         logger.error(f"An error occurred while cleaning up missing files: {str(e)}")
+        return 0

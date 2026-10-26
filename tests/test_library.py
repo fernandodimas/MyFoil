@@ -62,6 +62,25 @@ class TestLibraryValidation:
         finally:
             os.unlink(temp_path)
 
+    def test_validate_library_path_offline_env(self):
+        """Test validate_library_path detects offline environment variable"""
+        from library.scan import validate_library_path
+        with patch.dict(os.environ, {"OFFLINE_LIBRARIES": "/externo,/mnt/backup"}):
+            reason = validate_library_path("/externo")
+            assert reason is not None
+            assert "marked as offline" in reason
+
+            reason2 = validate_library_path("/mnt/backup/")
+            assert reason2 is not None
+            assert "marked as offline" in reason2
+
+    def test_validate_library_path_nonexistent(self):
+        """Test validate_library_path detects nonexistent path"""
+        from library.scan import validate_library_path
+        reason = validate_library_path("/this_path_does_not_exist_at_all_123")
+        assert reason is not None
+        assert "Path does not exist" in reason
+
 
 class TestLibraryCache:
     """Tests for library caching functionality"""

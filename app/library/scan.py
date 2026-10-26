@@ -93,6 +93,11 @@ def init_libraries(app, watcher, paths):
 def validate_library_path(path):
     if not path or not path.strip():
         return "Path is empty"
+    normalized = path.rstrip("/")
+    offline_env = os.environ.get("OFFLINE_LIBRARIES", "") or os.environ.get("DISABLED_LIBRARY_PATHS", "")
+    explicitly_offline = {p.strip().rstrip("/") for p in offline_env.split(",") if p.strip()}
+    if normalized in explicitly_offline:
+        return f"Library '{path}' is marked as offline via OFFLINE_LIBRARIES environment variable"
     try:
         if not os.path.exists(path):
             return f"Path does not exist: {path}"
@@ -304,6 +309,18 @@ def scan_library_path(library_path, job_id=None):
     disk_files_set = set(files)
     deleted_files = [f for f in filepaths_in_library if f not in disk_files_set]
 
+    # Safety guard against mass accidental deletion due to failing disks or partial mount errors:
+    # If more than 50% of the library files in DB are missing (and at least 5 files exist), abort!
+    if len(filepaths_in_library) >= 5 and len(deleted_files) > (len(filepaths_in_library) * 0.5):
+        warn_msg = (
+            f"Mass deletion guard triggered for '{library_path}': {len(deleted_files)} of {len(filepaths_in_library)} "
+            f"files missing on disk. Disk may be corrupted, failing, or unmounted. Aborting scan without deleting files."
+        )
+        logger.warning(warn_msg)
+        log_activity("library_scan_aborted", details={"path": library_path, "warning": warn_msg})
+        job_tracker.fail_job(job_id, warn_msg)
+        return
+
     if deleted_files:
         if job_tracker.is_cancelled(job_id):
             logger.info(f"Job {job_id} was cancelled by user, stopping scan")
@@ -497,6 +514,11 @@ def identify_library_files(library):
 
     if not library_id:
         logger.warning(f"Skipping identification for library with no ID: {library_path}")
+        return
+
+    invalid_reason = validate_library_path(library_path)
+    if invalid_reason:
+        logger.info(f"Skipping identification for offline/inaccessible library {library_path}: {invalid_reason}")
         return
 
     files_to_identify, already_identified = get_files_to_identify(library_id)

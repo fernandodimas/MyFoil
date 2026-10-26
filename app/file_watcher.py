@@ -288,6 +288,13 @@ class Watcher:
 
     def add_directory(self, directory):
         if directory not in self.directories:
+            normalized = directory.rstrip("/")
+            offline_env = os.environ.get("OFFLINE_LIBRARIES", "") or os.environ.get("DISABLED_LIBRARY_PATHS", "")
+            explicitly_offline = {p.strip().rstrip("/") for p in offline_env.split(",") if p.strip()}
+            if normalized in explicitly_offline:
+                logger.info(f"Directory {directory} is marked as offline via OFFLINE_LIBRARIES, skipping watchdog.")
+                return False
+
             try:
                 if not os.path.exists(directory):
                     logger.warning(f"Directory {directory} does not exist, not added to watchdog.")
