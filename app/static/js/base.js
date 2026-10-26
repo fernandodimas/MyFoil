@@ -187,26 +187,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // WebSocket Global Listener
     if (typeof io !== 'undefined') {
-        window.socket = io({
-            transports: ['polling'],
-            upgrade: false,
-            reconnection: true,
-            reconnectionAttempts: 10,
-            reconnectionDelay: 2000,
-            timeout: 20000
-        });
+        if (!window.socket) {
+            window.socket = io({
+                transports: ['polling', 'websocket'],
+                upgrade: true,
+                reconnection: true,
+                reconnectionAttempts: 10,
+                reconnectionDelay: 2000,
+                timeout: 20000
+            });
+        }
 
-        socket.on('library_updated', (data) => {
+        window.socket.on('library_updated', (data) => {
             window.debugLog('WebSocket: Library update received', data);
             if (typeof refreshLibrary === 'function') {
                 refreshLibrary();
             }
         });
-    }
-
-    // WebSocket Global Listener
-    if (typeof io !== 'undefined') {
-        // ... (WebSocket init code remains here or inside DOMContentLoaded is fine, but debounce must be global)
     }
 
     // Service Worker Registration for PWA

@@ -349,3 +349,11 @@ def get_all_wishlist_ignore():
         }
 
     return success_response(data=result)
+
+
+# Aliases for REST API v1 compatibility
+get_wishlist_api = get_wishlist
+add_to_wishlist_api = add_to_wishlist
+update_wishlist_item_api = update_wishlist_item
+remove_from_wishlist_api = remove_from_wishlist
+export_wishlist_api = export_wishlist

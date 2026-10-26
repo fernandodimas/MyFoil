@@ -1744,6 +1744,37 @@ def get_tags():
     return success_response(data=[{"id": t.id, "name": t.name, "color": t.color, "icon": t.icon} for t in tags])
 
 
+get_tags_api = get_tags
+
+
+@library_bp.route("/tags", methods=["POST"])
+@access_required("admin")
+@handle_api_errors
+def create_tag_api():
+    """Criar nova tag"""
+    data = request.json or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return error_response(ErrorCode.INVALID_PARAMS, message="Tag name is required")
+    color = data.get("color", "#3273dc")
+    icon = data.get("icon")
+    tag = TagRepository.create(name=name, color=color, icon=icon)
+    return success_response(data={"id": tag.id, "name": tag.name, "color": tag.color, "icon": tag.icon})
+
+
+@library_bp.route("/tags/<int:tag_id>/titles", methods=["GET"])
+@access_required("shop")
+@handle_api_errors
+def get_titles_by_tag_api(tag_id):
+    """Get all titles associated with a specific tag"""
+    tag = TagRepository.get_by_id(tag_id)
+    if not tag:
+        return not_found_response("Tag not found")
+    tagged_titles = tag.titles.all() if hasattr(tag, "titles") else []
+    items = [_serialize_title_with_apps(t) for t in tagged_titles]
+    return success_response(data=items)
+
+
 @library_bp.route("/titles/<title_id>/tags")
 @access_required("shop")
 @handle_api_errors

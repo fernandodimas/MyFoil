@@ -173,6 +173,15 @@ def init_rest_api(app):
         },
     )
 
+    def _unwrap_api_data(resp):
+        res_obj = resp[0] if isinstance(resp, tuple) else resp
+        if hasattr(res_obj, "get_json"):
+            payload = res_obj.get_json()
+            if isinstance(payload, dict) and "data" in payload:
+                return payload["data"]
+            return payload
+        return resp
+
     # Namespace Library
     @ns_library.route("/games")
     class GameList(Resource):
@@ -193,7 +202,7 @@ def init_rest_api(app):
         @access_required("shop")
         def get(self, title_id):
             """Get game details with updates and DLCs"""
-            import app_info_api
+            from routes.library import app_info_api
 
             # Reuse existing logic that returns JSON
             return app_info_api(title_id)
@@ -204,7 +213,7 @@ def init_rest_api(app):
         @access_required("admin")
         def post(self):
             """Trigger a library scan (Async if Celery enabled)"""
-            import scan_library_api
+            from routes.system import scan_library_api
 
             return scan_library_api()
 
@@ -214,7 +223,7 @@ def init_rest_api(app):
         @access_required("shop")
         def get(self):
             """Get current scan and update status"""
-            import process_status_api
+            from routes.system import process_status_api
 
             return process_status_api()
 
@@ -225,7 +234,7 @@ def init_rest_api(app):
         @access_required("admin")
         def delete(self, file_id):
             """Delete a file from disk and database"""
-            import delete_file_api
+            from routes.system import delete_file_api
 
             return delete_file_api(file_id)
 
@@ -236,9 +245,12 @@ def init_rest_api(app):
         @ns_library.marshal_list_with(unidentified_file_model)
         def get(self):
             """List all unidentified files"""
-            import get_unidentified_files_api
+            from routes.system import get_unidentified_files_api
 
-            return get_unidentified_files_api().get_json()
+            data = _unwrap_api_data(get_unidentified_files_api())
+            if isinstance(data, dict) and "files" in data:
+                return data["files"]
+            return data if isinstance(data, list) else []
 
     # Namespace TitleDB
     @ns_titledb.route("/sources")
@@ -256,7 +268,7 @@ def init_rest_api(app):
         @access_required("admin")
         def post(self):
             """Add a new TitleDB source"""
-            import titledb_sources_api
+            from routes.settings import titledb_sources_api
 
             return titledb_sources_api()
 
@@ -267,7 +279,7 @@ def init_rest_api(app):
         @access_required("admin")
         def put(self, name):
             """Update an existing TitleDB source"""
-            import titledb_sources_api
+            from routes.settings import titledb_sources_api
 
             # Fake request body for direct call if needed or just use current request
             return titledb_sources_api()
@@ -276,7 +288,7 @@ def init_rest_api(app):
         @access_required("admin")
         def delete(self, name):
             """Remove a TitleDB source"""
-            import titledb_sources_api
+            from routes.settings import titledb_sources_api
 
             return titledb_sources_api()
 
@@ -286,7 +298,7 @@ def init_rest_api(app):
         @access_required("admin")
         def post(self):
             """Force TitleDB update in background"""
-            import force_titledb_update_api
+            from routes.system import force_titledb_update_api
 
             return force_titledb_update_api()
 
@@ -324,7 +336,7 @@ def init_rest_api(app):
             """Get user's wishlist"""
             from routes.wishlist import get_wishlist_api
 
-            return get_wishlist_api()
+            return _unwrap_api_data(get_wishlist_api())
 
         @ns_wishlist.doc("add_to_wishlist")
         @access_required("shop")
@@ -373,7 +385,7 @@ def init_rest_api(app):
             """Get all tags"""
             from routes.library import get_tags_api
 
-            return get_tags_api()
+            return _unwrap_api_data(get_tags_api())
 
         @ns_tags.doc("create_tag")
         @access_required("admin")
@@ -412,7 +424,8 @@ def init_rest_api(app):
             """Get all titles with a specific tag"""
             from routes.library import get_titles_by_tag_api
 
-            return get_titles_by_tag_api(tag_id)
+            data = _unwrap_api_data(get_titles_by_tag_api(tag_id))
+            return data if isinstance(data, list) else []
 
     # Namespace Webhooks
     @ns_webhooks.route("")
@@ -424,13 +437,13 @@ def init_rest_api(app):
             """Get all webhooks"""
             from routes.settings import get_webhooks_api
 
-            return get_webhooks_api()
+            return _unwrap_api_data(get_webhooks_api())
 
         @ns_webhooks.doc("create_webhook")
         @access_required("admin")
         def post(self):
             """Create a new webhook"""
-            from routes.settings import create_webhook_api
+            from routes.settings import add_webhook_api as create_webhook_api
 
             return create_webhook_api()
 

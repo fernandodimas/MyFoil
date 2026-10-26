@@ -2,7 +2,7 @@
 Web Routes - Rotas principais da aplicação web
 """
 
-from flask import Blueprint, render_template, request, redirect, jsonify, send_from_directory
+from flask import Blueprint, render_template, request, redirect, jsonify, send_from_directory, current_app
 from flask_login import login_required
 from auth import access_required, admin_account_created
 from middleware.auth import tinfoil_access
@@ -249,11 +249,14 @@ def run_renaming_api():
     }
 
     # Run in background to avoid timeout
-    def run_wrapper():
-        import app
+    app_instance = current_app._get_current_object()
 
-        with app.app_context():
-            start_renaming_job(patterns)
+    def run_wrapper():
+        with app_instance.app_context():
+            try:
+                start_renaming_job(patterns)
+            finally:
+                db.session.remove()
 
     import threading
 
