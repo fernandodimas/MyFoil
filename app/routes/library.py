@@ -296,18 +296,35 @@ def library_api():
 def _serialize_title_with_apps(title: Titles, ignore_map=None) -> dict:
     """
     Serialize a title with its apps for the paginated library endpoint.
-    Uses the library.get_game_info_item function for serialization.
+    Uses in-memory preloaded apps when available to eliminate N+1 DB roundtrips.
     """
-    from db import get_all_title_apps
+    from db import get_all_title_apps, to_dict
 
     title_id = title.title_id
 
-    # Get all title apps (owned and unowned)
-    try:
-        all_title_apps_dict = get_all_title_apps(title_id)
-    except Exception as e:
-        logger.warning(f"Error fetching apps for title {title_id}: {e}")
-        all_title_apps_dict = []
+    # If title.apps was already loaded (e.g. via selectinload), serialize directly in memory!
+    if hasattr(title, "apps") and title.apps is not None:
+        try:
+            tags = [t.name for t in title.tags] if hasattr(title, "tags") and title.tags else []
+            all_title_apps_dict = []
+            for a in title.apps:
+                a_dict = to_dict(a)
+                a_dict["files_info"] = [
+                    {"path": f.filepath, "size": f.size, "id": f.id, "identified": f.identified}
+                    for f in (a.files or [])
+                ]
+                a_dict["tags"] = tags
+                all_title_apps_dict.append(a_dict)
+        except Exception as e:
+            logger.warning(f"Error reading in-memory apps for title {title_id}: {e}")
+            all_title_apps_dict = []
+    else:
+        # Fallback to DB query if not loaded
+        try:
+            all_title_apps_dict = get_all_title_apps(title_id)
+        except Exception as e:
+            logger.warning(f"Error fetching apps for title {title_id}: {e}")
+            all_title_apps_dict = []
 
     # Build title_data structure expected by library.get_game_info_item
     title_data = {
@@ -457,16 +474,10 @@ def library_paged_api():
     # because the DB-level counters may be stale or conservative. We'll fetch a large
     # page of titles to process in memory and then paginate the filtered results.
     if dlc_filter or redundant_filter:
-        # Fetch a large set (reasonable upper bound) to filter in memory
-        # Reduced from 5000 to 1000 to prevent OOM
-        FETCH_LIMIT = 1000
+        # Fetch a reasonable candidate set to filter in memory
+        FETCH_LIMIT = min(per_page * 4, 250)
         # Narrow initial DB result using materialized counters where possible
         filter_args = {}
-        # For DLC and Redundant filters, we rely on the RUNTIME check (Python loop below)
-        # because the DB status flags (complete, redundant_updates_count) might be stale
-        # or computed with slightly different logic (e.g. ignoring 'ignores').
-        # However, checking for DLC/Redundant implies looking at OWNED games.
-        # So we restrict the DB fetch to owned items to optimize performance.
         filter_args["owned_only"] = True
         
         paginated_all = TitlesRepository.get_paged(
@@ -478,7 +489,6 @@ def library_paged_api():
         # Preload ignore preferences for performance and correctness when filtering
         ignores_by_user = {}
         try:
-            # Use flattened cached helper to get normalized ignore prefs
             flat = WishlistIgnoreRepository.get_flattened_ignores_for_user(current_user.id)
             for tid, sets in flat.items():
                 ignores_by_user[tid] = {
@@ -488,22 +498,20 @@ def library_paged_api():
         except Exception:
             ignores_by_user = {}
 
-        for title in all_titles:
+        for idx, title in enumerate(all_titles):
+            if idx % 15 == 0:
+                import time
+                time.sleep(0.001)
+
             try:
-                # Pass per-title ignore preferences into serializer so it can compute
-                # 'has_non_ignored' flags consistently server-side.
                 item = _serialize_title_with_apps(title, ignore_map=ignores_by_user)
                 if not item:
                     continue
 
-                # Apply requested post-serialization filters
-                # Apply requested post-serialization filters
                 if dlc_filter:
-                    # Wants games that have base but missing DLCs (respecting ignores)
                     if not (item.get("has_base") and item.get("has_non_ignored_dlcs")):
                         continue
                 if redundant_filter:
-                    # Wants games with redundant updates (respecting ignores)
                     if not item.get("has_non_ignored_redundant"):
                         continue
 
@@ -659,7 +667,7 @@ def library_search_paged_api():
 
     # If dlc or redundant filters are requested, do post-serialization filtering with per-user ignore prefs
     if dlc or redundant:
-        FETCH_LIMIT = 500
+        FETCH_LIMIT = min(per_page * 4, 250)
         try:
             paginated_all = TitlesRepository.get_paged(
                 page=1, per_page=FETCH_LIMIT, query_text=query_text, filters=filters, sort_by=sort_by, order=order
@@ -669,7 +677,7 @@ def library_search_paged_api():
             logger.error(f"DLC/redundant filter query failed, attempting rollback: {e}")
             db.session.rollback()
             paginated_all = TitlesRepository.get_paged(
-                page=1, per_page=min(FETCH_LIMIT, 100), query_text=query_text, filters=filters, sort_by=sort_by, order=order
+                page=1, per_page=min(FETCH_LIMIT, 50), query_text=query_text, filters=filters, sort_by=sort_by, order=order
             )
             all_titles = paginated_all.items
 
@@ -686,7 +694,11 @@ def library_search_paged_api():
             ignores_by_user = {}
 
         items_all = []
-        for title in all_titles:
+        for idx, title in enumerate(all_titles):
+            if idx % 15 == 0:
+                import time
+                time.sleep(0.001)
+
             try:
                 item = _serialize_title_with_apps(title, ignore_map=ignores_by_user)
                 if not item:
@@ -728,7 +740,7 @@ def library_search_paged_api():
     # For pending filter, we need to fetch all have_base titles and filter post-serialization
     # because Titles.up_to_date in the DB can be stale
     if pending:
-        FETCH_LIMIT = 500
+        FETCH_LIMIT = min(per_page * 4, 250)
         try:
             paginated = TitlesRepository.get_paged(
                 page=1, per_page=FETCH_LIMIT, query_text=query_text, filters=filters, sort_by=sort_by, order=order
@@ -739,7 +751,7 @@ def library_search_paged_api():
             db.session.rollback()
             # Retry with smaller batch
             paginated = TitlesRepository.get_paged(
-                page=1, per_page=min(FETCH_LIMIT, 100), query_text=query_text, filters=filters, sort_by=sort_by, order=order
+                page=1, per_page=min(FETCH_LIMIT, 50), query_text=query_text, filters=filters, sort_by=sort_by, order=order
             )
             all_titles = paginated.items
 
@@ -756,7 +768,11 @@ def library_search_paged_api():
             ignores_by_user = {}
 
         items_all = []
-        for title in all_titles:
+        for idx, title in enumerate(all_titles):
+            if idx % 15 == 0:
+                import time
+                time.sleep(0.001)
+
             try:
                 item = _serialize_title_with_apps(title, ignore_map=ignores_by_user)
                 if not item:

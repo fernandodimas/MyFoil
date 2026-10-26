@@ -39,14 +39,20 @@ class TitlesRepository:
         return Titles.query.options(joinedload(Titles.apps)).all()
 
     @staticmethod
-    def get_paged(page, per_page, sort_by="name", order="asc", query_text=None, filters=None):
+    def get_paged(page, per_page, sort_by="name", order="asc", query_text=None, filters=None, load_apps=True):
         """
-        Database-level pagination for titles
+        Database-level pagination for titles with batch loading of apps/files to prevent N+1 query storms.
         """
-        # Avoid eager-loading Apps by default for the paged list — loading apps for
-        # every title can be expensive. Only load apps when callers explicitly
-        # need them (use get_all_with_apps()).
+        from sqlalchemy.orm import selectinload
+        from models.apps import Apps
+
         query = Titles.query.filter(Titles.title_id.isnot(None))
+
+        if load_apps:
+            query = query.options(
+                selectinload(Titles.apps).selectinload(Apps.files),
+                selectinload(Titles.tags),
+            )
 
         if query_text:
             query = query.filter(
