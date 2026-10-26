@@ -5,7 +5,7 @@ Phase 3.1: Database refactoring - Separate queries from models
 
 import time
 import logging
-from sqlalchemy import or_, func, select
+from sqlalchemy import or_, func, select, cast
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError
 from db import db
@@ -75,13 +75,42 @@ class TitlesRepository:
                 query = query.filter(or_(Titles.have_base == False, Titles.have_base.is_(None)))
 
             if filters.get("genre") and filters.get("genre") != "Todos os Gêneros":
-                # Assuming JSON list stored as text, simple contains check
-                g = filters.get("genre")
-                query = query.filter(Titles.genres_json.astext.ilike(f"%{g}%"))
+                g = str(filters.get("genre")).strip()
+                from models.titlemetadata import TitleMetadata
+
+                meta_genre_subq = (
+                    select(TitleMetadata.title_id)
+                    .where(cast(TitleMetadata.genres, db.String).ilike(f'%"{g}"%'))
+                )
+                query = query.filter(
+                    or_(
+                        cast(Titles.genres_json, db.String).ilike(f'%"{g}"%'),
+                        Titles.category.ilike(g),
+                        Titles.category.ilike(f"{g},%"),
+                        Titles.category.ilike(f"%,{g}"),
+                        Titles.category.ilike(f"%, {g}"),
+                        Titles.category.ilike(f"%,{g},%"),
+                        Titles.category.ilike(f"%, {g},%"),
+                        Titles.title_id.in_(meta_genre_subq),
+                    )
+                )
 
             if filters.get("tag"):
-                t = filters.get("tag")
-                query = query.filter(Titles.tags_json.astext.ilike(f"%{t}%"))
+                t = str(filters.get("tag")).strip()
+                from models.tag import Tag
+                from models.titlemetadata import TitleMetadata
+
+                meta_tag_subq = (
+                    select(TitleMetadata.title_id)
+                    .where(cast(TitleMetadata.tags, db.String).ilike(f'%"{t}"%'))
+                )
+                query = query.filter(
+                    or_(
+                        cast(Titles.tags_json, db.String).ilike(f'%"{t}"%'),
+                        Titles.tags.any(Tag.name.ilike(t)),
+                        Titles.title_id.in_(meta_tag_subq),
+                    )
+                )
 
             if filters.get("dlc"):
                 # DLC filter: Owned games that have missing DLCs.
@@ -244,6 +273,65 @@ class TitlesRepository:
                 for g in t.genres_json:
                     genre_dist[g] = genre_dist.get(g, 0) + 1
         return sorted(genre_dist.items(), key=lambda x: x[1], reverse=True)
+
+    @staticmethod
+    def get_all_genres_and_tags():
+        """Get all distinct genres and tags across the entire library"""
+        genres_set = set()
+        tags_set = set()
+
+        try:
+            rows = (
+                Titles.query.with_entities(Titles.category, Titles.genres_json, Titles.tags_json)
+                .filter(Titles.title_id.isnot(None))
+                .all()
+            )
+            for cat, g_json, t_json in rows:
+                if cat:
+                    for item in str(cat).split(","):
+                        val = item.strip()
+                        if val:
+                            genres_set.add(val)
+                if g_json and isinstance(g_json, list):
+                    for item in g_json:
+                        if item and isinstance(item, str):
+                            genres_set.add(item.strip())
+                if t_json and isinstance(t_json, list):
+                    for item in t_json:
+                        if item and isinstance(item, str):
+                            tags_set.add(item.strip())
+        except Exception:
+            db.session.rollback()
+
+        try:
+            from models.titlemetadata import TitleMetadata
+
+            meta_rows = TitleMetadata.query.with_entities(TitleMetadata.genres, TitleMetadata.tags).all()
+            for m_genres, m_tags in meta_rows:
+                if m_genres and isinstance(m_genres, list):
+                    for item in m_genres:
+                        if item and isinstance(item, str):
+                            genres_set.add(item.strip())
+                if m_tags and isinstance(m_tags, list):
+                    for item in m_tags:
+                        if item and isinstance(item, str):
+                            tags_set.add(item.strip())
+        except Exception:
+            db.session.rollback()
+
+        try:
+            from models.tag import Tag
+
+            for tag_obj in Tag.query.all():
+                if tag_obj.name:
+                    tags_set.add(tag_obj.name.strip())
+        except Exception:
+            db.session.rollback()
+
+        return {
+            "genres": sorted(genres_set),
+            "tags": sorted(tags_set),
+        }
 
     @staticmethod
     def create(**kwargs):

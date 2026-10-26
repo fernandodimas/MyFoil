@@ -19,6 +19,8 @@ let scrollOffset = 0;  // Track which filtered items have been rendered
 let hasMoreItems = true;  // Track if there are more items to render
 let isServerSideFiltered = false; // Track if current games list is a filtered subset
 let lastServerSort = currentSort; // Track the sort used for the last server request
+let globalFiltersLoaded = false; // Track if full genre/tag options were loaded from server
+let scrollObserver = null; // IntersectionObserver instance for infinite scroll
 const PER_PAGE = 75;  // Items per page (optimized for performance - 75 is sweet spot)
 const SCROLL_BATCH_SIZE = 30;  // Render 30 items at a time for smoothness
 
@@ -139,12 +141,14 @@ function loadLibraryPaginated(page = 1, append = false) {
             games = newGames;
         }
 
-        // Initialize filter dropdowns (genres/tags) based on loaded games
-        try {
-            initGenders(games);
-            initTags(games);
-        } catch (e) {
-            console.warn('Failed to init genders/tags from loaded games', e);
+        // Initialize filter dropdowns (genres/tags) from loaded games only as fallback
+        if (!globalFiltersLoaded) {
+            try {
+                initGenders(games);
+                initTags(games);
+            } catch (e) {
+                console.warn('Failed to init genders/tags from loaded games', e);
+            }
         }
 
         // Update total count from server
@@ -170,13 +174,13 @@ function loadLibraryPaginated(page = 1, append = false) {
         // Sync lastServerSort BEFORE applying filters to avoid infinite reload loop
         lastServerSort = currentSort;
 
-        // Apply filters after data is loaded
-        applyFilters();
-
-        // Hide loading indicators
+        // Hide loading indicators before rendering
         $('#loadingIndicator').addClass('is-hidden');
         $('#paginationLoader').addClass('is-hidden');
         isLoadingMore = false;
+
+        // Apply filters after data is loaded (preserve existing scroll when appending)
+        applyFilters(append);
 
         if (!append) {
             const loadedPercent = totalItems > 0
@@ -272,6 +276,31 @@ const _debounce = (func, wait) => {
         timeout = setTimeout(() => func.apply(this, args), wait);
     };
 };
+
+function loadFilterOptions() {
+    return $.getJSON('/api/library/filters', (res) => {
+        const data = (res && res.data) ? res.data : res;
+        if (!data) return;
+
+        if (Array.isArray(data.genres) && data.genres.length > 0) {
+            const currentGender = $('#filterGender').val();
+            const genderSelect = $('#filterGender').empty().append(`<option value="">${t('dashboard.all_genres')}</option>`);
+            data.genres.forEach(g => genderSelect.append(new Option(g, g)));
+            if (currentGender) $('#filterGender').val(currentGender);
+        }
+
+        if (Array.isArray(data.tags) && data.tags.length > 0) {
+            const currentTag = $('#filterTag').val();
+            const tagSelect = $('#filterTag').empty().append(`<option value="">${t('dashboard.all_tags')}</option>`);
+            data.tags.forEach(tag => tagSelect.append(new Option(tag, tag)));
+            if (currentTag) $('#filterTag').val(currentTag);
+        }
+
+        globalFiltersLoaded = (Array.isArray(data.genres) && data.genres.length > 0) || (Array.isArray(data.tags) && data.tags.length > 0);
+    }).fail(() => {
+        debugWarn('Failed to load global filter options, falling back to page-level init');
+    });
+}
 
 function initGenders(gamesList) {
     const genders = new Set();
@@ -481,32 +510,42 @@ function renderIconView(items) {
 }
 
 function renderListView(items) {
-    const table = $(`
-        <div class="column is-12" style="width: 100%;">
-            <div class="table-container box is-paddingless shadow-sm overflow-hidden border-none">
-                <table class="table is-fullwidth is-hoverable game-list-table mb-0">
-                    <thead>
-                        <tr class="has-background-light-soft" style="border-bottom: 2px solid var(--primary)">
-                            <th width="65" class="has-text-centered p-1">${t('dashboard.table_icon')}</th>
-                            <th>${t('dashboard.table_title')}</th>
-                            <th width="140">${t('dashboard.table_tid')}</th>
-                            <th width="80" class="has-text-centered">${t('dashboard.table_version')}</th>
-                            <th class="is-hidden-mobile" width="80">${t('dashboard.table_ratings')}</th>
-                            <th class="is-hidden-mobile" width="100">${t('dashboard.table_size')}</th>
-                            <th class="is-hidden-mobile" width="100">${t('dashboard.table_status')}</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+    let tbody = $('#libraryContainer table.game-list-table tbody');
+    let isNewTable = false;
+
+    if (tbody.length === 0) {
+        isNewTable = true;
+        const table = $(`
+            <div class="column is-12" style="width: 100%;">
+                <div class="table-container box is-paddingless shadow-sm overflow-hidden border-none">
+                    <table class="table is-fullwidth is-hoverable game-list-table mb-0">
+                        <thead>
+                            <tr class="has-background-light-soft" style="border-bottom: 2px solid var(--primary)">
+                                <th width="65" class="has-text-centered p-1">${t('dashboard.table_icon')}</th>
+                                <th>${t('dashboard.table_title')}</th>
+                                <th width="140">${t('dashboard.table_tid')}</th>
+                                <th width="80" class="has-text-centered">${t('dashboard.table_version')}</th>
+                                <th class="is-hidden-mobile" width="80">${t('dashboard.table_ratings')}</th>
+                                <th class="is-hidden-mobile" width="100">${t('dashboard.table_size')}</th>
+                                <th class="is-hidden-mobile" width="100">${t('dashboard.table_status')}</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
-        </div>
-    `);
+        `);
+        $('#libraryContainer').append(table);
+        tbody = table.find('tbody');
+    }
+
+    const startOffset = tbody.find('tr').length;
     items.forEach((game, index) => {
         const statusColor = game.status_color === 'orange' ? 'has-text-warning' : (game.status_color === 'green' ? 'has-text-success' : 'has-text-grey');
         const statusText = game.status_color === 'orange' ? t('dashboard.status_missing') : (game.status_color === 'green' ? t('dashboard.status_owned') : t('dashboard.status_incomplete'));
 
-        table.find('tbody').append(`
-            <tr data-index="${index}" data-game-id="${game.id}" tabindex="0" role="button" onclick="focusAndOpenGame('${game.id}')">
+        tbody.append(`
+            <tr data-index="${startOffset + index}" data-game-id="${game.id}" tabindex="0" role="button" onclick="focusAndOpenGame('${game.id}')">
                 <td class="p-1 has-text-centered"><img src="${game.iconUrl || '/static/img/no-icon.png'}" style="width: 32px; height: 32px; border-radius: 4px; object-fit: cover;"></td>
                  <td class="is-vcentered">
                     <strong class="is-size-7-mobile">${game.name || 'Unknown'}</strong>
@@ -522,10 +561,9 @@ function renderListView(items) {
             </tr>
         `);
     });
-    $('#libraryContainer').append(table);
 }
 
-function applyFilters() {
+function applyFilters(append = false) {
     const query = ($('#navbarSearch').val() || '').trim();
     const gender = $('#filterGender').val();
     const tag = $('#filterTag').val();
@@ -535,14 +573,15 @@ function applyFilters() {
     const showOnlyDlcs = $('#btnFilterPendingDlc').hasClass('is-primary');
     const showOnlyRedundant = $('#btnFilterRedundant').hasClass('is-primary');
 
-    // Mark for full re-render
-    isNewRender = true;
+    if (!append) {
+        // Mark for full re-render
+        isNewRender = true;
+    }
 
     const hasActiveFilters = !!(query || gender || tag || showOnlyBase || showOnlyUpdates || showOnlyDlcs || showOnlyRedundant);
     $('#clearFiltersBtn').toggleClass('has-active', !!hasActiveFilters);
 
     // If the user has active filters or a search query, use the server-side SEARCH (full results)
-    // The paged endpoint doesn't support negative filters like 'pending', so use /api/library/search
     if (hasActiveFilters) {
         searchLibraryServer(1, false);
         return;
@@ -619,8 +658,6 @@ function applyFilters() {
         }
         g.has_non_ignored_redundant = hasNonIgnoredRedundant;
 
-
-
         // Determine status color for UI
         if (!g.has_base) {
             g.status_color = 'orange';
@@ -636,36 +673,37 @@ function applyFilters() {
 
     window.filteredGames = games.slice();
 
-    window.filteredGames.sort((a, b) => {
-        const [field, order] = currentSort.split('-');
-        let comparison = 0;
+    if (!append) {
+        window.filteredGames.sort((a, b) => {
+            const [field, order] = currentSort.split('-');
+            let comparison = 0;
 
-        if (field === 'name') {
-            comparison = (a.name || '').localeCompare(b.name || '');
-        } else if (field === 'release') {
-            const dateA = String(a.release_date || a.latest_release_date || '0000-00-00');
-            const dateB = String(b.release_date || b.latest_release_date || '0000-00-00');
-            comparison = dateA.localeCompare(dateB);
-        } else if (field === 'added') {
-            const timeA = a.added_at ? new Date(a.added_at).getTime() : 0;
-            const timeB = b.added_at ? new Date(b.added_at).getTime() : 0;
-            const dateA = isNaN(timeA) ? 0 : timeA;
-            const dateB = isNaN(timeB) ? 0 : timeB;
-            comparison = dateA - dateB;
-        } else if (field === 'id') {
-            comparison = (a.id || '').localeCompare(b.id || '');
-        } else if (field === 'status') {
-            comparison = (a.status_score || 0) - (b.status_score || 0);
-        } else if (field === 'size') {
-            comparison = (a.size || 0) - (b.size || 0);
-        }
+            if (field === 'name') {
+                comparison = (a.name || '').localeCompare(b.name || '');
+            } else if (field === 'release') {
+                const dateA = String(a.release_date || a.latest_release_date || '0000-00-00');
+                const dateB = String(b.release_date || b.latest_release_date || '0000-00-00');
+                comparison = dateA.localeCompare(dateB);
+            } else if (field === 'added') {
+                const timeA = a.added_at ? new Date(a.added_at).getTime() : 0;
+                const timeB = b.added_at ? new Date(b.added_at).getTime() : 0;
+                const dateA = isNaN(timeA) ? 0 : timeA;
+                const dateB = isNaN(timeB) ? 0 : timeB;
+                comparison = dateA - dateB;
+            } else if (field === 'id') {
+                comparison = (a.id || '').localeCompare(b.id || '');
+            } else if (field === 'status') {
+                comparison = (a.status_score || 0) - (b.status_score || 0);
+            } else if (field === 'size') {
+                comparison = (a.size || 0) - (b.size || 0);
+            }
 
-        return order === 'asc' ? comparison : -comparison;
-    });
+            return order === 'asc' ? comparison : -comparison;
+        });
+    }
 
     // Update item count - show filtered count vs total loaded
     const loadedCount = totalItems || games.length;
-    const filteredCount = window.filteredGames.length;
     const countText = `${loadedCount}`;
     $('#totalItemsCount, #totalItemsCountMobile').text(`${countText} ${t('dashboard.games_count')}`);
 
@@ -678,7 +716,14 @@ function applyFilters() {
         $('#libraryContainer').removeClass('is-hidden');
     }
 
-    renderLibrary();
+    if (append) {
+        renderMoreFilteredItems();
+        const renderedCount = getRenderedItemsCount();
+        hasMoreItems = window.filteredGames.length > renderedCount || !allGamesLoaded;
+        $('#scrollSentinel').toggle(hasMoreItems);
+    } else {
+        renderLibrary();
+    }
 }
 
 function clearFilters() {
@@ -701,6 +746,18 @@ function clearSearch() {
 
 // Server-side search helper to query the entire library (paged) when filters/search are active
 function searchLibraryServer(page = 1, append = false) {
+    if (isLoadingMore && append) {
+        return;
+    }
+
+    if (page === 1 && !append) {
+        allGamesLoaded = false;
+        currentPage = 1;
+        scrollOffset = 0;
+    }
+
+    isLoadingMore = true;
+
     const query = ($('#navbarSearch').val() || '').trim();
     const genre = $('#filterGender').val();
     const tag = $('#filterTag').val();
@@ -730,10 +787,6 @@ function searchLibraryServer(page = 1, append = false) {
     if (showOnlyBase) url += `&missing=true`;
     // showOnlyUpdates -> pending (owned && not up_to_date)
     if (showOnlyUpdates) url += `&pending=true`;
-    // owned_only mapping: if user explicitly selects owned-only behavior, send owned=true
-    if (!showOnlyBase && !showOnlyUpdates && showOnlyDlcs === false) {
-        // no-op; keep default
-    }
 
     if (showOnlyDlcs) url += `&dlc=true`;
     if (showOnlyRedundant) url += `&redundant=true`;
@@ -751,6 +804,7 @@ function searchLibraryServer(page = 1, append = false) {
         const items = (payload && payload.items && Array.isArray(payload.items)) ? payload.items : (payload.items || []);
 
         isServerSideFiltered = true;
+        lastServerSort = currentSort;
 
         if (append) {
             games = [...games, ...items];
@@ -761,7 +815,7 @@ function searchLibraryServer(page = 1, append = false) {
         // Update pagination / total
         const pagination = payload && payload.pagination ? payload.pagination : (res && res.pagination ? res.pagination : null);
         if (pagination) {
-            totalItems = pagination.total_items || pagination.total || games.length;
+            totalItems = pagination.total_items !== undefined ? pagination.total_items : (pagination.total !== undefined ? pagination.total : games.length);
             allGamesLoaded = pagination.has_next !== undefined ? !pagination.has_next : !pagination.has_more;
             currentPage = pagination.page || page;
         } else {
@@ -771,39 +825,57 @@ function searchLibraryServer(page = 1, append = false) {
 
         // For status/dlc/update tags we still need to compute client-side using ignorePreferences
         games.forEach(g => {
-            const gameIgnore = ignorePreferences[g.id] || {};
+            if (!g) return;
+            const titleId = (g.id || '').toUpperCase();
+            const gameIgnore = ignorePreferences[titleId] || ignorePreferences[g.id] || {};
             const ignoredDlcs = gameIgnore.dlcs || {};
             const ignoredUpdates = gameIgnore.updates || {};
 
             let hasNonIgnoredUpdates = false;
-            if (g.has_base && g.updates && Array.isArray(g.updates)) {
-                const ownedVersion = parseInt(g.owned_version) || 0;
-                hasNonIgnoredUpdates = g.updates.some(u => {
-                    const v = parseInt(u.version);
-                    return v > ownedVersion && !u.owned && !ignoredUpdates[v.toString()];
-                });
+            if (g.has_base && !g.has_latest_version) {
+                if (g.updates && Array.isArray(g.updates)) {
+                    const ownedVersion = parseInt(g.owned_version) || 0;
+                    hasNonIgnoredUpdates = g.updates.some(u => {
+                        const v = parseInt(u.version);
+                        return v > ownedVersion && !u.owned && !ignoredUpdates[v.toString()];
+                    });
+                } else {
+                    hasNonIgnoredUpdates = !!g.has_non_ignored_updates;
+                }
             }
             g.has_non_ignored_updates = hasNonIgnoredUpdates;
 
             let hasNonIgnoredDlcs = false;
-            if (g.has_base && g.dlcs && Array.isArray(g.dlcs)) {
-                hasNonIgnoredDlcs = g.dlcs.some(dlc => {
-                    const appIdKey = typeof dlc.app_id === 'string' ? dlc.app_id : (dlc.appId || '');
-                    const isIgnored = appIdKey ? (ignoredDlcs[appIdKey.toUpperCase()] || ignoredDlcs[appIdKey.toLowerCase()]) : false;
-                    const isNotOwned = !dlc.owned;
-                    return isNotOwned && !isIgnored;
-                });
+            if (g.has_base) {
+                if (g.dlcs && Array.isArray(g.dlcs)) {
+                    hasNonIgnoredDlcs = g.dlcs.some(dlc => {
+                        const appIdKey = typeof dlc.app_id === 'string' ? dlc.app_id : (dlc.appId || '');
+                        const isIgnored = appIdKey ? (
+                            ignoredDlcs[appIdKey] ||
+                            ignoredDlcs[appIdKey.toUpperCase()] ||
+                            ignoredDlcs[appIdKey.toLowerCase()]
+                        ) : false;
+                        const isNotOwned = !dlc.owned;
+                        return isNotOwned && !isIgnored;
+                    });
+                } else {
+                    hasNonIgnoredDlcs = !!g.has_non_ignored_dlcs;
+                }
             }
             g.has_non_ignored_dlcs = hasNonIgnoredDlcs;
 
             let hasNonIgnoredRedundant = false;
-            if (g.has_redundant_updates && g.updates && Array.isArray(g.updates)) {
-                const ownedUpdates = g.updates.filter(u => u.owned).sort((a, b) => (parseInt(b.version) || 0) - (parseInt(a.version) || 0));
-                if (ownedUpdates.length > 1) {
-                    hasNonIgnoredRedundant = ownedUpdates.slice(1).some(u => {
-                        const v = (u.version || 0).toString();
-                        return !ignoredUpdates[v];
-                    });
+            if (g.has_redundant_updates) {
+                if (g.updates && Array.isArray(g.updates)) {
+                    const ownedUpdates = g.updates.filter(u => u.owned).sort((a, b) => (parseInt(b.version) || 0) - (parseInt(a.version) || 0));
+                    if (ownedUpdates.length > 1) {
+                        hasNonIgnoredRedundant = ownedUpdates.slice(1).some(u => {
+                            const v = (u.version || 0).toString();
+                            return !ignoredUpdates[v];
+                        });
+                    }
+                } else {
+                    hasNonIgnoredRedundant = !!g.has_non_ignored_redundant;
                 }
             }
             g.has_non_ignored_redundant = hasNonIgnoredRedundant;
@@ -832,45 +904,85 @@ function searchLibraryServer(page = 1, append = false) {
         // Update UI counts
         $('#totalItemsCount, #totalItemsCountMobile').text(`${totalItems} ${t('dashboard.games_count')}`);
 
-        // Render results
-        resetInfiniteScroll();
+        // Show/hide empty state
+        if (window.filteredGames.length === 0) {
+            $('#noResults').removeClass('is-hidden');
+            $('#libraryContainer').addClass('is-hidden');
+        } else {
+            $('#noResults').addClass('is-hidden');
+            $('#libraryContainer').removeClass('is-hidden');
+        }
 
         $('#loadingIndicator').addClass('is-hidden');
         $('#paginationLoader').addClass('is-hidden');
+        isLoadingMore = false;
+
+        // Render results
+        if (append) {
+            renderMoreFilteredItems();
+            const renderedCount = getRenderedItemsCount();
+            hasMoreItems = window.filteredGames.length > renderedCount || !allGamesLoaded;
+            $('#scrollSentinel').toggle(hasMoreItems);
+        } else {
+            resetInfiniteScroll();
+        }
     }).fail((jqXHR, textStatus, err) => {
         console.error('Server search failed:', textStatus, err, jqXHR.responseText);
         $('#loadingIndicator').addClass('is-hidden');
         $('#paginationLoader').addClass('is-hidden');
+        isLoadingMore = false;
         showToast(t('dashboard.search_error') || 'Erro na busca. Tente novamente.', 'danger');
     });
 }
 
 // ========== INFINITE SCROLL ==========
 
+function getRenderedItemsCount() {
+    if (currentView === 'list') {
+        return document.querySelectorAll('#libraryContainer tbody tr').length;
+    }
+    return document.querySelectorAll('#libraryContainer .grid-item').length;
+}
+
 function setupInfiniteScroll() {
+    if (scrollObserver) {
+        scrollObserver.disconnect();
+        scrollObserver = null;
+    }
+
     const sentinel = document.getElementById('scrollSentinel');
     if (!sentinel) return;
 
-    const observer = new IntersectionObserver((entries) => {
+    scrollObserver = new IntersectionObserver((entries) => {
         const entry = entries[0];
-        // Load more when user scrolls near bottom
-        // Load from server if we haven't loaded everything yet
-        if (entry.isIntersecting && !allGamesLoaded && !isLoadingMore) {
-            loadLibraryPaginated(currentPage + 1, true);
+        if (!entry.isIntersecting) return;
+
+        // First render more of the already loaded but unrendered filtered items
+        const renderedBefore = getRenderedItemsCount();
+        if (renderedBefore < window.filteredGames.length) {
+            renderMoreFilteredItems();
         }
-        // Also render more of the already loaded but filtered items
-        renderMoreFilteredItems();
+
+        // Load next page from server if we've rendered all loaded items and more exist on server
+        const renderedAfter = getRenderedItemsCount();
+        if (renderedAfter >= window.filteredGames.length && !allGamesLoaded && !isLoadingMore) {
+            if (isServerSideFiltered) {
+                searchLibraryServer(currentPage + 1, true);
+            } else {
+                loadLibraryPaginated(currentPage + 1, true);
+            }
+        }
     }, {
         rootMargin: '200px'
     });
 
-    observer.observe(sentinel);
+    scrollObserver.observe(sentinel);
 }
 
 function renderMoreFilteredItems() {
     // Get next batch of filtered games that haven't been rendered yet
     const filtered = window.filteredGames;
-    const renderedCount = document.querySelectorAll('.grid-item').length;
+    const renderedCount = getRenderedItemsCount();
 
     // Skip if we've already rendered all filtered games
     if (renderedCount >= filtered.length) {
@@ -899,6 +1011,9 @@ function renderMoreFilteredItems() {
     setupKeyboardNavigation();
     observeImages();
 
+    hasMoreItems = filtered.length > endIdx || !allGamesLoaded;
+    $('#scrollSentinel').toggle(hasMoreItems);
+
     // Hide loader after a brief delay
     setTimeout(() => {
         $('#paginationLoader').addClass('is-hidden');
@@ -924,8 +1039,8 @@ function loadMoreItems() {
     observeImages();
     $('#loadingIndicator').addClass('is-hidden');
 
-    // Show sentinel for lazy loading if there are more items
-    hasMoreItems = filtered.length > firstBatch.length;
+    // Show sentinel for lazy loading if there are more items in memory or on server
+    hasMoreItems = filtered.length > firstBatch.length || !allGamesLoaded;
     $('#scrollSentinel').toggle(hasMoreItems);
 }
 
@@ -937,6 +1052,7 @@ function resetInfiniteScroll() {
     $('#scrollSentinel').remove();
     $('#libraryContainer').after('<div id="scrollSentinel" style="height: 20px; width: 100%;"></div>');
     loadMoreItems();
+    setupInfiniteScroll();
 }
 
 // ========== KEYBOARD NAVIGATION ==========
@@ -1114,6 +1230,7 @@ $(document).ready(() => {
     });
 
     // Initial Load
+    loadFilterOptions();
     loadAllIgnorePreferences().then(() => {
         refreshLibrary();
     });

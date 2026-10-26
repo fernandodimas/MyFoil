@@ -329,6 +329,10 @@ def _serialize_title_with_apps(title: Titles, ignore_map=None) -> dict:
         "rating_count": title.rating_count,
         "playtime_main": title.playtime_main,
         "added_at": title.added_at,
+        "genres_json": title.genres_json,
+        "tags_json": title.tags_json,
+        "screenshots_json": title.screenshots_json,
+        "tags": [t.name for t in title.tags] if title.tags else [],
         "apps": all_title_apps_dict,
     }
 
@@ -336,6 +340,43 @@ def _serialize_title_with_apps(title: Titles, ignore_map=None) -> dict:
     game_info = library.get_game_info_item(title_id, title_data, ignore_preferences=ignore_map)
 
     return game_info
+
+
+@library_bp.route("/library/filters")
+@access_required("shop")
+@handle_api_errors
+def library_filters_api():
+    """Return all distinct genres and tags across the entire library for filter dropdowns."""
+    meta = TitlesRepository.get_all_genres_and_tags()
+    genres_set = set(meta.get("genres", []))
+    tags_set = set(meta.get("tags", []))
+
+    # Also merge genres/tags from disk library cache if available (includes TitleDB categories)
+    try:
+        cached = library.load_library_from_disk()
+        if cached and isinstance(cached.get("library"), list):
+            for g in cached["library"]:
+                if not isinstance(g, dict):
+                    continue
+                cats = g.get("category")
+                if isinstance(cats, list):
+                    for c in cats:
+                        if c and isinstance(c, str):
+                            genres_set.add(c.strip())
+                t_list = g.get("tags")
+                if isinstance(t_list, list):
+                    for t in t_list:
+                        if t and isinstance(t, str):
+                            tags_set.add(t.strip())
+    except Exception:
+        pass
+
+    return success_response(
+        data={
+            "genres": sorted(genres_set),
+            "tags": sorted(tags_set),
+        }
+    )
 
 
 @library_bp.route("/library/paged")
@@ -451,31 +492,7 @@ def library_paged_api():
             try:
                 # Pass per-title ignore preferences into serializer so it can compute
                 # 'has_non_ignored' flags consistently server-side.
-                item = library.get_game_info_item(
-                    title.title_id,
-                    {
-                        "title_id": title.title_id,
-                        "name": title.name,
-                        "iconUrl": title.icon_url,
-                        "bannerUrl": title.banner_url,
-                        "category": title.category,
-                        "release_date": title.release_date,
-                        "publisher": title.publisher,
-                        "description": title.description,
-                        "size": title.size,
-                        "nsuid": title.nsuid,
-                        "have_base": title.have_base,
-                        "up_to_date": title.up_to_date,
-                        "complete": title.complete,
-                        "metacritic_score": title.metacritic_score,
-                        "rawg_rating": title.rawg_rating,
-                        "rating_count": title.rating_count,
-                        "playtime_main": title.playtime_main,
-                        "added_at": title.added_at,
-                        "apps": get_all_title_apps(title.title_id),
-                    },
-                    ignore_preferences=ignores_by_user,
-                )
+                item = _serialize_title_with_apps(title, ignore_map=ignores_by_user)
                 if not item:
                     continue
 
@@ -671,30 +688,7 @@ def library_search_paged_api():
         items_all = []
         for title in all_titles:
             try:
-                title_data = {
-                    "title_id": title.title_id,
-                    "name": title.name,
-                    "iconUrl": title.icon_url,
-                    "bannerUrl": title.banner_url,
-                    "category": title.category,
-                    "release_date": title.release_date,
-                    "publisher": title.publisher,
-                    "description": title.description,
-                    "size": title.size,
-                    "nsuid": title.nsuid,
-                    "have_base": title.have_base,
-                    "up_to_date": title.up_to_date,
-                    "complete": title.complete,
-                    "added_at": title.added_at,
-                    "apps": None,
-                }
-
-                # Build apps on demand to avoid heavy DB load unless needed
-                from db import get_all_title_apps
-
-                title_data["apps"] = get_all_title_apps(title.title_id)
-
-                item = library.get_game_info_item(title.title_id, title_data, ignore_preferences=ignores_by_user)
+                item = _serialize_title_with_apps(title, ignore_map=ignores_by_user)
                 if not item:
                     continue
 
@@ -804,11 +798,19 @@ def library_search_paged_api():
         sort_by=sort_by, order=order
     )
 
+    ignores_by_user = {}
+    try:
+        flat = WishlistIgnoreRepository.get_flattened_ignores_for_user(current_user.id)
+        ignores_by_user = flat
+    except Exception:
+        ignores_by_user = {}
+
     # Serialize items directly without secondary filtering
     items = []
     for title in paginated.items:
         try:
-            item = _serialize_title_with_apps(title)
+            ignore_prefs = ignores_by_user.get(title.title_id)
+            item = _serialize_title_with_apps(title, ignore_map=ignore_prefs)
             if item:
                 items.append(item)
         except Exception as e:
